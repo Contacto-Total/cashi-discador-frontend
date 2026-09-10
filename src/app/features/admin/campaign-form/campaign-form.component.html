@@ -494,9 +494,12 @@
             <lucide-angular name="list-filter" [size]="18"></lucide-angular>
             Filtros Activos ({{ campaignFilters.length }})
           </h3>
-          <div class="filter-cards">
-            <div class="filter-card" *ngFor="let filter of campaignFilters; let i = index">
+          <div class="filter-row" *ngIf="getOrderedFilters().length > 0">
+            <div class="filter-row-label">Prioridad de ordenamiento <small>{{ getOrderedFilters().length }}/5</small></div>
+            <div class="filter-cards" cdkDropList (cdkDropListDropped)="reorderOrderPriorities($event)">
+            <div class="filter-card filter-card--ordered" *ngFor="let filter of getOrderedFilters(); let i = index" cdkDrag>
               <div class="filter-card-header">
+                <span class="filter-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
                 <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
                   {{ getTipoContactoNombre(filter.tipoContacto) }}
                 </span>
@@ -510,7 +513,7 @@
                     {{ getFilterOrderLabel(filter) }}
                   </button>
                 </div>
-                <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
+                <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro">
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                 </button>
               </div>
@@ -557,17 +560,37 @@
               </div>
             </div>
           </div>
-          <div class="order-priority-panel" *ngIf="getOrderedFilters().length > 0">
-            <div class="order-priority-title">
-              <span>Prioridad de ordenamiento</span>
-              <small>{{ getOrderedFilters().length }}/5 activos</small>
-            </div>
-            <div class="order-priority-list" cdkDropList (cdkDropListDropped)="reorderOrderPriorities($event)">
-              <div class="order-priority-item" *ngFor="let filter of getOrderedFilters(); let i = index" cdkDrag>
-                <span class="filter-order" cdkDragHandle><lucide-angular name="grip-vertical" [size]="16"></lucide-angular></span>
-                <span class="order-priority-number">{{ i + 1 }}</span>
-                <span>{{ filter.fieldName }}</span>
-                <span class="order-direction-badge">{{ filter.orderDirection }}</span>
+          </div>
+          <div class="filter-row" *ngIf="getNonOrderedFilters().length > 0">
+            <div class="filter-row-label">Sin ordenamiento</div>
+            <div class="filter-cards filter-cards--na">
+              <div class="filter-card" *ngFor="let filter of getNonOrderedFilters()">
+                <div class="filter-card-header">
+                  <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
+                    {{ getTipoContactoNombre(filter.tipoContacto) }}
+                  </span>
+                  <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
+                  <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
+                  <div class="filter-sort-actions" *ngIf="filter.fieldCode">
+                    <button type="button" class="btn-filter-sort"
+                            (click)="toggleFilterOrder(filter)" title="Activar ordenamiento descendente">
+                      NA
+                    </button>
+                  </div>
+                  <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro">
+                    <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                  </button>
+                </div>
+                <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'BOOLEAN' && filter.dataType !== 'FECHA'">
+                  <div class="range-display">
+                    <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null"><span class="range-label">Mínimo</span><span class="range-number">{{ filter.minValue | appNumber }}</span></div>
+                    <div class="range-separator" *ngIf="filter.minValue !== undefined && filter.maxValue !== undefined"><lucide-angular name="arrow-right" [size]="16"></lucide-angular></div>
+                    <div class="range-value" *ngIf="filter.maxValue !== undefined && filter.maxValue !== null"><span class="range-label">Máximo</span><span class="range-number">{{ filter.maxValue | appNumber }}</span></div>
+                  </div>
+                </div>
+                <div class="filter-card-body" *ngIf="filter.fieldCode && (filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN')"><div class="texto-filter-values"><span class="texto-value-tag" *ngFor="let val of (filter.selectedValues || '').split(',')">{{ val }}</span></div></div>
+                <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType === 'FECHA'"><div class="range-display"><div class="range-value" *ngIf="filter.minDate"><span class="range-label">Desde</span><span class="range-number">{{ filter.minDate }}</span></div><div class="range-separator" *ngIf="filter.minDate && filter.maxDate"><lucide-angular name="arrow-right" [size]="16"></lucide-angular></div><div class="range-value" *ngIf="filter.maxDate"><span class="range-label">Hasta</span><span class="range-number">{{ filter.maxDate }}</span></div></div></div>
+                <div class="filter-card-body filter-estado-only" *ngIf="!filter.fieldCode"><span>Filtra todos los clientes con este estado de contacto</span></div>
               </div>
             </div>
           </div>

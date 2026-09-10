@@ -810,8 +810,9 @@ export class CampaignFormComponent implements OnInit {
     return this.getFiltersByTipoContacto(tipoContacto).length > 0;
   }
 
-  removeFilter(index: number): void {
-    this.campaignFilters.splice(index, 1);
+  removeFilter(filter: CampaignFilterRange): void {
+    const index = this.campaignFilters.indexOf(filter);
+    if (index >= 0) this.campaignFilters.splice(index, 1);
     this.normalizeOrderPriorities();
   }
 
@@ -850,6 +851,10 @@ export class CampaignFormComponent implements OnInit {
     return this.campaignFilters
       .filter(filter => filter.fieldCode && filter.orderDirection && filter.orderDirection !== 'NA')
       .sort((a, b) => (a.orderPriority || 0) - (b.orderPriority || 0));
+  }
+
+  getNonOrderedFilters(): CampaignFilterRange[] {
+    return this.campaignFilters.filter(filter => !filter.orderDirection || filter.orderDirection === 'NA');
   }
 
   reorderOrderPriorities(event: CdkDragDrop<CampaignFilterRange[]>): void {
