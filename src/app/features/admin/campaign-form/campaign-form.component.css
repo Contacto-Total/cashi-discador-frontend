@@ -769,6 +769,10 @@
     grid-template-columns: 1fr;
   }
 
+  .rango-antiguedad-grid--compact {
+    grid-template-columns: 1fr;
+  }
+
   .dial-config-grid {
     grid-template-columns: 1fr;
   }
@@ -1495,6 +1499,14 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.5rem;
   margin-top: 0.5rem;
+}
+
+.rango-antiguedad-grid--compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rango-antiguedad-grid--compact .rango-checkbox-label {
+  padding: 0.5rem 0.65rem;
 }
 
 .rango-checkbox-label {

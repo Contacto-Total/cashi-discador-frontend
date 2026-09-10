@@ -185,7 +185,6 @@
             min="1"
             max="100"
             placeholder="50">
-          <small>Llamadas simultáneas (1-100)</small>
         </div>
       </div>
     </div>
@@ -209,18 +208,6 @@
               {{ tipo.nombre }}
             </option>
           </select>
-          <small class="help-text">
-            {{ getTipoFiltroEstadoDescripcion() }}
-          </small>
-        </div>
-
-        <div class="tipos-contacto-info">
-          <label>Tipos de Contacto Disponibles:</label>
-          <div class="tipos-badges">
-            <span *ngFor="let tipo of tiposContacto" class="tipo-badge" [style.background-color]="tipo.color">
-              {{ tipo.codigo }} - {{ tipo.nombre }}
-            </span>
-          </div>
         </div>
       </div>
     </div>
@@ -231,11 +218,7 @@
         <lucide-angular name="calendar-range" [size]="20"></lucide-angular>
         Filtro por Antigüedad de Mora
       </h2>
-      <p class="section-description">
-        Seleccione los rangos de antigüedad que desea incluir en la campaña. Si no selecciona ninguno, se incluirán todos.
-      </p>
-
-      <div class="rango-antiguedad-grid">
+      <div class="rango-antiguedad-grid rango-antiguedad-grid--compact">
         <label
           *ngFor="let rango of rangosAntiguedad"
           class="rango-checkbox-label"
@@ -260,10 +243,6 @@
         <lucide-angular name="phone" [size]="20"></lucide-angular>
         Teléfonos y Contactabilidad
       </h2>
-      <p class="section-description">
-        Seleccione los tipos de teléfono y la cantidad máxima de números elegibles por cliente.
-      </p>
-
       <div class="rango-antiguedad-grid">
         <label
           *ngFor="let tipo of tiposTelefono"
@@ -273,9 +252,7 @@
             type="checkbox"
             [checked]="isTipoTelefonoSelected(tipo.codigo)"
             (change)="toggleTipoTelefono(tipo.codigo)">
-          <span class="rango-checkbox-text">{{ tipo.nombre }}
-            <small style="display:block; opacity:0.7; font-weight:normal;">{{ tipo.descripcion }}</small>
-          </span>
+          <span class="rango-checkbox-text">{{ tipo.nombre }}</span>
         </label>
       </div>
 
@@ -522,14 +499,13 @@
                 </span>
                 <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
                 <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
-                <!-- Temporalmente oculto: el backend anterior solo admite el ordenamiento heredado. -->
-                <!-- <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
+                <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
                   <button type="button" class="btn-filter-sort"
                           (click)="toggleFilterOrder(filter); $event.stopPropagation()"
                           [title]="getFilterOrderLabel(filter) === 'DESC' ? 'Mayor a menor. Cambiar a ascendente' : 'Menor a mayor. Cambiar a descendente'">
                     {{ getFilterOrderLabel(filter) }}
                   </button>
-                </div> -->
+                </div>
                 <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                 </button>
@@ -593,7 +569,7 @@
       </ng-template>
     </div>
 
-    <!-- Seguimiento de Promesas temporalmente ocultado para mantener compatibilidad con el backend anterior.
+    <!-- SECCIÓN: Seguimiento de Promesas -->
     <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="handshake" [size]="20"></lucide-angular>
@@ -679,9 +655,9 @@
       <small class="help-text" *ngIf="seguimientoPromesaVencida">
         Solo se considerará la última promesa del cliente, incluso si tiene otras promesas vencidas en el mes.
       </small>
-    </div> -->
+    </div>
 
-    <!-- <div class="phone-selection-panel !mt-0">
+    <div class="phone-selection-panel !mt-0">
       <div>
         <h3>Números por cliente</h3>
         <p>Defina cuántos números elegibles se considerarán para cada cliente.</p>
@@ -700,7 +676,7 @@
         <small>Los clientes que ya registren una tipificación de llamada contestada se excluirán con todos sus números.</small>
         <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
       </div>
-    </div> -->
+    </div>
 
     <!-- Botones de Acción -->
     <div class="form-actions !rounded-lg !p-2.5">

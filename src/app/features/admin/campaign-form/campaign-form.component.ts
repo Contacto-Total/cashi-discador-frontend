@@ -58,8 +58,6 @@ export const MY_DATE_FORMATS = {
 
 
 export class CampaignFormComponent implements OnInit {
-  // Temporalmente desactivado hasta desplegar el backend de filtros de promesas.
-  private readonly promiseFiltersEnabled = false;
   startDate: Date | null = null;
   endDate: Date | null = null;
 
@@ -461,7 +459,6 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private loadPromiseFilter(campaignId: number): void {
-    if (!this.promiseFiltersEnabled) return;
     this.campaignService.getCampaignPromiseFilter(campaignId).subscribe({
       next: (filter) => {
         if (!filter) return;
@@ -1073,23 +1070,11 @@ export class CampaignFormComponent implements OnInit {
         // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
         this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
           next: () => {
-            // 3) El backend anterior no conoce filtros de promesas.
-            this.campaignService.previewImportacionSP(
-              newCampaignId,
-              this.selectedTenantId,
-              this.selectedPortfolioId,
-              this.selectedSubPortfolioId,
-              this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
-              filtroRangoAnt,
-              filtroTipoTel
-            ).subscribe({
-              next: (preview) => {
-                this.previewData = preview;
-                this.previewLoading = false;
-              },
+            this.campaignService.replaceCampaignPromiseFilter(newCampaignId, this.buildPromiseFilter()).subscribe({
+              next: () => this.previewImportacion(newCampaignId, filtroRangoAnt, filtroTipoTel),
               error: (err) => {
-                console.error('Error preview V2:', err);
-                this.previewError = 'Error al obtener el preview';
+                console.error('Error guardando filtro de promesa:', err);
+                this.previewError = 'Error al guardar el filtro de promesa';
                 this.previewLoading = false;
               }
             });
@@ -1104,6 +1089,28 @@ export class CampaignFormComponent implements OnInit {
       error: (err) => {
         console.error('Error creando campaña draft:', err);
         this.previewError = 'Error al crear la campaña draft';
+        this.previewLoading = false;
+      }
+    });
+  }
+
+  private previewImportacion(campaignId: number, filtroRangoAnt?: string, filtroTipoTel?: string): void {
+    this.campaignService.previewImportacionSP(
+      campaignId,
+      this.selectedTenantId,
+      this.selectedPortfolioId,
+      this.selectedSubPortfolioId,
+      this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+      filtroRangoAnt,
+      filtroTipoTel
+    ).subscribe({
+      next: (preview) => {
+        this.previewData = preview;
+        this.previewLoading = false;
+      },
+      error: (err) => {
+        console.error('Error preview V2:', err);
+        this.previewError = 'Error al obtener el preview';
         this.previewLoading = false;
       }
     });
@@ -1242,13 +1249,21 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        // Solo exportar Excel para campañas NUEVAS, no en edición.
-        if (exportExcel) {
-          this.exportCampaignToExcel(campaignId);
-        } else {
-          this.loading = false;
-          this.router.navigate(['/admin/campaigns']);
-        }
+        this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
+          next: () => {
+            if (exportExcel) {
+              this.exportCampaignToExcel(campaignId);
+            } else {
+              this.loading = false;
+              this.router.navigate(['/admin/campaigns']);
+            }
+          },
+          error: (err) => {
+            console.error('Error guardando filtro de promesa:', err);
+            this.loading = false;
+            this.router.navigate(['/admin/campaigns']);
+          }
+        });
       },
       error: (err) => {
         console.error('Error guardando filtros:', err);
