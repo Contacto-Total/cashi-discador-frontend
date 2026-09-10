@@ -493,65 +493,28 @@
           <h3>
             <lucide-angular name="list-filter" [size]="18"></lucide-angular>
             Filtros Activos ({{ campaignFilters.length }})
+            <button type="button" class="btn-clear-filters" (click)="clearFilters()">Limpiar todos</button>
           </h3>
-          <div class="filter-row">
-            <div class="filter-cards">
-            <div class="filter-card" *ngFor="let filter of campaignFilters">
-              <div class="filter-card-header">
-                <div class="filter-card-title">
-                  <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
-                    {{ getTipoContactoNombre(filter.tipoContacto) }}
-                  </span>
-                  <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
-                  <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
-                </div>
-                <div class="filter-card-actions">
-                  <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="trash-2" [size]="16"></lucide-angular></button>
-                </div>
-              </div>
-              <!-- NUMERICO filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'BOOLEAN' && filter.dataType !== 'FECHA'">
-                <div class="range-display">
-                  <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
-                    <span class="range-label">Mínimo</span>
-                    <span class="range-number">{{ filter.minValue | appNumber }}</span>
-                  </div>
-                  <div class="range-separator" *ngIf="filter.minValue !== undefined && filter.maxValue !== undefined">
-                    <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
-                  </div>
-                  <div class="range-value" *ngIf="filter.maxValue !== undefined && filter.maxValue !== null">
-                    <span class="range-label">Máximo</span>
-                    <span class="range-number">{{ filter.maxValue | appNumber }}</span>
-                  </div>
-                </div>
-              </div>
-              <!-- TEXTO/BOOLEAN filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && (filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN')">
-                <div class="texto-filter-values">
-                  <span class="texto-value-tag" *ngFor="let val of (filter.selectedValues || '').split(',')">{{ val }}</span>
-                </div>
-              </div>
-              <!-- FECHA filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType === 'FECHA'">
-                <div class="range-display">
-                  <div class="range-value" *ngIf="filter.minDate">
-                    <span class="range-label">Desde</span>
-                    <span class="range-number">{{ filter.minDate }}</span>
-                  </div>
-                  <div class="range-separator" *ngIf="filter.minDate && filter.maxDate">
-                    <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
-                  </div>
-                  <div class="range-value" *ngIf="filter.maxDate">
-                    <span class="range-label">Hasta</span>
-                    <span class="range-number">{{ filter.maxDate }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="filter-card-body filter-estado-only" *ngIf="!filter.fieldCode">
-                <span>Filtra todos los clientes con este estado de contacto</span>
-              </div>
-            </div>
-          </div>
+          <div class="active-filters-table-wrap">
+            <table class="active-filters-table">
+              <thead>
+                <tr><th>Tipo de contacto</th><th>Campo</th><th>Rango</th><th aria-label="Acciones"></th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let filter of campaignFilters">
+                  <td><span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">{{ getTipoContactoNombre(filter.tipoContacto) }}</span></td>
+                  <td class="active-filter-field">{{ filter.fieldCode ? filter.fieldName : 'Solo por Estado' }}</td>
+                  <td class="active-filter-range">
+                    <ng-container *ngIf="filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN'; else dateOrNumeric">{{ filter.selectedValues }}</ng-container>
+                    <ng-template #dateOrNumeric>
+                      <ng-container *ngIf="filter.dataType === 'FECHA'; else numericRange">{{ filter.minDate || 'Sin mínimo' }} <lucide-angular name="arrow-right" [size]="16"></lucide-angular> {{ filter.maxDate || 'Sin máximo' }}</ng-container>
+                    </ng-template>
+                    <ng-template #numericRange><ng-container *ngIf="filter.minValue !== undefined && filter.minValue !== null; else noMinimum">{{ filter.minValue | appNumber }}</ng-container><ng-template #noMinimum>Sin mínimo</ng-template> <lucide-angular name="arrow-right" [size]="16"></lucide-angular> <ng-container *ngIf="filter.maxValue !== undefined && filter.maxValue !== null; else noMaximum">{{ filter.maxValue | appNumber }}</ng-container><ng-template #noMaximum>Sin máximo</ng-template></ng-template>
+                  </td>
+                  <td><button type="button" class="btn-remove-filter table-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="x" [size]="18"></lucide-angular></button></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

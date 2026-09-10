@@ -811,6 +811,11 @@ export class CampaignFormComponent implements OnInit {
     this.pruneInactiveOrderFields();
   }
 
+  clearFilters(): void {
+    this.campaignFilters = [];
+    this.pruneInactiveOrderFields();
+  }
+
   reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
     moveItemInArray(this.campaignFilters, event.previousIndex, event.currentIndex);
   }
