@@ -630,6 +630,9 @@ export class CampaignFormComponent implements OnInit {
       next: (filters) => {
         let legacyOrderAssigned = false;
         this.campaignFilters = filters.map(filter => {
+          if (filter.orderDirection === 'ASC' || filter.orderDirection === 'DESC') {
+            return { ...filter };
+          }
           if (!legacyOrderAssigned && filter.fieldCode === this.campaign.ordenarPorCampo) {
             legacyOrderAssigned = true;
             return {
@@ -638,7 +641,7 @@ export class CampaignFormComponent implements OnInit {
               orderPriority: 1
             };
           }
-          return { ...filter, orderDirection: 'NA' };
+          return { ...filter, orderDirection: 'NA', orderPriority: undefined };
         });
         console.log('Filtros de campaña cargados:', filters);
       },
@@ -911,6 +914,7 @@ export class CampaignFormComponent implements OnInit {
       next: (campaign) => {
         console.log('✅ Campaign loaded:', campaign);
         this.campaign = campaign;
+        this.maxTelefonosPorCliente = campaign.maxTelefonosPorCliente ?? 1;
 
         // Convertir fechas para datetime-local
         if (campaign.startDate) {
@@ -1046,6 +1050,7 @@ export class CampaignFormComponent implements OnInit {
     this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
       ? this.selectedTiposTelefono.join(',')
       : undefined;
+    this.campaign.maxTelefonosPorCliente = this.maxTelefonosPorCliente;
 
     // Grupo dirigido (null = todos los asesores de la subcartera)
     this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;

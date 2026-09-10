@@ -497,7 +497,7 @@
           </h3>
           <div class="filter-row" *ngIf="getOrderedFilters().length > 0">
             <div class="filter-cards" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorderOrderPriorities($event)">
-            <div class="filter-card filter-card--ordered" *ngFor="let filter of getOrderedFilters(); let i = index" cdkDrag>
+            <div class="filter-card filter-card--ordered" *ngFor="let filter of getOrderedFilters(); let i = index" cdkDrag cdkDragPreviewClass="campaign-filter-drag-preview">
               <div class="filter-card-header">
                 <div class="filter-card-title" cdkDragHandle title="Arrastrar para cambiar prioridad">
                   <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">

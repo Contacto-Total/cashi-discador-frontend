@@ -57,6 +57,7 @@ export interface Campaign {
 
   // Filtro tipo de teléfono: CELULAR, FIJO, o ambos separados por coma
   filtroTipoTelefono?: string;
+  maxTelefonosPorCliente?: number;
 
   // Particionado por bloques: intercala contactos de distintos rangos en rondas
   particionadoPorBloques?: boolean;
@@ -425,11 +426,9 @@ export class CampaignAdminService {
    */
   saveCampaignFilters(campaignId: number, filters: CampaignFilterRange[], skipImport: boolean = false): Observable<CampaignFilterRange[]> {
     const params = skipImport ? '?skipImport=true' : '';
-    // Las prioridades de ordenamiento se mantendrán en UI hasta que el backend las persista.
-    const payload = filters.map(({ orderDirection, orderPriority, ...filter }) => filter);
     return this.http.post<CampaignFilterRange[]>(
       `${this.apiUrl}/${campaignId}/filters${params}`,
-      payload,
+      filters,
       { headers: this.getHeaders() }
     );
   }
