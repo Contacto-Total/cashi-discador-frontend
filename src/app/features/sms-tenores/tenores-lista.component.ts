@@ -61,10 +61,10 @@ const ESTILOS = {
     @keyframes deslizar { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
     @keyframes fundir { from { opacity: 0; } to { opacity: 1; } }
     @keyframes brotar { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
-    .aparecer { animation: aparecer 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .aparecer { animation: aparecer 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
     .deslizar { animation: deslizar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
     .fundir { animation: fundir 0.3s ease-out both; }
-    .brotar { animation: brotar 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .brotar { animation: brotar 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
     @media (prefers-reduced-motion: reduce) {
       .aparecer, .deslizar, .fundir, .brotar { animation: none; }
     }
@@ -172,7 +172,7 @@ const ESTILOS = {
         } @else {
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             @for (t of pagina(); track t.id; let i = $index) {
-              <article class="aparecer group flex h-full min-h-[300px] flex-col gap-3 rounded-xl border p-4 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(15,23,42,0.08)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              <article class="aparecer group flex h-full min-h-[300px] flex-col gap-3 rounded-xl border p-4 transition-[transform,box-shadow,border-color] duration-300 ease-out will-change-transform hover:-translate-y-1 hover:border-[#c5ccd6] hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:hover:border-slate-600"
                        [style.animation-delay.ms]="i * 35"
                        [ngClass]="claseTarjeta(t)">
                 <div class="flex items-start justify-between gap-2">

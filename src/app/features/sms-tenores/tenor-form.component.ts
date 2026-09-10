@@ -133,7 +133,7 @@ interface ParteMensaje {
       </div>
 
       @if (variables(); as vars) {
-        <main class="grid grid-cols-1 items-start gap-[18px] px-7 py-[18px] lg:grid-cols-[minmax(0,1fr)_400px]">
+        <main class="grid grid-cols-1 gap-[18px] px-7 py-[18px] lg:grid-cols-[minmax(0,1fr)_400px]">
           <div class="flex flex-col gap-3.5">
 
             <section [class]="estilos.tarjeta">
@@ -268,7 +268,7 @@ interface ParteMensaje {
               </div>
             </section>
 
-            <section [class]="estilos.tarjeta">
+            <section [class]="estilos.tarjeta + ' flex-1'">
               <div class="flex items-center justify-between gap-3">
                 <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
                 @if (totalPreview() > 0) {
@@ -285,8 +285,8 @@ interface ParteMensaje {
                   </div>
                 }
               </div>
-              <div class="rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
-                <div class="flex min-h-[200px] flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
+              <div class="flex flex-1 flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
+                <div class="flex min-h-[176px] flex-1 flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
                   <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
                     <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
                     <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
@@ -311,30 +311,6 @@ interface ParteMensaje {
                 </div>
               </div>
             </section>
-
-            <div class="flex flex-col gap-2">
-              <button type="button" (click)="guardar()" [disabled]="guardando()"
-                      class="flex h-11 items-center justify-center gap-[9px] rounded-[10px] bg-[#0f172a] text-sm font-semibold text-white hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
-                <span class="inline-flex" [class.animate-spin]="guardando()">
-                  <lucide-angular [name]="guardando() ? 'loader-2' : 'save'" [size]="15" class="block"></lucide-angular>
-                </span>
-                {{ editando() ? 'Guardar cambios' : 'Guardar tenor' }}
-              </button>
-              <div class="flex gap-2">
-                <button type="button" (click)="generarArchivo()" [disabled]="!editando() || descargando()"
-                        [attr.title]="editando() ? null : 'Guarda el tenor para poder generar el archivo'"
-                        class="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-[10px] border border-[#8491a3] bg-white text-[13.5px] font-semibold text-[#0f172a] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800">
-                  <span class="inline-flex" [class.animate-spin]="descargando()">
-                    <lucide-angular [name]="descargando() ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
-                  </span>
-                  Generar archivo
-                </button>
-                <a routerLink="/sms/combos"
-                   class="btn flex h-[42px] w-[104px] items-center justify-center rounded-[10px] text-[13.5px] font-semibold text-[#334155] hover:bg-[#eef1f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">
-                  Cancelar
-                </a>
-              </div>
-            </div>
           </div>
 
             <section [class]="estilos.tarjeta + ' lg:col-span-2'">
@@ -395,6 +371,28 @@ interface ParteMensaje {
                 </div>
               </div>
             </section>
+
+          <div class="flex flex-wrap items-center justify-end gap-2 lg:col-span-2">
+            <a routerLink="/sms/combos"
+               class="btn flex h-10 items-center justify-center rounded-[10px] px-4 text-[13.5px] font-semibold text-[#334155] transition-colors hover:bg-[#eef1f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">
+              Cancelar
+            </a>
+            <button type="button" (click)="generarArchivo()" [disabled]="!editando() || descargando()"
+                    [attr.title]="editando() ? null : 'Guarda el tenor para poder generar el archivo'"
+                    class="flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#8491a3] bg-white px-4 text-[13.5px] font-semibold text-[#0f172a] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800">
+              <span class="inline-flex" [class.animate-spin]="descargando()">
+                <lucide-angular [name]="descargando() ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
+              </span>
+              Generar archivo
+            </button>
+            <button type="button" (click)="guardar()" [disabled]="guardando()"
+                    class="flex h-10 items-center justify-center gap-[9px] rounded-[10px] bg-[#0f172a] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+              <span class="inline-flex" [class.animate-spin]="guardando()">
+                <lucide-angular [name]="guardando() ? 'loader-2' : 'save'" [size]="15" class="block"></lucide-angular>
+              </span>
+              {{ editando() ? 'Guardar cambios' : 'Guardar tenor' }}
+            </button>
+          </div>
         </main>
       } @else if (cargandoVariables()) {
         <main class="px-7 py-10">
