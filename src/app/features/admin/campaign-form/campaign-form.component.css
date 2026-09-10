@@ -133,6 +133,26 @@
   width: 100%;
 }
 
+.form-section.section-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.form-section.section-valid {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.16);
+}
+
+.state-segmentation-section {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.42), rgba(30, 41, 59, 0.94));
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+:host-context(body.light-theme) .state-segmentation-section {
+  background: linear-gradient(135deg, #ecfdf5, #f8fafc);
+  border-color: #86efac;
+}
+
 .form-section h2 {
   font-size: 1rem;
   color: #f8fafc;

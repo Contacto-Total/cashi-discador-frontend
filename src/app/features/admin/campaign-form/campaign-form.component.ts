@@ -84,6 +84,8 @@ export class CampaignFormComponent implements OnInit {
   loading: boolean = false;
   error: string | null = null;
   campaignId: number | null = null;
+  invalidSections = { basic: false, assignment: false };
+  resolvedSections = { basic: false, assignment: false };
 
   // Datos para selectores en cascada
   tenants: Tenant[] = [];
@@ -944,6 +946,21 @@ export class CampaignFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.invalidSections.basic = !this.campaign.name?.trim();
+    this.invalidSections.assignment = !this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId;
+
+    if (this.invalidSections.basic) {
+      this.error = 'Complete el nombre de la campaña';
+      this.scrollToSection('basic-info-section');
+      return;
+    }
+
+    if (this.invalidSections.assignment) {
+      this.error = 'Debe seleccionar proveedor, cartera y subcartera';
+      this.scrollToSection('assignment-section');
+      return;
+    }
+
     if (!this.campaign.name) {
       this.error = 'El nombre de la campaña es requerido';
       return;
@@ -1002,6 +1019,29 @@ export class CampaignFormComponent implements OnInit {
       // Para nueva campaña, mostrar preview primero
       this.showPreview();
     }
+  }
+
+  onBasicChanged(): void {
+    if (this.invalidSections.basic && this.campaign.name?.trim()) {
+      this.invalidSections.basic = false;
+      this.resolvedSections.basic = true;
+      this.error = null;
+    }
+  }
+
+  onAssignmentChanged(): void {
+    if (this.invalidSections.assignment
+      && this.selectedTenantId > 0
+      && this.selectedPortfolioId > 0
+      && this.selectedSubPortfolioId > 0) {
+      this.invalidSections.assignment = false;
+      this.resolvedSections.assignment = true;
+      this.error = null;
+    }
+  }
+
+  private scrollToSection(sectionId: string): void {
+    setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   }
 
   /**

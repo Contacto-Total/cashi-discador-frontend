@@ -29,13 +29,14 @@
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading" (ngSubmit)="onSubmit()"
+  <form *ngIf="!loading" (ngSubmit)="onSubmit()" novalidate
         class="form-content !gap-3 [&_.form-group]:!mb-2 [&_.form-group_label]:!mb-1 [&_.form-group_label]:!text-xs [&_.form-input]:!rounded-md [&_.form-input]:!px-2.5 [&_.form-input]:!py-1.5 [&_.form-input]:!text-sm [&_.form-select]:!rounded-md [&_.form-select]:!px-2.5 [&_.form-select]:!py-1.5 [&_.form-select]:!text-sm [&_.form-textarea]:!rounded-md [&_.form-textarea]:!px-2.5 [&_.form-textarea]:!py-1.5 [&_.form-textarea]:!text-sm [&_.form-section_h2]:!mb-3 [&_.form-section_h2]:!pb-2 [&_.section-description]:!mb-2 [&_.section-description]:!text-xs">
 
     <!-- SECCIÓN SUPERIOR: Info básica + Asignación -->
     <div class="top-sections !gap-3">
       <!-- Información Básica -->
-      <div class="form-section !rounded-lg !p-3">
+      <div id="basic-info-section" class="form-section !rounded-lg !p-3"
+           [class.section-error]="invalidSections.basic" [class.section-valid]="resolvedSections.basic">
         <h2>
           <lucide-angular name="file-text" [size]="20"></lucide-angular>
           Información Básica
@@ -46,8 +47,9 @@
           <input
             type="text"
             id="name"
-            [(ngModel)]="campaign.name"
-            name="name"
+             [(ngModel)]="campaign.name"
+             name="name"
+             (ngModelChange)="onBasicChanged()"
             placeholder="Ej: Campaña Cobranza Enero 2025"
             class="form-input"
             required>
@@ -80,7 +82,8 @@
       </div>
 
       <!-- Asignación -->
-      <div class="form-section !rounded-lg !p-3">
+      <div id="assignment-section" class="form-section !rounded-lg !p-3"
+           [class.section-error]="invalidSections.assignment" [class.section-valid]="resolvedSections.assignment">
         <h2>
           <lucide-angular name="building-2" [size]="20"></lucide-angular>
           Asignación
@@ -92,7 +95,7 @@
             id="tenant"
             [(ngModel)]="selectedTenantId"
             name="tenant"
-            (ngModelChange)="onTenantChange()"
+             (ngModelChange)="onTenantChange(); onAssignmentChanged()"
             class="form-select"
             required>
             <option [ngValue]="0">Seleccione un proveedor...</option>
@@ -109,7 +112,7 @@
               id="portfolio"
               [(ngModel)]="selectedPortfolioId"
               name="portfolio"
-              (ngModelChange)="onPortfolioChange()"
+             (ngModelChange)="onPortfolioChange(); onAssignmentChanged()"
               [disabled]="selectedTenantId === 0"
               class="form-select"
               required>
@@ -126,7 +129,7 @@
               id="subportfolio"
               [(ngModel)]="selectedSubPortfolioId"
               name="subportfolio"
-              (ngModelChange)="onSubPortfolioChange()"
+             (ngModelChange)="onSubPortfolioChange(); onAssignmentChanged()"
               [disabled]="selectedPortfolioId === 0"
               class="form-select"
               required>
@@ -190,7 +193,7 @@
     </div>
 
     <!-- SECCIÓN: Configuración de Estado de Cliente -->
-    <div class="form-section full-width !rounded-lg !p-3">
+    <div class="form-section full-width state-segmentation-section !rounded-lg !p-3">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
         Segmentación por Estado de Cliente
