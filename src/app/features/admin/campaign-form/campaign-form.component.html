@@ -493,29 +493,25 @@
           <h3>
             <lucide-angular name="list-filter" [size]="18"></lucide-angular>
             Filtros Activos ({{ campaignFilters.length }})
+            <span class="filters-order-summary" *ngIf="getOrderedFilters().length > 0">Prioridad de ordenamiento <strong>{{ getOrderedFilters().length }}/5</strong></span>
           </h3>
           <div class="filter-row" *ngIf="getOrderedFilters().length > 0">
-            <div class="filter-row-label">Prioridad de ordenamiento <small>{{ getOrderedFilters().length }}/5</small></div>
             <div class="filter-cards" cdkDropList (cdkDropListDropped)="reorderOrderPriorities($event)">
             <div class="filter-card filter-card--ordered" *ngFor="let filter of getOrderedFilters(); let i = index" cdkDrag>
               <div class="filter-card-header">
-                <span class="filter-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
-                <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
-                  {{ getTipoContactoNombre(filter.tipoContacto) }}
-                </span>
-                <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
-                <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
-                <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
-                  <button type="button" class="btn-filter-sort"
-                          (click)="toggleFilterOrder(filter); $event.stopPropagation()"
-                          [class.active]="getFilterOrderLabel(filter) !== 'NA'"
-                          [title]="'Orden actual: ' + getFilterOrderLabel(filter) + '. Cambiar orden.'">
-                    {{ getFilterOrderLabel(filter) }}
-                  </button>
+                <div class="filter-card-title" cdkDragHandle title="Arrastrar para cambiar prioridad">
+                  <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
+                    {{ getTipoContactoNombre(filter.tipoContacto) }}
+                  </span>
+                  <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
+                  <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
                 </div>
-                <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro">
-                  <lucide-angular name="trash-2" [size]="16"></lucide-angular>
-                </button>
+                <div class="filter-card-actions">
+                  <div class="filter-sort-actions" *ngIf="filter.fieldCode">
+                    <button type="button" class="btn-filter-sort" (click)="toggleFilterOrder(filter); $event.stopPropagation()" [class.active]="true" [title]="'Orden actual: ' + getFilterOrderLabel(filter) + '. Cambiar orden.'">{{ getFilterOrderLabel(filter) }}</button>
+                  </div>
+                  <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="trash-2" [size]="16"></lucide-angular></button>
+                </div>
               </div>
               <!-- NUMERICO filter body -->
               <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'BOOLEAN' && filter.dataType !== 'FECHA'">
@@ -566,20 +562,17 @@
             <div class="filter-cards filter-cards--na">
               <div class="filter-card" *ngFor="let filter of getNonOrderedFilters()">
                 <div class="filter-card-header">
-                  <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
-                    {{ getTipoContactoNombre(filter.tipoContacto) }}
-                  </span>
-                  <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
-                  <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
-                  <div class="filter-sort-actions" *ngIf="filter.fieldCode">
-                    <button type="button" class="btn-filter-sort"
-                            (click)="toggleFilterOrder(filter)" title="Activar ordenamiento descendente">
-                      NA
-                    </button>
+                  <div class="filter-card-title">
+                    <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
+                      {{ getTipoContactoNombre(filter.tipoContacto) }}
+                    </span>
+                    <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
+                    <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
                   </div>
-                  <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro">
-                    <lucide-angular name="trash-2" [size]="16"></lucide-angular>
-                  </button>
+                  <div class="filter-card-actions">
+                    <div class="filter-sort-actions" *ngIf="filter.fieldCode"><button type="button" class="btn-filter-sort" (click)="toggleFilterOrder(filter)" title="Activar ordenamiento descendente">NA</button></div>
+                    <button type="button" class="btn-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="trash-2" [size]="16"></lucide-angular></button>
+                  </div>
                 </div>
                 <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'BOOLEAN' && filter.dataType !== 'FECHA'">
                   <div class="range-display">
