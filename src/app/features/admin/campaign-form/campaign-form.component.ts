@@ -852,17 +852,28 @@ export class CampaignFormComponent implements OnInit {
   }
 
   toggleOrderDirection(field: OrderableCampaignField): void {
-    const existingIndex = this.campaignOrderFields.findIndex(item => item.fieldCode === field.fieldCode);
+    this.toggleOrderField(field.fieldCode);
+  }
+
+  toggleOrderField(fieldCode: string): void {
+    const field = this.getOrderableFields().find(item => item.fieldCode === fieldCode);
+    if (!field) return;
+    const existingIndex = this.campaignOrderFields.findIndex(item => item.fieldCode === fieldCode);
     if (existingIndex < 0) {
       if (this.campaignOrderFields.length >= 5) {
         this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
         return;
       }
-      this.campaignOrderFields.push({ ...field, orderDirection: 'DESC', orderPriority: this.campaignOrderFields.length + 1 });
+      this.campaignOrderFields = [...this.campaignOrderFields, {
+        ...field,
+        orderDirection: 'DESC',
+        orderPriority: this.campaignOrderFields.length + 1
+      }];
     } else if (this.campaignOrderFields[existingIndex].orderDirection === 'DESC') {
-      this.campaignOrderFields[existingIndex].orderDirection = 'ASC';
+      this.campaignOrderFields = this.campaignOrderFields.map((item, index) =>
+        index === existingIndex ? { ...item, orderDirection: 'ASC' } : item);
     } else {
-      this.campaignOrderFields.splice(existingIndex, 1);
+      this.campaignOrderFields = this.campaignOrderFields.filter((_, index) => index !== existingIndex);
     }
     this.normalizeOrderPriorities();
     this.error = null;

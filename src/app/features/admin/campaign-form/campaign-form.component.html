@@ -317,6 +317,10 @@
 
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section !rounded-lg !p-3">
+      <h2>
+        <lucide-angular name="filter" [size]="20"></lucide-angular>
+        Filtros de Segmentación por Rango
+      </h2>
       <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
         <div class="filter-add-section !mb-3 !rounded-lg !p-3">
@@ -517,14 +521,14 @@
             <div class="order-field-item" *ngFor="let field of campaignOrderFields; let i = index" cdkDrag>
               <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
-              <button type="button" class="btn-filter-sort active" (click)="toggleOrderDirection(field)">{{ field.orderDirection }}</button>
+              <button type="button" class="btn-filter-sort active" (click)="toggleOrderField(field.fieldCode)">{{ field.orderDirection }}</button>
             </div>
           </div>
           <div class="order-fields-list order-fields-list--inactive" *ngIf="getInactiveOrderFields().length > 0">
             <div class="order-field-item order-field-item--inactive" *ngFor="let field of getInactiveOrderFields()">
               <span class="order-field-priority order-field-priority--na">NA</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
-              <button type="button" class="btn-filter-sort" (click)="toggleOrderDirection(field)">NA</button>
+              <button type="button" class="btn-filter-sort" (click)="toggleOrderField(field.fieldCode)">NA</button>
             </div>
           </div>
         </div>
