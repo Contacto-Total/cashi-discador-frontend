@@ -1,11 +1,14 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoTenor } from './sms-tenores.service';
-import { GrupoTenores, Tenor } from './sms-tenores.models';
+import { GrupoTenores, MensajeTenor, Tenor, TenorGuardar } from './sms-tenores.models';
+
+/** Límite de un SMS, la misma regla que aplicaba el módulo anterior. */
+const LIMITE_SMS = 160;
 
 /** Variables que muestra la tarjeta antes de "+N más". */
 const VARIABLES_VISIBLES = 2;
@@ -16,6 +19,9 @@ const VARIABLES_VISIBLES = 2;
  * El número de clientes de cada tarjeta es el conteo guardado en el tenor: se
  * recalcula una vez al día después de la carga y bajo demanda, nunca al abrir la
  * pantalla, que así no lanza consultas sobre la cartera.
+ *
+ * «Vista previa» abre un panel lateral con el mensaje de un cliente real, para
+ * recorrerlos y descargar el archivo desde ahí, como en el módulo anterior.
  *
  * Estilos: el CSS global del tema claro sobrescribe enlaces, inputs, encabezados
  * y algunas utilidades (`p-3`, `mt-2`, `bg-slate-900`...), y como no está en una
@@ -102,12 +108,10 @@ const VARIABLES_VISIBLES = 2;
                     <div class="flex items-start justify-between gap-3">
                       <h2 class="!m-0 text-[14.5px] font-bold leading-snug">{{ t.nombre }}</h2>
                       <div class="flex shrink-0 gap-1.5">
-                        <button type="button" (click)="descargar(t)" [disabled]="alerta(t) || ocupado() === t.id"
+                        <button type="button" (click)="abrirVistaPrevia(t)" [disabled]="alerta(t)"
                                 class="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-semibold text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:border-[#f0e2c8] disabled:bg-[#fdf8ee] disabled:text-[#c9b48c] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:disabled:border-slate-700 dark:disabled:bg-slate-900 dark:disabled:text-slate-500">
-                          <span class="inline-flex" [class.animate-spin]="ocupado() === t.id">
-                            <lucide-angular [name]="ocupado() === t.id ? 'loader-2' : 'download'" [size]="14" class="block"></lucide-angular>
-                          </span>
-                          Descargar
+                          <lucide-angular name="eye" [size]="14" class="block"></lucide-angular>
+                          Vista previa
                         </button>
                         <a [routerLink]="['/sms/tenores', t.id]"
                            class="btn inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-semibold !text-[#334155] hover:bg-[#f4f6f9] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700">
@@ -129,7 +133,7 @@ const VARIABLES_VISIBLES = 2;
                       } @else if (t.clientesHoy === 0) {
                         <span class="flex items-center gap-1.5 text-xs font-semibold text-[#b45309] dark:text-amber-300">
                           <span class="flex shrink-0"><lucide-angular name="alert-triangle" [size]="13" class="block"></lucide-angular></span>
-                          Sin clientes con la carga vigente · descarga bloqueada
+                          Sin clientes con la carga vigente · no genera archivo
                         </span>
                       } @else {
                         <div class="flex flex-wrap gap-[5px]">
@@ -202,6 +206,88 @@ const VARIABLES_VISIBLES = 2;
           </section>
         }
       </main>
+
+      @if (vistaPrevia(); as t) {
+        <div class="fixed inset-0 z-40 bg-[#0f172a]/40" (click)="cerrarVistaPrevia()" aria-hidden="true"></div>
+        <aside role="dialog" aria-modal="true" [attr.aria-label]="'Vista previa de ' + t.nombre"
+               class="fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col bg-white shadow-2xl dark:bg-slate-900">
+          <div class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div class="flex min-w-0 flex-col gap-0.5">
+              <h2 class="!m-0 truncate text-[15px] font-bold">{{ t.nombre }}</h2>
+              <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }} · {{ t.nombreCartera }}</span>
+            </div>
+            <button type="button" (click)="cerrarVistaPrevia()" aria-label="Cerrar vista previa"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[#5f6c80] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800">
+              <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
+            </button>
+          </div>
+
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-[13px] font-semibold">Así le llega a cada cliente</span>
+              @if (previewTotal() > 0) {
+                <div class="flex items-center gap-1.5">
+                  <button type="button" (click)="verMensaje(-1)" [disabled]="previewIndice() === 0 || previewCargando()" aria-label="Mensaje anterior"
+                          class="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-40 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800">
+                    <lucide-angular name="chevron-left" [size]="12" class="block"></lucide-angular>
+                  </button>
+                  <span class="text-[12.5px] tabular-nums text-[#334155] dark:text-slate-300">{{ miles(previewIndice() + 1) }} de {{ miles(previewTotal()) }}</span>
+                  <button type="button" (click)="verMensaje(1)" [disabled]="previewIndice() >= previewTotal() - 1 || previewCargando()" aria-label="Mensaje siguiente"
+                          class="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-40 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800">
+                    <lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular>
+                  </button>
+                </div>
+              }
+            </div>
+
+            @if (previewMensaje(); as m) {
+              <div class="flex flex-col gap-[9px] rounded-xl bg-[#f4f6f9] p-[13px] dark:bg-slate-800">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(m.nombre) }}</span>
+                  <span class="text-[13px] font-semibold">{{ m.nombre || 'Cliente' }}</span>
+                  <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ m.telefono }}</span>
+                </div>
+                <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ m.texto }}</p>
+                <span class="text-xs tabular-nums" [ngClass]="m.caracteres > limiteSms ? 'font-semibold text-[#b91c1c] dark:text-red-400' : 'text-[#5f6c80] dark:text-slate-400'">
+                  {{ m.caracteres }} / {{ limiteSms }} caracteres{{ m.caracteres > limiteSms ? ' · pasa del límite, el archivo no se generará' : '' }}
+                </span>
+              </div>
+            } @else {
+              <p class="rounded-xl bg-[#f4f6f9] px-3 py-6 text-center text-[13px] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">
+                {{ previewCargando() ? 'Cargando…' : (previewError() || 'Ningún cliente cumple las condiciones hoy.') }}
+              </p>
+            }
+
+            <div class="flex flex-col gap-1.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-3 text-[12.5px] dark:border-slate-800 dark:bg-slate-950/40">
+              <span [class]="'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400'">Filtros del tenor</span>
+              @for (r of t.rangos; track $index) {
+                <span class="tabular-nums">{{ r.columna }}: {{ r.min === null ? 'sin mínimo' : miles(r.min) }} – {{ r.max === null ? 'sin máximo' : miles(r.max) }}</span>
+              }
+              @if (t.restricciones.sinPromesaVigente) { <span>Sin promesa vigente</span> }
+              @if (t.restricciones.sinListaNegra) { <span>Sin lista negra</span> }
+              @if (t.restricciones.soloNoContenido) { <span>Solo clientes NO CONTENIDO</span> }
+              @if (!t.rangos.length && !t.restricciones.sinPromesaVigente && !t.restricciones.sinListaNegra && !t.restricciones.soloNoContenido) {
+                <span class="text-[#5f6c80] dark:text-slate-400">Sin rangos ni restricciones.</span>
+              }
+            </div>
+          </div>
+
+          <div class="flex gap-2 border-t border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <button type="button" (click)="descargar(t)" [disabled]="ocupado() === t.id || previewTotal() === 0"
+                    class="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#0f172a] text-[13.5px] font-semibold text-white hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+              <span class="inline-flex" [class.animate-spin]="ocupado() === t.id">
+                <lucide-angular [name]="ocupado() === t.id ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
+              </span>
+              Descargar archivo
+            </button>
+            <a [routerLink]="['/sms/tenores', t.id]"
+               class="btn flex h-[42px] items-center justify-center gap-2 rounded-[10px] border border-[#8491a3] bg-white px-4 text-[13.5px] font-semibold !text-[#0f172a] hover:bg-[#f4f6f9] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-transparent dark:!text-slate-100 dark:hover:bg-slate-800">
+              <lucide-angular name="pencil" [size]="14" class="block"></lucide-angular>
+              Editar
+            </a>
+          </div>
+        </aside>
+      }
     </div>
   `
 })
@@ -210,6 +296,7 @@ export class TenoresListaComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   readonly miles = miles;
+  readonly limiteSms = LIMITE_SMS;
   readonly limiteVariables = VARIABLES_VISIBLES;
   readonly grupos = signal<GrupoTenores[]>([]);
   readonly cargando = signal(true);
@@ -218,6 +305,14 @@ export class TenoresListaComponent implements OnInit {
   readonly archivadosAbiertos = signal(false);
   private readonly plegados = signal<ReadonlySet<number>>(new Set<number>());
   private readonly expandidos = signal<ReadonlySet<number>>(new Set<number>());
+
+  /** Tenor abierto en el panel de vista previa y el mensaje que se está mirando. */
+  readonly vistaPrevia = signal<Tenor | null>(null);
+  readonly previewMensaje = signal<MensajeTenor | null>(null);
+  readonly previewTotal = signal(0);
+  readonly previewIndice = signal(0);
+  readonly previewCargando = signal(false);
+  readonly previewError = signal<string | null>(null);
 
   /** Grupos con sus tenores activos que coinciden con la búsqueda. */
   readonly visibles = computed<GrupoTenores[]>(() => {
@@ -279,6 +374,60 @@ export class TenoresListaComponent implements OnInit {
   /** Tarjeta en alerta: el tenor no se puede calcular o hoy no alcanza a ningún cliente. */
   alerta(t: Tenor): boolean {
     return !!t.conteoError || t.clientesHoy === 0;
+  }
+
+  abrirVistaPrevia(t: Tenor): void {
+    this.vistaPrevia.set(t);
+    this.previewMensaje.set(null);
+    this.previewTotal.set(0);
+    this.previewIndice.set(0);
+    this.previewError.set(null);
+    this.cargarMensaje(t, 0);
+  }
+
+  cerrarVistaPrevia(): void {
+    this.vistaPrevia.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  alPulsarEscape(): void {
+    if (this.vistaPrevia()) {
+      this.cerrarVistaPrevia();
+    }
+  }
+
+  verMensaje(desplazamiento: number): void {
+    const t = this.vistaPrevia();
+    const siguiente = this.previewIndice() + desplazamiento;
+    if (!t || siguiente < 0 || siguiente >= this.previewTotal()) {
+      return;
+    }
+    this.cargarMensaje(t, siguiente);
+  }
+
+  iniciales(nombre: string): string {
+    const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean);
+    if (!palabras.length) {
+      return '?';
+    }
+    return (palabras[0].charAt(0) + (palabras[1]?.charAt(0) ?? '')).toUpperCase();
+  }
+
+  /** Un mensaje real del tenor, tal como se guardó. La primera llamada trae también el total. */
+  private cargarMensaje(t: Tenor, desde: number): void {
+    this.previewCargando.set(true);
+    this.api.preview(borradorDe(t), desde).subscribe({
+      next: preview => {
+        this.previewMensaje.set(preview.mensajes[0] ?? null);
+        this.previewTotal.set(preview.total);
+        this.previewIndice.set(preview.desde);
+        this.previewCargando.set(false);
+      },
+      error: err => {
+        this.previewError.set(mensajeDeError(err, 'No se pudo generar la vista previa.'));
+        this.previewCargando.set(false);
+      }
+    });
   }
 
   descargar(t: Tenor): void {
@@ -359,6 +508,19 @@ export class TenoresListaComponent implements OnInit {
       grupos.map(grupo => ({ ...grupo, tenores: grupo.tenores.map(t => (t.id === tenor.id ? tenor : t)) }))
     );
   }
+}
+
+/** El tenor guardado, en la forma que espera el backend para contar y previsualizar. */
+function borradorDe(t: Tenor): TenorGuardar {
+  return {
+    nombre: t.nombre,
+    idInquilino: t.idInquilino,
+    idCartera: t.idCartera,
+    idSubcartera: t.idSubcartera,
+    plantilla: t.plantilla,
+    rangos: t.rangos,
+    restricciones: t.restricciones
+  };
 }
 
 function alternarEn(actual: ReadonlySet<number>, id: number): ReadonlySet<number> {
