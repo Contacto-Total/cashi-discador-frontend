@@ -865,7 +865,7 @@ export class CampaignFormComponent implements OnInit {
     return this.campaignOrderFields().find(field => field.fieldCode === fieldCode)?.orderDirection ?? 'NA';
   }
 
-  setOrderDirection(fieldCode: string, direction: 'NA' | 'ASC' | 'DESC'): void {
+  setOrderDirection(fieldCode: string, direction: string): void {
     const field = this.getOrderableFields().find(item => item.fieldCode === fieldCode);
     if (!field) return;
     const orderFields = this.campaignOrderFields();
@@ -877,6 +877,7 @@ export class CampaignFormComponent implements OnInit {
       }
       return;
     }
+    if (direction !== 'ASC' && direction !== 'DESC') return;
     if (existingIndex < 0) {
       if (orderFields.length >= 5) {
         this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
