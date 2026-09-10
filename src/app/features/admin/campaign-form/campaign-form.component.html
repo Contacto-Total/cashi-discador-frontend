@@ -486,7 +486,7 @@
           </div>
         </div>
 
-        <div class="filter-results-layout">
+        <div class="filter-results-layout" *ngIf="campaignFilters.length > 0">
         <!-- Lista de filtros agregados -->
         <div class="filters-list" *ngIf="campaignFilters.length > 0">
           <div class="active-filters-table-wrap">
@@ -514,7 +514,7 @@
 
         <div class="order-fields-panel">
           <div class="order-fields-header">
-            <h3><lucide-angular name="arrow-down-up" [size]="18"></lucide-angular> Orden de resultados</h3>
+            <h3><lucide-angular name="sliders" [size]="18"></lucide-angular> Orden de resultados</h3>
             <span>{{ campaignOrderFields().length }}/5</span>
           </div>
           <div class="order-fields-list" *ngIf="campaignOrderFields().length > 0" cdkDropList (cdkDropListDropped)="reorderOrderFields($event)">
@@ -534,10 +534,6 @@
         </div>
         </div>
 
-        <div *ngIf="campaignFilters.length === 0 && filterableFields.length > 0" class="no-filters-message">
-          <lucide-angular name="filter-x" [size]="24"></lucide-angular>
-          <span>No hay filtros configurados. Agrega filtros para segmentar los contactos de la campaña.</span>
-        </div>
       </ng-container>
 
       <ng-template #noSubcartera>
