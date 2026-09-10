@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -107,7 +107,7 @@ export class CampaignFormComponent implements OnInit {
   filterableFields: FilterableField[] = [];
   campaignFilters: CampaignFilterRange[] = [];
   private campaignFiltersLoaded = false;
-  campaignOrderFields: CampaignOrderField[] = [];
+  readonly campaignOrderFields = signal<CampaignOrderField[]>([]);
   selectedFieldId: number = 0;
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
@@ -825,7 +825,7 @@ export class CampaignFormComponent implements OnInit {
   loadCampaignOrderFields(campaignId: number): void {
     this.campaignService.getCampaignOrderFields(campaignId).subscribe({
       next: fields => {
-        this.campaignOrderFields = fields;
+        this.campaignOrderFields.set(fields);
         if (this.campaignFiltersLoaded) this.pruneInactiveOrderFields();
       },
       error: err => console.error('Error loading campaign order fields:', err)
@@ -837,7 +837,7 @@ export class CampaignFormComponent implements OnInit {
     return this.campaignFilters
       .filter(filter => !!filter.fieldCode && !seen.has(filter.fieldCode) && !!seen.add(filter.fieldCode))
       .map(filter => {
-        const order = this.campaignOrderFields.find(item => item.fieldCode === filter.fieldCode);
+        const order = this.campaignOrderFields().find(item => item.fieldCode === filter.fieldCode);
         return order ? order : {
           fieldDefinitionId: filter.fieldDefinitionId,
           fieldCode: filter.fieldCode,
@@ -858,42 +858,43 @@ export class CampaignFormComponent implements OnInit {
   toggleOrderField(fieldCode: string): void {
     const field = this.getOrderableFields().find(item => item.fieldCode === fieldCode);
     if (!field) return;
-    const existingIndex = this.campaignOrderFields.findIndex(item => item.fieldCode === fieldCode);
+    const orderFields = this.campaignOrderFields();
+    const existingIndex = orderFields.findIndex(item => item.fieldCode === fieldCode);
     if (existingIndex < 0) {
-      if (this.campaignOrderFields.length >= 5) {
+      if (orderFields.length >= 5) {
         this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
         return;
       }
-      this.campaignOrderFields = [...this.campaignOrderFields, {
+      this.campaignOrderFields.set(this.normalizeOrderPriorities([...orderFields, {
         ...field,
         orderDirection: 'DESC',
-        orderPriority: this.campaignOrderFields.length + 1
-      }];
-    } else if (this.campaignOrderFields[existingIndex].orderDirection === 'DESC') {
-      this.campaignOrderFields = this.campaignOrderFields.map((item, index) =>
-        index === existingIndex ? { ...item, orderDirection: 'ASC' } : item);
+        orderPriority: orderFields.length + 1
+      }]));
+    } else if (orderFields[existingIndex].orderDirection === 'DESC') {
+      this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.map((item, index) =>
+        index === existingIndex ? { ...item, orderDirection: 'ASC' } : item)));
     } else {
-      this.campaignOrderFields = this.campaignOrderFields.filter((_, index) => index !== existingIndex);
+      this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.filter((_, index) => index !== existingIndex)));
     }
-    this.normalizeOrderPriorities();
     this.error = null;
   }
 
   reorderOrderFields(event: CdkDragDrop<CampaignOrderField[]>): void {
-    moveItemInArray(this.campaignOrderFields, event.previousIndex, event.currentIndex);
-    this.normalizeOrderPriorities();
+    const reordered = [...this.campaignOrderFields()];
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+    this.campaignOrderFields.set(this.normalizeOrderPriorities(reordered));
   }
 
-  private normalizeOrderPriorities(): void {
-    this.campaignOrderFields.forEach((field, index) => field.orderPriority = index + 1);
+  private normalizeOrderPriorities(fields: CampaignOrderField[]): CampaignOrderField[] {
+    return fields.map((field, index) => ({ ...field, orderPriority: index + 1 }));
   }
 
   private pruneInactiveOrderFields(): void {
     const activeFilterCodes = new Set(this.campaignFilters
       .filter(filter => !!filter.fieldCode)
       .map(filter => filter.fieldCode));
-    this.campaignOrderFields = this.campaignOrderFields.filter(field => activeFilterCodes.has(field.fieldCode));
-    this.normalizeOrderPriorities();
+    this.campaignOrderFields.update(fields =>
+      this.normalizeOrderPriorities(fields.filter(field => activeFilterCodes.has(field.fieldCode))));
   }
 
   getPhoneSelectionDescription(): string {
@@ -1366,7 +1367,7 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        this.campaignService.replaceCampaignOrderFields(campaignId, this.campaignOrderFields).subscribe({
+        this.campaignService.replaceCampaignOrderFields(campaignId, this.campaignOrderFields()).subscribe({
           next: () => {
             this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
               next: () => {

@@ -515,10 +515,10 @@
         <div class="order-fields-panel">
           <div class="order-fields-header">
             <h3><lucide-angular name="arrow-down-up" [size]="18"></lucide-angular> Orden de resultados</h3>
-            <span>{{ campaignOrderFields.length }}/5</span>
+            <span>{{ campaignOrderFields().length }}/5</span>
           </div>
-          <div class="order-fields-list" *ngIf="campaignOrderFields.length > 0" cdkDropList (cdkDropListDropped)="reorderOrderFields($event)">
-            <div class="order-field-item" *ngFor="let field of campaignOrderFields; let i = index" cdkDrag>
+          <div class="order-fields-list" *ngIf="campaignOrderFields().length > 0" cdkDropList (cdkDropListDropped)="reorderOrderFields($event)">
+            <div class="order-field-item" *ngFor="let field of campaignOrderFields(); let i = index" cdkDrag>
               <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
               <button type="button" class="btn-filter-sort active" (click)="toggleOrderField(field.fieldCode)">{{ field.orderDirection }}</button>
