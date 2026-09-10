@@ -42,20 +42,60 @@ const MAX_DIAS = 7;
 const SIN_CASCADA = 'Seleccione Proveedor, Cartera y Subcartera.';
 
 /**
- * Los resultados que el speech-analyzer evalúa, y solo esos.
+ * Las tipificaciones evaluables, una por una.
  *
- * La lista tiene que seguir a `_RUTAS_N2_EVALUABLES` de `cashi_read.py`: si aquí sobra
- * una, la pantalla ofrece un filtro que devuelve cero filas; si falta, hay evaluaciones
- * en la base que nadie puede aislar y quedan mezcladas dentro de «Todos».
+ * **El `value` es el valor EXACTO que guarda `registros_gestion.ruta_nivel_2`**, no una
+ * etiqueta: el backend lo compara con `g.RESULTADO = ?`, sin normalizar. De ahí que
+ * CON INTENCIÓN lleve tilde y SIN INTENCION no: así están escritas en la base
+ * (verificado byte a byte sobre producción el 2026-09-10), y una mayúscula o una tilde
+ * de diferencia devuelve cero filas sin ningún error visible.
  *
  * CONTACTO CON TERCEROS no está y no es un olvido: su rúbrica no existe y el backend la
  * excluye de la consulta.
  */
-const RESULTADOS_EVALUABLES: SelectOption[] = [
-  { label: 'Todos', value: '' },
-  { label: 'Contacto directo', value: 'CONTACTO CON TITULAR O ENCARGADO' },
-  { label: 'Promesa de pago', value: 'PROMESA DE PAGO' },
-  { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' }
+const R_TODOS: SelectOption = { label: 'Todos', value: '' };
+const R_OPORTUNIDAD: SelectOption = { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' };
+const R_CONTACTO: SelectOption = { label: 'Contacto con titular o encargado', value: 'CONTACTO CON TITULAR O ENCARGADO' };
+const R_PROMESA: SelectOption = { label: 'Promesa de pago', value: 'PROMESA DE PAGO' };
+const R_CON_INTENCION: SelectOption = { label: 'Con intención', value: 'CON INTENCIÓN' };
+const R_SIN_INTENCION: SelectOption = { label: 'Sin intención', value: 'SIN INTENCION' };
+const R_REFINANCIAMIENTO: SelectOption = { label: 'Refinanciamiento', value: 'REFINANCIAMIENTO' };
+
+/**
+ * Lo que ofrece el monitoreo legacy, que evalúa la historia de FOH.
+ *
+ * Son las tres de `_RUTAS_N2_EVALUABLES` en `cashi_read.py`, que es lo único que el
+ * speech llegó a puntuar hasta agosto.
+ */
+const RESULTADOS_LEGACY: SelectOption[] = [R_TODOS, R_CONTACTO, R_PROMESA, R_OPORTUNIDAD];
+
+/**
+ * Lo que ofrece el monitoreo del discador en Tramo 3 y Tramo 5.
+ *
+ * Estos dos tramos tipifican distinto que las carteras propias: en vez de un único
+ * CONTACTO CON TITULAR O ENCARGADO parten el contacto directo en CON INTENCIÓN y SIN
+ * INTENCIÓN, y suman REFINANCIAMIENTO al lado de PROMESA DE PAGO.
+ *
+ * **Volumen real del 01 al 10 de septiembre**, gestiones con llamada y agente:
+ * SIN INTENCION 790, PROMESA DE PAGO 335, OPORTUNIDAD DE PAGO 172, CON INTENCIÓN 135,
+ * REFINANCIAMIENTO 6.
+ */
+const RESULTADOS_TRAMOS: SelectOption[] = [
+  R_TODOS, R_OPORTUNIDAD, R_CON_INTENCION, R_SIN_INTENCION, R_REFINANCIAMIENTO, R_PROMESA
+];
+
+/** Lo que ofrece el monitoreo del discador en Tramo Propio y Castigo. */
+const RESULTADOS_PROPIA: SelectOption[] = [R_TODOS, R_OPORTUNIDAD, R_CONTACTO, R_PROMESA];
+
+/**
+ * Lo que se ofrece mientras no haya cartera elegida: la unión de las dos listas.
+ *
+ * Mostrar una de las dos sería adivinar, y la de propia esconde CON INTENCIÓN hasta que
+ * alguien baje por la cascada. Con la unión no falta nada, y en cuanto se elige la
+ * cartera la lista se recorta sola; si lo elegido dejó de existir, vuelve a «Todos».
+ */
+const RESULTADOS_SIN_TRAMO: SelectOption[] = [
+  R_TODOS, R_OPORTUNIDAD, R_CONTACTO, R_CON_INTENCION, R_SIN_INTENCION, R_REFINANCIAMIENTO, R_PROMESA
 ];
 
 /**
@@ -80,6 +120,14 @@ const RESULTADOS_EVALUABLES: SelectOption[] = [
  * y el speech la evalúa igual.
  */
 const TRAMOS_SIN_OPORTUNIDAD_DE_PAGO = ['TRAMO3', 'TRAMO5'];
+
+/**
+ * Los mismos dos tramos, usados ahora para otra cosa además de esconder una opción.
+ *
+ * En el monitoreo del discador deciden qué lista de tipificaciones se ofrece: Tramo 3 y
+ * Tramo 5 parten el contacto directo en CON INTENCIÓN / SIN INTENCIÓN y agregan
+ * REFINANCIAMIENTO; propia y castigo usan CONTACTO CON TITULAR O ENCARGADO.
+ */
 
 
 /**
@@ -379,41 +427,65 @@ export class QualityMonitorComponent implements OnInit {
   // ---------------------------------------------------------------- resultados por tramo
 
   /**
-   * Arma el desplegable de Resultado según el tramo elegido.
+   * Arma el desplegable de Resultado según el monitoreo y el tramo elegido.
    *
-   * Hoy quita una sola opción —OPORTUNIDAD DE PAGO en Tramo 3 y Tramo 5, ver
-   * {@link TRAMOS_SIN_OPORTUNIDAD_DE_PAGO}—, pero se escribe como un recálculo y no
-   * como un `if` sobre el arreglo porque la cascada se recorre para arriba y para
-   * abajo: quien pasa de una cartera donde la opción existe a una donde no, tiene que
-   * ver la lista corta, y al volver, la larga otra vez.
+   * Se escribe como un recálculo y no como un `if` sobre el arreglo porque la cascada se
+   * recorre para arriba y para abajo: quien pasa de una cartera donde una opción existe a
+   * una donde no, tiene que ver la lista corta, y al volver, la larga otra vez.
    *
-   * **Y si la opción escondida estaba elegida, el filtro vuelve a «Todos».** Dejarla
-   * puesta sería peor que mostrarla: el desplegable diría «Todos» mientras la consulta
-   * sigue filtrando por un resultado que la pantalla ya no ofrece.
+   * **Y si lo que estaba elegido ya no se ofrece, el filtro vuelve a «Todos».** Dejarlo
+   * puesto sería peor que mostrarlo: el desplegable diría una cosa mientras la consulta
+   * sigue filtrando por un resultado que la pantalla ya no lista.
    */
   private recalcularResultados(): void {
-    const fuera = this.tramoSinOportunidadDePago()
-      ? ['OPORTUNIDAD DE PAGO']
-      : [];
+    this.resultados = this.resultadosDelTramo();
 
-    this.resultados = RESULTADOS_EVALUABLES.filter(r => !fuera.includes(String(r.value)));
-
-    if (fuera.includes(this.selectedResultado)) {
+    if (!this.resultados.some(r => String(r.value) === this.selectedResultado)) {
       this.selectedResultado = '';
     }
   }
 
+  /**
+   * Qué tipificaciones ofrece esta combinación de monitoreo y cartera.
+   *
+   * Legacy conserva su lista de siempre, con OPORTUNIDAD DE PAGO escondida en los dos
+   * tramos por la razón de {@link TRAMOS_SIN_OPORTUNIDAD_DE_PAGO}.
+   *
+   * El discador parte por tramo, porque tipifican distinto: Tramo 3 y Tramo 5 abren el
+   * contacto directo en CON INTENCIÓN / SIN INTENCIÓN y agregan REFINANCIAMIENTO; propia
+   * y castigo se quedan con CONTACTO CON TITULAR O ENCARGADO. Ahí OPORTUNIDAD DE PAGO va
+   * en las dos listas: en el discador sí se usa en los tramos.
+   */
+  private resultadosDelTramo(): SelectOption[] {
+    if (this.modo === 'legacy') {
+      return this.tramoSinOportunidadDePago()
+        ? RESULTADOS_LEGACY.filter(r => r.value !== R_OPORTUNIDAD.value)
+        : RESULTADOS_LEGACY;
+    }
+    if (!this.selectedCartera) {
+      return RESULTADOS_SIN_TRAMO;
+    }
+    return this.esTramo3o5() ? RESULTADOS_TRAMOS : RESULTADOS_PROPIA;
+  }
+
   /** Si el tramo elegido es uno de los que no usan esa tipificación. */
   private tramoSinOportunidadDePago(): boolean {
-    // En el discador esta regla no aplica: alli si hay oportunidades de pago evaluadas.
-    if (!this.cfg.ocultaOportunidadEnTramos) {
-      return false;
-    }
-    // Se miran los dos niveles porque el nombre del tramo vive en uno o en otro según
-    // el entorno: en la tabla histórica la cartera es 'FO_TRAMO 3' y la subcartera
-    // 'FO_TRAMO_3', pero en el catálogo de QAS hay subcarteras con nombre propio
-    // ('Lima') colgando de una cartera que sí se llama Tramo 3. Con los dos, la regla
-    // acierta en los dos árboles.
+    // En el discador esta regla no aplica: allí sí se tipifica oportunidad de pago en
+    // los dos tramos —172 gestiones del 01 al 10 de septiembre— y esconderla borraría
+    // evaluaciones reales de la pantalla.
+    return this.cfg.ocultaOportunidadEnTramos && this.esTramo3o5();
+  }
+
+  /**
+   * Si lo elegido en la cascada es Tramo 3 o Tramo 5.
+   *
+   * Se miran los dos niveles porque el nombre del tramo vive en uno o en otro según el
+   * entorno: en la tabla histórica la cartera es 'FO_TRAMO 3' y la subcartera
+   * 'FO_TRAMO_3', pero en el catálogo de QAS hay subcarteras con nombre propio ('Lima')
+   * colgando de una cartera que sí se llama Tramo 3. Con los dos, la regla acierta en
+   * los dos árboles.
+   */
+  private esTramo3o5(): boolean {
     const cartera = this.carteras.find(c => c.value === this.selectedCartera);
     return [cartera?.label, this.nombreSubcartera()]
       .some(nombre => TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.includes(this.claveTramo(nombre)));
