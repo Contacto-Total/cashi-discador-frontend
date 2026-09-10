@@ -683,6 +683,26 @@
   border-color: #cbd5e1;
 }
 
+:host-context(body.light-theme) .order-fields-panel {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+:host-context(body.light-theme) .order-fields-header h3,
+:host-context(body.light-theme) .order-field-name {
+  color: #1e293b;
+}
+
+:host-context(body.light-theme) .order-fields-header p,
+:host-context(body.light-theme) .order-fields-empty {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .order-field-item {
+  border-color: #dbeafe;
+  background: #eff6ff;
+}
+
 
 :host-context(body.light-theme) .btn-filter-sort:hover {
   color: #1d4ed8;

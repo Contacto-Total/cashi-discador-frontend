@@ -102,6 +102,7 @@ export class CampaignFormComponent implements OnInit {
   // Filtros de rango
   filterableFields: FilterableField[] = [];
   campaignFilters: CampaignFilterRange[] = [];
+  private campaignFiltersLoaded = false;
   campaignOrderFields: CampaignOrderField[] = [];
   selectedOrderFieldCode = '';
   selectedOrderDirection: 'ASC' | 'DESC' = 'DESC';
@@ -632,6 +633,8 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.getCampaignFilters(campaignId).subscribe({
       next: (filters) => {
         this.campaignFilters = filters;
+        this.campaignFiltersLoaded = true;
+        this.pruneInactiveOrderFields();
         console.log('Filtros de campaña cargados:', filters);
       },
       error: (err) => console.error('Error loading campaign filters:', err)
@@ -805,6 +808,7 @@ export class CampaignFormComponent implements OnInit {
   removeFilter(filter: CampaignFilterRange): void {
     const index = this.campaignFilters.indexOf(filter);
     if (index >= 0) this.campaignFilters.splice(index, 1);
+    this.pruneInactiveOrderFields();
   }
 
   reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
@@ -813,13 +817,20 @@ export class CampaignFormComponent implements OnInit {
 
   loadCampaignOrderFields(campaignId: number): void {
     this.campaignService.getCampaignOrderFields(campaignId).subscribe({
-      next: fields => this.campaignOrderFields = fields,
+      next: fields => {
+        this.campaignOrderFields = fields;
+        if (this.campaignFiltersLoaded) this.pruneInactiveOrderFields();
+      },
       error: err => console.error('Error loading campaign order fields:', err)
     });
   }
 
   getAvailableOrderFields(): FilterableField[] {
-    return this.filterableFields.filter(field => !this.campaignOrderFields.some(order => order.fieldCode === field.fieldCode));
+    const activeFilterCodes = new Set(this.campaignFilters
+      .filter(filter => !!filter.fieldCode)
+      .map(filter => filter.fieldCode));
+    return this.filterableFields.filter(field =>
+      activeFilterCodes.has(field.fieldCode) && !this.campaignOrderFields.some(order => order.fieldCode === field.fieldCode));
   }
 
   addOrderField(): void {
@@ -857,6 +868,14 @@ export class CampaignFormComponent implements OnInit {
 
   private normalizeOrderPriorities(): void {
     this.campaignOrderFields.forEach((field, index) => field.orderPriority = index + 1);
+  }
+
+  private pruneInactiveOrderFields(): void {
+    const activeFilterCodes = new Set(this.campaignFilters
+      .filter(filter => !!filter.fieldCode)
+      .map(filter => filter.fieldCode));
+    this.campaignOrderFields = this.campaignOrderFields.filter(field => activeFilterCodes.has(field.fieldCode));
+    this.normalizeOrderPriorities();
   }
 
   getPhoneSelectionDescription(): string {
