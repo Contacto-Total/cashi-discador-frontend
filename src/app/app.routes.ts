@@ -149,14 +149,20 @@ export const routes: Routes = [
   // ========================================
   {
     path: 'sms/combos',
-    loadComponent: () => import('./features/legacy/SMS_DYNAMIC/pages/combo-list-page/combo-list-page.component').then(m => m.ComboListPageComponent),
-    canActivate: [authGuard]
+    loadComponent: () => import('./features/sms-tenores/tenores-lista.component').then(m => m.TenoresListaComponent),
+    canActivate: [authGuard, adminGuard]
   },
   {
-    path: 'sms/dynamic',
-    loadComponent: () => import('./features/legacy/SMS_DYNAMIC/pages/dyn-query-page/dyn-query-page.component').then(m => m.DynQueryPageComponent),
-    canActivate: [authGuard]
+    path: 'sms/tenores/nuevo',
+    loadComponent: () => import('./features/sms-tenores/tenor-form.component').then(m => m.TenorFormComponent),
+    canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'sms/tenores/:id',
+    loadComponent: () => import('./features/sms-tenores/tenor-form.component').then(m => m.TenorFormComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  { path: 'sms/dynamic', redirectTo: 'sms/tenores/nuevo', pathMatch: 'full' },
 
   // ========================================
   // OTROS MÓDULOS LEGACY
