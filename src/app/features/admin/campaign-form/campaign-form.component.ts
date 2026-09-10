@@ -855,6 +855,12 @@ export class CampaignFormComponent implements OnInit {
     this.toggleOrderField(field.fieldCode);
   }
 
+  onOrderDirectionClick(event: MouseEvent, fieldCode: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.toggleOrderField(fieldCode);
+  }
+
   toggleOrderField(fieldCode: string): void {
     const field = this.getOrderableFields().find(item => item.fieldCode === fieldCode);
     if (!field) return;
@@ -865,11 +871,10 @@ export class CampaignFormComponent implements OnInit {
         this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
         return;
       }
-      this.campaignOrderFields.set(this.normalizeOrderPriorities([...orderFields, {
-        ...field,
-        orderDirection: 'DESC',
-        orderPriority: orderFields.length + 1
-      }]));
+      this.campaignOrderFields.set(this.normalizeOrderPriorities([
+        ...orderFields,
+        { ...field, orderDirection: 'DESC', orderPriority: orderFields.length + 1 }
+      ]));
     } else if (orderFields[existingIndex].orderDirection === 'DESC') {
       this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.map((item, index) =>
         index === existingIndex ? { ...item, orderDirection: 'ASC' } : item)));
