@@ -8,6 +8,9 @@ import { AudioPart } from '../models/quality-monitoring.model';
 /** En qué punto está la preparación de la parte que se está escuchando. */
 export type PlaybackState = 'vacio' | 'preparando' | 'listo' | 'error';
 
+/** Devuelve la URL desde la que bajar una parte, o null si hay que resolverla por nombre. */
+export type ResolverUrl = (parte: AudioPart) => string | null;
+
 /**
  * La reproducción de un audio histórico dentro de la ficha de evaluación.
  *
@@ -47,6 +50,13 @@ export class AudioPlaybackService implements OnDestroy {
 
   /** Mismo prefijo que la descarga: es el mismo controller. */
   private readonly baseUrl = environment.apiUrl + '/recording';
+
+  /**
+   * Cómo se pide el audio de una parte, cuando el módulo sabe su URL exacta.
+   *
+   * Null es el camino de legacy: se pide por nombre y el backend lo busca en el bucket.
+   */
+  private urlPorParte: ResolverUrl | null = null;
 
   /** Las velocidades que se ofrecen, en el orden en que rota el botón. */
   readonly VELOCIDADES = [1, 1.5, 2];
@@ -107,9 +117,10 @@ export class AudioPlaybackService implements OnDestroy {
    * Corta lo que estuviera sonando: ver la nota de la clase sobre por qué hay un solo
    * elemento de audio.
    */
-  abrir(partes: AudioPart[]): void {
+  abrir(partes: AudioPart[], urlPorParte: ResolverUrl | null = null): void {
     this.cerrar();
     this.partes = partes ?? [];
+    this.urlPorParte = urlPorParte;
     this.indice = 0;
     if (this.partes.length) {
       this.preparar(0, false);
@@ -137,6 +148,7 @@ export class AudioPlaybackService implements OnDestroy {
     this.urls.clear();
 
     this.partes = [];
+    this.urlPorParte = null;
     this.indice = 0;
     this.estado = 'vacio';
     this.mensajeError = '';
@@ -181,11 +193,24 @@ export class AudioPlaybackService implements OnDestroy {
       return;
     }
 
+    // Dos caminos, y la diferencia es dónde vive la ruta del archivo.
+    //
+    // En el discador la fila de la llamada guarda `recording_s3_key`, así que el backend
+    // resuelve el objeto con el `idx` y basta un GET. En legacy no hay tal cosa: lo único
+    // que se sabe es el nombre del WAV, y el backend tiene que buscarlo en el índice del
+    // bucket, así que se le mandan los cuatro campos en un POST.
+    //
+    // La key nunca viaja del navegador al backend, ni siquiera en el discador: mandarla
+    // convertiría ese endpoint en un lector de cualquier objeto del bucket.
+    const directa = this.urlPorParte?.(parte) ?? null;
+
     this.estado = 'preparando';
-    this.peticion = this.http.post(
-      this.baseUrl + '/historico/audio/preescucha',
-      { anio: parte.anio, mes: parte.mes, dia: parte.dia, nombre: parte.nombre },
-      { responseType: 'blob' }
+    this.peticion = (directa
+      ? this.http.get(directa, { responseType: 'blob' })
+      : this.http.post(
+          this.baseUrl + '/historico/audio/preescucha',
+          { anio: parte.anio, mes: parte.mes, dia: parte.dia, nombre: parte.nombre },
+          { responseType: 'blob' })
     ).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
