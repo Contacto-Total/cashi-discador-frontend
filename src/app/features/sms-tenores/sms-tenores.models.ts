@@ -12,6 +12,23 @@ export interface RestriccionesTenor {
   soloNoContenido: boolean;
 }
 
+/**
+ * Varios montos bajo una sola variable: a cada cliente se le pone el primero de
+ * la lista que sea mayor que cero y llegue al mínimo, si lo hay; sin ninguno, el
+ * cliente no entra. Vive en el tenor que la creó.
+ */
+export interface CombinadaTenor {
+  /** Nombre entre llaves con que va en el mensaje; sale de la etiqueta. */
+  token: string;
+  etiqueta: string;
+  /** Columnas de monto en orden de prioridad. */
+  columnas: string[];
+  /** Por debajo de este monto se salta al siguiente; nulo si no hay. */
+  minimo?: number | null;
+  /** Etiquetas de esas columnas, solo para mostrar; las pone el backend. */
+  nombres?: string[] | null;
+}
+
 /** Lo que envía el formulario: sirve para guardar y para contar o previsualizar un borrador. */
 export interface TenorGuardar {
   nombre: string;
@@ -21,6 +38,7 @@ export interface TenorGuardar {
   plantilla: string;
   rangos: RangoTenor[];
   restricciones: RestriccionesTenor;
+  combinadas: CombinadaTenor[];
 }
 
 export type EstadoTenor = 'ACTIVO' | 'ARCHIVADO';
@@ -37,6 +55,7 @@ export interface Tenor {
   variables: string[];
   rangos: RangoTenor[];
   restricciones: RestriccionesTenor;
+  combinadas: CombinadaTenor[];
   estado: EstadoTenor;
   origen: string;
   /** Último conteo guardado; nulo si el tenor no se pudo calcular. */

@@ -172,7 +172,7 @@ const ESTILOS = {
         } @else {
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             @for (t of pagina(); track t.id; let i = $index) {
-              <article class="aparecer group flex h-full min-h-[300px] flex-col gap-3 rounded-xl border p-4 transition-[transform,box-shadow,border-color] duration-300 ease-out will-change-transform hover:-translate-y-1 hover:border-[#c5ccd6] hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:hover:border-slate-600"
+              <article class="aparecer group flex h-full min-h-[300px] flex-col gap-3 rounded-xl border p-4 transition-[translate,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-[#c5ccd6] hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:hover:border-slate-600"
                        [style.animation-delay.ms]="i * 35"
                        [ngClass]="claseTarjeta(t)">
                 <div class="flex items-start justify-between gap-2">
@@ -367,6 +367,18 @@ const ESTILOS = {
                   <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">El mensaje no usa variables.</span>
                 }
               </div>
+              @for (c of t.combinadas; track c.token) {
+                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[#eef1f5] pt-2 text-[12.5px] dark:border-slate-800">
+                  <span class="flex items-center gap-1 font-semibold"><lucide-angular name="layers" [size]="12" class="block text-[#1d4ed8] dark:text-blue-300"></lucide-angular>{{ c.etiqueta }}:</span>
+                  @for (nombre of (c.nombres ?? c.columnas); track $index; let k = $index) {
+                    @if (k > 0) { <span class="text-[#8491a3]">→</span> }
+                    <span class="text-[#334155] dark:text-slate-300">{{ nombre }}</span>
+                  }
+                  @if (c.minimo) {
+                    <span class="rounded-full bg-[#eef2f7] px-1.5 text-[11px] font-semibold tabular-nums text-[#334155] dark:bg-slate-800 dark:text-slate-300">mín. S/{{ miles(c.minimo) }}</span>
+                  }
+                </div>
+              }
             </div>
 
             <div class="flex flex-col gap-1.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-3 text-[12.5px] dark:border-slate-800 dark:bg-slate-950/40">
@@ -746,7 +758,8 @@ function borradorDe(t: Tenor): TenorGuardar {
     idSubcartera: t.idSubcartera,
     plantilla: t.plantilla,
     rangos: t.rangos,
-    restricciones: t.restricciones
+    restricciones: t.restricciones,
+    combinadas: t.combinadas
   };
 }
 
