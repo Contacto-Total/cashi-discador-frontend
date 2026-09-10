@@ -628,7 +628,18 @@ export class CampaignFormComponent implements OnInit {
   loadCampaignFilters(campaignId: number): void {
     this.campaignService.getCampaignFilters(campaignId).subscribe({
       next: (filters) => {
-        this.campaignFilters = filters;
+        let legacyOrderAssigned = false;
+        this.campaignFilters = filters.map(filter => {
+          if (!legacyOrderAssigned && filter.fieldCode === this.campaign.ordenarPorCampo) {
+            legacyOrderAssigned = true;
+            return {
+              ...filter,
+              orderDirection: this.campaign.ordenarDireccion === 'ASC' ? 'ASC' : 'DESC',
+              orderPriority: 1
+            };
+          }
+          return { ...filter, orderDirection: 'NA' };
+        });
         console.log('Filtros de campaña cargados:', filters);
       },
       error: (err) => console.error('Error loading campaign filters:', err)
@@ -801,6 +812,7 @@ export class CampaignFormComponent implements OnInit {
 
   removeFilter(index: number): void {
     this.campaignFilters.splice(index, 1);
+    this.normalizeOrderPriorities();
   }
 
   reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
@@ -809,17 +821,53 @@ export class CampaignFormComponent implements OnInit {
 
   toggleFilterOrder(filter: CampaignFilterRange): void {
     if (!filter.fieldCode) return;
-    const isCurrentField = this.campaign.ordenarPorCampo === filter.fieldCode;
-    this.campaign.ordenarPorCampo = filter.fieldCode;
-    this.campaign.ordenarDireccion = isCurrentField && this.campaign.ordenarDireccion === 'DESC'
-      ? 'ASC'
-      : 'DESC';
+    const currentDirection = filter.orderDirection || 'NA';
+
+    if (currentDirection === 'NA') {
+      const activeOrderCount = this.getOrderedFilters().length;
+      if (activeOrderCount >= 5) {
+        this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
+        return;
+      }
+      filter.orderDirection = 'DESC';
+      filter.orderPriority = activeOrderCount + 1;
+    } else if (currentDirection === 'DESC') {
+      filter.orderDirection = 'ASC';
+    } else {
+      filter.orderDirection = 'NA';
+      filter.orderPriority = undefined;
+    }
+
+    this.normalizeOrderPriorities();
+    this.error = null;
   }
 
-  getFilterOrderLabel(filter: CampaignFilterRange): 'ASC' | 'DESC' {
-    return this.campaign.ordenarPorCampo === filter.fieldCode
-      ? this.campaign.ordenarDireccion || 'DESC'
-      : 'DESC';
+  getFilterOrderLabel(filter: CampaignFilterRange): 'NA' | 'ASC' | 'DESC' {
+    return filter.orderDirection || 'NA';
+  }
+
+  getOrderedFilters(): CampaignFilterRange[] {
+    return this.campaignFilters
+      .filter(filter => filter.fieldCode && filter.orderDirection && filter.orderDirection !== 'NA')
+      .sort((a, b) => (a.orderPriority || 0) - (b.orderPriority || 0));
+  }
+
+  reorderOrderPriorities(event: CdkDragDrop<CampaignFilterRange[]>): void {
+    const orderedFilters = this.getOrderedFilters();
+    moveItemInArray(orderedFilters, event.previousIndex, event.currentIndex);
+    orderedFilters.forEach((filter, index) => filter.orderPriority = index + 1);
+    this.syncLegacyOrder();
+  }
+
+  private normalizeOrderPriorities(): void {
+    this.getOrderedFilters().forEach((filter, index) => filter.orderPriority = index + 1);
+    this.syncLegacyOrder();
+  }
+
+  private syncLegacyOrder(): void {
+    const firstOrder = this.getOrderedFilters()[0];
+    this.campaign.ordenarPorCampo = firstOrder?.fieldCode;
+    this.campaign.ordenarDireccion = firstOrder?.orderDirection === 'ASC' ? 'ASC' : 'DESC';
   }
 
   getPhoneSelectionDescription(): string {

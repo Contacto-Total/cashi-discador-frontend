@@ -505,7 +505,8 @@
                 <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
                   <button type="button" class="btn-filter-sort"
                           (click)="toggleFilterOrder(filter); $event.stopPropagation()"
-                          [title]="getFilterOrderLabel(filter) === 'DESC' ? 'Mayor a menor. Cambiar a ascendente' : 'Menor a mayor. Cambiar a descendente'">
+                          [class.active]="getFilterOrderLabel(filter) !== 'NA'"
+                          [title]="'Orden actual: ' + getFilterOrderLabel(filter) + '. Cambiar orden.'">
                     {{ getFilterOrderLabel(filter) }}
                   </button>
                 </div>
@@ -553,6 +554,20 @@
               </div>
               <div class="filter-card-body filter-estado-only" *ngIf="!filter.fieldCode">
                 <span>Filtra todos los clientes con este estado de contacto</span>
+              </div>
+            </div>
+          </div>
+          <div class="order-priority-panel" *ngIf="getOrderedFilters().length > 0">
+            <div class="order-priority-title">
+              <span>Prioridad de ordenamiento</span>
+              <small>{{ getOrderedFilters().length }}/5 activos</small>
+            </div>
+            <div class="order-priority-list" cdkDropList (cdkDropListDropped)="reorderOrderPriorities($event)">
+              <div class="order-priority-item" *ngFor="let filter of getOrderedFilters(); let i = index" cdkDrag>
+                <span class="filter-order" cdkDragHandle><lucide-angular name="grip-vertical" [size]="16"></lucide-angular></span>
+                <span class="order-priority-number">{{ i + 1 }}</span>
+                <span>{{ filter.fieldName }}</span>
+                <span class="order-direction-badge">{{ filter.orderDirection }}</span>
               </div>
             </div>
           </div>

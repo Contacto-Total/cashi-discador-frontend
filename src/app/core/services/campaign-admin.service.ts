@@ -193,6 +193,8 @@ export interface CampaignFilterRange {
   minDate?: string;             // Para FECHA: fecha mínima (YYYY-MM-DD)
   maxDate?: string;             // Para FECHA: fecha máxima (YYYY-MM-DD)
   tipoContacto?: TipoContacto; // CD, CI, PR, NC - null = aplica a todos
+  orderDirection?: 'NA' | 'ASC' | 'DESC';
+  orderPriority?: number;
 }
 
 export interface CampaignPromiseFilter {
@@ -423,9 +425,11 @@ export class CampaignAdminService {
    */
   saveCampaignFilters(campaignId: number, filters: CampaignFilterRange[], skipImport: boolean = false): Observable<CampaignFilterRange[]> {
     const params = skipImport ? '?skipImport=true' : '';
+    // Las prioridades de ordenamiento se mantendrán en UI hasta que el backend las persista.
+    const payload = filters.map(({ orderDirection, orderPriority, ...filter }) => filter);
     return this.http.post<CampaignFilterRange[]>(
       `${this.apiUrl}/${campaignId}/filters${params}`,
-      filters,
+      payload,
       { headers: this.getHeaders() }
     );
   }
