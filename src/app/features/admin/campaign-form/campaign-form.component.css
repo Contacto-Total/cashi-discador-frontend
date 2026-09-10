@@ -704,6 +704,7 @@
 .order-fields-list { display: grid; gap: 0.35rem; margin-top: 0.55rem; }
 
 .order-field-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -729,6 +730,9 @@
 .order-field-name { flex: 1; color: #e2e8f0; font-size: 0.78rem; font-weight: 600; }
 .order-field-item .btn-remove-filter { width: 28px; height: 28px; }
 .order-direction-control {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   width: 72px;
   height: 28px;
   padding: 0 0.4rem;
@@ -736,6 +740,7 @@
   background: #dbeafe;
   border: 1px solid #93c5fd;
   border-radius: 999px;
+  cursor: pointer;
   font-size: 0.7rem;
   font-weight: 700;
 }
