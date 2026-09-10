@@ -488,6 +488,7 @@
           </div>
         </div>
 
+        <div class="filter-results-layout">
         <!-- Lista de filtros agregados -->
         <div class="filters-list" *ngIf="campaignFilters.length > 0">
           <h3>
@@ -546,6 +547,7 @@
             </div>
           </div>
           <p class="order-fields-empty" *ngIf="campaignOrderFields.length === 0">Sin ordenamiento configurado. El sistema usará su orden predeterminado.</p>
+        </div>
         </div>
 
         <div *ngIf="campaignFilters.length === 0 && filterableFields.length > 0" class="no-filters-message">
