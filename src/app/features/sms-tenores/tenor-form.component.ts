@@ -347,8 +347,8 @@ interface ParteMensaje {
                     <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ m.telefono }}</span>
                   </div>
                   <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ m.texto }}</p>
-                  @if (m.segmentos > 1) {
-                    <p class="text-xs font-semibold text-[#b91c1c] dark:text-red-400">Este mensaje ocupa {{ m.segmentos }} SMS: el archivo no se podrá generar.</p>
+                  @if (m.caracteres > limite()) {
+                    <p class="text-xs font-semibold text-[#b91c1c] dark:text-red-400">Este mensaje pasa de {{ limite() }} caracteres: el archivo no se podrá generar.</p>
                   }
                 </div>
               } @else {
@@ -674,8 +674,9 @@ export class TenorFormComponent implements OnInit {
     return this.mensaje()?.caracteres ?? this.plantilla.length;
   }
 
+  /** Límite de un SMS, la misma regla que aplicaba el módulo anterior. */
   limite(): number {
-    return this.mensaje()?.codificacion === 'UCS2' ? 70 : 160;
+    return 160;
   }
 
   excede(): boolean {
