@@ -401,21 +401,21 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   private resolveCampaignScopeNames(campaigns: Campaign[]): void {
-    const subPortfolioIds = [...new Set(campaigns
-      .map(campaign => campaign.subPortfolioId)
-      .filter((id): id is number => id != null && !this.subPortfolioNames.has(id)))];
+    const portfolioIds = [...new Set(campaigns
+      .filter(campaign => campaign.subPortfolioId != null && campaign.portfolioId != null && !this.subPortfolioNames.has(campaign.subPortfolioId))
+      .map(campaign => campaign.portfolioId!))];
 
-    if (subPortfolioIds.length === 0) {
+    if (portfolioIds.length === 0) {
       this.applyCampaignScopeNames(campaigns);
       return;
     }
 
-    forkJoin(subPortfolioIds.map(id => this.portfolioService.getSubPortfolioById(id).pipe(catchError(() => of(null)))))
-      .subscribe(subPortfolios => {
-      subPortfolios.forEach(subPortfolio => {
-        if (subPortfolio) this.subPortfolioNames.set(subPortfolio.id, subPortfolio.subPortfolioName);
+    forkJoin(portfolioIds.map(id => this.campaignService.getSubPortfoliosForCampaigns(id).pipe(catchError(() => of([])))))
+      .subscribe(groups => {
+      groups.flat().forEach(subPortfolio => {
+        this.subPortfolioNames.set(subPortfolio.id, subPortfolio.nombre);
       });
-        this.applyCampaignScopeNames(campaigns);
+      this.applyCampaignScopeNames(campaigns);
       });
   }
 

@@ -448,6 +448,13 @@ export class CampaignAdminService {
     return this.http.get<CampaignOrderField[]>(`${this.apiUrl}/${campaignId}/order-fields`, { headers: this.getHeaders() });
   }
 
+  getSubPortfoliosForCampaigns(portfolioId: number): Observable<Array<{ id: number; nombre: string; codigo: string }>> {
+    return this.http.get<Array<{ id: number; nombre: string; codigo: string }>>(
+      `${environment.apiUrl}/v2/typifications/config/portfolios/${portfolioId}/subportfolios`,
+      { headers: this.getHeaders() }
+    );
+  }
+
   replaceCampaignOrderFields(campaignId: number, fields: CampaignOrderField[]): Observable<CampaignOrderField[]> {
     return this.http.put<CampaignOrderField[]>(`${this.apiUrl}/${campaignId}/order-fields`, fields, { headers: this.getHeaders() });
   }
