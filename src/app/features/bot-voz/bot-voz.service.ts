@@ -82,6 +82,12 @@ export interface BotCola {
   horaInicio?: string | null;
   horaFin?: string | null;
   diasSemana?: string | null;
+  /**
+   * Tramos del día, "HH:mm-HH:mm" separados por comas. Null = un solo horario, el de
+   * `horaInicio`/`horaFin`. Con franjas, esos dos guardan el principio del primer tramo
+   * y el final del último, y quien decide si se marca es el tramo.
+   */
+  franjas?: string | null;
   maxLlamadasSimultaneas?: number | null;
   /**
    * BORRADOR | LISTA | PAUSADA | FINALIZADA.
@@ -248,6 +254,8 @@ export interface BotSesion {
   costoEstimadoUsd?: number;
   inicio?: string;
   idGestion?: number;
+  /** Si el cliente llegó a decir algo. El estado y el resultado no lo dicen. */
+  hablo?: boolean | null;
 }
 
 /** Los totales de un día de llamadas, tal y como los cuenta la base. */
@@ -257,6 +265,12 @@ export interface ResumenLlamadas {
   total: number;
   porEstado: Record<string, number>;
   porResultado: Record<string, number>;
+  /** Llamadas en las que el cliente dijo algo. */
+  conversaron?: number;
+  /** Descolgaron y no dijeron nada: ni buzón ni no-contesta. */
+  sinHablar?: number;
+  /** Los resultados, contados solo entre las que conversaron. */
+  porResultadoConversacion?: Record<string, number>;
   duracionMediaSeg: number;
   costoUsd: number;
 }
@@ -527,7 +541,8 @@ export class BotVozService {
   }
 
   getSesiones(estados?: string[], resultados?: string[],
-              idCola?: number | null, fecha?: string | null): Observable<BotSesion[]> {
+              idCola?: number | null, fecha?: string | null,
+              hablo?: boolean | null): Observable<BotSesion[]> {
     let p = new HttpParams();
     (estados ?? []).forEach((e) => (p = p.append('estados', e)));
     (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
@@ -535,6 +550,7 @@ export class BotVozService {
     // La MISMA fecha que el resumen, o los contadores y las filas hablan de días
     // distintos. Vacía = hoy, que es lo que decide el backend.
     if (fecha) p = p.set('fecha', fecha);
+    if (hablo != null) p = p.set('hablo', String(hablo));
     return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
   }
 

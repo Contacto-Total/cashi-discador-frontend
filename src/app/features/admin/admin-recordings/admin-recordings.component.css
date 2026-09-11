@@ -775,22 +775,25 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  .tabs-bar {
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  }
+/*
+  Oscuro por el tema de la app y no por el del sistema operativo: ThemeService ignora
+  prefers-color-scheme, así que con esa media query un Windows en modo oscuro pintaba
+  la pestaña activa en blanco sobre la página clara.
+*/
+:host-context(body.dark-theme) .tabs-bar {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
 
-  .tabs-bar button {
-    color: #94a3b8;
-  }
+:host-context(body.dark-theme) .tabs-bar button {
+  color: #94a3b8;
+}
 
-  .tabs-bar button:hover,
-  .tabs-bar button.active {
-    color: #ffffff;
-  }
+:host-context(body.dark-theme) .tabs-bar button:hover,
+:host-context(body.dark-theme) .tabs-bar button.active {
+  color: #ffffff;
+}
 
-  .tabs-bar button.active {
-    background: rgba(255, 255, 255, 0.10);
-  }
+:host-context(body.dark-theme) .tabs-bar button.active {
+  background: rgba(255, 255, 255, 0.10);
 }
