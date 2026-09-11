@@ -91,22 +91,19 @@
       <div class="flex flex-col gap-1.5 w-[145px] flex-shrink-0">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Desde</label>
         <input type="date" [(ngModel)]="desde"
-               [attr.min]="minCalendario || null" [attr.max]="maxCalendario"
                class="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-950/50 ring-1 ring-slate-300 dark:ring-white/10
                       text-slate-900 dark:text-slate-100 text-[13px] tabular-nums
                       focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
       </div>
 
       <!--
-        `max` acotado a 7 días desde la fecha de inicio y, además, al fin del histórico:
-        el calendario frena el rango antes de que se pueda elegir uno que la matriz no
-        puede dibujar o un mes que este módulo no tiene. La validación de buscar() sigue
-        ahí por si el valor se escribe a mano.
+        `max` acotado a 7 días desde la fecha de inicio: el calendario frena el rango
+        antes de que se pueda elegir uno que la matriz no puede dibujar. La validación
+        de buscar() sigue ahí por si el valor se escribe a mano.
       -->
       <div class="flex flex-col gap-1.5 w-[145px] flex-shrink-0">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Hasta</label>
-        <input type="date" [(ngModel)]="hasta"
-               [attr.min]="desde || minCalendario || null" [attr.max]="maxHasta || null"
+        <input type="date" [(ngModel)]="hasta" [attr.min]="desde || null" [attr.max]="maxHasta || null"
                class="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-950/50 ring-1 ring-slate-300 dark:ring-white/10
                       text-slate-900 dark:text-slate-100 text-[13px] tabular-nums
                       focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
@@ -133,7 +130,7 @@
                 class="h-10 px-3.5 rounded-full text-[13px] text-slate-700 dark:text-slate-300
                        bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10
                        transition-colors whitespace-nowrap cursor-pointer">
-          Última semana
+          Semana actual
         </button>
       </div>
     </div>
@@ -622,7 +619,6 @@
     perder el lugar donde estaba.
   -->
   <app-evaluation-editor
-      [modo]="modo"
     *ngIf="evaluacionAbierta"
     [idx]="evaluacionAbierta.idx"
     (cerrado)="cerrarEvaluacion()"

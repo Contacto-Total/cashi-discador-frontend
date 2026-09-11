@@ -6,7 +6,6 @@ import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, File
 import { CustomSelectComponent, SelectOption } from '../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../shared/services/toast.service';
 import { AdminRecordingsService, RecordingDTO } from '../../../core/services/admin-recordings.service';
-import { QualityMonitorComponent } from '../../legacy/recordings/components/quality-monitor/quality-monitor.component';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -19,25 +18,10 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
  */
 const MAX_DIAS_RANGO = 31;
 
-/**
- * Las dos vistas de este módulo.
- *
- * Monitoreo es la MISMA pantalla que la de Grabaciones Históricas, montada con
- * `modo="discador"`: mismas reglas, mismo cálculo de cumplimiento, misma ficha. Lo único
- * que cambia es de dónde salen las filas y cómo se resuelve el audio, y eso vive en
- * `MONITORING_MODES` y no acá.
- *
- * Se montan con `*ngIf` y no con `[hidden]`: cambiar de pestaña descarta el estado de la
- * otra, que es lo correcto. Son dos preguntas distintas —«quiero oír esta llamada» y
- * «cómo viene el equipo»— y conservar los filtros de una al volver de la otra confunde.
- */
-type Pestana = 'grabaciones' | 'monitoreo';
-
 @Component({
   selector: 'app-admin-recordings',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, CustomSelectComponent,
-            QualityMonitorComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, CustomSelectComponent],
   templateUrl: './admin-recordings.component.html',
   styleUrls: ['./admin-recordings.component.css']
 })
@@ -52,12 +36,6 @@ export class AdminRecordingsComponent implements OnInit {
   readonly Loader = Loader;
   readonly FileSpreadsheet = FileSpreadsheet;
   readonly Math = Math;
-
-  pestana: Pestana = 'grabaciones';
-
-  seleccionar(pestana: Pestana): void {
-    this.pestana = pestana;
-  }
 
   // Data
   recordings: RecordingDTO[] = [];

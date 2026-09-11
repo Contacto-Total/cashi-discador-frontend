@@ -18,31 +18,6 @@
     </div>
   </div>
 
-  <!--
-    Pestañas como segmentado y no como subrayado: son dos vistas hermanas del mismo
-    módulo, no una jerarquía. Es la misma barra que usa Grabaciones Históricas, para que
-    las dos pantallas de monitoreo se abran igual.
-  -->
-  <div class="tabs-bar">
-    <button type="button"
-            [class.active]="pestana === 'grabaciones'"
-            (click)="seleccionar('grabaciones')">
-      <lucide-angular name="search" [size]="15"></lucide-angular>
-      Grabaciones
-    </button>
-    <button type="button"
-            [class.active]="pestana === 'monitoreo'"
-            (click)="seleccionar('monitoreo')">
-      <lucide-angular name="bar-chart-3" [size]="15"></lucide-angular>
-      Monitoreo
-    </button>
-  </div>
-
-  <app-quality-monitor *ngIf="pestana === 'monitoreo'" modo="discador"></app-quality-monitor>
-
-  <ng-container *ngIf="pestana === 'grabaciones'">
-
-
   <!-- Filters Section -->
   <div class="filters-section">
     <div class="filters-row">
@@ -302,5 +277,4 @@
     <h3>Sin resultados</h3>
     <p>No se encontraron grabaciones con los criterios seleccionados. Intenta con otros filtros.</p>
   </div>
-  </ng-container>
 </div>

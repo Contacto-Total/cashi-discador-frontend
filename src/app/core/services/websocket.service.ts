@@ -38,6 +38,7 @@ export class WebsocketService {
   connect(): void {
     // Guard: prevent duplicate connections
     if (this.stompClient && this.stompClient.active) {
+      console.log('[WebSocket] Already connected/connecting, skipping duplicate connect()');
       return;
     }
 
@@ -65,12 +66,17 @@ export class WebsocketService {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       reconnectDelay: 5000,
+      debug: (str) => {
+        console.log('STOMP: ' + str);
+      },
       onConnect: () => {
+        console.log('WebSocket Connected');
         this.connectionStatus.next(true);
         // STOMP subscriptions are transport state. Recreate all of them after a reconnect.
         this.messageSubjects.forEach((subject, topic) => this.subscribeToTopic(topic, subject));
       },
       onDisconnect: () => {
+        console.log('WebSocket Disconnected');
         this.connectionStatus.next(false);
       },
       onStompError: (frame) => {
@@ -97,15 +103,20 @@ export class WebsocketService {
   }
 
   subscribe(topic: string): Observable<any> {
+    console.log(`[WebSocket] subscribe() called for topic: ${topic}, already exists: ${this.messageSubjects.has(topic)}`);
+
     if (!this.messageSubjects.has(topic)) {
       const subject = new Subject<any>();
       this.messageSubjects.set(topic, subject);
 
       if (this.stompClient && this.stompClient.connected) {
+        console.log(`[WebSocket] Client connected, subscribing immediately to ${topic}`);
         this.subscribeToTopic(topic, subject);
       } else {
+        console.log(`[WebSocket] Client not connected yet, waiting for connection to subscribe to ${topic}`);
         // Wait for connection then subscribe
         const subscription = this.connectionStatus$.subscribe(connected => {
+          console.log(`[WebSocket] connectionStatus$ emitted: ${connected} for pending topic ${topic}`);
           // Double-check that the client is actually connected
           if (connected && this.stompClient?.connected) {
             this.subscribeToTopic(topic, subject);
@@ -127,9 +138,12 @@ export class WebsocketService {
 
     try {
       this.topicSubscriptions.get(topic)?.unsubscribe();
+      console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
       const subscription = this.stompClient.subscribe(topic, (message: IMessage) => {
         try {
+          console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
           const payload = JSON.parse(message.body);
+          console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
           subject.next(payload);
         } catch (e) {
           console.error('Error parsing WebSocket message:', e);

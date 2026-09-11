@@ -7,47 +7,28 @@ import {
   EvaluationDetail,
   MonitoringAudio,
   MonitoringDetailRequest,
-  MonitoringMode,
   MonitoringRequest,
   MonitoringSubportfolio,
-  MonitoringWeek,
-  MONITORING_MODES
+  MonitoringWeek
 } from '../models/quality-monitoring.model';
 
 /**
- * Los dos monitoreos de calidad, que son el mismo contrato contra dos rutas.
+ * La pestaña Monitoreo de Grabaciones Históricas.
  *
- * `apiUrl` y no `webServiceUrl`, igual que los otros tres servicios del módulo: esto lo
- * atiende el backend del discador.
+ * `apiUrl` y no `webServiceUrl`, igual que los otros tres servicios del módulo:
+ * esto lo atiende el discador leyendo de la base histórica de producción.
  *
- * Los dos endpoints principales son POST aunque sean consultas. No es descuido: el
- * cuerpo de `/semana` lleva una lista de asesores, y el resto del módulo ya resuelve así
- * sus búsquedas. Un GET con la lista en query params sería el único distinto.
- *
- * **No es `providedIn: 'root'`.** Lo provee cada `QualityMonitorComponent`, porque la
- * ruta base es estado de la instancia: con un singleton, montar el monitoreo del
- * discador le cambiaría la ruta al de legacy por debajo.
+ * Los dos endpoints son POST aunque sean consultas. No es descuido: el cuerpo de
+ * `/semana` lleva una lista de asesores, y el resto del módulo ya resuelve así sus
+ * búsquedas. Un GET con la lista en query params sería el único distinto.
  */
-@Injectable()
+@Injectable({
+  providedIn: 'root'
+})
 export class QualityMonitoringService {
-  private modo: MonitoringMode = 'legacy';
-
-  baseUrl = environment.apiUrl + MONITORING_MODES.legacy.ruta;
+  baseUrl = environment.apiUrl + '/gestion/historica/monitoreo';
 
   constructor(private http: HttpClient) { }
-
-  /** Apunta el servicio a uno de los dos monitoreos. Se llama una vez, al montar. */
-  usar(modo: MonitoringMode): void {
-    this.modo = modo;
-    this.baseUrl = environment.apiUrl + MONITORING_MODES[modo].ruta;
-  }
-
-  /** La URL del audio de una parte. Solo el discador la tiene; en legacy es null. */
-  urlDeAudio(idx: number, parte: number): string | null {
-    return this.modo === 'discador'
-      ? `${this.baseUrl}/evaluacion/${idx}/audio?parte=${parte}`
-      : null;
-  }
 
   httpOptions = {
     headers: new HttpHeaders({
@@ -112,12 +93,10 @@ export class QualityMonitoringService {
   /**
    * Corrige a mano la calificación de uno o más criterios.
    *
-   * **Es la única llamada de todo el módulo que modifica algo**, así que no lleva
-   * `retry`: reintentar una escritura que pudo haberse aplicado es peor que fallar y
-   * dejar que la persona reintente viendo el estado real.
-   *
-   * En legacy escribe en la base de PRODUCCIÓN, corra el backend donde corra. En el
-   * discador escribe en la del propio entorno.
+   * **Escribe en la base de PRODUCCIÓN.** Es la única llamada de todo el módulo
+   * que modifica algo, así que no lleva `retry`: reintentar una escritura que
+   * pudo haberse aplicado es peor que fallar y dejar que la persona reintente
+   * viendo el estado real.
    */
   ajustarEvaluacion(idx: number, request: AdjustRequest) {
     return this.http

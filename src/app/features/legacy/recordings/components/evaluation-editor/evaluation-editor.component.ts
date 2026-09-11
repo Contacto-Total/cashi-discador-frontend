@@ -10,7 +10,7 @@ import { QualityMonitoringService } from '../../services/quality-monitoring.serv
 import { HistoricalRecordingsService } from '../../services/historical-recordings.service';
 import { RecordingDownloadService } from '../../services/recording-download.service';
 import { AudioPlaybackService } from '../../services/audio-playback.service';
-import { AudioPart, EvaluationCriterion, EvaluationDetail, MonitoringMode } from '../../models/quality-monitoring.model';
+import { AudioPart, EvaluationCriterion, EvaluationDetail } from '../../models/quality-monitoring.model';
 import { Transcription } from '../../models/transcription.model';
 
 /** Los criterios de una sección, para dibujarlos agrupados como en el Excel. */
@@ -100,15 +100,6 @@ export class EvaluationEditorComponent implements OnDestroy {
   };
 
   /** El audio a mostrar. Cambiarlo recarga la ficha. */
-  /**
-   * Cuál de los dos monitoreos abrió esta ficha.
-   *
-   * Decide dos cosas: de dónde se pide el audio —por key en el discador, por nombre en
-   * legacy— y si se ofrece la descarga cruda como salida de emergencia. Esa descarga
-   * existe solo en legacy, donde el endpoint sabe buscar el archivo por nombre.
-   */
-  @Input() modo: MonitoringMode = 'legacy';
-
   @Input() set idx(valor: number | null) {
     this._idx = valor;
     if (valor !== null) {
@@ -180,9 +171,7 @@ export class EvaluationEditorComponent implements OnDestroy {
         // La conversión arranca al abrir la ficha, no al pulsar play: mientras el
         // supervisor lee el resumen y baja por los criterios, el audio ya se está
         // preparando en el servidor. Si cierra antes, la petición se cancela.
-        this.player.abrir(
-          data.audios ?? [],
-          (parte) => this.monitoreo.urlDeAudio(data.idx, parte.orden));
+        this.player.abrir(data.audios ?? []);
       },
       error: (e) => {
         this.isLoading = false;
@@ -407,21 +396,9 @@ export class EvaluationEditorComponent implements OnDestroy {
    * pueda con él, porque la descarga no lo convierte: lo que el navegador no puede
    * reproducir, un reproductor de escritorio a veces sí.
    */
-  /**
-   * Si esta ficha ofrece bajar el archivo crudo.
-   *
-   * Solo en legacy: ese endpoint resuelve el objeto por nombre, que es la única pista
-   * que tienen las gestiones de FOH. Las del discador se identifican por su key, y
-   * exponer un endpoint que baje una key cualquiera del bucket a pedido del navegador
-   * es exactamente lo que se evitó en el de preescucha.
-   */
-  get puedeDescargar(): boolean {
-    return this.modo === 'legacy';
-  }
-
   descargarParteActual(): void {
     const parte = this.player.parteActual;
-    if (!parte || !this.ficha || !this.puedeDescargar) {
+    if (!parte || !this.ficha) {
       return;
     }
 

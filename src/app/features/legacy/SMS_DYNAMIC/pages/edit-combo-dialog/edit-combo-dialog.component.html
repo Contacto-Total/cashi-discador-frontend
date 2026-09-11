@@ -1,0 +1,288 @@
+<!-- edit-combo-dialog.component.html -->
+<form
+  [formGroup]="form"
+  class="dlg"
+  (ngSubmit)="save()"
+  novalidate
+  style="display:flex; flex-direction:column; width:640px; max-height:80vh;"
+>
+  <header class="dlg__head" style="flex:0 0 auto;">
+    <h2>Editar</h2>
+    <button type="button" class="icon-btn" (click)="close()" aria-label="Cerrar">✕</button>
+  </header>
+
+  <!-- Cuerpo con scroll: crece dentro del alto fijo sin expandir el diálogo -->
+  <section class="dlg__body" style="flex:1 1 auto; overflow:auto; padding-right:8px;">
+    <!-- Obligatorios -->
+    <div class="grid">
+      <div class="full">
+        <label>Nombre</label>
+        <input formControlName="nombre" type="text" placeholder="Nombre del combo" />
+      </div>
+
+      <div class="full">
+        <div class="row-between">
+          <label>Texto de SMS (Plantilla) <span class="req">*</span></label>
+        </div>
+        <textarea formControlName="plantillaTexto" rows="5" placeholder="Hola {NOMBRE}, …"></textarea>
+        <div class="error" *ngIf="smsCtrl.invalid && (smsCtrl.dirty || submitted)">
+          El texto es obligatorio.
+        </div>
+        <label>Preview</label>
+        <div class="preview-box">
+          {{ previewText() || 'Tu SMS aparecerá aquí…' }}
+        </div>
+        <div class="character-meter">
+          <div class="character-bar"
+               [class.warning]="previewText().length > 120"
+               [class.danger]="previewText().length > 160"
+               [style.width.%]="Math.min((previewText().length / 160) * 100, 100)">
+          </div>
+        </div>
+        <div class="character-count">
+          {{ previewText().length }} / 160
+        </div>
+      </div>
+    </div>
+
+    <!-- Opciones avanzadas SIEMPRE visibles (sin <details>) -->
+    <section class="adv" style="margin-top:16px;">
+      <div class="adv__title" style="font-weight:600; background:#f6f7f9; padding:12px 16px; border-radius:10px;">
+        Opciones avanzadas
+      </div>
+
+      <div class="grid" style="margin-top:12px;">
+
+        <div class="group-card group--tramo">
+          <label>Tramo</label>
+          <select formControlName="tramo">
+            <option value="3">Tramo 3</option>
+            <option value="5">Tramo 5</option>
+            <option value="CONTACTO_TOTAL">Cartera Propia</option>  <!-- ← AÑADIR -->
+          </select>
+        </div>
+
+
+        <div class="group-card group--selects">
+          <label>Selección</label>
+
+          <div class="chip-groups">
+            <!-- Cliente -->
+            <div class="chip-group chip-group--cliente">
+              <h4 class="chip-group-title">Cliente</h4>
+              <div class="chip-container">
+                <button type="button" class="chip" [class.active]="hasSelect('NOMBRE')" (click)="onChipClick($event,'NOMBRE')">Nombre</button>
+                <button type="button" class="chip" [class.active]="hasSelect('NOMBRECOMPLETO')" (click)="onChipClick($event,'NOMBRECOMPLETO')">Nombre completo</button>
+                <button type="button" class="chip" [class.active]="hasSelect('EMAIL')" (click)="onChipClick($event,'EMAIL')">Correo</button>
+                <button type="button" class="chip" [class.active]="hasSelect('NUMCUENTAPMCP')" (click)="onChipClick($event,'NUMCUENTAPMCP')">N° de Cuenta</button>
+              </div>
+            </div>
+
+            <!-- Financiero -->
+            <div class="chip-group chip-group--financiero">
+              <h4 class="chip-group-title">Financiero</h4>
+              <div class="chip-container">
+                <button type="button" class="chip"
+                        [class.active]="hasSelect('LTD')"
+                        [disabled]="isChipDisabled('LTD')"
+                        (click)="onChipClick($event,'LTD')">LTD</button>
+
+                <button type="button" class="chip"
+                        [class.active]="hasSelect('LTDE')"
+                        [disabled]="isChipDisabled('LTDE')"
+                        (click)="onChipClick($event,'LTDE')">LTDE</button>
+
+                <button type="button" class="chip"
+                        [class.active]="hasSelect('LTD_LTDE')"
+                        [disabled]="isChipDisabled('LTD_LTDE')"
+                        (click)="onChipClick($event,'LTD_LTDE')">LTD + LTDE</button>
+
+                <button type="button" class="chip"
+                        [class.active]="hasSelect('BAJA30')"
+                        [disabled]="isChipDisabled('BAJA30')"
+                        (click)="onChipClick($event,'BAJA30')">Baja 30</button>
+
+                <button type="button" class="chip"
+                        [class.active]="hasSelect('SALDO_MORA')"
+                        [disabled]="isChipDisabled('SALDO_MORA')"
+                        (click)="onChipClick($event,'SALDO_MORA')">Mora</button>
+
+                <button type="button" class="chip"
+                        [class.active]="hasSelect('BAJA30_SALDOMORA')"
+                        [disabled]="isChipDisabled('BAJA30_SALDOMORA')"
+                        (click)="onChipClick($event,'BAJA30_SALDOMORA')">Baja 30 y Saldo Mora</button>
+
+                <button type="button" class="chip" [class.active]="hasSelect('PKM')" (click)="onChipClick($event,'PKM')">PKM</button>
+                <button type="button" class="chip" [class.active]="hasSelect('CAPITAL')" (click)="onChipClick($event,'CAPITAL')">Capital</button>
+                <button type="button" class="chip" [class.active]="hasSelect('DEUDA_TOTAL')" (click)="onChipClick($event,'DEUDA_TOTAL')">Deuda Total</button>
+              </div>
+            </div>
+
+
+            <!-- Fechas -->
+            <div class="chip-group chip-group--fechas">
+              <h4 class="chip-group-title">Fechas</h4>
+              <div class="chip-container">
+                <button type="button" class="chip" [class.active]="hasSelect('DIASMORA')" (click)="onChipClick($event,'DIASMORA')">Días mora</button>
+                <button type="button" class="chip" [class.active]="hasSelect('HOY')" (click)="onChipClick($event,'HOY')">Hoy</button>
+                <button type="button" class="chip" [class.active]="hasSelect('MANANA')" (click)="onChipClick($event,'MANANA')">Mañana</button>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="hasTopUpSelect()" class="form-field">
+            <label class="form-label">Sumar importe</label>
+            <input type="number" min="0" step="1" class="form-input"
+                   formControlName="importeExtra" placeholder="0">
+          </div>
+        </div>
+
+        <!-- Rangos -->
+        <div class="group-card group--rangos">
+          <div class="group-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span>Rangos</span>
+            <button type="button" class="btn btn-secondary" (click)="addRange()">
+              + Añadir rango
+            </button>
+          </div>
+
+          <div class="range-item" *ngFor="let rg of rangosFA.controls; let i = index" [formGroup]="$any(rg)">
+            <!-- Modo intervalo -->
+            <div *ngIf="$any(rg).get('useMin')?.value && $any(rg).get('useMax')?.value; else singleMode" class="interval-mode">
+
+              <div class="interval-header">
+                <select class="form-select slim interval-field" formControlName="field" title="Campo">
+                  <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+                </select>
+
+                <button type="button" class="btn btn-danger btn-small" (click)="removeRange(i)">
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+
+              <div class="interval-expression">
+                <input type="number" class="form-input slim interval-input" formControlName="min" placeholder="mín">
+
+                <label class="interval-check">
+                  <input type="checkbox" formControlName="inclusiveMin">
+                  <span class="interval-symbol">{{ $any(rg).get('inclusiveMin')?.value ? '≤' : '<' }}</span>
+                </label>
+
+                <div class="interval-variable">
+                  {{ fieldLabel($any(rg).get('field')?.value) || 'Variable' }}
+                </div>
+
+                <label class="interval-check">
+                  <input type="checkbox" formControlName="inclusiveMax">
+                  <span class="interval-symbol">{{ $any(rg).get('inclusiveMax')?.value ? '≤' : '<' }}</span>
+                </label>
+
+                <input type="number" class="form-input slim interval-input" formControlName="max" placeholder="máx">
+              </div>
+
+              <div class="interval-footer">
+                <label class="tiny-check">
+                  <input type="checkbox"
+                         checked
+                         (change)="$any(rg).get('mode')?.value === 'gt' ? toggleUseMax(i, false) : toggleUseMin(i, false)">
+                  <span>Desactivar intervalo</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Modo simple -->
+            <ng-template #singleMode>
+              <div class="range-row">
+                <select class="form-select slim col-field" formControlName="field" title="Campo">
+                  <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+                </select>
+
+                <select class="form-select slim col-op"
+                        [value]="$any(rg).get('mode')?.value"
+                        (change)="changeOperator(i, $any($event.target).value)"
+                        title="Operador">
+                  <option value="gt">&gt;</option>
+                  <option value="lt">&lt;</option>
+                </select>
+
+                <div class="value-box col-value">
+                  <ng-container [ngSwitch]="$any(rg).get('mode')?.value">
+                    <ng-container *ngSwitchCase="'gt'">
+                      <input type="number" class="form-input slim" formControlName="min" placeholder="valor mínimo">
+                      <label class="tiny-check">
+                        <input type="checkbox" formControlName="inclusiveMin">
+                        <span>{{ $any(rg).get('inclusiveMin')?.value ? '≥' : '>' }}</span>
+                      </label>
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'lt'">
+                      <input type="number" class="form-input slim" formControlName="max" placeholder="valor máximo">
+                      <label class="tiny-check">
+                        <input type="checkbox" formControlName="inclusiveMax">
+                        <span>{{ $any(rg).get('inclusiveMax')?.value ? '≤' : '<' }}</span>
+                      </label>
+                    </ng-container>
+                  </ng-container>
+                </div>
+
+                <button type="button" class="btn btn-danger btn-small col-del" (click)="removeRange(i)">
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+
+              <div class="hint" style="margin:8px 0 0 0;">
+                <label class="tiny-check">
+                  <ng-container *ngIf="$any(rg).get('mode')?.value === 'gt'">
+                    <input type="checkbox"
+                           [checked]="$any(rg).get('useMax')?.value"
+                           (change)="toggleUseMax(i, $any($event.target).checked)">
+                    <span>añadir límite</span>
+                  </ng-container>
+                  <ng-container *ngIf="$any(rg).get('mode')?.value === 'lt'">
+                    <input type="checkbox"
+                           [checked]="$any(rg).get('useMin')?.value"
+                           (change)="toggleUseMin(i, $any($event.target).checked)">
+                    <span>añadir límite inferior</span>
+                  </ng-container>
+                </label>
+              </div>
+            </ng-template>
+
+            <div *ngIf="$any(rg).errors?.['rangeOrder']" class="hint error-inline">
+              ⚠️ El mínimo no puede ser mayor que el máximo.
+            </div>
+          </div>
+        </div>
+
+
+        <!-- … dentro de la grid de Opciones avanzadas, cerca de Restricciones … -->
+        <div class="group-card group--cond">
+          <div class="group-title">Condiciones</div>
+          <div class="checks">
+            <label><input type="checkbox" formControlName="cond_PROMESAS_HOY"> Promesas HOY</label>
+            <label><input type="checkbox" formControlName="cond_PROMESAS_MANANA"> Promesas MAÑANA</label>
+            <label><input type="checkbox" formControlName="cond_PROMESAS_MANANA2"> Promesas HOY y MAÑANA</label>
+            <label><input type="checkbox" formControlName="cond_PROMESAS_ROTAS"> Promesas ROTAS</label>
+          </div>
+        </div>
+
+        <div class="group-card group--restr">
+          <div class="group-title">Restricciones</div>
+          <div class="checks">
+            <label><input type="checkbox" formControlName="noContenido"> No Contenido</label>
+            <label><input type="checkbox" formControlName="excluirPromesasPeriodoActual"> Excluir promesas periodo</label>
+            <label><input type="checkbox" formControlName="excluirCompromisos"> Excluir compromisos</label>
+            <label><input type="checkbox" formControlName="excluirBlacklist"> Excluir blacklist</label>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+  </section>
+
+    <footer class="dlg__foot" style="flex:0 0 auto;">
+    <button type="button" mat-button (click)="close()">Cancelar</button>
+    <button type="submit" mat-raised-button color="primary" [disabled]="form.invalid || saving">
+      {{ saving ? 'Guardando…' : 'Guardar' }}
+    </button>
+  </footer>
+</form>

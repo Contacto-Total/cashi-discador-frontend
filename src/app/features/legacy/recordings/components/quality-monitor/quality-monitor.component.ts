@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -11,8 +11,7 @@ import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
 import { EvaluationEditorComponent } from '../evaluation-editor/evaluation-editor.component';
 import {
-  MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringMode,
-  MonitoringModeConfig, MonitoringWeek, MONITORING_MODES
+  MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringWeek
 } from '../../models/quality-monitoring.model';
 import { TenantService } from '../../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../../maintenance/services/portfolio.service';
@@ -42,60 +41,20 @@ const MAX_DIAS = 7;
 const SIN_CASCADA = 'Seleccione Proveedor, Cartera y Subcartera.';
 
 /**
- * Las tipificaciones evaluables, una por una.
+ * Los resultados que el speech-analyzer evalúa, y solo esos.
  *
- * **El `value` es el valor EXACTO que guarda `registros_gestion.ruta_nivel_2`**, no una
- * etiqueta: el backend lo compara con `g.RESULTADO = ?`, sin normalizar. De ahí que
- * CON INTENCIÓN lleve tilde y SIN INTENCION no: así están escritas en la base
- * (verificado byte a byte sobre producción el 2026-09-10), y una mayúscula o una tilde
- * de diferencia devuelve cero filas sin ningún error visible.
+ * La lista tiene que seguir a `_RUTAS_N2_EVALUABLES` de `cashi_read.py`: si aquí sobra
+ * una, la pantalla ofrece un filtro que devuelve cero filas; si falta, hay evaluaciones
+ * en la base que nadie puede aislar y quedan mezcladas dentro de «Todos».
  *
  * CONTACTO CON TERCEROS no está y no es un olvido: su rúbrica no existe y el backend la
  * excluye de la consulta.
  */
-const R_TODOS: SelectOption = { label: 'Todos', value: '' };
-const R_OPORTUNIDAD: SelectOption = { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' };
-const R_CONTACTO: SelectOption = { label: 'Contacto con titular o encargado', value: 'CONTACTO CON TITULAR O ENCARGADO' };
-const R_PROMESA: SelectOption = { label: 'Promesa de pago', value: 'PROMESA DE PAGO' };
-const R_CON_INTENCION: SelectOption = { label: 'Con intención', value: 'CON INTENCIÓN' };
-const R_SIN_INTENCION: SelectOption = { label: 'Sin intención', value: 'SIN INTENCION' };
-const R_REFINANCIAMIENTO: SelectOption = { label: 'Refinanciamiento', value: 'REFINANCIAMIENTO' };
-
-/**
- * Lo que ofrece el monitoreo legacy, que evalúa la historia de FOH.
- *
- * Son las tres de `_RUTAS_N2_EVALUABLES` en `cashi_read.py`, que es lo único que el
- * speech llegó a puntuar hasta agosto.
- */
-const RESULTADOS_LEGACY: SelectOption[] = [R_TODOS, R_CONTACTO, R_PROMESA, R_OPORTUNIDAD];
-
-/**
- * Lo que ofrece el monitoreo del discador en Tramo 3 y Tramo 5.
- *
- * Estos dos tramos tipifican distinto que las carteras propias: en vez de un único
- * CONTACTO CON TITULAR O ENCARGADO parten el contacto directo en CON INTENCIÓN y SIN
- * INTENCIÓN, y suman REFINANCIAMIENTO al lado de PROMESA DE PAGO.
- *
- * **Volumen real del 01 al 10 de septiembre**, gestiones con llamada y agente:
- * SIN INTENCION 790, PROMESA DE PAGO 335, OPORTUNIDAD DE PAGO 172, CON INTENCIÓN 135,
- * REFINANCIAMIENTO 6.
- */
-const RESULTADOS_TRAMOS: SelectOption[] = [
-  R_TODOS, R_OPORTUNIDAD, R_CON_INTENCION, R_SIN_INTENCION, R_REFINANCIAMIENTO, R_PROMESA
-];
-
-/** Lo que ofrece el monitoreo del discador en Tramo Propio y Castigo. */
-const RESULTADOS_PROPIA: SelectOption[] = [R_TODOS, R_OPORTUNIDAD, R_CONTACTO, R_PROMESA];
-
-/**
- * Lo que se ofrece mientras no haya cartera elegida: la unión de las dos listas.
- *
- * Mostrar una de las dos sería adivinar, y la de propia esconde CON INTENCIÓN hasta que
- * alguien baje por la cascada. Con la unión no falta nada, y en cuanto se elige la
- * cartera la lista se recorta sola; si lo elegido dejó de existir, vuelve a «Todos».
- */
-const RESULTADOS_SIN_TRAMO: SelectOption[] = [
-  R_TODOS, R_OPORTUNIDAD, R_CONTACTO, R_CON_INTENCION, R_SIN_INTENCION, R_REFINANCIAMIENTO, R_PROMESA
+const RESULTADOS_EVALUABLES: SelectOption[] = [
+  { label: 'Todos', value: '' },
+  { label: 'Contacto directo', value: 'CONTACTO CON TITULAR O ENCARGADO' },
+  { label: 'Promesa de pago', value: 'PROMESA DE PAGO' },
+  { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' }
 ];
 
 /**
@@ -120,15 +79,6 @@ const RESULTADOS_SIN_TRAMO: SelectOption[] = [
  * y el speech la evalúa igual.
  */
 const TRAMOS_SIN_OPORTUNIDAD_DE_PAGO = ['TRAMO3', 'TRAMO5'];
-
-/**
- * Los mismos dos tramos, usados ahora para otra cosa además de esconder una opción.
- *
- * En el monitoreo del discador deciden qué lista de tipificaciones se ofrece: Tramo 3 y
- * Tramo 5 parten el contacto directo en CON INTENCIÓN / SIN INTENCIÓN y agregan
- * REFINANCIAMIENTO; propia y castigo usan CONTACTO CON TITULAR O ENCARGADO.
- */
-
 
 /**
  * La matriz asesor × día de evaluaciones de calidad.
@@ -164,22 +114,9 @@ const TRAMOS_SIN_OPORTUNIDAD_DE_PAGO = ['TRAMO3', 'TRAMO5'];
   imports: [CommonModule, FormsModule, LucideAngularModule, CustomSelectComponent,
             EvaluationEditorComponent],
   templateUrl: './quality-monitor.component.html',
-  styleUrls: ['./quality-monitor.component.scss'],
-  // El servicio se provee acá y no en root porque su ruta base es estado de la
-  // instancia: los dos monitoreos son la misma pantalla contra endpoints distintos.
-  providers: [QualityMonitoringService]
+  styleUrls: ['./quality-monitor.component.scss']
 })
 export class QualityMonitorComponent implements OnInit {
-  /**
-   * Cuál de los dos monitoreos es esta instancia.
-   *
-   * `legacy` es lo que dejó FOH hasta agosto de 2026 y vive en Grabaciones Históricas;
-   * `discador` es lo que el discador genera desde septiembre y vive en Grabaciones
-   * Discador. Misma pantalla, mismas reglas, mismo cálculo de cumplimiento: lo único que
-   * cambia está en {@link MONITORING_MODES}.
-   */
-  @Input() modo: MonitoringMode = 'legacy';
-
   readonly Search = Search;
   readonly Eye = Eye;
   readonly TrendingUp = TrendingUp;
@@ -340,14 +277,7 @@ export class QualityMonitorComponent implements OnInit {
     private toast: ToastService
   ) {}
 
-  /** Lo único que distingue a un monitoreo del otro. */
-  get cfg(): MonitoringModeConfig {
-    return MONITORING_MODES[this.modo];
-  }
-
   ngOnInit(): void {
-    // Antes que nada: apunta el servicio a los endpoints de este monitoreo.
-    this.monitoreo.usar(this.modo);
     this.cargarProveedores();
     this.recalcularResultados();
 
@@ -389,9 +319,7 @@ export class QualityMonitorComponent implements OnInit {
     if (this.selectedProveedor > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedProveedor).subscribe({
         next: (data) => {
-          this.carteras = data
-            .filter(p => this.viveEnEsteModo(p.portfolioName))
-            .map(p => ({ label: p.portfolioName, value: p.id }));
+          this.carteras = data.map(p => ({ label: p.portfolioName, value: p.id }));
         },
         error: () => { this.toast.error('No se pudieron cargar las carteras'); }
       });
@@ -407,12 +335,8 @@ export class QualityMonitorComponent implements OnInit {
     if (this.selectedCartera > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedCartera).subscribe({
         next: (data) => {
-          // Se filtra tambien acá y no solo arriba: nada impide que una subcartera de
-          // tramo propio cuelgue de otra cartera, y el corte tiene que ser por lo que
-          // se va a consultar, que es el nombre de la subcartera.
-          this.subPortfolios = data.filter(s => this.viveEnEsteModo(s.subPortfolioName));
-          this.subcarteras = this.subPortfolios
-            .map(s => ({ label: s.subPortfolioName, value: s.id }));
+          this.subPortfolios = data;
+          this.subcarteras = data.map(s => ({ label: s.subPortfolioName, value: s.id }));
         },
         error: () => { this.toast.error('No se pudieron cargar las subcarteras'); }
       });
@@ -427,65 +351,37 @@ export class QualityMonitorComponent implements OnInit {
   // ---------------------------------------------------------------- resultados por tramo
 
   /**
-   * Arma el desplegable de Resultado según el monitoreo y el tramo elegido.
+   * Arma el desplegable de Resultado según el tramo elegido.
    *
-   * Se escribe como un recálculo y no como un `if` sobre el arreglo porque la cascada se
-   * recorre para arriba y para abajo: quien pasa de una cartera donde una opción existe a
-   * una donde no, tiene que ver la lista corta, y al volver, la larga otra vez.
+   * Hoy quita una sola opción —OPORTUNIDAD DE PAGO en Tramo 3 y Tramo 5, ver
+   * {@link TRAMOS_SIN_OPORTUNIDAD_DE_PAGO}—, pero se escribe como un recálculo y no
+   * como un `if` sobre el arreglo porque la cascada se recorre para arriba y para
+   * abajo: quien pasa de una cartera donde la opción existe a una donde no, tiene que
+   * ver la lista corta, y al volver, la larga otra vez.
    *
-   * **Y si lo que estaba elegido ya no se ofrece, el filtro vuelve a «Todos».** Dejarlo
-   * puesto sería peor que mostrarlo: el desplegable diría una cosa mientras la consulta
-   * sigue filtrando por un resultado que la pantalla ya no lista.
+   * **Y si la opción escondida estaba elegida, el filtro vuelve a «Todos».** Dejarla
+   * puesta sería peor que mostrarla: el desplegable diría «Todos» mientras la consulta
+   * sigue filtrando por un resultado que la pantalla ya no ofrece.
    */
   private recalcularResultados(): void {
-    this.resultados = this.resultadosDelTramo();
+    const fuera = this.tramoSinOportunidadDePago()
+      ? ['OPORTUNIDAD DE PAGO']
+      : [];
 
-    if (!this.resultados.some(r => String(r.value) === this.selectedResultado)) {
+    this.resultados = RESULTADOS_EVALUABLES.filter(r => !fuera.includes(String(r.value)));
+
+    if (fuera.includes(this.selectedResultado)) {
       this.selectedResultado = '';
     }
   }
 
-  /**
-   * Qué tipificaciones ofrece esta combinación de monitoreo y cartera.
-   *
-   * Legacy conserva su lista de siempre, con OPORTUNIDAD DE PAGO escondida en los dos
-   * tramos por la razón de {@link TRAMOS_SIN_OPORTUNIDAD_DE_PAGO}.
-   *
-   * El discador parte por tramo, porque tipifican distinto: Tramo 3 y Tramo 5 abren el
-   * contacto directo en CON INTENCIÓN / SIN INTENCIÓN y agregan REFINANCIAMIENTO; propia
-   * y castigo se quedan con CONTACTO CON TITULAR O ENCARGADO. Ahí OPORTUNIDAD DE PAGO va
-   * en las dos listas: en el discador sí se usa en los tramos.
-   */
-  private resultadosDelTramo(): SelectOption[] {
-    if (this.modo === 'legacy') {
-      return this.tramoSinOportunidadDePago()
-        ? RESULTADOS_LEGACY.filter(r => r.value !== R_OPORTUNIDAD.value)
-        : RESULTADOS_LEGACY;
-    }
-    if (!this.selectedCartera) {
-      return RESULTADOS_SIN_TRAMO;
-    }
-    return this.esTramo3o5() ? RESULTADOS_TRAMOS : RESULTADOS_PROPIA;
-  }
-
   /** Si el tramo elegido es uno de los que no usan esa tipificación. */
   private tramoSinOportunidadDePago(): boolean {
-    // En el discador esta regla no aplica: allí sí se tipifica oportunidad de pago en
-    // los dos tramos —172 gestiones del 01 al 10 de septiembre— y esconderla borraría
-    // evaluaciones reales de la pantalla.
-    return this.cfg.ocultaOportunidadEnTramos && this.esTramo3o5();
-  }
-
-  /**
-   * Si lo elegido en la cascada es Tramo 3 o Tramo 5.
-   *
-   * Se miran los dos niveles porque el nombre del tramo vive en uno o en otro según el
-   * entorno: en la tabla histórica la cartera es 'FO_TRAMO 3' y la subcartera
-   * 'FO_TRAMO_3', pero en el catálogo de QAS hay subcarteras con nombre propio ('Lima')
-   * colgando de una cartera que sí se llama Tramo 3. Con los dos, la regla acierta en
-   * los dos árboles.
-   */
-  private esTramo3o5(): boolean {
+    // Se miran los dos niveles porque el nombre del tramo vive en uno o en otro según
+    // el entorno: en la tabla histórica la cartera es 'FO_TRAMO 3' y la subcartera
+    // 'FO_TRAMO_3', pero en el catálogo de QAS hay subcarteras con nombre propio
+    // ('Lima') colgando de una cartera que sí se llama Tramo 3. Con los dos, la regla
+    // acierta en los dos árboles.
     const cartera = this.carteras.find(c => c.value === this.selectedCartera);
     return [cartera?.label, this.nombreSubcartera()]
       .some(nombre => TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.includes(this.claveTramo(nombre)));
@@ -498,11 +394,6 @@ export class QualityMonitorComponent implements OnInit {
    * el mismo motivo: el mismo tramo aparece escrito de cuatro formas entre el catálogo
    * y la tabla histórica, y una comparación literal acertaría solo con una de ellas.
    */
-  /** Si una cartera o subcartera del catálogo tiene historia en este monitoreo. */
-  private viveEnEsteModo(nombre: string | undefined | null): boolean {
-    return !this.cfg.carterasFuera.includes(this.claveTramo(nombre));
-  }
-
   private claveTramo(nombre: string | number | undefined | null): string {
     return String(nombre ?? '')
       .toUpperCase()
@@ -558,17 +449,13 @@ export class QualityMonitorComponent implements OnInit {
   }
 
   private fijarSemana(offset: number, consultar = true): void {
-    // El ancla es el último día que este monitoreo puede mostrar. En el discador es hoy,
-    // como en cualquier pantalla; en legacy es el 31/08, porque con el módulo congelado
-    // «la última semana» es la última que tiene datos y no la del calendario. Anclado en
-    // hoy, los dos botones movían el rango dentro de un mes sin ninguna fila.
-    const ancla = new Date(`${this.maxCalendario}T00:00:00`);
-    // getDay(): 0 es domingo. El lunes de esa semana queda a -6 si cae domingo.
-    const diaSemana = ancla.getDay();
+    const hoy = new Date();
+    // getDay(): 0 es domingo. El lunes de la semana en curso queda a -6 el domingo.
+    const diaSemana = hoy.getDay();
     const aLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
 
-    const lunes = new Date(ancla);
-    lunes.setDate(ancla.getDate() + aLunes + offset * 7);
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() + aLunes + offset * 7);
 
     const viernes = new Date(lunes);
     viernes.setDate(lunes.getDate() + 4);
@@ -970,30 +857,11 @@ export class QualityMonitorComponent implements OnInit {
    */
   get maxHasta(): string {
     if (!this.desde) {
-      return this.maxCalendario;
+      return '';
     }
     const tope = new Date(`${this.desde}T00:00:00`);
     tope.setDate(tope.getDate() + MAX_DIAS - 1);
-    // El más chico de los dos topes: el ancho de la matriz y el fin de la historia de
-    // este monitoreo. Comparar strings 'YYYY-MM-DD' alcanza, que es como las ordena el
-    // propio input.
-    const porAncho = this.comoIso(tope);
-    return porAncho < this.maxCalendario ? porAncho : this.maxCalendario;
-  }
-
-  /**
-   * El último día seleccionable del monitoreo, para el `max` de los dos calendarios.
-   *
-   * En legacy es el fin del histórico. En el discador es hoy: no hay techo declarado y
-   * dejar elegir mañana solo puede devolver una matriz vacía.
-   */
-  get maxCalendario(): string {
-    return this.cfg.hasta ?? this.comoIso(new Date());
-  }
-
-  /** El primer día seleccionable, o cadena vacía si este monitoreo no tiene piso. */
-  get minCalendario(): string {
-    return this.cfg.desde ?? '';
+    return this.comoIso(tope);
   }
 
   // ------------------------------------------------------------------ paginado de la matriz
