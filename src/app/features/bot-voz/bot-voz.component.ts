@@ -1,16 +1,110 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { A11yModule } from '@angular/cdk/a11y';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas,
 } from './bot-voz.service';
 
+/** Una pastilla de la pantalla de Llamadas, ya con su cuenta. */
+interface Pastilla {
+  clave: string;
+  etiqueta: string;
+  tono: string;
+  ayuda: string;
+  familia: 'como' | 'que';
+  n: number;
+  fijo: boolean;
+}
+
+/** Una columna de Contactabilidad: se cuenta, no se filtra. */
+interface ColumnaContacto {
+  clave: string;
+  etiqueta: string;
+  ayuda: string;
+  n: number;
+  pct: string;
+  alto: number;
+  barra: string;
+  tonoTexto: string;
+}
+
+interface Contactabilidad {
+  columnas: ColumnaContacto[];
+  noContestaron: number;
+  contestaron: number;
+  conversaron: number;
+  pctHablaron: string;
+  fallaron: number;
+  resumen: string;
+}
+
+/** Un grupo de pastillas de «Qué salió», con su total. */
+interface CapsulaQue {
+  clave: string;
+  etiqueta: string;
+  tono: string;
+  n: number;
+  pastillas: Pastilla[];
+}
+
+interface Vueltas {
+  total: number;
+  filas: { clave: string; etiqueta: string; sub: string; n: number; pct: string; muestra: string }[];
+  segmentos: { clave: string; dash: string; offset: number; trazo: string }[];
+  resumen: string;
+}
+
+/**
+ * Clases que se repiten en las pantallas del bot, con el sistema de Gestión de Tenores.
+ *
+ * El CSS global del tema claro pisa inputs, encabezados y algunas utilidades (`p-3`,
+ * `mt-2`...), y como no está en una capa gana a Tailwind: por eso los colores van en
+ * hexadecimal y los controles con `!`. Cuando una pieza necesita otro ancho o relleno
+ * se envuelve o tiene su variante, no se le suma una utilidad que choque con la suya.
+ */
+const CLASES = {
+  etiqueta: 'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
+  subetiqueta: 'text-[12.5px] font-semibold text-[#334155] dark:text-slate-300',
+  ayuda: 'text-[12px] leading-snug text-[#5f6c80] dark:text-slate-400',
+  campo: 'h-[38px] w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] text-[13px] !text-[#0f172a] placeholder:text-[#5f6c80] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:placeholder:text-slate-400 dark:disabled:!bg-slate-900',
+  campoBuscar: 'h-[38px] w-full rounded-lg border !border-[#8491a3] !bg-white pl-[35px] pr-3 text-[13.5px] !text-[#0f172a] placeholder:text-[#5f6c80] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:placeholder:text-slate-400',
+  select: 'h-[38px] w-full appearance-none rounded-lg border !border-[#8491a3] !bg-white pl-[11px] pr-8 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:disabled:!bg-slate-900 dark:disabled:!text-slate-400',
+  flechaSelect: 'pointer-events-none absolute right-[11px] top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400',
+  botonPrimario: 'inline-flex h-[38px] items-center justify-center gap-[7px] whitespace-nowrap rounded-lg bg-[#0f172a] px-4 text-[13.5px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:!text-slate-900 dark:hover:bg-slate-200',
+  botonPrimarioChico: 'inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] bg-[#0f172a] px-3 text-[12.5px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:!text-slate-900 dark:hover:bg-slate-200',
+  botonSecundario: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  botonSecundarioAlto: 'inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#8491a3] bg-white px-3.5 text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  botonIcono: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  botonIconoPeligro: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white !text-[#b91c1c] transition-colors hover:bg-[#fdecec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-red-400 dark:hover:bg-red-950/40',
+  botonIniciar: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] bg-[#15803d] px-3 text-[12.5px] font-semibold !text-white transition-colors hover:bg-[#166534] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2',
+  botonPausar: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#e9c46a] bg-[#fdf2dc] px-3 text-[12.5px] font-semibold !text-[#92400e] transition-colors hover:bg-[#fbe7bd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-amber-800 dark:bg-amber-950/50 dark:!text-amber-300 dark:hover:bg-amber-950',
+  enlace: 'inline-flex items-center gap-1 text-[12.5px] font-semibold !text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:!text-blue-400',
+  cerrar: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] !text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:!text-slate-400 dark:hover:bg-slate-800',
+  tarjeta: 'flex flex-col gap-3.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900',
+  tituloPaso: '!m-0 flex items-center gap-2 text-[15px] font-bold',
+  paso: 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0f172a] text-[11.5px] font-bold !text-white dark:bg-white dark:!text-slate-900',
+  chip: 'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-[#f4f6f9] px-2.5 text-xs font-semibold text-[#334155] dark:bg-slate-800 dark:text-slate-300',
+  chipAzul: 'inline-flex h-6 items-center whitespace-nowrap rounded-full bg-[#eff5ff] px-2.5 text-xs font-semibold text-[#1d4ed8] dark:bg-blue-950 dark:text-blue-300',
+  chipAviso: 'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-[#fdf2dc] px-2.5 text-xs font-semibold text-[#b45309] dark:bg-amber-950/50 dark:text-amber-300',
+  aviso: 'flex items-start gap-2 rounded-lg bg-[#fdf2dc] px-3 py-2.5 text-[12.5px] leading-snug text-[#92400e] dark:bg-amber-950/40 dark:text-amber-300',
+  info: 'flex items-start gap-2 rounded-lg bg-[#eff5ff] px-3 py-2.5 text-[12.5px] leading-snug text-[#1e40af] dark:bg-blue-950/40 dark:text-blue-300',
+  error: 'text-[12.5px] font-semibold text-[#b91c1c] dark:text-red-400',
+  th: 'whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400',
+  thDerecha: 'whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400',
+  td: 'border-b border-[#eef1f5] px-3 py-2.5 align-top text-[13px] dark:border-slate-800',
+  dato: 'flex flex-col gap-0.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40',
+  datoTitulo: 'text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
+  datoValor: 'text-[15px] font-bold tabular-nums',
+  fondo: 'fundir fixed inset-0 z-40 bg-[#0f172a]/45 backdrop-blur-[2px]',
+} as const;
+
 @Component({
   selector: 'app-bot-voz',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, A11yModule],
   templateUrl: './bot-voz.component.html',
   styleUrls: ['./bot-voz.component.css'],
 })
@@ -24,6 +118,189 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * colas de los demas. Esos numeros se editan hoy dentro de cada cola.
    */
   vista: 'colas' | 'tonos' | 'reglas' | 'llamadas' = 'colas';
+
+  /** Las clases compartidas, para la plantilla. */
+  readonly ui = CLASES;
+
+  /** Las pestañas de la cabecera, en el orden en que se usan. */
+  readonly pestanas: ReadonlyArray<{ valor: 'colas' | 'tonos' | 'reglas' | 'llamadas';
+                                     texto: string; icono: string }> = [
+    { valor: 'colas', texto: 'Colas', icono: 'layers' },
+    { valor: 'llamadas', texto: 'Llamadas', icono: 'phone-call' },
+    { valor: 'tonos', texto: 'Voces y tonos', icono: 'mic' },
+    { valor: 'reglas', texto: 'Reglas', icono: 'clipboard-list' },
+  ];
+
+  /** Los tres objetivos posibles de una cola, para las opciones del formulario. */
+  readonly objetivosForm = [
+    { valor: 'RECORDATORIO', titulo: 'Recordar una cuota que está por vencer',
+      ayuda: 'No negocia ni ofrece descuentos: solo avisa de la fecha.' },
+    { valor: 'CREACION', titulo: 'Negociar una cuota que ya venció',
+      ayuda: 'Ofrece las rebajas configuradas hasta cerrar una promesa nueva.' },
+    { valor: 'PRIMER_CONTACTO', titulo: 'Abrir la primera promesa de un cliente',
+      ayuda: 'Clientes de la subcartera que nunca han pactado nada.' },
+  ] as const;
+
+  /** Pestaña: pulsar la que ya está abierta no hace nada. `abrir` la trataba como ida y vuelta. */
+  irAVista(v: 'colas' | 'tonos' | 'reglas' | 'llamadas'): void {
+    if (this.vista !== v) this.abrir(v);
+  }
+
+  /** Escape cierra lo que esté encima: la llamada, el formulario o el detalle de la cola. */
+  @HostListener('document:keydown.escape')
+  alPulsarEscape(): void {
+    if (this.sesionAbierta) this.cerrarDetalle();
+    else if (this.modalCola) this.cerrarModalCola();
+    else if (this.detalleDe != null) this.cerrarDetalleCola();
+  }
+
+  /** La cola cuyo detalle está abierto en el panel lateral. */
+  get colaEnDetalle(): BotCola | undefined {
+    return this.detalleDe == null ? undefined : this.colas.find((c) => c.id === this.detalleDe);
+  }
+
+  cerrarDetalleCola(): void {
+    this.detalleDe = undefined;
+  }
+
+  // ----- Horario: nada, un horario o varias franjas -----
+
+  /** Las filas de horario del formulario. Vacío = la ventana legal entera. */
+  franjasForm: { desde: string; hasta: string }[] = [];
+
+  anadirFranja(): void {
+    const ultima = this.franjasForm[this.franjasForm.length - 1];
+    this.franjasForm = [...this.franjasForm, { desde: ultima?.hasta || '', hasta: '' }];
+  }
+
+  quitarFranja(i: number): void {
+    this.franjasForm = this.franjasForm.filter((_, j) => j !== i);
+  }
+
+  /** Los tramos guardados de una cola; vacío si llama en un solo horario. */
+  tramosDe(c: BotCola): { desde: string; hasta: string }[] {
+    if (!c.franjas) return [];
+    return c.franjas.split(',').map((t) => {
+      const [desde, hasta] = t.trim().split('-');
+      return { desde: this.hhmm(desde), hasta: this.hhmm(hasta) };
+    });
+  }
+
+  /** El horario de una cola en una línea, para la tarjeta y el detalle. */
+  textoHorario(c: BotCola): string {
+    const tramos = this.tramosDe(c);
+    if (tramos.length) return tramos.map((t) => `${t.desde}–${t.hasta}`).join(' · ');
+    if (c.horaInicio || c.horaFin) {
+      return `${this.hhmm(c.horaInicio || this.config?.horaInicio)}–${this.hhmm(c.horaFin || this.config?.horaFin)}`;
+    }
+    return 'Horario general';
+  }
+
+  /**
+   * Por qué no se puede guardar el horario, o vacío si vale.
+   *
+   * Un extremo vacío vale lo mismo que el tope legal, igual que en el backend, que lo
+   * vuelve a comprobar al guardar.
+   */
+  problemaFranjas(): string {
+    const tramos = this.franjasForm
+      .filter((f) => f.desde || f.hasta)
+      .map((f) => ({ desde: f.desde || this.topeHoraInicio, hasta: f.hasta || this.topeHoraFin }))
+      .sort((a, b) => a.desde.localeCompare(b.desde));
+    for (let i = 0; i < tramos.length; i++) {
+      if (tramos[i].desde >= tramos[i].hasta) {
+        const que = tramos.length > 1 ? 'La franja' : 'El horario';
+        return `${que} ${tramos[i].desde}–${tramos[i].hasta} tiene que empezar antes de acabar.`;
+      }
+      if (i > 0 && tramos[i].desde < tramos[i - 1].hasta) return 'Las franjas no pueden solaparse.';
+    }
+    return '';
+  }
+
+  /** Vuelca el formulario en la cola: 0 filas = ventana legal, 1 = horario único, 2 o más = franjas. */
+  private volcarFranjas(c: BotCola): void {
+    const filas = this.franjasForm.filter((f) => f.desde || f.hasta);
+    if (filas.length <= 1) {
+      c.horaInicio = filas[0]?.desde || null;
+      c.horaFin = filas[0]?.hasta || null;
+      c.franjas = null;
+      return;
+    }
+    const tramos = filas
+      .map((f) => ({ desde: f.desde || this.topeHoraInicio, hasta: f.hasta || this.topeHoraFin }))
+      .sort((a, b) => a.desde.localeCompare(b.desde));
+    c.franjas = tramos.map((t) => `${t.desde}-${t.hasta}`).join(',');
+    c.horaInicio = tramos[0].desde;
+    c.horaFin = tramos[tramos.length - 1].hasta;
+  }
+
+  // ----- Presentación -----
+
+  /** Clases de la insignia de estado de una cola. El texto va siempre: el color solo no basta. */
+  claseEstado(clase: string): string {
+    const base = 'inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-semibold';
+    const tonos: Record<string, string> = {
+      'st-discando': 'bg-[#e8f6ee] text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300',
+      'st-espera': 'bg-[#eff5ff] text-[#1d4ed8] dark:bg-blue-950/60 dark:text-blue-300',
+      'st-alerta': 'bg-[#fdf2dc] text-[#b45309] dark:bg-amber-950/50 dark:text-amber-300',
+      'st-pausada': 'bg-[#eef2f7] text-[#475569] dark:bg-slate-800 dark:text-slate-300',
+      'st-borrador': 'bg-[#eef2f7] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400',
+    };
+    return `${base} ${tonos[clase] ?? tonos['st-pausada']}`;
+  }
+
+  /** Clases de una pastilla de Llamadas según su tono y si está elegida. */
+  clasePastilla(tono: string, activa: boolean): string {
+    const base = 'inline-flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]';
+    if (activa) {
+      return `${base} border-[#0f172a] bg-[#0f172a] !text-white dark:border-white dark:bg-white dark:!text-slate-900`;
+    }
+    const tonos: Record<string, string> = {
+      ok: 'border-[#bfe5cc] bg-[#eaf7ef] !text-[#166534] hover:bg-[#dcf1e4] dark:border-emerald-900 dark:bg-emerald-950/40 dark:!text-emerald-300',
+      aviso: 'border-[#f1dcae] bg-[#fdf6e7] !text-[#92400e] hover:bg-[#fbecc9] dark:border-amber-900 dark:bg-amber-950/40 dark:!text-amber-300',
+      malo: 'border-[#f5c2c2] bg-[#fdecec] !text-[#b91c1c] hover:bg-[#fadcdc] dark:border-red-900 dark:bg-red-950/40 dark:!text-red-300',
+      gris: 'border-[#d5dbe3] bg-white !text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200',
+    };
+    return `${base} ${tonos[tono] ?? tonos['gris']}`;
+  }
+
+  /** Clases de una insignia pequeña según su tono. */
+  claseInsignia(tono: string): string {
+    const base = 'inline-flex h-[22px] items-center whitespace-nowrap rounded-full px-2 text-[11.5px] font-semibold';
+    const tonos: Record<string, string> = {
+      ok: 'bg-[#e8f6ee] text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300',
+      aviso: 'bg-[#fdf2dc] text-[#b45309] dark:bg-amber-950/50 dark:text-amber-300',
+      malo: 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/40 dark:text-red-300',
+      gris: 'bg-[#eef2f7] text-[#475569] dark:bg-slate-800 dark:text-slate-300',
+    };
+    return `${base} ${tonos[tono] ?? tonos['gris']}`;
+  }
+
+  /**
+   * Cómo terminó una llamada, sin fingir una conversación que no hubo.
+   *
+   * Si el cliente habló se mira en sus turnos (`hablo`), no en el estado: quien cuelga
+   * tras el saludo acaba COMPLETADA igual que una conversación entera.
+   */
+  comoTermino(s: BotSesion): { texto: string; tono: string } {
+    const e = (s.estado || '').toUpperCase();
+    if (e === 'BUZON') return { texto: 'Buzón', tono: 'gris' };
+    if (e === 'NO_CONTESTA') return { texto: 'No contestó', tono: 'gris' };
+    if (e === 'OCUPADO') return { texto: 'Ocupado', tono: 'gris' };
+    if (e === 'ERROR') return { texto: 'Falló', tono: 'malo' };
+    if (s.hablo === false) return { texto: 'No habló', tono: 'aviso' };
+    if (s.hablo === true) return { texto: e === 'COLGO_CLIENTE' ? 'Colgó' : 'Conversó', tono: 'ok' };
+    return { texto: e ? e.replace(/_/g, ' ').toLowerCase() : '—', tono: 'gris' };
+  }
+
+  /** Qué se consiguió, solo si hubo con quién hablar. Sin conversación no hay resultado. */
+  queSeConsiguio(s: BotSesion): string {
+    if (s.hablo === false) return '—';
+    const r = (s.resultadoNegocio || '').toUpperCase();
+    if (!r) return '—';
+    const g = BotVozComponent.GRUPOS.find((x) => x.familia === 'que' && x.resultados?.includes(r));
+    return g ? g.etiqueta : r.replace(/_/g, ' ').toLowerCase();
+  }
 
   // ----- Colas y tonos -----
   colas: BotCola[] = [];
@@ -297,45 +574,54 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Las pastillas de la pantalla de llamadas -----
   //
-  // La tabla contesta "que paso en ESTA llamada" y no contesta lo primero que se
-  // pregunta al abrirla: cuantas contestaron y cuantas dejaron algo. Eso estaba solo
-  // en el total entre parentesis del titulo.
+  // Dos preguntas, no una lista de contadores:
+  //   - CÓMO TERMINÓ. Si habló el cliente se mira en sus turnos, no en el estado: quien
+  //     cuelga tras el saludo acaba COMPLETADA, y sin intención la sesión se guarda como
+  //     SIN_COMPROMISO, así que por estado contaba como conversación.
+  //   - QUÉ SE CONSIGUIÓ, solo entre las que conversaron: "sin compromiso" solo dice algo
+  //     si hubo alguien con quien comprometerse.
   //
-  // Dos familias, y no una lista de dieciseis contadores:
-  //   - COMO ACABO la llamada, que sale de `estado` y lo pone el micro.
-  //   - QUE SE SACO, que sale de `resultadoNegocio` (la taxonomia del clasificador).
-  // Una llamada contestada cuenta en las dos, a proposito: son dos preguntas, no dos
-  // trozos de la misma tarta.
-  //
-  // Se pintan clicando: una pastilla que solo enseña un numero es justo lo que se
-  // quito de los filtros de la cola por confuso. Clicando filtra la tabla, y vuelve a
-  // clicarse para quitarlo.
-  //
-  // Las que salen a cero no se pintan. Con seis resultados posibles y llamadas de una
-  // sola clase, la fila se llenaria de ceros que no dicen nada.
+  // Clicar una pastilla filtra la tabla en el servidor con el mismo criterio con que se
+  // cuenta; volver a clicarla lo quita.
   private static readonly GRUPOS: { clave: string; etiqueta: string; tono: string;
-                                    estados?: string[]; resultados?: string[] }[] = [
-    // Como acabo. La primera se llamaba "Contestó" y dejaba fuera los buzones, que
-    // TAMBIEN descolgaron: la pantalla decia "Contestó 3" cuando 65 lineas habian
-    // descolgado. Ahora dice lo que cuenta —que habló una persona— y el dato de
-    // cuantas descolgaron va aparte, en la linea de totales.
-    { clave: 'hablo',      etiqueta: 'Habló una persona', tono: 'ok',
-      estados: ['COMPLETADA', 'COLGO_CLIENTE'] },
-    { clave: 'nocontesto', etiqueta: 'No contestó',   tono: 'gris',
-      estados: ['NO_CONTESTA', 'OCUPADO'] },
-    { clave: 'buzon',      etiqueta: 'Buzón',         tono: 'gris',   estados: ['BUZON'] },
-    { clave: 'error',      etiqueta: 'Falló',         tono: 'malo',   estados: ['ERROR'] },
-    // Que se saco
-    { clave: 'promesa',    etiqueta: 'Con promesa',   tono: 'ok',
-      resultados: ['ACUERDA_PAGO', 'CONFIRMA_PAGO'] },
-    { clave: 'yapago',     etiqueta: 'Ya pagó',       tono: 'ok',     resultados: ['YA_PAGO'] },
-    { clave: 'asesor',     etiqueta: 'Pide asesor',   tono: 'aviso',  resultados: ['PIDE_ASESOR'] },
-    { clave: 'reclamo',    etiqueta: 'Reclamo',       tono: 'aviso',  resultados: ['RECLAMO'] },
-    { clave: 'reprograma', etiqueta: 'Reprogramar',   tono: 'aviso',
-      resultados: ['PIDE_REPROGRAMAR', 'PIDE_CANCELAR'] },
-    { clave: 'nopuede',    etiqueta: 'No puede',      tono: 'gris',   resultados: ['NO_PUEDE'] },
-    { clave: 'notitular',  etiqueta: 'No es titular', tono: 'gris',   resultados: ['NO_ES_TITULAR'] },
-    { clave: 'sinnada',    etiqueta: 'Sin compromiso', tono: 'gris',  resultados: ['SIN_COMPROMISO'] },
+                                    familia: 'como' | 'que'; ayuda: string;
+                                    estados?: string[]; resultados?: string[];
+                                    hablo?: boolean }[] = [
+    { clave: 'conversa',   familia: 'como', etiqueta: 'Conversó',            tono: 'ok',
+      hablo: true, ayuda: 'El cliente dijo algo en la llamada.' },
+    { clave: 'sinhablar',  familia: 'como', etiqueta: 'Descolgó y no habló', tono: 'aviso',
+      estados: ['COMPLETADA', 'COLGO_CLIENTE'], hablo: false,
+      ayuda: 'Descolgó pero no dijo nada: colgó tras el saludo o la línea estaba muda.' },
+    { clave: 'buzon',      familia: 'como', etiqueta: 'Buzón',       tono: 'gris',
+      estados: ['BUZON'], ayuda: 'Contestó una contestadora.' },
+    { clave: 'nocontesto', familia: 'como', etiqueta: 'No contestó', tono: 'gris',
+      estados: ['NO_CONTESTA', 'OCUPADO'], ayuda: 'No descolgó o estaba ocupado.' },
+    { clave: 'error',      familia: 'como', etiqueta: 'Falló',       tono: 'malo',
+      estados: ['ERROR'], ayuda: 'La llamada se cortó por un error del sistema.' },
+    { clave: 'promesa',    familia: 'que', etiqueta: 'Con promesa',       tono: 'ok',    hablo: true,
+      resultados: ['ACUERDA_PAGO', 'CONFIRMA_PAGO'], ayuda: 'Cerró una promesa de pago.' },
+    { clave: 'sincerrar',  familia: 'que', etiqueta: 'Aceptó sin cerrar', tono: 'aviso', hablo: true,
+      resultados: ['ACEPTA_SIN_CERRAR'], ayuda: 'Dijo que sí, pero colgó antes de confirmar el cronograma.' },
+    { clave: 'yapago',     familia: 'que', etiqueta: 'Ya pagó',           tono: 'ok',    hablo: true,
+      resultados: ['YA_PAGO'], ayuda: 'Dice que ya pagó.' },
+    { clave: 'sinnada',    familia: 'que', etiqueta: 'Sin compromiso',    tono: 'gris',  hablo: true,
+      resultados: ['SIN_COMPROMISO'], ayuda: 'Habló, pero no se comprometió a nada.' },
+    { clave: 'nopuede',    familia: 'que', etiqueta: 'No puede pagar',    tono: 'gris',  hablo: true,
+      resultados: ['NO_PUEDE'], ayuda: 'Dice que no puede pagar.' },
+    { clave: 'reprograma', familia: 'que', etiqueta: 'Reprogramar',       tono: 'aviso', hablo: true,
+      resultados: ['PIDE_REPROGRAMAR', 'PIDE_CANCELAR'], ayuda: 'Pide mover o cancelar lo pactado.' },
+    { clave: 'asesor',     familia: 'que', etiqueta: 'Pide asesor',       tono: 'aviso', hablo: true,
+      resultados: ['PIDE_ASESOR'], ayuda: 'Quiere hablar con una persona.' },
+    { clave: 'reclamo',    familia: 'que', etiqueta: 'Reclamo',           tono: 'aviso', hablo: true,
+      resultados: ['RECLAMO'], ayuda: 'Reclama la deuda.' },
+    { clave: 'colgo',      familia: 'que', etiqueta: 'Colgó a mitad',     tono: 'gris',  hablo: true,
+      resultados: ['COLGO_CLIENTE'], ayuda: 'Colgó en mitad de la conversación.' },
+    { clave: 'notitular',  familia: 'que', etiqueta: 'No es el titular',  tono: 'gris',  hablo: true,
+      resultados: ['NO_ES_TITULAR'], ayuda: 'Contestó otra persona.' },
+    { clave: 'equivocado', familia: 'que', etiqueta: 'Número equivocado', tono: 'gris',  hablo: true,
+      resultados: ['NUMERO_EQUIVOCADO'], ayuda: 'El número no es del titular.' },
+    { clave: 'fallecido',  familia: 'que', etiqueta: 'Fallecido',         tono: 'malo',  hablo: true,
+      resultados: ['FALLECIDO'], ayuda: 'Informan que el titular falleció.' },
   ];
 
   /** La pastilla clicada, o null cuando se ven todas las llamadas. */
@@ -459,8 +745,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private encaja(s: BotSesion, clave: string): boolean {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === clave);
     if (!g) return true;
+    if (g.hablo !== undefined && s.hablo != null && s.hablo !== g.hablo) return false;
     if (g.estados) return g.estados.includes((s.estado || '').toUpperCase());
-    return (g.resultados || []).includes((s.resultadoNegocio || '').toUpperCase());
+    if (g.resultados) return g.resultados.includes((s.resultadoNegocio || '').toUpperCase());
+    return true;
   }
 
   /** Los totales del día que devuelve el backend. Null mientras no hayan llegado. */
@@ -470,6 +758,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
   set resumenLlamadas(r: ResumenLlamadas | null) {
     this._resumenLlamadas = r;
     this.pastillasLlamadas = this.calcularPastillas(r);
+    this.pastillasComo = this.pastillasLlamadas.filter((p) => p.familia === 'como');
+    this.pastillasQue = this.pastillasLlamadas.filter((p) => p.familia === 'que');
+    this.capsulasQue = this.agruparCapsulas(this.pastillasQue);
+    this.contacto = this.calcularContacto(r);
   }
 
   /**
@@ -485,23 +777,25 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * Los números salen del RESUMEN del día, no de las llamadas cargadas: contando sobre
    * las 100 de la tabla, el número encogía solo según entraban llamadas nuevas.
    */
-  pastillasLlamadas: { clave: string; etiqueta: string; tono: string; n: number;
-                       fijo: boolean }[] = [];
+  pastillasLlamadas: Pastilla[] = [];
+  /** Las dos filas de la pantalla, separadas aquí y no en la plantilla por lo mismo. */
+  pastillasComo: Pastilla[] = [];
+  pastillasQue: Pastilla[] = [];
 
-  private calcularPastillas(r: ResumenLlamadas | null) {
+  private calcularPastillas(r: ResumenLlamadas | null): Pastilla[] {
     if (!r) return [];
+    const resultados = r.porResultadoConversacion ?? r.porResultado ?? {};
     return BotVozComponent.GRUPOS
       .map((g) => {
-        const fuente = g.estados ? r.porEstado : r.porResultado;
-        const claves = g.estados ?? g.resultados ?? [];
-        const n = claves.reduce((a, k) => a + (fuente?.[k] ?? 0), 0);
-        // `fijo`: las de COMO ACABO se pintan siempre, tambien a cero. Con las colas
-        // paradas el dia entero salian todas a cero, se filtraban todas y la fila de
-        // pastillas desaparecia entera —con ella el resumen del dia—, que es justo lo
-        // que el supervisor abre a mirar cuando el discador no esta marcando. Son
-        // cuatro y son excluyentes: cuatro ceros se leen como "hoy no se llamo".
-        // Las de QUE SE SACO siguen ocultandose a cero: ahi si serian ruido.
-        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, n, fijo: !!g.estados };
+        let n: number;
+        if (g.clave === 'conversa') n = r.conversaron ?? 0;
+        else if (g.clave === 'sinhablar') n = r.sinHablar ?? 0;
+        else if (g.estados) n = g.estados.reduce((a, k) => a + (r.porEstado?.[k] ?? 0), 0);
+        else n = (g.resultados ?? []).reduce((a, k) => a + (resultados[k] ?? 0), 0);
+        // Las de cómo terminó se pintan siempre, también a cero: son las que dicen si se
+        // llamó. Las de qué se consiguió se ocultan a cero, donde solo serían ruido.
+        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, ayuda: g.ayuda,
+                 familia: g.familia, n, fijo: g.familia === 'como' };
       })
       .filter((p) => p.fijo || p.n > 0);
   }
@@ -509,10 +803,155 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Sin esto el *ngFor tampoco reutiliza las filas aunque el array no cambie. */
   trackPastilla(_: number, p: { clave: string }): string { return p.clave; }
 
-  /** Cuántas descolgaron: la persona y el buzón, que también descolgó. */
-  get descolgaron(): number {
-    const e = this.resumenLlamadas?.porEstado ?? {};
-    return ['COMPLETADA', 'COLGO_CLIENTE', 'BUZON'].reduce((a, k) => a + (e[k] ?? 0), 0);
+  /** Miles con punto, como en el diseño: 1.455. */
+  miles(n: number | null | undefined): string {
+    return String(Math.round(n ?? 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  /** Porcentaje con un decimal y coma: 58,2 %. */
+  private porcentaje(n: number, total: number): string {
+    return total ? `${((n / total) * 100).toFixed(1).replace('.', ',')} %` : '—';
+  }
+
+  /**
+   * Contactabilidad en cuatro columnas que no se pisan.
+   *
+   * El buzón NO cuenta como contestada: el AMD lo cuelga sin dejar mensaje —también a
+   * quien descuelga y calla los primeros 6 s— y la cola lo vuelve a marcar en la vuelta
+   * siguiente (`IntencionBot.BUZON` es reintentable). Antes se sumaba en «descolgaron».
+   */
+  contacto: Contactabilidad = this.calcularContacto(null);
+
+  private calcularContacto(r: ResumenLlamadas | null): Contactabilidad {
+    const e = r?.porEstado ?? {};
+    const total = r?.total ?? 0;
+    const noDescolgaron = (e['NO_CONTESTA'] ?? 0) + (e['OCUPADO'] ?? 0);
+    const buzon = e['BUZON'] ?? 0;
+    const sinHablar = r?.sinHablar ?? 0;
+    const conversaron = r?.conversaron ?? 0;
+    const base = [
+      { clave: 'nodescolgaron', etiqueta: 'No descolgaron', ayuda: 'No contestó o daba ocupado', n: noDescolgaron,
+        barra: 'bg-[#cbd5e1] dark:bg-slate-600', tonoTexto: '' },
+      { clave: 'buzon', etiqueta: 'Buzón', ayuda: 'Contestadora, o calló los primeros 6 s', n: buzon,
+        barra: 'bg-[#64748b] dark:bg-slate-400', tonoTexto: '' },
+      { clave: 'sinhablar', etiqueta: 'Descolgaron y no hablaron', ayuda: 'Línea muda, silencio o colgó sin hablar', n: sinHablar,
+        barra: 'bg-[#d97706] dark:bg-amber-400', tonoTexto: 'text-[#92400e] dark:text-amber-300' },
+      { clave: 'conversaron', etiqueta: 'Conversaron', ayuda: 'El cliente dijo algo', n: conversaron,
+        barra: 'bg-[#15803d] dark:bg-emerald-400', tonoTexto: 'text-[#15803d] dark:text-emerald-400' },
+    ];
+    const mayor = Math.max(1, ...base.map((b) => b.n));
+    const contestaron = sinHablar + conversaron;
+    return {
+      columnas: base.map((b) => ({ ...b, pct: this.porcentaje(b.n, total),
+                                   alto: b.n ? Math.max(3, Math.round((150 * b.n) / mayor)) : 0 })),
+      noContestaron: noDescolgaron + buzon,
+      contestaron,
+      conversaron,
+      pctHablaron: this.porcentaje(conversaron, contestaron),
+      fallaron: e['ERROR'] ?? 0,
+      resumen: `De ${this.miles(total)} marcadas: ${this.miles(noDescolgaron)} no descolgaron, ${this.miles(buzon)} buzón, `
+             + `${this.miles(sinHablar)} descolgaron y no hablaron y ${this.miles(conversaron)} conversaron.`,
+    };
+  }
+
+  /**
+   * Las pastillas de «Qué salió», en cuatro grupos según cómo las trata el backend.
+   * «Para retomar» son las que `IntencionBot` marca con requiereSeguimiento.
+   */
+  private static readonly CAPSULAS: { clave: string; etiqueta: string; tono: string; claves: string[] }[] = [
+    { clave: 'promesa', etiqueta: 'Promesa', tono: 'text-[#15803d] dark:text-emerald-400', claves: ['promesa', 'yapago'] },
+    { clave: 'retomar', etiqueta: 'Para retomar', tono: 'text-[#b45309] dark:text-amber-300',
+      claves: ['sincerrar', 'reclamo', 'reprograma', 'asesor', 'fallecido'] },
+    { clave: 'sinavance', etiqueta: 'Sin avance', tono: 'text-[#334155] dark:text-slate-300', claves: ['sinnada', 'nopuede', 'colgo'] },
+    { clave: 'titular', etiqueta: 'No era el titular', tono: 'text-[#334155] dark:text-slate-300', claves: ['notitular', 'equivocado'] },
+  ];
+
+  /** Campo y no getter, por lo mismo que las pastillas: si se recrean, no se pueden clicar. */
+  capsulasQue: CapsulaQue[] = [];
+
+  private agruparCapsulas(pastillas: Pastilla[]): CapsulaQue[] {
+    return BotVozComponent.CAPSULAS
+      .map((g) => {
+        const de = pastillas.filter((p) => g.claves.includes(p.clave)).sort((a, b) => b.n - a.n);
+        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, n: de.reduce((a, p) => a + p.n, 0), pastillas: de };
+      })
+      .filter((g) => g.pastillas.length > 0);
+  }
+
+  /** «1.455 llamadas · cola Castigo · 07/09». */
+  get subtituloLlamadas(): string {
+    const n = this.resumenLlamadas ? this.resumenLlamadas.total : this.sesiones.length;
+    const cola = this.colasFiltro.find((c) => c.id === this.colaLlamadas);
+    const dia = this.fechaLlamadas ? this.fechaLlamadas.split('-').reverse().slice(0, 2).join('/') : 'todos los días';
+    return [`${this.miles(n)} llamadas`, cola ? `cola ${cola.nombre}` : 'todas las colas', dia].join(' · ');
+  }
+
+  /**
+   * Cuántas llamadas lleva cada cliente de la cola elegida.
+   *
+   * No hay contador en el backend: se cuenta sobre las filas de la cola por `intentos`.
+   * Como eso baja la cola entera, no se repite en cada refresco de la pantalla: solo al
+   * cambiar de cola o pasado un minuto.
+   */
+  vueltas: Vueltas | null = null;
+  errorVueltas = false;
+  private vueltasDe: number | null = null;
+  private vueltasAt = 0;
+
+  private cargarVueltas(): void {
+    const id = this.colaLlamadas;
+    if (id == null) { this.vueltas = null; this.vueltasDe = null; this.errorVueltas = false; return; }
+    if (this.vueltasDe === id && Date.now() - this.vueltasAt < 60_000) return;
+    if (this.vueltasDe !== id) { this.vueltas = null; this.errorVueltas = false; }
+    this.vueltasDe = id;
+    this.vueltasAt = Date.now();
+    this.svc.getCola(id).subscribe({
+      next: (filas) => {
+        if (this.colaLlamadas !== id) return;
+        this.vueltas = this.calcularVueltas(filas);
+        this.errorVueltas = false;
+      },
+      error: () => {
+        if (this.colaLlamadas !== id) return;
+        this.errorVueltas = true;
+        this.vueltasAt = 0;
+      },
+    });
+  }
+
+  private calcularVueltas(filas: BotContacto[]): Vueltas {
+    const vivas = filas.filter((f) => f.estado !== 'DESCARTADA');
+    const cuenta = (pasa: (i: number) => boolean) => vivas.filter((f) => pasa(f.intentos ?? 0)).length;
+    const total = vivas.length;
+    const orden = [
+      { clave: 'v1', etiqueta: '1 vuelta', sub: 'ya llamados', n: cuenta((i) => i === 1),
+        muestra: 'bg-[#15803d] dark:bg-emerald-400', trazo: 'stroke-[#15803d] dark:stroke-emerald-400' },
+      { clave: 'v0', etiqueta: 'Sin marcar', sub: 'en espera', n: cuenta((i) => i === 0),
+        muestra: 'bg-[#cbd5e1] dark:bg-slate-600', trazo: 'stroke-[#cbd5e1] dark:stroke-slate-600' },
+      { clave: 'v2', etiqueta: '2 vueltas', sub: '', n: cuenta((i) => i === 2),
+        muestra: 'bg-[#2563eb] dark:bg-blue-400', trazo: 'stroke-[#2563eb] dark:stroke-blue-400' },
+      { clave: 'v3', etiqueta: '3 vueltas', sub: '', n: cuenta((i) => i === 3),
+        muestra: 'bg-[#d97706] dark:bg-amber-400', trazo: 'stroke-[#d97706] dark:stroke-amber-400' },
+      { clave: 'v4', etiqueta: '4 o más', sub: '', n: cuenta((i) => i >= 4),
+        muestra: 'bg-[#b91c1c] dark:bg-red-400', trazo: 'stroke-[#b91c1c] dark:stroke-red-400' },
+    ];
+    const conDatos = orden.filter((d) => d.n > 0);
+    const hueco = conDatos.length > 1 ? Math.min(5, total * 0.004) : 0;
+    let acumulado = 0;
+    const segmentos = conDatos.map((d) => {
+      const largo = Math.max(0, d.n - hueco);
+      const s = { clave: d.clave, dash: `${largo} ${Math.max(0, total - largo)}`, offset: -acumulado, trazo: d.trazo };
+      acumulado += d.n;
+      return s;
+    });
+    return {
+      total,
+      filas: orden.map((d) => ({ clave: d.clave, etiqueta: d.etiqueta, sub: d.sub, n: d.n,
+                                 pct: this.porcentaje(d.n, total), muestra: d.muestra })),
+      segmentos,
+      resumen: `De ${this.miles(total)} clientes: `
+             + (conDatos.map((d) => `${this.miles(d.n)} ${d.etiqueta.toLowerCase()}`).join(', ') || 'ninguno todavía'),
+    };
   }
 
   /** El nombre legible de una pastilla, para decir por que esta filtrada la tabla. */
@@ -1172,6 +1611,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.editandoCola = undefined;
     this.errorModal = '';
     this.nuevaCola = this.colaVacia();
+    this.franjasForm = [];
     // Sin objetivo preseleccionado: el boton de guardar se queda deshabilitado hasta
     // que alguien elija uno, que es lo que obliga a decidirlo en vez de heredarlo.
     this.objetivo = '';
@@ -1207,6 +1647,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
   editarCola(c: BotCola): void {
     this.editandoCola = c.id;
     this.nuevaCola = { ...c };
+    const tramos = this.tramosDe(c);
+    this.franjasForm = tramos.length ? tramos
+      : (c.horaInicio || c.horaFin)
+        ? [{ desde: this.hhmm(c.horaInicio ?? undefined), hasta: this.hhmm(c.horaFin ?? undefined) }]
+        : [];
     // Se normaliza al leer, no solo al guardar: la columna admite fisicamente una coma
     // y una fila vieja o un UPDATE a mano pueden traerla. Si trae dos objetivos ningun
     // radio queda marcado, que es exactamente lo que hay que ver — y guardar obliga a
@@ -1273,6 +1718,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
       this.errorModal = 'Revisa las condiciones de negociación.';
       return;
     }
+    const franjasMal = this.problemaFranjas();
+    if (franjasMal) {
+      this.errorModal = franjasMal;
+      return;
+    }
     this.errorCurva = '';
     this.errorModal = '';
     this.guardandoCola = true;
@@ -1283,6 +1733,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // Los tres numeros de intensidad viajan dentro de `nuevaCola` y se mandan siempre,
     // tambien los que la pantalla no ensena para este objetivo: son NOT NULL en la base
     // y el backend los normaliza, asi que vaciar uno vale lo que el de por defecto.
+    this.volcarFranjas(this.nuevaCola);
     this.guardarCola({
       ...this.nuevaCola, objetivos: this.objetivo,
       maxLlamadasSimultaneas: this.simultaneasEnRango(this.nuevaCola.maxLlamadasSimultaneas),
@@ -1448,6 +1899,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (dias && !dias.toUpperCase().split(',').map((d) => d.trim()).includes(hoy)) {
       return `Hoy no se marca: la ventana permitida es ${dias}. Vuelve el próximo día hábil.`;
     }
+    if (this.tramosDe(c).length) {
+      return `Fuera de sus franjas (${this.textoHorario(c)}). Sigue sola en la siguiente.`;
+    }
     const desde = (c.horaInicio || this.config?.horaInicio || '').slice(0, 5);
     const hasta = (c.horaFin || this.config?.horaFin || '').slice(0, 5);
     return `Fuera del horario ${desde}–${hasta}. Sigue sola cuando vuelva a abrirse.`;
@@ -1513,10 +1967,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private dentroDeHorario(c: BotCola): boolean {
     const ahora = new Date();
     const hhmm = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
-    const desde = (c.horaInicio || this.config?.horaInicio || '').slice(0, 5);
-    const hasta = (c.horaFin || this.config?.horaFin || '').slice(0, 5);
-    if (desde && hhmm < desde) return false;
-    if (hasta && hhmm > hasta) return false;
+    const tramos = this.tramosDe(c);
+    if (tramos.length) {
+      if (!tramos.some((t) => hhmm >= t.desde && hhmm <= t.hasta)) return false;
+    } else {
+      const desde = (c.horaInicio || this.config?.horaInicio || '').slice(0, 5);
+      const hasta = (c.horaFin || this.config?.horaFin || '').slice(0, 5);
+      if (desde && hhmm < desde) return false;
+      if (hasta && hhmm > hasta) return false;
+    }
     // Los días también se heredan. Es lo que faltaba: el tope legal es de lunes a
     // viernes y el fin de semana no se marca.
     const dias = c.diasSemana || this.config?.diasSemana || '';
@@ -1639,6 +2098,25 @@ export class BotVozComponent implements OnInit, OnDestroy {
       PRIMER_CONTACTO: '1ª promesa',
     };
     return (c.objetivos || '').split(',').filter(Boolean).map((o) => bonito[o.trim()] ?? o);
+  }
+
+  /** El objetivo de la tarjeta, dicho entero: una cola tiene uno solo. */
+  objetivoTexto(c: BotCola): string {
+    const textos: Record<string, string> = {
+      RECORDATORIO: 'Recordatorio',
+      CREACION: 'Negociar vencidas',
+      PRIMER_CONTACTO: 'Primer contacto',
+    };
+    const o = (c.objetivos || '').split(',')[0]?.trim() || '';
+    return textos[o] ?? (o || '—');
+  }
+
+  /** El horario de la tarjeta, una cápsula por franja. Vacío = horario general. */
+  horarioEnCapsulas(c: BotCola): string[] {
+    const tramos = this.tramosDe(c);
+    if (tramos.length) return tramos.map((t) => `${t.desde}–${t.hasta}`);
+    if (c.horaInicio || c.horaFin) return [this.textoHorario(c)];
+    return [];
   }
 
   // ----- Reglas -----
@@ -2169,7 +2647,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
     // Fecha vacia = todas las llamadas de la cola elegida, del dia que sean.
     this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
-                         this.fechaLlamadas || null).subscribe({
+                         this.fechaLlamadas || null, g?.hablo ?? null).subscribe({
       next: (s) => {
         this.sesiones = s;
         this.errorSesiones = false;
@@ -2186,6 +2664,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });
+    this.cargarVueltas();
   }
 
   /**
