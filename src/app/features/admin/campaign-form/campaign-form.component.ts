@@ -1245,11 +1245,18 @@ export class CampaignFormComponent implements OnInit {
         // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
         this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
           next: () => {
-            this.campaignService.replaceCampaignPromiseFilter(newCampaignId, this.buildPromiseFilter()).subscribe({
-              next: () => this.previewImportacion(newCampaignId, filtroRangoAnt, filtroTipoTel),
+            this.campaignService.replaceCampaignOrderFields(newCampaignId, this.campaignOrderFields()).subscribe({
+              next: () => this.campaignService.replaceCampaignPromiseFilter(newCampaignId, this.buildPromiseFilter()).subscribe({
+                next: () => this.previewImportacion(newCampaignId, filtroRangoAnt, filtroTipoTel),
+                error: (err) => {
+                  console.error('Error guardando filtro de promesa:', err);
+                  this.previewError = 'Error al guardar el filtro de promesa';
+                  this.previewLoading = false;
+                }
+              }),
               error: (err) => {
-                console.error('Error guardando filtro de promesa:', err);
-                this.previewError = 'Error al guardar el filtro de promesa';
+                console.error('Error guardando prioridades de ordenamiento:', err);
+                this.previewError = 'Error al guardar las prioridades de ordenamiento';
                 this.previewLoading = false;
               }
             });
