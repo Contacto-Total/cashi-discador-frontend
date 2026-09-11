@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  ContactoControl,
   ConteoTenor,
   ExportableTenor,
   GrupoTenores,
@@ -73,6 +74,19 @@ export class SmsTenoresService {
 
   descargar(id: number): Observable<Blob> {
     return this.http.get(`${this.url}/tenor/${id}/export`, { responseType: 'blob' });
+  }
+
+  contactosControl(): Observable<ContactoControl[]> {
+    return this.http.get<RespuestaApi<ContactoControl[]>>(`${this.url}/contactos-control`).pipe(map(r => r.data));
+  }
+
+  crearContactoControl(contacto: ContactoControl): Observable<ContactoControl> {
+    return this.http.post<RespuestaApi<ContactoControl>>(`${this.url}/contactos-control`, contacto).pipe(map(r => r.data));
+  }
+
+  /** Corrige nombre, documento y celular. */
+  actualizarContactoControl(id: number, contacto: ContactoControl): Observable<ContactoControl> {
+    return this.http.put<RespuestaApi<ContactoControl>>(`${this.url}/contactos-control/${id}`, contacto).pipe(map(r => r.data));
   }
 }
 
