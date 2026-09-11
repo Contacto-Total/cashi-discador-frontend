@@ -21,7 +21,7 @@
           </p>
         </div>
       </div>
-      @if (vista === 'colas' && puedeCrearCola) {
+      @if (vista === 'colas' && !colaEnDetalle && puedeCrearCola) {
         <button type="button" (click)="abrirModalCola()" [class]="ui.botonPrimario">
           <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
           Nueva cola
@@ -57,274 +57,295 @@
 
       <!-- ===================== COLAS ===================== -->
       @case ('colas') {
-        <section class="flex flex-col gap-4">
-          @if (colas.length) {
-            <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-              Cada cola llama a los clientes de una subcartera. Rearmar solo añade a quien todavía no está: lo ya marcado se queda con su estado y sus intentos.
-            </p>
-          } @else {
-            <div class="aparecer flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#8491a3] bg-white px-6 py-12 text-center dark:border-slate-600 dark:bg-slate-900">
-              <span class="flex text-[#5f6c80] dark:text-slate-400"><lucide-angular name="inbox" [size]="22" class="block"></lucide-angular></span>
-              <p class="!m-0 text-[14.5px] font-bold">{{ esAdmin ? 'Todavía no hay ninguna cola' : 'Tu subcartera aún no tiene cola' }}</p>
-              @if (puedeCrearCola) {
-                <button type="button" (click)="abrirModalCola()" [class]="ui.enlace + ' text-[13px]'">Crear la primera</button>
-              } @else {
-                <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ motivoNoCrear }}</p>
-              }
-            </div>
-          }
-
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            @for (c of colas; track c.id; let i = $index) {
-              <article class="aparecer flex h-full flex-col gap-3.5 rounded-xl border bg-white p-4 transition-[translate,box-shadow,border-color] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:bg-slate-900"
-                       [style.animation-delay.ms]="i * 35" [class.ring-2]="detalleDe === c.id" [class.ring-blue-500]="detalleDe === c.id"
-                       [ngClass]="estadoCola(c).clase === 'st-discando' ? 'border-[#9ad5b0] shadow-[0_14px_32px_rgba(15,23,42,0.06)] dark:border-emerald-800' : 'border-[#e6e9ee] hover:border-[#c5ccd6] dark:border-slate-800 dark:hover:border-slate-600'">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex min-w-0 flex-col gap-1">
-                    <span class="truncate text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ nombreSubcartera(c.idSubcartera) }}</span>
-                    <h2 class="!m-0 line-clamp-2 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ c.nombre }}</h2>
-                  </div>
-                  <span [class]="claseEstado(estadoCola(c).clase)" [title]="estadoCola(c).ayuda">
-                    @if (estadoCola(c).clase === 'st-discando') {
-                      <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
-                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60 motion-reduce:animate-none"></span>
-                        <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-current"></span>
-                      </span>
-                    }
-                    {{ estadoCola(c).texto }}
+        @if (colaEnDetalle; as sel) {
+          <!-- Una cola en su vista propia (?cola=ID): atrás vuelve a la lista. -->
+          <section class="aparecer flex flex-col gap-4" [attr.aria-label]="'Cola ' + sel.nombre">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <button type="button" (click)="cerrarDetalleCola()" [class]="ui.enlace + ' w-fit !text-[13px]'">
+                  <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
+                  Colas
+                </button>
+                <span class="flex flex-wrap items-center gap-2">
+                  <span class="text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ nombreSubcartera(sel.idSubcartera) }}</span>
+                  <span [class]="claseEstado(estadoCola(sel).clase)" [title]="estadoCola(sel).ayuda">{{ estadoCola(sel).texto }}</span>
+                </span>
+                <h2 class="!m-0 text-[22px] font-extrabold leading-tight tracking-[-0.02em]">{{ sel.nombre }}</h2>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" (click)="alternarCola(sel)" [class]="sel.estaDiscando ? ui.botonPausar : ui.botonIniciar">
+                  <lucide-angular [name]="sel.estaDiscando ? 'pause' : 'play'" [size]="14" class="block"></lucide-angular>
+                  {{ sel.estaDiscando ? 'Detener' : 'Iniciar' }}
+                </button>
+                <button type="button" (click)="editarCola(sel)" [class]="ui.botonIcono" aria-label="Editar la cola" title="Editar">
+                  <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
+                </button>
+                <button type="button" (click)="armarColaDe(sel)" [disabled]="armandoCola === sel.id" [class]="ui.botonIcono"
+                        aria-label="Rearmar: añadir los clientes que falten" title="Rearmar: añade a quien todavía no está">
+                  <span class="flex" [class.animate-spin]="armandoCola === sel.id">
+                    <lucide-angular [name]="armandoCola === sel.id ? 'loader-2' : 'refresh-cw'" [size]="15" class="block"></lucide-angular>
                   </span>
-                </div>
+                </button>
+                <button type="button" (click)="eliminarCola(sel)" [disabled]="sel.estaDiscando" [class]="ui.botonIconoPeligro"
+                        [attr.aria-label]="sel.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar la cola'"
+                        [title]="sel.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar'">
+                  <lucide-angular name="trash-2" [size]="15" class="block"></lucide-angular>
+                </button>
+              </div>
+            </div>
 
-                @if (!c.estaDiscando && c.motivoPausa) {
-                  <p [class]="ui.aviso + ' !m-0 font-semibold'">
+            <div [class]="ui.tarjeta">
+              <div class="flex flex-col gap-2">
+                <span [class]="ui.etiqueta">Qué hace esta cola</span>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (o of objetivosDe(sel); track o) {
+                    <span [class]="ui.chipAzul">{{ o }}</span>
+                  }
+                  <span [class]="ui.chip">Habla como {{ nombreTono(sel.idTono) }}</span>
+                  <span [class]="ui.chip">{{ textoHorario(sel) }}</span>
+                  <span [class]="ui.chip">{{ sel.intentosMaximos }} {{ sel.intentosMaximos === 1 ? 'intento' : 'intentos' }}</span>
+                  @if (sel.maxLlamadasSimultaneas) {
+                    <span [class]="ui.chip">{{ sel.maxLlamadasSimultaneas }} llamada(s) a la vez</span>
+                  }
+                </div>
+                @if (!sel.estaDiscando && sel.motivoPausa) {
+                  <p [class]="ui.aviso + ' !m-0'">
                     <span class="flex pt-px"><lucide-angular name="alert-triangle" [size]="14" class="block"></lucide-angular></span>
-                    <span>{{ c.motivoPausa }}
-                      @if (c.pausadaAt) { · {{ c.pausadaAt | date:'dd/MM HH:mm' }} }
-                    </span>
+                    <span>{{ estadoCola(sel).ayuda }}</span>
                   </p>
                 }
+              </div>
 
-                @if (totalDe(c)) {
-                  <div class="flex items-center justify-between gap-4 rounded-[10px] bg-[#f8fafc] px-3 py-3 dark:bg-slate-950/40">
-                    <div class="flex min-w-0 flex-col gap-1">
-                      <span class="flex items-baseline gap-1.5">
-                        <span class="text-[22px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(gestionadosDe(c)) }}</span>
-                        <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">de {{ miles(totalDe(c)) }} llamados</span>
+              @if (descartesDe(sel).length) {
+                <div class="flex flex-col gap-2">
+                  <span [class]="ui.etiqueta">Quiénes no entraron, y por qué</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (d of descartesDe(sel); track $index) {
+                      <span [class]="d.ok ? ui.chip : ui.chipAviso" [title]="'regla ' + d.regla">
+                        {{ d.titulo }}: <strong class="tabular-nums">{{ d.n }}</strong>
                       </span>
-                      <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                        {{ miles(pendientesDe(c)) }} por marcar
-                        @if (descartadasDe(c)) { · {{ miles(descartadasDe(c)) }} fuera }
-                      </span>
-                    </div>
-                    <div class="flex shrink-0 flex-col items-end gap-1.5">
-                      <span class="text-[15px] font-extrabold leading-none tabular-nums"
-                            [ngClass]="estadoCola(c).clase === 'st-discando' ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#2563eb] dark:text-blue-400'">{{ avanceDe(c) }} %</span>
-                      <span class="block h-2.5 w-[112px] overflow-hidden rounded-full bg-[#e2e8f0] shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] dark:bg-slate-800"
-                            role="progressbar" aria-valuemin="0" aria-valuemax="100"
-                            [attr.aria-valuenow]="avanceDe(c)" [attr.aria-label]="'Avance de ' + c.nombre">
-                        <span class="block h-full rounded-full transition-[width] duration-500 ease-out"
-                              [ngClass]="estadoCola(c).clase === 'st-discando' ? 'barra-viva bg-[#15803d] dark:bg-emerald-400' : 'bg-[#2563eb] dark:bg-blue-400'"
-                              [style.width.%]="avanceDe(c)"></span>
-                      </span>
-                    </div>
-                  </div>
-                } @else {
-                  <div class="flex min-h-[68px] flex-col justify-center gap-1 rounded-[10px] border border-dashed border-[#c5ccd6] px-3 py-3 dark:border-slate-700">
-                    <span class="text-[13px] font-semibold">{{ c.ultimaArmadaAt ? 'No quedó nadie por marcar' : 'Todavía no se ha armado' }}</span>
-                    <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
-                      @if (!c.ultimaArmadaAt) {
-                        Al armarla entran los que cumplan los filtros.
-                      } @else if (descartadasDe(c)) {
-                        {{ miles(descartadasDe(c)) }} quedaron fuera por los filtros.
-                      } @else {
-                        Vuelve a armarla para añadir a quien falte.
-                      }
-                    </span>
-                  </div>
-                }
-
-                <dl class="!m-0 grid grid-cols-[64px_1fr] items-center gap-x-3 gap-y-2 text-[12.5px]">
-                  <dt class="text-[#5f6c80] dark:text-slate-400">Objetivo</dt>
-                  <dd class="!m-0 font-semibold">{{ objetivoTexto(c) }}</dd>
-                  <dt class="text-[#5f6c80] dark:text-slate-400">Voz</dt>
-                  <dd class="!m-0 flex items-center gap-1 font-semibold"><lucide-angular name="mic" [size]="12" class="block"></lucide-angular>{{ nombreTono(c.idTono) }}</dd>
-                  <dt class="text-[#5f6c80] dark:text-slate-400">Horario</dt>
-                  <dd class="!m-0 flex flex-wrap gap-1 font-semibold">
-                    @for (t of horarioEnCapsulas(c); track $index) {
-                      <span class="rounded-md bg-[#f4f6f9] px-1.5 py-0.5 text-[11.5px] font-semibold tabular-nums text-[#334155] dark:bg-slate-800 dark:text-slate-300">{{ t }}</span>
-                    } @empty {
-                      <span class="font-normal text-[#5f6c80] dark:text-slate-400">Horario general</span>
                     }
-                  </dd>
-                  <dt class="text-[#5f6c80] dark:text-slate-400">Intentos</dt>
-                  <dd class="!m-0 font-semibold tabular-nums">{{ c.intentosMaximos ?? '—' }}</dd>
-                  <dt class="text-[#5f6c80] dark:text-slate-400">Armada</dt>
-                  <dd class="!m-0 font-semibold tabular-nums">
-                    @if (c.ultimaArmadaAt) {
-                      {{ c.ultimaArmadaAt | date:'dd/MM · HH:mm' }}
-                    } @else {
-                      <span class="font-normal text-[#5f6c80] dark:text-slate-400">sin armar todavía</span>
-                    }
-                  </dd>
-                </dl>
-
-                <div class="mt-auto flex items-center justify-between gap-2 border-t border-[#eef1f5] pt-3 dark:border-slate-800">
-                  <button type="button" (click)="alternarCola(c)" [class]="c.estaDiscando ? ui.botonPausar : ui.botonIniciar">
-                    <lucide-angular [name]="c.estaDiscando ? 'pause' : 'play'" [size]="14" class="block"></lucide-angular>
-                    {{ c.estaDiscando ? 'Detener' : 'Iniciar' }}
-                  </button>
-                  <div class="flex shrink-0 items-center gap-1.5">
-                    <button type="button" (click)="verDetalle(c)" [class]="ui.botonIcono" [attr.aria-expanded]="detalleDe === c.id" [attr.aria-label]="detalleDe === c.id ? 'Ocultar los clientes de la cola' : 'Ver la cola y sus clientes'" [title]="detalleDe === c.id ? 'Ocultar' : 'Ver la cola'">
-                      <lucide-angular name="eye" [size]="15" class="block"></lucide-angular>
-                    </button>
-                    <button type="button" (click)="editarCola(c)" [class]="ui.botonIcono" aria-label="Editar la cola" title="Editar">
-                      <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
-                    </button>
-                    <button type="button" (click)="armarColaDe(c)" [disabled]="armandoCola === c.id" [class]="ui.botonIcono"
-                            aria-label="Rearmar: añadir los clientes que falten" title="Rearmar: añade a quien todavía no está">
-                      <span class="flex" [class.animate-spin]="armandoCola === c.id">
-                        <lucide-angular [name]="armandoCola === c.id ? 'loader-2' : 'refresh-cw'" [size]="15" class="block"></lucide-angular>
-                      </span>
-                    </button>
-                    <button type="button" (click)="eliminarCola(c)" [disabled]="c.estaDiscando" [class]="ui.botonIconoPeligro"
-                            [attr.aria-label]="c.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar la cola'"
-                            [title]="c.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar'">
-                      <lucide-angular name="trash-2" [size]="15" class="block"></lucide-angular>
-                    </button>
                   </div>
                 </div>
-              </article>
-              @if (i === finFilaDetalle) {
-                @if (colaEnDetalle; as sel) {
-                  <section id="detalle-cola" [attr.aria-label]="'Clientes de ' + sel.nombre"
-                           class="aparecer flex flex-col gap-4 rounded-xl border border-[#bfd3fb] bg-white p-5 shadow-[0_14px_32px_rgba(15,23,42,0.08)] md:col-span-2 dark:border-blue-900 dark:bg-slate-900">
-                    <div class="flex items-start justify-between gap-3 border-b border-[#eef1f5] pb-3 dark:border-slate-800">
-                      <div class="flex min-w-0 flex-col gap-1">
-                        <span class="flex flex-wrap items-center gap-2">
-                          <span class="text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ nombreSubcartera(sel.idSubcartera) }}</span>
-                          <span [class]="claseEstado(estadoCola(sel).clase)">{{ estadoCola(sel).texto }}</span>
-                        </span>
-                        <h2 class="!m-0 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ sel.nombre }}</h2>
-                      </div>
-                      <button type="button" (click)="cerrarDetalleCola()" aria-label="Cerrar el detalle" [class]="ui.cerrar">
-                        <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
+              }
+            </div>
+
+            <div [class]="ui.tarjeta">
+              <div class="flex flex-wrap items-end justify-between gap-2.5">
+                <span class="text-[14px] font-bold">
+                  Clientes en la cola
+                  <span class="font-normal tabular-nums text-[#5f6c80] dark:text-slate-400">({{ filasDe(sel).length }})</span>
+                </span>
+                <label class="relative block min-w-[240px] flex-1 basis-[260px]">
+                  <span class="sr-only">Buscar en la cola</span>
+                  <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
+                    <lucide-angular name="search" [size]="15" class="block"></lucide-angular>
+                  </span>
+                  <input type="search" [(ngModel)]="busquedaDetalle" (ngModelChange)="alBuscarEnDetalle()"
+                         placeholder="Buscar por documento, nombre o teléfono" [class]="ui.campoBuscar">
+                </label>
+              </div>
+
+              @if (!filasDe(sel).length) {
+                <div class="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#c5ccd6] px-6 py-8 text-center dark:border-slate-700">
+                  @if (busquedaDetalle) {
+                    <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">Nadie coincide con «{{ busquedaDetalle }}» en esta cola.</p>
+                  } @else {
+                    <p class="!m-0 text-[13.5px] font-bold">Todavía no se ha armado</p>
+                    <button type="button" (click)="armarColaDe(sel)" [disabled]="armandoCola === sel.id" [class]="ui.botonSecundario">
+                      <lucide-angular name="refresh-cw" [size]="14" class="block"></lucide-angular>
+                      Armar ahora
+                    </button>
+                  }
+                </div>
+              } @else {
+                <div class="overflow-hidden rounded-xl border border-[#e6e9ee] dark:border-slate-800">
+                  <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th [class]="ui.th">Cliente</th>
+                          <th [class]="ui.th">Por qué se le llama</th>
+                          <th [class]="ui.th">Teléfono</th>
+                          <th [class]="ui.th">Situación</th>
+                          <th [class]="ui.thDerecha">Veces marcado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (f of filasDePagina(sel); track f.id) {
+                          <tr>
+                            <td [class]="ui.td">
+                              <div class="font-semibold">{{ f.nombreCliente || '—' }}</div>
+                              <div class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ f.documento }}</div>
+                            </td>
+                            <td [class]="ui.td">{{ motivoLlamada(f.tipoObjetivo) }}</td>
+                            <td [class]="ui.td + ' whitespace-nowrap tabular-nums'">{{ f.telefono }}</td>
+                            <td [class]="ui.td"><span [class]="claseInsignia('gris')">{{ situacionFila(f.estado) }}</span></td>
+                            <td [class]="ui.td + ' text-right tabular-nums'">{{ f.intentos }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                @if (paginasDetalle(sel) > 1) {
+                  <nav aria-label="Paginación de la cola" class="flex flex-wrap items-center justify-between gap-3">
+                    <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                      Página {{ paginaDetalle }} de {{ paginasDetalle(sel) }} · {{ filasDe(sel).length }} clientes
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <button type="button" (click)="pasarPagina(sel, -1)" [disabled]="paginaDetalle === 1" aria-label="Página anterior" [class]="ui.botonIcono">
+                        <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
                       </button>
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                      <span [class]="ui.etiqueta">Qué hace esta cola</span>
-                      <div class="flex flex-wrap gap-1.5">
-                        @for (o of objetivosDe(sel); track o) {
-                          <span [class]="ui.chipAzul">{{ o }}</span>
-                        }
-                        <span [class]="ui.chip">Habla como {{ nombreTono(sel.idTono) }}</span>
-                        <span [class]="ui.chip">{{ textoHorario(sel) }}</span>
-                        <span [class]="ui.chip">{{ sel.intentosMaximos }} {{ sel.intentosMaximos === 1 ? 'intento' : 'intentos' }}</span>
-                        @if (sel.maxLlamadasSimultaneas) {
-                          <span [class]="ui.chip">{{ sel.maxLlamadasSimultaneas }} llamada(s) a la vez</span>
-                        }
-                      </div>
-                      @if (!sel.estaDiscando && sel.motivoPausa) {
-                        <p [class]="ui.aviso + ' !m-0'">
-                          <span class="flex pt-px"><lucide-angular name="alert-triangle" [size]="14" class="block"></lucide-angular></span>
-                          <span>{{ estadoCola(sel).ayuda }}</span>
-                        </p>
-                      }
-                    </div>
-
-                    @if (descartesDe(sel).length) {
-                      <div class="flex flex-col gap-2">
-                        <span [class]="ui.etiqueta">Quiénes no entraron, y por qué</span>
-                        <div class="flex flex-wrap gap-1.5">
-                          @for (d of descartesDe(sel); track $index) {
-                            <span [class]="d.ok ? ui.chip : ui.chipAviso" [title]="'regla ' + d.regla">
-                              {{ d.titulo }}: <strong class="tabular-nums">{{ d.n }}</strong>
-                            </span>
-                          }
-                        </div>
-                      </div>
-                    }
-
-                    <div class="flex flex-wrap items-end justify-between gap-2.5">
-                      <span class="text-[14px] font-bold">
-                        Clientes en la cola
-                        <span class="font-normal tabular-nums text-[#5f6c80] dark:text-slate-400">({{ filasDe(sel).length }})</span>
-                      </span>
-                      <label class="relative block min-w-[240px] flex-1 basis-[260px]">
-                        <span class="sr-only">Buscar en la cola</span>
-                        <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
-                          <lucide-angular name="search" [size]="15" class="block"></lucide-angular>
-                        </span>
-                        <input type="search" [(ngModel)]="busquedaDetalle" (ngModelChange)="alBuscarEnDetalle()"
-                               placeholder="Buscar por documento, nombre o teléfono" [class]="ui.campoBuscar">
-                      </label>
-                    </div>
-
-                    @if (!filasDe(sel).length) {
-                      <div class="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#c5ccd6] px-6 py-8 text-center dark:border-slate-700">
-                        @if (busquedaDetalle) {
-                          <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">Nadie coincide con «{{ busquedaDetalle }}» en esta cola.</p>
-                        } @else {
-                          <p class="!m-0 text-[13.5px] font-bold">Todavía no se ha armado</p>
-                          <button type="button" (click)="armarColaDe(sel)" [disabled]="armandoCola === sel.id" [class]="ui.botonSecundario">
-                            <lucide-angular name="refresh-cw" [size]="14" class="block"></lucide-angular>
-                            Armar ahora
-                          </button>
-                        }
-                      </div>
-                    } @else {
-                      <div class="overflow-hidden rounded-xl border border-[#e6e9ee] dark:border-slate-800">
-                        <div class="overflow-x-auto">
-                          <table class="w-full border-collapse">
-                            <thead>
-                              <tr>
-                                <th [class]="ui.th">Cliente</th>
-                                <th [class]="ui.th">Por qué se le llama</th>
-                                <th [class]="ui.th">Teléfono</th>
-                                <th [class]="ui.th">Situación</th>
-                                <th [class]="ui.thDerecha">Veces marcado</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              @for (f of filasDePagina(sel); track f.id) {
-                                <tr>
-                                  <td [class]="ui.td">
-                                    <div class="font-semibold">{{ f.nombreCliente || '—' }}</div>
-                                    <div class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ f.documento }}</div>
-                                  </td>
-                                  <td [class]="ui.td">{{ motivoLlamada(f.tipoObjetivo) }}</td>
-                                  <td [class]="ui.td + ' whitespace-nowrap tabular-nums'">{{ f.telefono }}</td>
-                                  <td [class]="ui.td"><span [class]="claseInsignia('gris')">{{ situacionFila(f.estado) }}</span></td>
-                                  <td [class]="ui.td + ' text-right tabular-nums'">{{ f.intentos }}</td>
-                                </tr>
-                              }
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      @if (paginasDetalle(sel) > 1) {
-                        <nav aria-label="Paginación de la cola" class="flex flex-wrap items-center justify-between gap-3">
-                          <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                            Página {{ paginaDetalle }} de {{ paginasDetalle(sel) }} · {{ filasDe(sel).length }} clientes
-                          </span>
-                          <span class="flex items-center gap-1">
-                            <button type="button" (click)="pasarPagina(sel, -1)" [disabled]="paginaDetalle === 1" aria-label="Página anterior" [class]="ui.botonIcono">
-                              <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
-                            </button>
-                            <button type="button" (click)="pasarPagina(sel, 1)" [disabled]="paginaDetalle === paginasDetalle(sel)" aria-label="Página siguiente" [class]="ui.botonIcono">
-                              <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
-                            </button>
-                          </span>
-                        </nav>
-                      }
-                    }
-                  </section>
+                      <button type="button" (click)="pasarPagina(sel, 1)" [disabled]="paginaDetalle === paginasDetalle(sel)" aria-label="Página siguiente" [class]="ui.botonIcono">
+                        <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
+                      </button>
+                    </span>
+                  </nav>
                 }
               }
+            </div>
+          </section>
+        } @else {
+          <section class="flex flex-col gap-4">
+            @if (colas.length) {
+              <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                Cada cola llama a los clientes de una subcartera. Rearmar solo añade a quien todavía no está: lo ya marcado se queda con su estado y sus intentos.
+              </p>
+            } @else {
+              <div class="aparecer flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#8491a3] bg-white px-6 py-12 text-center dark:border-slate-600 dark:bg-slate-900">
+                <span class="flex text-[#5f6c80] dark:text-slate-400"><lucide-angular name="inbox" [size]="22" class="block"></lucide-angular></span>
+                <p class="!m-0 text-[14.5px] font-bold">{{ esAdmin ? 'Todavía no hay ninguna cola' : 'Tu subcartera aún no tiene cola' }}</p>
+                @if (puedeCrearCola) {
+                  <button type="button" (click)="abrirModalCola()" [class]="ui.enlace + ' text-[13px]'">Crear la primera</button>
+                } @else {
+                  <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ motivoNoCrear }}</p>
+                }
+              </div>
             }
+
+            @if (colas.length) {
+              <div class="flex flex-col gap-2">
+                <h2 class="!m-0 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#5f6c80] dark:text-slate-400">
+                  Hoy <span class="tabular-nums">({{ colasDeHoy.length }})</span>
+                </h2>
+                @if (colasDeHoy.length) {
+                  <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+                    @for (c of colasDeHoy; track c.id; let i = $index) {
+                      <ng-container *ngTemplateOutlet="filaCola; context: { $implicit: c, i: i }"></ng-container>
+                    }
+                  </div>
+                } @else {
+                  <p class="!m-0 rounded-xl border border-dashed border-[#c5ccd6] px-4 py-3 text-[13px] text-[#5f6c80] dark:border-slate-700 dark:text-slate-400">
+                    Hoy no hay ninguna cola en marcha.
+                  </p>
+                }
+              </div>
+
+              @if (colasAnteriores.length) {
+                <div class="flex flex-col gap-2">
+                  <button type="button" (click)="verAnteriores = !verAnteriores" [attr.aria-expanded]="verAnteriores"
+                          class="inline-flex w-fit items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[0.06em] !text-[#5f6c80] hover:!text-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:!text-slate-400 dark:hover:!text-white">
+                    <lucide-angular [name]="verAnteriores ? 'chevron-down' : 'chevron-right'" [size]="13" class="block"></lucide-angular>
+                    Anteriores <span class="tabular-nums">({{ colasAnteriores.length }})</span>
+                  </button>
+                  @if (verAnteriores) {
+                    <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+                      @for (c of colasAnteriores; track c.id; let i = $index) {
+                        <ng-container *ngTemplateOutlet="filaCola; context: { $implicit: c, i: i }"></ng-container>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </section>
+        }
+
+        <!-- Una fila por cola: quién es y cómo está, cuándo llama, cuánto lleva y sus acciones. -->
+        <ng-template #filaCola let-c let-i="i">
+          <div class="aparecer grid grid-cols-1 items-center gap-x-6 gap-y-3 border-t border-[#eef1f5] px-4 py-3.5 transition-colors first:border-t-0 hover:bg-[#f8fafc] lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto] dark:border-slate-800 dark:hover:bg-slate-800/40"
+               [style.animation-delay.ms]="i * 30">
+            <div class="flex min-w-0 flex-col gap-1">
+              <span class="truncate text-[11.5px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ nombreSubcartera(c.idSubcartera) }}</span>
+              <button type="button" (click)="verDetalle(c)" [title]="'Ver los clientes de ' + c.nombre"
+                      class="w-fit max-w-full truncate text-left text-[15.5px] font-extrabold tracking-[-0.01em] !text-[#0f172a] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:!text-white">{{ c.nombre }}</button>
+              <span class="flex min-w-0 flex-wrap items-center gap-2">
+                <span [class]="claseEstado(estadoCola(c).clase)" [title]="estadoCola(c).ayuda">
+                  @if (estadoCola(c).clase === 'st-discando') {
+                    <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
+                      <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60 motion-reduce:animate-none"></span>
+                      <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-current"></span>
+                    </span>
+                  }
+                  {{ estadoCola(c).texto }}
+                </span>
+                @if (!c.estaDiscando && c.motivoPausa) {
+                  <span class="truncate text-[12px] font-semibold text-[#92400e] dark:text-amber-300" [title]="c.motivoPausa">{{ c.motivoPausa }}</span>
+                }
+              </span>
+            </div>
+
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <span class="flex flex-wrap gap-1">
+                @for (t of horarioEnCapsulas(c); track $index) {
+                  <span class="rounded-md bg-[#f4f6f9] px-1.5 py-0.5 text-[11.5px] font-semibold tabular-nums text-[#334155] dark:bg-slate-800 dark:text-slate-300">{{ t }}</span>
+                } @empty {
+                  <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Horario general</span>
+                }
+              </span>
+              <span class="truncate text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ objetivoTexto(c) }} · {{ nombreTono(c.idTono) }} · {{ c.intentosMaximos ?? '—' }} intentos</span>
+            </div>
+
+            <div class="flex min-w-0 flex-col gap-1.5">
+              @if (totalDe(c)) {
+                <span class="flex items-baseline justify-between gap-3 text-[12.5px] tabular-nums">
+                  <span class="truncate">
+                    <strong class="text-[15px] font-extrabold">{{ miles(gestionadosDe(c)) }}</strong>
+                    <span class="text-[#5f6c80] dark:text-slate-400"> de {{ miles(totalDe(c)) }} · {{ miles(pendientesDe(c)) }} por marcar@if (descartadasDe(c)) { · {{ miles(descartadasDe(c)) }} fuera}</span>
+                  </span>
+                  <strong class="shrink-0 font-extrabold" [ngClass]="estadoCola(c).clase === 'st-discando' ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#2563eb] dark:text-blue-400'">{{ avanceDe(c) }} %</strong>
+                </span>
+                <span class="block h-2 overflow-hidden rounded-full bg-[#e2e8f0] shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] dark:bg-slate-800"
+                      role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                      [attr.aria-valuenow]="avanceDe(c)" [attr.aria-label]="'Avance de ' + c.nombre">
+                  <span class="block h-full rounded-full transition-[width] duration-500 ease-out"
+                        [ngClass]="estadoCola(c).clase === 'st-discando' ? 'barra-viva bg-[#15803d] dark:bg-emerald-400' : 'bg-[#2563eb] dark:bg-blue-400'"
+                        [style.width.%]="avanceDe(c)"></span>
+                </span>
+              } @else {
+                <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                  {{ c.ultimaArmadaAt ? 'No quedó nadie por marcar' : 'Sin armar todavía' }}@if (descartadasDe(c)) { · {{ miles(descartadasDe(c)) }} fuera por los filtros}
+                </span>
+              }
+            </div>
+
+            <div class="flex shrink-0 items-center gap-1.5 lg:justify-end">
+              <button type="button" (click)="alternarCola(c)" [class]="c.estaDiscando ? ui.botonPausar : ui.botonIniciar">
+                <lucide-angular [name]="c.estaDiscando ? 'pause' : 'play'" [size]="14" class="block"></lucide-angular>
+                {{ c.estaDiscando ? 'Detener' : 'Iniciar' }}
+              </button>
+              <button type="button" (click)="editarCola(c)" [class]="ui.botonIcono" aria-label="Editar la cola" title="Editar">
+                <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
+              </button>
+              <button type="button" (click)="armarColaDe(c)" [disabled]="armandoCola === c.id" [class]="ui.botonIcono"
+                      aria-label="Rearmar: añadir los clientes que falten" title="Rearmar: añade a quien todavía no está">
+                <span class="flex" [class.animate-spin]="armandoCola === c.id">
+                  <lucide-angular [name]="armandoCola === c.id ? 'loader-2' : 'refresh-cw'" [size]="15" class="block"></lucide-angular>
+                </span>
+              </button>
+              <button type="button" (click)="eliminarCola(c)" [disabled]="c.estaDiscando" [class]="ui.botonIconoPeligro"
+                      [attr.aria-label]="c.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar la cola'"
+                      [title]="c.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar'">
+                <lucide-angular name="trash-2" [size]="15" class="block"></lucide-angular>
+              </button>
+              <button type="button" (click)="verDetalle(c)" [class]="ui.botonIcono" aria-label="Ver los clientes de la cola" title="Ver la cola">
+                <lucide-angular name="chevron-right" [size]="15" class="block"></lucide-angular>
+              </button>
+            </div>
           </div>
-        </section>
+        </ng-template>
       }
 
       <!-- ===================== LLAMADAS ===================== -->
