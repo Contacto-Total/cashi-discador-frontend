@@ -412,7 +412,7 @@ interface ParteMensaje {
                     <label class="relative flex cursor-pointer items-start gap-[9px] text-[13px]">
                       <input type="checkbox" class="peer sr-only" [ngModel]="soloNoContenido" (ngModelChange)="soloNoContenido = $event; marcarCambio()" />
                       <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
-                      <span>Solo clientes NO CONTENIDO <span class="text-[#5f6c80] dark:text-slate-400">(según la carga de FOH; desmarcada, entran también los CONTENIDO)</span></span>
+                      <span>Dejar fuera a los que ya están contenidos <span class="text-[#5f6c80] dark:text-slate-400">(CONTENIDO en la carga de FOH; desmarcada, el tenor no filtra por contención)</span></span>
                     </label>
                   } @else {
                     <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Esta subcartera no recibe contención.</p>
