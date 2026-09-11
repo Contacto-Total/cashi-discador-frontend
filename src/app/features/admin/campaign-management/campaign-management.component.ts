@@ -11,6 +11,7 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
+import { catchError, forkJoin, of } from 'rxjs';
 
 @Component({
   selector: 'app-campaign-management',
@@ -55,6 +56,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   selectedTenantId: number = 0;
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
+  private subPortfolioNames = new Map<number, string>();
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -122,6 +124,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
         this.campaigns = this.filterByUserSubPortfolio(campaigns);
+        this.resolveCampaignScopeNames(this.campaigns);
         if (goToLastPage) {
           this.currentPage = this.totalPages || 1;
         } else if (this.currentPage > this.totalPages) {
@@ -381,6 +384,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
         this.campaigns = this.filterByUserSubPortfolio(campaigns);
+        this.resolveCampaignScopeNames(this.campaigns);
       },
       error: (err) => {
         console.error('Error refreshing campaigns:', err);
@@ -394,6 +398,32 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       return campaigns.filter(c => c.subPortfolioId === user.subPortfolioId);
     }
     return campaigns;
+  }
+
+  private resolveCampaignScopeNames(campaigns: Campaign[]): void {
+    const subPortfolioIds = [...new Set(campaigns
+      .map(campaign => campaign.subPortfolioId)
+      .filter((id): id is number => id != null && !this.subPortfolioNames.has(id)))];
+
+    if (subPortfolioIds.length === 0) {
+      this.applyCampaignScopeNames(campaigns);
+      return;
+    }
+
+    forkJoin(subPortfolioIds.map(id => this.portfolioService.getSubPortfolioById(id).pipe(catchError(() => of(null)))))
+      .subscribe(subPortfolios => {
+      subPortfolios.forEach(subPortfolio => {
+        if (subPortfolio) this.subPortfolioNames.set(subPortfolio.id, subPortfolio.subPortfolioName);
+      });
+        this.applyCampaignScopeNames(campaigns);
+      });
+  }
+
+  private applyCampaignScopeNames(campaigns: Campaign[]): void {
+    campaigns.forEach(campaign => {
+      campaign.subPortfolioName = campaign.subPortfolioId == null ? undefined : this.subPortfolioNames.get(campaign.subPortfolioId);
+    });
+    this.campaigns = [...this.campaigns];
   }
 
   viewCampaignDetail(campaign: Campaign): void {
