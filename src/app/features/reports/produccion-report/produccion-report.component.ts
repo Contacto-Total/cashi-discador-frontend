@@ -474,9 +474,9 @@ export class ProduccionReportComponent implements OnInit {
     if (!this.contextoSeleccionado() || this.valorMetaNueva === null || this.valorMetaNueva < 0 || !this.fechaVigenciaNueva) return;
     this.guardandoMeta.set(true);
     this.produccionService.crearMeta({
-      idTenant: this.filtros.idProveedor ?? undefined,
-      idCartera: this.filtros.idCartera ?? undefined,
-      idSubcartera: this.filtros.idSubcartera ?? undefined,
+      idTenant: this.filtros.idProveedor!,
+      idCartera: this.filtros.idCartera!,
+      idSubcartera: this.filtros.idSubcartera!,
       tipoMeta: this.filtros.tipoMeta,
       valorMeta: this.valorMetaNueva,
       fechaVigencia: this.fechaVigenciaNueva,
