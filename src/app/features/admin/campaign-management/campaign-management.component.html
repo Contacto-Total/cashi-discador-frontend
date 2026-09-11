@@ -46,7 +46,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let campaign of paginatedCampaigns; trackBy: trackByCampaignId" class="!border-t !border-slate-100 !transition-colors hover:!bg-blue-50 dark:!border-slate-800 dark:hover:!bg-slate-800/70" [ngClass]="campaign.estaDiscando ? '!border-l-4 !border-l-emerald-500' : ''">
-              <td class="!h-14 !cursor-pointer !px-3 !py-2 !font-semibold !text-slate-900 dark:!text-slate-100" (click)="viewCampaignDetail(campaign)">
+              <td class="!h-14 !cursor-pointer !px-3 !py-2 !text-slate-900 dark:!text-slate-100" (click)="viewCampaignDetail(campaign)">
                 {{ campaign.name }}
               </td>
               <td class="!px-3 !py-2 !text-slate-700 dark:!text-slate-300">{{ campaign.subPortfolioName || ('#' + (campaign.subPortfolioId || '-')) }}</td>

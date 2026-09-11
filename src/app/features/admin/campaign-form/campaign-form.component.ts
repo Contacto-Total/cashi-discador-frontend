@@ -882,6 +882,24 @@ export class CampaignFormComponent implements OnInit {
     this.syncOrderableFilterFields();
   }
 
+  editFilter(filter: CampaignFilterRange): void {
+    this.selectedTipoContacto = filter.tipoContacto ?? null;
+    this.selectedFieldId = filter.fieldDefinitionId || 0;
+    this.onFieldChange();
+    this.newFilterMinValue = filter.minValue ?? null;
+    this.newFilterMaxValue = filter.maxValue ?? null;
+    this.newFilterSelectedValues = filter.selectedValues?.split(',').filter(Boolean) || [];
+    this.newFilterMinDate = filter.minDate || '';
+    this.newFilterMaxDate = filter.maxDate || '';
+
+    // Preserve the ordering field while the edited range is temporarily out of the list.
+    const index = this.campaignFilters.indexOf(filter);
+    if (index >= 0) this.campaignFilters.splice(index, 1);
+    this.syncOrderableFilterFields();
+    this.error = null;
+    setTimeout(() => document.getElementById('tipoContacto')?.focus());
+  }
+
   clearFilters(): void {
     this.campaignFilters = [];
     this.pruneInactiveOrderFields();

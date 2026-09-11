@@ -505,7 +505,7 @@
                     </ng-template>
                     <ng-template #numericRange><ng-container *ngIf="filter.minValue !== undefined && filter.minValue !== null; else noMinimum">{{ filter.minValue | appNumber }}</ng-container><ng-template #noMinimum>Sin mínimo</ng-template> <lucide-angular name="arrow-right" [size]="16"></lucide-angular> <ng-container *ngIf="filter.maxValue !== undefined && filter.maxValue !== null; else noMaximum">{{ filter.maxValue | appNumber }}</ng-container><ng-template #noMaximum>Sin máximo</ng-template></ng-template>
                   </td>
-                  <td><button type="button" class="btn-remove-filter table-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="x" [size]="18"></lucide-angular></button></td>
+                  <td class="filter-table-actions"><button type="button" class="btn-remove-filter table-remove-filter" (click)="editFilter(filter)" title="Editar filtro"><lucide-angular name="pencil" [size]="16"></lucide-angular></button><button type="button" class="btn-remove-filter table-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="x" [size]="18"></lucide-angular></button></td>
                 </tr>
               </tbody>
             </table>

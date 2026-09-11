@@ -427,6 +427,8 @@
 .active-filter-range { display: flex; align-items: center; gap: 0.65rem; font-family: 'SF Mono', Monaco, monospace; font-weight: 700; white-space: nowrap; }
 .active-filter-range lucide-angular { color: #94a3b8; }
 .table-remove-filter { width: 28px; height: 28px; border-color: transparent; }
+.filter-table-actions { white-space: nowrap; }
+.filter-table-actions .table-remove-filter + .table-remove-filter { margin-left: 0.25rem; }
 .active-filters-table .tipo-contacto-tag { max-width: 100%; padding: 0.35rem 0.5rem; font-size: 0.62rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 :host-context(body.light-theme) .active-filters-table-wrap { border-color: #dbeafe; }
