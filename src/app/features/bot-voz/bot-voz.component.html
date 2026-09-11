@@ -458,7 +458,7 @@
             </p>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div class="flex flex-col gap-4">
             @for (t of tonos; track $index) {
               <article [class]="ui.tarjeta + ' aparecer'">
                 <div class="flex flex-wrap items-center gap-2">
@@ -470,7 +470,7 @@
                 </div>
 
                 @if (puedeTecnico) {
-                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <label class="flex flex-col gap-1">
                       <span [class]="ui.subetiqueta">Nombre del tono</span>
                       <input type="text" [(ngModel)]="t.nombre" [class]="ui.campo">
@@ -812,8 +812,10 @@
   <!-- ===================== ALTA Y EDICIÓN DE UNA COLA ===================== -->
   @if (modalCola) {
     <div [class]="ui.fondo" (click)="cerrarModalCola()" aria-hidden="true"></div>
+    <!-- La capa que centra no recoge clics: pulsar fuera sigue cerrando por el fondo. -->
+    <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
     <div role="dialog" aria-modal="true" [attr.aria-label]="editandoCola ? 'Editar cola' : 'Nueva cola'" cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
-         class="deslizar fixed inset-y-0 right-0 z-50 flex w-full max-w-[880px] flex-col bg-[#f6f7f9] shadow-2xl dark:bg-slate-950">
+         class="aparecer pointer-events-auto flex max-h-full w-full max-w-[1100px] flex-col overflow-hidden rounded-2xl border border-[#e6e9ee] bg-[#f6f7f9] shadow-2xl dark:border-slate-800 dark:bg-slate-950">
       <div class="flex items-center justify-between gap-3 border-b border-[#e6e9ee] bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-col gap-[3px]">
           <h2 class="!m-0 text-[18px] font-extrabold tracking-[-0.015em]">{{ editandoCola ? 'Editar cola' : 'Nueva cola' }}</h2>
@@ -824,10 +826,19 @@
         </button>
       </div>
 
-      <div class="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+      <div class="flex min-h-0 flex-1">
+        <nav aria-label="Pasos del formulario" class="hidden w-[220px] shrink-0 flex-col gap-0.5 border-r border-[#e6e9ee] bg-white px-3 py-5 lg:flex dark:border-slate-800 dark:bg-slate-900">
+          <span class="px-2 pb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[#5f6c80] dark:text-slate-400">Ir a</span>
+          <button type="button" (click)="paso1.scrollIntoView({ behavior: 'smooth', block: 'start' })" [class]="ui.pasoIndice"><span [class]="ui.paso">1</span> Qué cola es</button>
+          <button type="button" (click)="paso2.scrollIntoView({ behavior: 'smooth', block: 'start' })" [class]="ui.pasoIndice"><span [class]="ui.paso">2</span> A quién llama</button>
+          <button type="button" (click)="paso3.scrollIntoView({ behavior: 'smooth', block: 'start' })" [class]="ui.pasoIndice"><span [class]="ui.paso">3</span> Cuándo llama</button>
+          <button type="button" (click)="paso4.scrollIntoView({ behavior: 'smooth', block: 'start' })" [class]="ui.pasoIndice"><span [class]="ui.paso">4</span> Cómo suena</button>
+          <button type="button" (click)="paso5.scrollIntoView({ behavior: 'smooth', block: 'start' })" [class]="ui.pasoIndice"><span [class]="ui.paso">5</span> Condiciones</button>
+        </nav>
+        <div class="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
 
         <!-- 1 · Qué cola es -->
-        <section [class]="ui.tarjeta">
+        <section [class]="ui.tarjeta" class="scroll-mt-5" #paso1>
           <h3 [class]="ui.tituloPaso"><span [class]="ui.paso">1</span> Qué cola es</h3>
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label class="flex flex-col gap-1 sm:col-span-2">
@@ -883,7 +894,7 @@
         </section>
 
         <!-- 2 · A quién llama: de qué parte de la cartera y por qué motivo -->
-        <section [class]="ui.tarjeta">
+        <section [class]="ui.tarjeta" class="scroll-mt-5" #paso2>
           <h3 [class]="ui.tituloPaso"><span [class]="ui.paso">2</span> A quién llama esta cola</h3>
 
           @if (nuevaCola.idSubcartera) {
@@ -1002,7 +1013,7 @@
         </section>
 
         <!-- 3 · Cuándo llama: nada (ventana legal), un horario o varias franjas -->
-        <section [class]="ui.tarjeta">
+        <section [class]="ui.tarjeta" class="scroll-mt-5" #paso3>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 [class]="ui.tituloPaso"><span [class]="ui.paso">3</span> Cuándo llama</h3>
             <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">Ventana legal {{ topeHoraInicio }} – {{ topeHoraFin }}</span>
@@ -1073,7 +1084,7 @@
         </section>
 
         <!-- 4 · Cómo suena -->
-        <section [class]="ui.tarjeta">
+        <section [class]="ui.tarjeta" class="scroll-mt-5" #paso4>
           <h3 [class]="ui.tituloPaso"><span [class]="ui.paso">4</span> Cómo suena</h3>
           <label class="flex flex-col gap-1 sm:max-w-[50%]">
             <span [class]="ui.subetiqueta">Voz y tono</span>
@@ -1090,7 +1101,7 @@
         </section>
 
         <!-- 5 · Condiciones de negociación: lo que Clara puede ofrecer cuando descuelgan -->
-        <section [class]="ui.tarjeta">
+        <section [class]="ui.tarjeta" class="scroll-mt-5" #paso5>
           <h3 [class]="ui.tituloPaso"><span [class]="ui.paso">5</span> Condiciones de negociación</h3>
 
           @if (reglaHeredada) {
@@ -1241,6 +1252,7 @@
           </div>
         }
       </div>
+      </div>
 
       <div class="flex flex-wrap items-center justify-end gap-2 border-t border-[#e6e9ee] bg-white px-6 py-3.5 dark:border-slate-800 dark:bg-slate-900">
         @if (errorModal) {
@@ -1255,6 +1267,7 @@
           {{ guardandoCola ? 'Guardando…' : (editandoCola ? 'Guardar cambios' : 'Crear cola') }}
         </button>
       </div>
+    </div>
     </div>
   }
 

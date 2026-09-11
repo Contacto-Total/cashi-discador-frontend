@@ -86,6 +86,7 @@ const CLASES = {
   tarjeta: 'flex flex-col gap-3.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900',
   tituloPaso: '!m-0 flex items-center gap-2 text-[15px] font-bold',
   paso: 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0f172a] text-[11.5px] font-bold !text-white dark:bg-white dark:!text-slate-900',
+  pasoIndice: 'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:!text-slate-300 dark:hover:bg-slate-800',
   chip: 'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-[#f4f6f9] px-2.5 text-xs font-semibold text-[#334155] dark:bg-slate-800 dark:text-slate-300',
   chipAzul: 'inline-flex h-6 items-center whitespace-nowrap rounded-full bg-[#eff5ff] px-2.5 text-xs font-semibold text-[#1d4ed8] dark:bg-blue-950 dark:text-blue-300',
   chipAviso: 'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-[#fdf2dc] px-2.5 text-xs font-semibold text-[#b45309] dark:bg-amber-950/50 dark:text-amber-300',
