@@ -13,6 +13,8 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 import { catchError, forkJoin, of } from 'rxjs';
 
+const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
+
 @Component({
   selector: 'app-campaign-management',
   standalone: true,
@@ -141,7 +143,37 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   showDuplicatePreview(campaign: Campaign): void {
-    this.successMessage = `Duplicar “${campaign.name}” creará un borrador para ajustar antes de importar.`;
+    if (!campaign.id) return;
+    forkJoin({
+      campaign: this.campaignService.getCampaignById(campaign.id),
+      filters: this.campaignService.getCampaignFilters(campaign.id),
+      orderFields: this.campaignService.getCampaignOrderFields(campaign.id),
+      promiseFilter: this.campaignService.getCampaignPromiseFilter(campaign.id)
+    }).subscribe({
+      next: ({ campaign: source, filters, orderFields, promiseFilter }) => {
+        const duplicate = {
+          ...source,
+          id: undefined,
+          name: `${source.name} Copia`,
+          status: 'DRAFT' as const,
+          estaDiscando: false,
+          createdAt: undefined,
+          updatedAt: undefined,
+          primeraActivacion: undefined,
+          ultimaActivacion: undefined,
+          ultimaDesactivacion: undefined,
+          filters,
+          orderFields,
+          promiseFilter
+        };
+        sessionStorage.setItem(DUPLICATE_CAMPAIGN_STORAGE_KEY, JSON.stringify(duplicate));
+        this.router.navigate(['/admin/campaigns/new']);
+      },
+      error: err => {
+        console.error('Error cargando campaña para duplicar:', err);
+        this.error = 'No se pudo cargar la configuración de la campaña';
+      }
+    });
   }
 
   /**

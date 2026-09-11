@@ -41,6 +41,8 @@ export const MY_DATE_FORMATS = {
   },
 };
 
+const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
+
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
@@ -206,13 +208,69 @@ export class CampaignFormComponent implements OnInit {
     this.startDateString = ahora;
     this.endDateString = ahora;
 
-  this.route.params.subscribe(params => {
-    if (params['id']) {
-      this.isEditMode = true;
-      this.campaignId = +params['id'];
-      this.loadCampaign(this.campaignId);
+   this.route.params.subscribe(params => {
+     if (params['id']) {
+       this.isEditMode = true;
+       this.campaignId = +params['id'];
+       this.loadCampaign(this.campaignId);
+     } else {
+       this.loadDuplicateDraft();
+     }
+   });
+  }
+
+  private loadDuplicateDraft(): void {
+    const rawDraft = sessionStorage.getItem(DUPLICATE_CAMPAIGN_STORAGE_KEY);
+    if (!rawDraft) return;
+    sessionStorage.removeItem(DUPLICATE_CAMPAIGN_STORAGE_KEY);
+
+    try {
+      const draft = JSON.parse(rawDraft);
+      this.campaign = { ...draft, id: undefined, status: 'DRAFT', estaDiscando: false };
+      this.campaignFilters = draft.filters || [];
+      this.campaignOrderFields.set(draft.orderFields || []);
+      this.syncOrderableFilterFields();
+      this.maxTelefonosPorCliente = this.campaign.maxTelefonosPorCliente ?? 1;
+      this.startDateString = this.campaign.startDate ? this.toDateTimeLocal(this.campaign.startDate) : this.startDateString;
+      this.endDateString = this.campaign.endDate ? this.toDateTimeLocal(this.campaign.endDate) : this.endDateString;
+      this.selectedRangosAntiguedad = this.campaign.filtroRangoAntiguedad?.split(',').map(value => value.trim()) || [];
+      this.selectedTiposTelefono = this.campaign.filtroTipoTelefono?.split(',').map(value => value.trim()) || [];
+
+      const promise = draft.promiseFilter as CampaignPromiseFilter | null;
+      if (promise) {
+        this.nivelMontoPromesa = promise.nivelMonto;
+        if (promise.tipo === 'VIGENTE') {
+          this.seguimientoPromesaVigente = true;
+          this.proximaCuotaDesde = promise.fechaDesde || this.fechaHoy;
+          this.proximaCuotaHasta = promise.fechaHasta || '';
+          this.promesaMontoMinimo = promise.montoDesde ?? null;
+          this.promesaMontoMaximo = promise.montoHasta ?? null;
+        } else {
+          this.seguimientoPromesaVencida = true;
+          this.promesaVencidaDesde = promise.fechaDesde || this.inicioMesActual;
+          this.promesaVencidaHasta = promise.fechaHasta || this.fechaHoy;
+          this.promesaVencidaMontoMinimo = promise.montoDesde ?? null;
+          this.promesaVencidaMontoMaximo = promise.montoHasta ?? null;
+        }
+      }
+
+      if (this.campaign.tenantId && this.campaign.portfolioId && this.campaign.subPortfolioId) {
+        forkJoin({
+          portfolios: this.portfolioService.getPortfoliosByTenant(this.campaign.tenantId),
+          subPortfolios: this.portfolioService.getSubPortfoliosByPortfolio(this.campaign.portfolioId)
+        }).subscribe(({ portfolios, subPortfolios }) => {
+          this.portfolios = portfolios;
+          this.subPortfolios = subPortfolios;
+          this.selectedTenantId = this.campaign.tenantId || 0;
+          this.selectedPortfolioId = this.campaign.portfolioId || 0;
+          this.selectedSubPortfolioId = this.campaign.subPortfolioId || 0;
+          this.loadFilterableFields(this.selectedSubPortfolioId);
+          this.loadGrupos(this.selectedSubPortfolioId, this.campaign.idGrupoAsesores ?? undefined);
+        });
+      }
+    } catch (error) {
+      console.error('No se pudo restaurar el borrador duplicado:', error);
     }
-  });
   }
 
   loadTenants(): void {
