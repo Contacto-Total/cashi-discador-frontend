@@ -155,9 +155,16 @@ export class BotVozComponent implements OnInit, OnDestroy {
     else if (this.detalleDe != null) this.cerrarDetalleCola();
   }
 
-  /** La cola cuyo detalle está abierto en el panel lateral. */
+  /** La cola cuyo detalle está abierto debajo de su fila de tarjetas. */
   get colaEnDetalle(): BotCola | undefined {
     return this.detalleDe == null ? undefined : this.colas.find((c) => c.id === this.detalleDe);
+  }
+
+  /** Última tarjeta de la fila donde está la cola abierta: el detalle se pinta justo
+   *  después, a lo ancho de las dos columnas. */
+  get finFilaDetalle(): number {
+    const i = this.colas.findIndex((c) => c.id === this.detalleDe);
+    return i < 0 ? -1 : Math.min(i + (i % 2 === 0 ? 1 : 0), this.colas.length - 1);
   }
 
   cerrarDetalleCola(): void {
@@ -2012,7 +2019,12 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.detalleDe = this.detalleDe === c.id ? undefined : c.id;
     this.busquedaDetalle = '';
     this.paginaDetalle = 1;
-    if (this.detalleDe) this.cargarCola();   // trae también los descartes
+    if (this.detalleDe) {
+      this.cargarCola();   // trae también los descartes
+      // Sale debajo de la fila de la tarjeta: si queda fuera de la vista, se acerca.
+      setTimeout(() => document.getElementById('detalle-cola')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    }
   }
 
   // ---- El detalle de una cola: buscador y paginado ----
