@@ -274,11 +274,12 @@
         <lucide-angular name="check-circle" [size]="16"></lucide-angular>
         <span>{{ selectedTiposTelefono.length }} tipo(s) seleccionado(s)</span>
       </div>
-      </fieldset>
     </div>
+    </fieldset>
 
     </div>
 
+    <fieldset class="readonly-configuration readonly-configuration--details" *ngIf="!isEditMode || showReadOnlyConfiguration" [disabled]="isEditMode">
     <!-- SECCIÓN: Grupo de asesores -->
     <div class="form-section full-width !rounded-lg !p-3" *ngIf="selectedSubPortfolioId > 0">
       <h2>
