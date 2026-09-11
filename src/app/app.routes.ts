@@ -139,6 +139,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    path: 'reports/produccion/historico',
+    loadComponent: () => import('./features/reports/produccion-report/produccion-metas-historico.component').then(m => m.ProduccionMetasHistoricoComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
     path: 'reports/produccion',
     loadComponent: () => import('./features/reports/produccion-report/produccion-report.component').then(m => m.ProduccionReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
