@@ -13,7 +13,7 @@ import { EstadoTenor, GrupoTenores, MensajeTenor, Tenor, TenorGuardar } from './
 
 /** Límite de un SMS, la misma regla que aplicaba el módulo anterior. */
 const LIMITE_SMS = 160;
-const POR_PAGINA = 12;
+const POR_PAGINA = 6;
 /** Variables que muestra la tarjeta antes de "+N". */
 const VARIABLES_VISIBLES = 3;
 
@@ -28,10 +28,11 @@ interface TenorVista extends Tenor {
 
 /** Clases que se repiten en la pantalla. */
 const ESTILOS = {
-  etiqueta: 'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
+  etiqueta: 'text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   select: 'h-[38px] w-full appearance-none rounded-lg border !border-[#8491a3] !bg-white pl-[11px] pr-8 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:disabled:!bg-slate-900 dark:disabled:!text-slate-400',
   flechaSelect: 'pointer-events-none absolute right-[11px] top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400',
   botonSecundario: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  botonEliminar: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white !text-[#b91c1c] transition-colors hover:bg-[#fdecec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-red-400 dark:hover:bg-red-950/40',
   botonPagina: 'flex h-8 min-w-8 items-center justify-center rounded-[7px] px-2 text-[12.5px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40'
 } as const;
 
@@ -43,7 +44,7 @@ const ESTILOS = {
  * pantalla, que así no lanza consultas sobre la cartera.
  *
  * «Vista previa» abre un panel lateral con el mensaje de un cliente real, para
- * recorrerlos, recalcular, archivar o descargar el archivo desde ahí.
+ * recorrerlos, recalcular, archivar, eliminar o descargar el archivo desde ahí.
  *
  * Estilos: el CSS global del tema claro sobrescribe enlaces, inputs, encabezados
  * y algunas utilidades (`p-3`, `mt-2`, `bg-slate-900`...), y como no está en una
@@ -164,19 +165,19 @@ const ESTILOS = {
           </p>
         } @else if (!filtrados().length) {
           <div class="aparecer flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#8491a3] bg-white px-6 py-12 text-center dark:border-slate-600 dark:bg-slate-900">
-            <p class="text-[14.5px] font-bold">{{ hayFiltros() ? 'Ningún tenor coincide con el filtro.' : estado() === 'ACTIVO' ? 'Todavía no hay tenores.' : 'No hay tenores archivados.' }}</p>
+            <p class="text-[14.5px] font-semibold">{{ hayFiltros() ? 'Ningún tenor coincide con el filtro.' : estado() === 'ACTIVO' ? 'Todavía no hay tenores.' : 'No hay tenores archivados.' }}</p>
             @if (!hayFiltros() && estado() === 'ACTIVO') {
               <a routerLink="/sms/tenores/nuevo" class="btn text-[13px] font-semibold text-[#2563eb] hover:underline dark:text-blue-400">Crear el primero</a>
             }
           </div>
         } @else {
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             @for (t of pagina(); track t.id; let i = $index) {
               <article class="aparecer group flex h-full min-h-[300px] flex-col gap-3 rounded-xl border p-4 transition-[translate,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-[#c5ccd6] hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:hover:border-slate-600"
                        [style.animation-delay.ms]="i * 35"
                        [ngClass]="claseTarjeta(t)">
                 <div class="flex items-start justify-between gap-2">
-                  <span class="truncate text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
+                  <span class="truncate text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
                   @if (t.estado === 'ARCHIVADO') {
                     <span class="shrink-0 rounded-full bg-[#eef2f7] px-2 py-[2px] text-[11px] font-semibold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">Archivado</span>
                   } @else if (alerta(t)) {
@@ -187,7 +188,7 @@ const ESTILOS = {
                   }
                 </div>
 
-                <h2 class="!m-0 line-clamp-2 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ t.nombre }}</h2>
+                <h2 class="!m-0 line-clamp-2 text-[15px] font-bold leading-snug">{{ t.nombre }}</h2>
 
                 <p class="rounded-[10px] rounded-bl-[3px] px-[13px] py-[10px] text-[13px] leading-[1.55] text-[#334155] dark:text-slate-200"
                    [ngClass]="alerta(t) ? 'bg-[#fbf3e3] dark:bg-amber-950/30' : 'bg-[#f4f6f9] dark:bg-slate-800'">
@@ -219,7 +220,7 @@ const ESTILOS = {
                       <span class="line-clamp-2 max-w-[220px] text-xs font-semibold leading-snug text-[#b45309] dark:text-amber-300">{{ t.conteoError }}</span>
                     } @else {
                       <span class="flex items-baseline gap-1.5">
-                        <span class="text-[22px] font-extrabold leading-none tracking-[-0.02em] tabular-nums" [ngClass]="t.clientesHoy === 0 ? 'text-[#b45309] dark:text-amber-300' : ''">{{ t.clientesHoy === null ? '—' : miles(t.clientesHoy) }}</span>
+                        <span class="text-xl font-bold leading-none tabular-nums" [ngClass]="t.clientesHoy === 0 ? 'text-[#b45309] dark:text-amber-300' : ''">{{ t.clientesHoy === null ? '—' : miles(t.clientesHoy) }}</span>
                         <span class="text-xs text-[#5f6c80] dark:text-slate-400">clientes</span>
                       </span>
                       <span class="whitespace-nowrap text-[11px] tabular-nums text-[#5f6c80] dark:text-slate-400">
@@ -227,7 +228,7 @@ const ESTILOS = {
                       </span>
                     }
                   </div>
-                  <div class="flex shrink-0 gap-1.5">
+                  <div class="flex shrink-0 items-center gap-1.5">
                     @if (t.estado === 'ACTIVO') {
                       <button type="button" (click)="abrirVistaPrevia(t)" [class]="estilos.botonSecundario">
                         <lucide-angular name="eye" [size]="14" class="block"></lucide-angular>
@@ -240,6 +241,10 @@ const ESTILOS = {
                     } @else {
                       <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ t.origen === 'FOH' ? 'Traído de la base anterior' : 'Solo referencia' }}</span>
                     }
+                    <button type="button" (click)="eliminar(t)" [disabled]="ocupado() === t.id"
+                            [class]="estilos.botonEliminar" aria-label="Eliminar tenor" title="Eliminar tenor">
+                      <lucide-angular name="trash-2" [size]="14" class="block"></lucide-angular>
+                    </button>
                   </div>
                 </div>
               </article>
@@ -283,8 +288,8 @@ const ESTILOS = {
                class="deslizar fixed inset-y-0 right-0 z-50 flex w-full max-w-[480px] flex-col bg-white shadow-2xl dark:bg-slate-900">
           <div class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div class="flex min-w-0 flex-col gap-1">
-              <span class="text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
-              <h2 class="!m-0 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ t.nombre }}</h2>
+              <span class="text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
+              <h2 class="!m-0 text-[15px] font-bold leading-snug">{{ t.nombre }}</h2>
             </div>
             <button type="button" (click)="cerrarVistaPrevia()" aria-label="Cerrar vista previa"
                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800">
@@ -295,13 +300,13 @@ const ESTILOS = {
           <div class="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             <div class="grid grid-cols-2 gap-2.5">
               <div class="flex flex-col gap-0.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40">
-                <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Clientes hoy</span>
-                <span class="text-[22px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ previewTotal() > 0 || previewMensaje() ? miles(previewTotal()) : (t.clientesHoy === null ? '—' : miles(t.clientesHoy)) }}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Clientes hoy</span>
+                <span class="text-xl font-bold leading-none tabular-nums">{{ previewTotal() > 0 || previewMensaje() ? miles(previewTotal()) : (t.clientesHoy === null ? '—' : miles(t.clientesHoy)) }}</span>
                 <span class="text-[11px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ porcentaje(t) }}</span>
               </div>
               <div class="flex flex-col gap-0.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40">
-                <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Último conteo</span>
-                <span class="text-[15px] font-bold tabular-nums">{{ t.conteoCalculadoAt ? (t.conteoCalculadoAt | date: 'dd/MM HH:mm') : 'Pendiente' }}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Último conteo</span>
+                <span class="text-[15px] font-semibold tabular-nums">{{ t.conteoCalculadoAt ? (t.conteoCalculadoAt | date: 'dd/MM HH:mm') : 'Pendiente' }}</span>
                 <button type="button" (click)="recalcular(t)" [disabled]="ocupado() === t.id"
                         class="inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-50 dark:text-blue-400">
                   <span class="inline-flex" [class.animate-spin]="ocupado() === t.id"><lucide-angular name="refresh-cw" [size]="11" class="block"></lucide-angular></span>
@@ -394,11 +399,18 @@ const ESTILOS = {
               }
             </div>
 
+            <div class="flex flex-wrap items-center gap-1">
             <button type="button" (click)="archivar(t)" [disabled]="ocupado() === t.id"
                     class="inline-flex w-fit items-center gap-1.5 rounded-[7px] px-2 py-1 text-[12.5px] font-semibold text-[#5f6c80] transition-colors hover:bg-[#fef2f2] hover:text-[#b91c1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-red-950/40 dark:hover:text-red-400">
               <lucide-angular name="archive" [size]="13" class="block"></lucide-angular>
               Archivar este tenor
             </button>
+            <button type="button" (click)="eliminar(t)" [disabled]="ocupado() === t.id"
+                    class="inline-flex w-fit items-center gap-1.5 rounded-[7px] px-2 py-1 text-[12.5px] font-semibold text-[#b91c1c] transition-colors hover:bg-[#fef2f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40">
+              <lucide-angular name="trash-2" [size]="13" class="block"></lucide-angular>
+              Eliminar este tenor
+            </button>
+            </div>
           </div>
 
           <div class="flex gap-2 border-t border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
@@ -704,6 +716,28 @@ export class TenoresListaComponent implements OnInit {
       },
       error: err => {
         this.toast.error(mensajeDeError(err, 'No se pudo archivar el tenor.'));
+        this.ocupado.set(null);
+      }
+    });
+  }
+
+  /** Borra el tenor, activo o archivado. No se puede deshacer: por eso pregunta antes. */
+  eliminar(t: Tenor): void {
+    if (!confirm(`¿Eliminar "${t.nombre}"? Se borra para siempre y no se puede deshacer.`)) {
+      return;
+    }
+    this.ocupado.set(t.id);
+    this.api.eliminar(t.id).subscribe({
+      next: () => {
+        this.tenores.update(lista => lista.filter(x => x.id !== t.id));
+        if (this.vistaPrevia()?.id === t.id) {
+          this.cerrarVistaPrevia();
+        }
+        this.toast.success('Tenor eliminado.');
+        this.ocupado.set(null);
+      },
+      error: err => {
+        this.toast.error(mensajeDeError(err, 'No se pudo eliminar el tenor.'));
         this.ocupado.set(null);
       }
     });

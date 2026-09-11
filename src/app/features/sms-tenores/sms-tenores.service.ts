@@ -57,6 +57,11 @@ export class SmsTenoresService {
     return this.http.post<RespuestaApi<Tenor>>(`${this.url}/tenor/${id}/archivar`, null).pipe(map(r => r.data));
   }
 
+  /** Borra el tenor, activo o archivado. No se puede deshacer. */
+  eliminar(id: number): Observable<void> {
+    return this.http.delete<RespuestaApi<unknown>>(`${this.url}/tenor/${id}`).pipe(map(() => undefined));
+  }
+
   recalcular(id: number): Observable<Tenor> {
     return this.http.post<RespuestaApi<Tenor>>(`${this.url}/tenor/${id}/recalcular`, null).pipe(map(r => r.data));
   }
