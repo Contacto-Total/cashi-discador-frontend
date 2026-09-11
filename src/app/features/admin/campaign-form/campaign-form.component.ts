@@ -87,6 +87,7 @@ export class CampaignFormComponent implements OnInit {
   };
 
   isEditMode: boolean = false;
+  showReadOnlyConfiguration = false;
   loading: boolean = false;
   error: string | null = null;
   campaignId: number | null = null;
@@ -1194,22 +1195,18 @@ export class CampaignFormComponent implements OnInit {
       this.campaign.endDate = this.endDateString;
     }
 
-    // Filtro rango antigüedad: convertir selección a comma-separated string
-    this.campaign.filtroRangoAntiguedad = this.selectedRangosAntiguedad.length > 0
-      ? this.selectedRangosAntiguedad.join(',')
-      : undefined;
-
-    // Filtro tipo teléfono
-    this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
-      ? this.selectedTiposTelefono.join(',')
-      : undefined;
-    this.campaign.maxTelefonosPorCliente = this.maxTelefonosPorCliente;
-
-    // Grupo dirigido (null = todos los asesores de la subcartera)
-    this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
-
-    // El campo está oculto temporalmente; el backend anterior recibe siempre cero.
-    this.campaign.retryInterval = 0;
+    if (!this.isEditMode) {
+      this.campaign.filtroRangoAntiguedad = this.selectedRangosAntiguedad.length > 0
+        ? this.selectedRangosAntiguedad.join(',')
+        : undefined;
+      this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
+        ? this.selectedTiposTelefono.join(',')
+        : undefined;
+      this.campaign.maxTelefonosPorCliente = this.maxTelefonosPorCliente;
+      this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
+      // El campo está oculto temporalmente; el backend anterior recibe siempre cero.
+      this.campaign.retryInterval = 0;
+    }
 
     this.error = null;
 
@@ -1218,7 +1215,8 @@ export class CampaignFormComponent implements OnInit {
       this.loading = true;
       this.campaignService.updateCampaign(this.campaignId, this.campaign).subscribe({
         next: () => {
-          this.saveFiltersAndNavigate(this.campaignId!);
+          this.loading = false;
+          this.router.navigate(['/admin/campaigns']);
         },
         error: (err) => {
           console.error('Error updating campaign:', err);
@@ -1667,27 +1665,55 @@ export class CampaignFormComponent implements OnInit {
         });
         rowNum += 2;
 
-        // Sección: Filtros aplicados
-        if (this.campaignFilters.length > 0) {
-          wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
-          const filtrosTitle = wsResumen.getCell(`A${rowNum}`);
-          filtrosTitle.value = 'FILTROS APLICADOS';
-          filtrosTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
-          filtrosTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F59E0B' } };
-          filtrosTitle.alignment = { horizontal: 'center' };
-          rowNum++;
+        // Sección: Configuración y filtros aplicados al generar la campaña.
+        wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
+        const filtrosTitle = wsResumen.getCell(`A${rowNum}`);
+        filtrosTitle.value = 'CONFIGURACIÓN Y FILTROS APLICADOS';
+        filtrosTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
+        filtrosTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F59E0B' } };
+        filtrosTitle.alignment = { horizontal: 'center' };
+        rowNum++;
 
-          this.campaignFilters.forEach(f => {
-            const filtroDesc = f.fieldCode
-              ? `${f.fieldName}: ${f.minValue ?? 'N/A'} - ${f.maxValue ?? 'N/A'}`
-              : 'Solo por Estado';
-            const row = wsResumen.getRow(rowNum);
-            row.getCell(1).value = this.getTipoContactoNombre(f.tipoContacto);
-            row.getCell(2).value = filtroDesc;
-            wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
-            rowNum++;
-          });
-        }
+        const promise = this.buildPromiseFilter();
+        const settings: Array<[string, string | number]> = [
+          ['Filtro de estado', this.getTipoFiltroEstadoDescripcion() || 'Sin filtro'],
+          ['Rangos de antigüedad', this.selectedRangosAntiguedad.join(', ') || 'Sin filtro'],
+          ['Tipo de teléfono', this.selectedTiposTelefono.join(', ') || 'Todos'],
+          ['Números por cliente', this.getPhoneSelectionDescription()],
+          ['Modo de discado', this.campaign.dialMode],
+          ['Intentos máximos', this.campaign.maxAttempts ?? '-'],
+          ['Intensidad', this.campaign.intensidad ?? '-'],
+          ['Seguimiento de promesa', promise
+            ? `${promise.tipo} | ${promise.nivelMonto} | Fechas: ${promise.fechaDesde || 'sin mínimo'} a ${promise.fechaHasta || 'sin máximo'} | Monto: ${promise.montoDesde ?? 'sin mínimo'} a ${promise.montoHasta ?? 'sin máximo'}`
+            : 'Sin filtro']
+        ];
+
+        settings.forEach(([label, value]) => {
+          this.addLabelValueRow(wsResumen, rowNum, `${label}:`, value);
+          wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+          rowNum++;
+        });
+
+        this.campaignFilters.forEach((filter, index) => {
+          const range = filter.selectedValues
+            || (filter.dataType === 'FECHA'
+              ? `${filter.minDate || 'Sin mínimo'} - ${filter.maxDate || 'Sin máximo'}`
+              : `${filter.minValue ?? 'Sin mínimo'} - ${filter.maxValue ?? 'Sin máximo'}`);
+          this.addLabelValueRow(
+            wsResumen,
+            rowNum,
+            `Segmentación ${index + 1}:`,
+            `${this.getTipoContactoNombre(filter.tipoContacto)} | ${filter.fieldCode ? filter.fieldName : 'Solo por estado'} | ${range}`
+          );
+          wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+          rowNum++;
+        });
+
+        this.campaignOrderFields().forEach(order => {
+          this.addLabelValueRow(wsResumen, rowNum, `Orden ${order.orderPriority}:`, `${order.fieldName} (${order.orderDirection})`);
+          wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+          rowNum++;
+        });
 
         // === HOJA 2: CLIENTES ===
         const wsClientes = workbook.addWorksheet('Clientes', {

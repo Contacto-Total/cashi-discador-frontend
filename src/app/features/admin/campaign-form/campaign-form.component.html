@@ -10,10 +10,16 @@
         <p>{{ isEditMode ? 'Modificar configuración de campaña' : 'Configurar nueva campaña de llamadas' }}</p>
       </div>
     </div>
+    <div class="header-actions">
+      <button *ngIf="isEditMode" type="button" class="btn-back !px-3 !py-2" (click)="showReadOnlyConfiguration = !showReadOnlyConfiguration">
+        <lucide-angular [name]="showReadOnlyConfiguration ? 'eye-off' : 'eye'" [size]="16"></lucide-angular>
+        <span>{{ showReadOnlyConfiguration ? 'Ocultar configuración' : 'Ver configuración' }}</span>
+      </button>
       <button class="btn-back !px-3 !py-2" (click)="onCancel()">
-      <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
-      <span>Volver</span>
-    </button>
+        <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
+        <span>Volver</span>
+      </button>
+    </div>
   </div>
 
   <!-- Error Message -->
@@ -55,14 +61,15 @@
             required>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" *ngIf="!isEditMode || showReadOnlyConfiguration">
           <label for="description">Descripción</label>
           <textarea
             id="description"
             [(ngModel)]="campaign.description"
             name="description"
             placeholder="Descripción breve de la campaña..."
-            class="form-textarea"
+             class="form-textarea"
+             [disabled]="isEditMode"
             rows="2"></textarea>
         </div>
 
@@ -81,6 +88,7 @@
       </div>
       </div>
 
+      <fieldset class="readonly-configuration" *ngIf="!isEditMode || showReadOnlyConfiguration" [disabled]="isEditMode">
       <!-- Asignación -->
       <div id="assignment-section" class="form-section !rounded-lg !p-3"
            [class.section-error]="invalidSections.assignment" [class.section-valid]="resolvedSections.assignment">
@@ -141,6 +149,7 @@
           </div>
         </div>
       </div>
+      </fieldset>
     </div>
 
     <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -152,13 +161,14 @@
       </h2>
 
       <div class="dial-config-grid !grid-cols-1 sm:!grid-cols-3 !gap-3">
-        <div class="form-group">
+        <div class="form-group" *ngIf="!isEditMode || showReadOnlyConfiguration">
           <label for="dialMode">Modo de Discado</label>
           <select
             id="dialMode"
             [(ngModel)]="campaign.dialMode"
-            name="dialMode"
-            class="form-select">
+             name="dialMode"
+             [disabled]="isEditMode"
+             class="form-select">
             <option value="MANUAL">Manual</option>
             <option value="PROGRESSIVE">Progresivo</option>
             <option value="PREDICTIVE">Predictivo</option>
@@ -192,6 +202,7 @@
       </div>
     </div>
 
+    <fieldset class="readonly-configuration readonly-configuration--details" *ngIf="!isEditMode || showReadOnlyConfiguration" [disabled]="isEditMode">
     <!-- SECCIÓN: Configuración de Estado de Cliente -->
     <div class="form-section full-width state-segmentation-section !rounded-lg !p-3">
       <h2>
@@ -263,6 +274,7 @@
         <lucide-angular name="check-circle" [size]="16"></lucide-angular>
         <span>{{ selectedTiposTelefono.length }} tipo(s) seleccionado(s)</span>
       </div>
+      </fieldset>
     </div>
 
     </div>
@@ -505,7 +517,7 @@
                     </ng-template>
                     <ng-template #numericRange><ng-container *ngIf="filter.minValue !== undefined && filter.minValue !== null; else noMinimum">{{ filter.minValue | appNumber }}</ng-container><ng-template #noMinimum>Sin mínimo</ng-template> <lucide-angular name="arrow-right" [size]="16"></lucide-angular> <ng-container *ngIf="filter.maxValue !== undefined && filter.maxValue !== null; else noMaximum">{{ filter.maxValue | appNumber }}</ng-container><ng-template #noMaximum>Sin máximo</ng-template></ng-template>
                   </td>
-                  <td class="filter-table-actions"><button type="button" class="btn-remove-filter table-remove-filter" (click)="editFilter(filter)" title="Editar filtro"><lucide-angular name="pencil" [size]="16"></lucide-angular></button><button type="button" class="btn-remove-filter table-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="x" [size]="18"></lucide-angular></button></td>
+                  <td class="filter-table-actions"><div><button type="button" class="btn-remove-filter table-remove-filter" (click)="editFilter(filter)" title="Editar filtro"><lucide-angular name="pencil" [size]="16"></lucide-angular></button><button type="button" class="btn-remove-filter table-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="x" [size]="18"></lucide-angular></button></div></td>
                 </tr>
               </tbody>
             </table>
@@ -517,8 +529,8 @@
             <h3><lucide-angular name="sliders" [size]="18"></lucide-angular> Orden de resultados</h3>
             <span>{{ campaignOrderFields().length }}/5</span>
           </div>
-          <div class="order-fields-list" *ngIf="campaignOrderFields().length > 0" cdkDropList (cdkDropListDropped)="reorderOrderFields($event)">
-            <div class="order-field-item" *ngFor="let field of campaignOrderFields(); let i = index" cdkDrag>
+          <div class="order-fields-list" *ngIf="campaignOrderFields().length > 0" cdkDropList [cdkDropListDisabled]="isEditMode" (cdkDropListDropped)="reorderOrderFields($event)">
+            <div class="order-field-item" *ngFor="let field of campaignOrderFields(); let i = index" cdkDrag [cdkDragDisabled]="isEditMode">
               <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
               <button type="button" class="btn-filter-sort active" (click)="onOrderDirectionClick($event, field.fieldCode)">{{ field.orderDirection }}</button>
@@ -652,6 +664,8 @@
         <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
       </div>
     </div>
+
+    </fieldset>
 
     <!-- Botones de Acción -->
     <div class="form-actions !rounded-lg !p-2.5">

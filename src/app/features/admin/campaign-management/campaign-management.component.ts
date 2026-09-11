@@ -10,7 +10,7 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
-import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
+import { AppDatePipe, AppDateTimePipe, AppTimePipe } from '@/shared/pipes/format.pipes';
 import { catchError, forkJoin, of } from 'rxjs';
 
 const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
@@ -18,7 +18,7 @@ const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
 @Component({
   selector: 'app-campaign-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, AppDateTimePipe],
+  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, AppDatePipe, AppDateTimePipe, AppTimePipe],
   templateUrl: './campaign-management.component.html',
   styleUrls: ['./campaign-management.component.css'],
   encapsulation: ViewEncapsulation.None

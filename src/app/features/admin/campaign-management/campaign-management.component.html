@@ -40,9 +40,9 @@
       </div>
 
       <div class="!overflow-x-auto !rounded-lg !border !border-slate-200 !bg-white dark:!border-slate-700 dark:!bg-slate-900" *ngIf="campaigns.length > 0">
-        <table class="!w-full !min-w-[1080px] !border-collapse !text-sm">
+        <table class="!w-full !min-w-[1160px] !border-collapse !text-sm">
           <thead>
-            <tr class="!bg-slate-50 dark:!bg-slate-800"><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Campaña</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Subcartera</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Inicio</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Fin</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Intensidad</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Estado</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Acciones</th></tr>
+            <tr class="!bg-slate-50 dark:!bg-slate-800"><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Campaña</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Subcartera</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Creada</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Inicio</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Fin</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Intensidad</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Estado</th><th class="!px-3 !py-2.5 !text-left !text-[11px] !font-bold !uppercase !tracking-wide !text-slate-500">Acciones</th></tr>
           </thead>
           <tbody>
             <tr *ngFor="let campaign of paginatedCampaigns; trackBy: trackByCampaignId" class="!border-t !border-slate-100 !transition-colors hover:!bg-blue-50 dark:!border-slate-800 dark:hover:!bg-slate-800/70" [ngClass]="campaign.estaDiscando ? '!border-l-4 !border-l-emerald-500' : ''">
@@ -50,8 +50,9 @@
                 {{ campaign.name }}
               </td>
               <td class="!px-3 !py-2 !text-slate-700 dark:!text-slate-300">{{ campaign.subPortfolioName || ('#' + (campaign.subPortfolioId || '-')) }}</td>
-              <td class="!whitespace-nowrap !px-3 !py-2 !text-slate-700 dark:!text-slate-300">{{ campaign.startDate ? (campaign.startDate | appDateTime: 'dayMonth') : '-' }}</td>
-              <td class="!whitespace-nowrap !px-3 !py-2 !text-slate-700 dark:!text-slate-300">{{ campaign.endDate ? (campaign.endDate | appDateTime: 'dayMonth') : '-' }}</td>
+              <td class="campaign-date-value">@if (campaign.createdAt) { <span>{{ campaign.createdAt | appDate: 'short' }}</span><small>{{ campaign.createdAt | appTime: false }}</small> } @else { - }</td>
+              <td class="campaign-date-value">@if (campaign.startDate) { <span>{{ campaign.startDate | appDate: 'short' }}</span><small>{{ campaign.startDate | appTime: false }}</small> } @else { - }</td>
+              <td class="campaign-date-value">@if (campaign.endDate) { <span>{{ campaign.endDate | appDate: 'short' }}</span><small>{{ campaign.endDate | appTime: false }}</small> } @else { - }</td>
               <td class="!px-3 !py-2 !font-mono !font-semibold !text-slate-700 dark:!text-slate-300">{{ campaign.intensidad || 50 }}</td>
               <td class="!whitespace-nowrap !px-3 !py-2"><span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">{{ getStatusText(campaign.status) }}</span><span *ngIf="campaign.estaDiscando" class="dialing-indicator"><span class="pulse-dot"></span>Discando</span></td>
               <td class="!px-3 !py-2"><div class="!flex !items-center !gap-1 !whitespace-nowrap">
