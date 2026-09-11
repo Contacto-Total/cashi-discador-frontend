@@ -164,27 +164,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.detalleDe == null ? undefined : this.colas.find((c) => c.id === this.detalleDe);
   }
 
-  /** Las colas del día: lanzadas hoy, las que aún no se armaron y cualquiera que esté marcando. */
-  get colasDeHoy(): BotCola[] {
-    return this.colas.filter((c) => this.esDeHoy(c));
-  }
-
-  /** Las de días anteriores. Van plegadas: con una cola por día la lista solo crece. */
-  get colasAnteriores(): BotCola[] {
-    return this.colas.filter((c) => !this.esDeHoy(c));
-  }
-
-  /** Si la lista de días anteriores está desplegada. */
-  verAnteriores = false;
-
-  private esDeHoy(c: BotCola): boolean {
-    if (c.estaDiscando || !c.fechaLanzamiento) return true;
-    const f = new Date(c.fechaLanzamiento);
-    const hoy = new Date();
-    return f.getFullYear() === hoy.getFullYear() && f.getMonth() === hoy.getMonth()
-        && f.getDate() === hoy.getDate();
-  }
-
   cerrarDetalleCola(): void {
     this.router.navigate([], { relativeTo: this.route, queryParams: { cola: null },
                                queryParamsHandling: 'merge' });
