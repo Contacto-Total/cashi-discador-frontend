@@ -27,7 +27,50 @@ export interface ResumenProduccion {
 export interface ReporteProduccionResponse {
   data: ReporteProduccionDTO[];
   resumen: ResumenProduccion;
+  tipoMeta: TipoMetaReporteProduccion;
+  valorMetaAplicada: number;
+  simulada: boolean;
   total: number;
+}
+
+export type TipoMetaReporteProduccion = 'INTERNA' | 'SIP';
+
+export interface FiltrosReporteProduccion {
+  fecha?: string;
+  idTenant: number;
+  idCartera: number;
+  idSubcartera: number;
+  tipoMeta: TipoMetaReporteProduccion;
+  horaDesde?: number;
+  horaHasta?: number;
+  valorMetaSimulada?: number;
+}
+
+export interface MetaReporteProduccion {
+  id?: number;
+  idTenant: number;
+  idCartera: number;
+  idSubcartera: number;
+  tipoMeta: TipoMetaReporteProduccion;
+  valorMeta: number;
+  fechaVigencia: string;
+  activo: boolean;
+  actualizadoPor?: string;
+  fechaCreacion?: string;
+  fechaActualizacion?: string;
+}
+
+export interface HistorialMetaReporteProduccion extends MetaReporteProduccion {
+  idMetaReporteProduccion: number;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  number: number;
+  totalPages: number;
+  totalElements: number;
+  first: boolean;
+  last: boolean;
 }
 
 @Injectable({
@@ -38,42 +81,74 @@ export class ProduccionReportService {
 
   constructor(private http: HttpClient) {}
 
-  getReporte(
-    fecha?: string,
-    idCartera?: number,
-    idSubcartera?: number,
-    horaDesde?: number,
-    horaHasta?: number
-  ): Observable<ReporteProduccionResponse> {
+  getReporte(filtros: FiltrosReporteProduccion): Observable<ReporteProduccionResponse> {
     let params = new HttpParams();
 
-    if (fecha) params = params.set('fecha', fecha);
-    if (idCartera) params = params.set('idCartera', idCartera.toString());
-    if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
-    if (horaDesde !== undefined && horaDesde !== null) params = params.set('horaDesde', horaDesde.toString());
-    if (horaHasta !== undefined && horaHasta !== null) params = params.set('horaHasta', horaHasta.toString());
+    if (filtros.fecha) params = params.set('fecha', filtros.fecha);
+    params = params.set('idTenant', filtros.idTenant.toString());
+    params = params.set('idCartera', filtros.idCartera.toString());
+    params = params.set('idSubcartera', filtros.idSubcartera.toString());
+    params = params.set('tipoMeta', filtros.tipoMeta);
+    if (filtros.horaDesde !== undefined) params = params.set('horaDesde', filtros.horaDesde.toString());
+    if (filtros.horaHasta !== undefined) params = params.set('horaHasta', filtros.horaHasta.toString());
+    if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get<ReporteProduccionResponse>(this.baseUrl, { params });
   }
 
-  exportarExcel(
-    fecha?: string,
-    idCartera?: number,
-    idSubcartera?: number,
-    horaDesde?: number,
-    horaHasta?: number
-  ): Observable<Blob> {
+  exportarExcel(filtros: FiltrosReporteProduccion): Observable<Blob> {
     let params = new HttpParams();
 
-    if (fecha) params = params.set('fecha', fecha);
-    if (idCartera) params = params.set('idCartera', idCartera.toString());
-    if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
-    if (horaDesde !== undefined && horaDesde !== null) params = params.set('horaDesde', horaDesde.toString());
-    if (horaHasta !== undefined && horaHasta !== null) params = params.set('horaHasta', horaHasta.toString());
+    if (filtros.fecha) params = params.set('fecha', filtros.fecha);
+    params = params.set('idTenant', filtros.idTenant.toString());
+    params = params.set('idCartera', filtros.idCartera.toString());
+    params = params.set('idSubcartera', filtros.idSubcartera.toString());
+    params = params.set('tipoMeta', filtros.tipoMeta);
+    if (filtros.horaDesde !== undefined) params = params.set('horaDesde', filtros.horaDesde.toString());
+    if (filtros.horaHasta !== undefined) params = params.set('horaHasta', filtros.horaHasta.toString());
+    if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get(`${this.baseUrl}/excel`, {
       params,
       responseType: 'blob'
     });
+  }
+
+  getMetas(idTenant: number, idCartera: number, idSubcartera: number): Observable<MetaReporteProduccion[]> {
+    const params = new HttpParams()
+      .set('idTenant', idTenant.toString())
+      .set('idCartera', idCartera.toString())
+      .set('idSubcartera', idSubcartera.toString());
+    return this.http.get<MetaReporteProduccion[]>(`${this.baseUrl}/metas`, { params });
+  }
+
+  crearMeta(meta: MetaReporteProduccion): Observable<MetaReporteProduccion> {
+    return this.http.post<MetaReporteProduccion>(`${this.baseUrl}/metas`, meta);
+  }
+
+  activarMeta(id: number): Observable<MetaReporteProduccion> {
+    return this.http.patch<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/activar`, {});
+  }
+
+  desactivarMeta(id: number): Observable<MetaReporteProduccion> {
+    return this.http.patch<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/desactivar`, {});
+  }
+
+  getHistorial(
+    idTenant: number,
+    idCartera: number,
+    idSubcartera: number,
+    tipoMeta: TipoMetaReporteProduccion,
+    page: number,
+    size = 10
+  ): Observable<PageResponse<HistorialMetaReporteProduccion>> {
+    const params = new HttpParams()
+      .set('idTenant', idTenant.toString())
+      .set('idCartera', idCartera.toString())
+      .set('idSubcartera', idSubcartera.toString())
+      .set('tipoMeta', tipoMeta)
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<PageResponse<HistorialMetaReporteProduccion>>(`${this.baseUrl}/metas/historial`, { params });
   }
 }
