@@ -277,6 +277,10 @@ import { forkJoin } from 'rxjs';
             <div class="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-700"><button type="button" (click)="seleccionarTipoMeta('INTERNA')" [class]="filtros.tipoMeta === 'INTERNA' ? 'bg-teal-600 text-white' : 'text-gray-600 dark:text-gray-300'" class="rounded-md px-2 py-1 text-xs font-semibold">Interna</button><button type="button" (click)="seleccionarTipoMeta('SIP')" [class]="filtros.tipoMeta === 'SIP' ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300'" class="rounded-md px-2 py-1 text-xs font-semibold">SIP</button></div>
           </div>
 
+          @if (!contextoSeleccionado()) {
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">Selecciona proveedor, cartera y subcartera para simular o registrar una meta.</p>
+          }
+
           <div class="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Simular meta</label>
