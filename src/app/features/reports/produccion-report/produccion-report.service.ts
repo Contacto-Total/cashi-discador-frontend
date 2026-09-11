@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface ReporteProduccionDTO {
+  idTenant: number;
   idCartera: number;
   nombreCartera: string;
   idSubcartera: number;
@@ -37,9 +38,9 @@ export type TipoMetaReporteProduccion = 'INTERNA' | 'SIP';
 
 export interface FiltrosReporteProduccion {
   fecha?: string;
-  idTenant: number;
-  idCartera: number;
-  idSubcartera: number;
+  idTenant?: number;
+  idCartera?: number;
+  idSubcartera?: number;
   tipoMeta: TipoMetaReporteProduccion;
   valorMetaSimulada?: number;
 }
@@ -83,9 +84,9 @@ export class ProduccionReportService {
     let params = new HttpParams();
 
     if (filtros.fecha) params = params.set('fecha', filtros.fecha);
-    params = params.set('idTenant', filtros.idTenant.toString());
-    params = params.set('idCartera', filtros.idCartera.toString());
-    params = params.set('idSubcartera', filtros.idSubcartera.toString());
+    if (filtros.idTenant !== undefined) params = params.set('idTenant', filtros.idTenant.toString());
+    if (filtros.idCartera !== undefined) params = params.set('idCartera', filtros.idCartera.toString());
+    if (filtros.idSubcartera !== undefined) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
     if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
@@ -96,9 +97,9 @@ export class ProduccionReportService {
     let params = new HttpParams();
 
     if (filtros.fecha) params = params.set('fecha', filtros.fecha);
-    params = params.set('idTenant', filtros.idTenant.toString());
-    params = params.set('idCartera', filtros.idCartera.toString());
-    params = params.set('idSubcartera', filtros.idSubcartera.toString());
+    if (filtros.idTenant !== undefined) params = params.set('idTenant', filtros.idTenant.toString());
+    if (filtros.idCartera !== undefined) params = params.set('idCartera', filtros.idCartera.toString());
+    if (filtros.idSubcartera !== undefined) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
     if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 

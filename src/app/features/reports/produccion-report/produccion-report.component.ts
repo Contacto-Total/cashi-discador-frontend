@@ -13,6 +13,7 @@ import {
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-produccion-report',
@@ -32,18 +33,6 @@ import { Router } from '@angular/router';
           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
             Producción diaria por cartera: Meta, Generación, Proyectado, Pagos y Puntos
           </p>
-        </div>
-        <div class="flex w-full flex-wrap gap-2 xl:w-auto">
-          <button type="button" (click)="seleccionarTipoMeta('INTERNA')"
-            [class]="filtros.tipoMeta === 'INTERNA' ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'"
-            class="flex-1 whitespace-nowrap rounded-lg border border-teal-500 px-4 py-2 text-sm font-semibold transition-colors xl:flex-none">
-            Meta Interna
-          </button>
-          <button type="button" (click)="seleccionarTipoMeta('SIP')"
-            [class]="filtros.tipoMeta === 'SIP' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'"
-            class="flex-1 whitespace-nowrap rounded-lg border border-indigo-500 px-4 py-2 text-sm font-semibold transition-colors xl:flex-none">
-            Meta SIP
-          </button>
         </div>
       </div>
 
@@ -66,7 +55,7 @@ import { Router } from '@angular/router';
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-              <option [ngValue]="null">Selecciona un proveedor</option>
+              <option [ngValue]="null">Todos los proveedores</option>
               @for (prov of proveedores(); track prov.id) {
                 <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
               }
@@ -77,12 +66,11 @@ import { Router } from '@angular/router';
           <div>
             <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Cartera</label>
             <select [(ngModel)]="filtros.idCartera" (ngModelChange)="onCarteraChange($event)"
-              [disabled]="!filtros.idProveedor"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500
                      disabled:opacity-50 disabled:cursor-not-allowed">
-              <option [ngValue]="null">Selecciona una cartera</option>
+              <option [ngValue]="null">Todas las carteras</option>
               @for (cart of carteras(); track cart.id) {
                 <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
               }
@@ -92,12 +80,12 @@ import { Router } from '@angular/router';
           <!-- Subcartera -->
           <div>
             <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Subcartera</label>
-            <select [(ngModel)]="filtros.idSubcartera" (ngModelChange)="onSubcarteraChange()" [disabled]="!filtros.idCartera"
+            <select [(ngModel)]="filtros.idSubcartera" (ngModelChange)="onSubcarteraChange()"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500
                      disabled:opacity-50 disabled:cursor-not-allowed">
-              <option [ngValue]="null">Selecciona una subcartera</option>
+              <option [ngValue]="null">Todas las subcarteras</option>
               @for (sub of subcarteras(); track sub.id) {
                 <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
               }
@@ -107,7 +95,7 @@ import { Router } from '@angular/router';
           <!-- Botones -->
             <div class="flex min-w-0 items-end gap-2 sm:col-span-2 lg:col-span-1">
             <button (click)="buscar()"
-              [disabled]="loading() || !contextoSeleccionado()"
+              [disabled]="loading()"
               class="min-w-0 flex-1 whitespace-nowrap px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold
                      rounded-lg transition-colors flex items-center justify-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed">
@@ -119,40 +107,25 @@ import { Router } from '@angular/router';
               Buscar
             </button>
             <button (click)="exportarExcel()"
-              [disabled]="loading() || data().length === 0 || !contextoSeleccionado()"
+              [disabled]="loading() || data().length === 0"
               class="flex-1 whitespace-nowrap px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
                      rounded-lg transition-colors flex items-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed">
               <lucide-angular name="download" [size]="18"></lucide-angular>
               Excel
             </button>
+            <button (click)="irAHistorico()" [disabled]="!contextoSeleccionado()" class="flex-1 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">Histórico</button>
           </div>
         </div>
-        @if (!contextoSeleccionado()) {
-          <p class="mt-3 text-sm text-amber-700 dark:text-amber-300">Selecciona proveedor, cartera y subcartera para consultar una meta.</p>
-        }
       </div>
-
-      @if (contextoSeleccionado()) {
-        <div class="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-teal-100 bg-teal-50 p-3 dark:border-teal-900/50 dark:bg-teal-950/30">
-          <span class="mr-auto text-sm font-semibold text-teal-900 dark:text-teal-100">Meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</span>
-          @if (simulacionActiva) { <span class="text-xs font-medium text-teal-700 dark:text-teal-300">Simulación activa</span> }
-          <input type="number" min="0" [(ngModel)]="valorMetaSimulada" placeholder="Simular monto" aria-label="Simular meta"
-            class="w-36 rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 dark:border-teal-700 dark:bg-gray-800 dark:text-white" />
-          <button type="button" (click)="simular()" [disabled]="valorMetaSimulada === null" class="whitespace-nowrap rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Simular</button>
-          <button type="button" (click)="limpiarSimulacion()" [disabled]="!simulacionActiva" class="whitespace-nowrap rounded-lg border border-teal-600 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:text-teal-300">Limpiar</button>
-          <button type="button" (click)="alternarGestionMetas()" class="whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Gestionar</button>
-          <button type="button" (click)="irAHistorico()" class="whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Histórico</button>
-        </div>
-      }
 
       <!-- Métricas Resumen -->
       @if (resumen()) {
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <!-- Total Meta -->
-          <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-gray-300 uppercase">Meta Total</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalMeta | number:'1.2-2' }}</p>
+          <div class="bg-gradient-to-r from-slate-800 to-slate-950 rounded-xl shadow-md p-4 text-white">
+             <p class="text-xs font-semibold text-white uppercase">Meta Total</p>
+             <p class="text-xl font-extrabold text-white">S/ {{ resumen()!.totalMeta | number:'1.2-2' }}</p>
           </div>
 
           <!-- Generación -->
@@ -296,19 +269,21 @@ import { Router } from '@angular/router';
       </div>
       </main>
 
-      @if (mostrarGestionMetas()) {
-        <aside class="w-full shrink-0 rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 xl:sticky xl:top-4 xl:w-80">
+        <aside class="w-full shrink-0 rounded-xl bg-white p-3 shadow-md dark:bg-gray-800 xl:sticky xl:top-4 xl:w-64">
           <div class="mb-4 flex items-start justify-between gap-3">
             <div>
-              <h2 class="text-base font-bold text-gray-800 dark:text-white">Gestionar meta</h2>
-              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ filtros.tipoMeta === 'INTERNA' ? 'Meta Interna' : 'Meta SIP' }}</p>
+              <h2 class="text-sm font-bold text-gray-800 dark:text-white">Configuración de meta</h2>
             </div>
-            <button type="button" (click)="alternarGestionMetas()" class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-700 dark:hover:text-white" aria-label="Cerrar panel">
-              <lucide-angular name="x" [size]="18"></lucide-angular>
-            </button>
+            <div class="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-700"><button type="button" (click)="seleccionarTipoMeta('INTERNA')" [class]="filtros.tipoMeta === 'INTERNA' ? 'bg-teal-600 text-white' : 'text-gray-600 dark:text-gray-300'" class="rounded-md px-2 py-1 text-xs font-semibold">Interna</button><button type="button" (click)="seleccionarTipoMeta('SIP')" [class]="filtros.tipoMeta === 'SIP' ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300'" class="rounded-md px-2 py-1 text-xs font-semibold">SIP</button></div>
           </div>
 
           <div class="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Simular meta</label>
+              <input type="number" min="0" [(ngModel)]="valorMetaSimulada" placeholder="Monto temporal" [disabled]="!contextoSeleccionado()" class="w-full rounded-lg border border-teal-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:opacity-50 dark:border-teal-700 dark:bg-gray-700 dark:text-white" />
+              <div class="mt-2 flex gap-2"><button type="button" (click)="simular()" [disabled]="valorMetaSimulada === null || !contextoSeleccionado()" class="flex-1 rounded-lg bg-teal-600 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Simular</button><button type="button" (click)="limpiarSimulacion()" [disabled]="!simulacionActiva" class="flex-1 rounded-lg border border-teal-600 px-2 py-1.5 text-xs font-semibold text-teal-700 disabled:opacity-50 dark:text-teal-300">Limpiar</button></div>
+              @if (simulacionActiva) { <p class="mt-1 text-xs font-medium text-teal-700 dark:text-teal-300">Simulación activa</p> }
+            </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Valor de meta</label>
               <input type="number" min="0" [(ngModel)]="valorMetaNueva" placeholder="0.00" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
@@ -317,7 +292,7 @@ import { Router } from '@angular/router';
               <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Vigencia</label>
               <input type="date" [(ngModel)]="fechaVigenciaNueva" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
             </div>
-            <button type="button" (click)="guardarMeta()" [disabled]="guardandoMeta() || valorMetaNueva === null" class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Guardar meta</button>
+            <button type="button" (click)="guardarMeta()" [disabled]="guardandoMeta() || valorMetaNueva === null || !contextoSeleccionado()" class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Guardar meta</button>
           </div>
 
           <div class="mt-4">
@@ -333,7 +308,6 @@ import { Router } from '@angular/router';
             </div>
           </div>
         </aside>
-      }
       </div>
     </div>
   `,
@@ -347,7 +321,6 @@ export class ProduccionReportComponent implements OnInit {
   data = signal<ReporteProduccionDTO[]>([]);
   resumen = signal<ResumenProduccion | null>(null);
   metas = signal<MetaReporteProduccion[]>([]);
-  mostrarGestionMetas = signal(false);
   guardandoMeta = signal(false);
 
   valorMetaSimulada: number | null = null;
@@ -386,7 +359,7 @@ export class ProduccionReportComponent implements OnInit {
 
     // Cargar proveedores
     this.comisionesService.obtenerInquilinos().subscribe({
-      next: (data) => this.proveedores.set(data),
+      next: (data) => { this.proveedores.set(data); this.cargarTodasLasCarteras(); this.buscar(); },
       error: (err) => console.error('Error cargando proveedores:', err)
     });
 
@@ -395,7 +368,6 @@ export class ProduccionReportComponent implements OnInit {
   onProveedorChange(idProveedor: number | null): void {
     this.filtros.idCartera = null;
     this.filtros.idSubcartera = null;
-    this.carteras.set([]);
     this.subcarteras.set([]);
     this.limpiarResultados();
 
@@ -404,6 +376,8 @@ export class ProduccionReportComponent implements OnInit {
         next: (data) => this.carteras.set(data),
         error: (err) => console.error('Error cargando carteras:', err)
       });
+    } else {
+      this.cargarTodasLasCarteras();
     }
   }
 
@@ -417,11 +391,12 @@ export class ProduccionReportComponent implements OnInit {
         next: (data) => this.subcarteras.set(data),
         error: (err) => console.error('Error cargando subcarteras:', err)
       });
+    } else {
+      this.cargarTodasLasSubcarteras();
     }
   }
 
   buscar(): void {
-    if (!this.contextoSeleccionado()) return;
     this.loading.set(true);
 
     this.produccionService.getReporte(this.construirFiltros()).subscribe({
@@ -440,7 +415,6 @@ export class ProduccionReportComponent implements OnInit {
   }
 
   exportarExcel(): void {
-    if (!this.contextoSeleccionado()) return;
     this.loading.set(true);
 
     this.produccionService.exportarExcel(this.construirFiltros()).subscribe({
@@ -466,7 +440,7 @@ export class ProduccionReportComponent implements OnInit {
   seleccionarTipoMeta(tipoMeta: TipoMetaReporteProduccion): void {
     this.filtros.tipoMeta = tipoMeta;
     this.simulacionActiva = this.valorMetaSimulada !== null;
-    if (this.contextoSeleccionado() && this.mostrarGestionMetas()) {
+    if (this.contextoSeleccionado()) {
       this.cargarGestionMetas();
     }
   }
@@ -487,13 +461,6 @@ export class ProduccionReportComponent implements OnInit {
     this.buscar();
   }
 
-  alternarGestionMetas(): void {
-    this.mostrarGestionMetas.update(value => !value);
-    if (this.mostrarGestionMetas()) {
-      this.cargarGestionMetas();
-    }
-  }
-
   cargarGestionMetas(): void {
     if (!this.contextoSeleccionado()) return;
     const { idProveedor, idCartera, idSubcartera } = this.filtros;
@@ -507,9 +474,9 @@ export class ProduccionReportComponent implements OnInit {
     if (!this.contextoSeleccionado() || this.valorMetaNueva === null || this.valorMetaNueva < 0 || !this.fechaVigenciaNueva) return;
     this.guardandoMeta.set(true);
     this.produccionService.crearMeta({
-      idTenant: this.filtros.idProveedor!,
-      idCartera: this.filtros.idCartera!,
-      idSubcartera: this.filtros.idSubcartera!,
+      idTenant: this.filtros.idProveedor ?? undefined,
+      idCartera: this.filtros.idCartera ?? undefined,
+      idSubcartera: this.filtros.idSubcartera ?? undefined,
       tipoMeta: this.filtros.tipoMeta,
       valorMeta: this.valorMetaNueva,
       fechaVigencia: this.fechaVigenciaNueva,
@@ -572,11 +539,20 @@ export class ProduccionReportComponent implements OnInit {
     });
   }
 
+  private cargarTodasLasCarteras(): void {
+    const solicitudes = this.proveedores().map(proveedor => this.comisionesService.obtenerCarteras(proveedor.id));
+    if (solicitudes.length) forkJoin(solicitudes).subscribe({ next: grupos => this.carteras.set(grupos.flat()) });
+  }
+
+  private cargarTodasLasSubcarteras(): void {
+    const solicitudes = this.carteras().map(cartera => this.comisionesService.obtenerSubcarteras(cartera.id));
+    if (solicitudes.length) forkJoin(solicitudes).subscribe({ next: grupos => this.subcarteras.set(grupos.flat()) });
+  }
+
   private limpiarResultados(): void {
     this.data.set([]);
     this.resumen.set(null);
     this.metas.set([]);
-    this.mostrarGestionMetas.set(false);
     this.simulacionActiva = false;
     this.valorMetaSimulada = null;
   }
