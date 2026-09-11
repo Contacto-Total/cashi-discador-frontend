@@ -19,7 +19,9 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe],
   template: `
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
+    <div class="min-h-screen bg-gray-100 p-4 dark:bg-gray-900 md:p-6">
+      <div class="mx-auto flex max-w-[1800px] flex-col items-start gap-4 xl:flex-row">
+      <main class="min-w-0 flex-1">
       <!-- Header -->
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div class="min-w-0">
@@ -47,7 +49,7 @@ import { Router } from '@angular/router';
 
       <!-- Filtros -->
       <div class="mb-4 rounded-xl bg-white p-3 shadow-md dark:bg-gray-800">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <!-- Fecha -->
           <div>
             <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Fecha</label>
@@ -102,36 +104,8 @@ import { Router } from '@angular/router';
             </select>
           </div>
 
-          <!-- Hora Desde -->
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Hora desde</label>
-            <select [(ngModel)]="filtros.horaDesde"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-              <option [ngValue]="null">--</option>
-              @for (h of horas; track h) {
-                <option [ngValue]="h">{{ h.toString().padStart(2, '0') }}:00</option>
-              }
-            </select>
-          </div>
-
-          <!-- Hora Hasta -->
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Hora hasta</label>
-            <select [(ngModel)]="filtros.horaHasta"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-              <option [ngValue]="null">--</option>
-              @for (h of horas; track h) {
-                <option [ngValue]="h">{{ h.toString().padStart(2, '0') }}:00</option>
-              }
-            </select>
-          </div>
-
           <!-- Botones -->
-            <div class="flex min-w-0 items-end gap-2 sm:col-span-2 lg:col-span-2 2xl:col-span-1">
+            <div class="flex min-w-0 items-end gap-2 sm:col-span-2 lg:col-span-1">
             <button (click)="buscar()"
               [disabled]="loading() || !contextoSeleccionado()"
               class="min-w-0 flex-1 whitespace-nowrap px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold
@@ -169,30 +143,6 @@ import { Router } from '@angular/router';
           <button type="button" (click)="limpiarSimulacion()" [disabled]="!simulacionActiva" class="whitespace-nowrap rounded-lg border border-teal-600 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:text-teal-300">Limpiar</button>
           <button type="button" (click)="alternarGestionMetas()" class="whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Gestionar</button>
           <button type="button" (click)="irAHistorico()" class="whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Histórico</button>
-        </div>
-      }
-
-      @if (mostrarGestionMetas()) {
-        <div class="mb-4 rounded-xl bg-white p-3 shadow-md dark:bg-gray-800">
-          <div class="mb-3 flex items-center justify-between gap-3"><h2 class="text-sm font-bold text-gray-800 dark:text-white">Nueva meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</h2><button type="button" (click)="cargarGestionMetas()" class="text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-300">Actualizar</button></div>
-          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <input type="number" min="0" [(ngModel)]="valorMetaNueva" placeholder="Nueva meta"
-              class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
-            <input type="date" [(ngModel)]="fechaVigenciaNueva"
-              class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
-            <button type="button" (click)="guardarMeta()" [disabled]="guardandoMeta() || valorMetaNueva === null"
-              class="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Guardar meta</button>
-          </div>
-          <div class="mt-3 overflow-x-auto">
-            <table class="w-full min-w-[700px] text-sm">
-              <thead class="border-b border-gray-200 text-left text-xs uppercase text-gray-500 dark:border-gray-700"><tr><th class="px-3 py-2">Valor</th><th class="px-3 py-2">Vigencia</th><th class="px-3 py-2">Estado</th><th class="px-3 py-2">Actualizado por</th><th class="px-3 py-2 text-right">Acciones</th></tr></thead>
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                @for (meta of metas(); track meta.id) {
-                  <tr><td class="px-3 py-3 font-semibold text-gray-900 dark:text-white">S/ {{ meta.valorMeta | number:'1.2-2' }}</td><td class="px-3 py-3 text-gray-600 dark:text-gray-300">{{ meta.fechaVigencia }}</td><td class="px-3 py-3"><span [class]="meta.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="rounded-full px-2 py-1 text-xs font-semibold">{{ meta.activo ? 'Activa' : 'Inactiva' }}</span></td><td class="px-3 py-3 text-gray-600 dark:text-gray-300">{{ meta.actualizadoPor || '-' }}</td><td class="px-3 py-3 text-right"><button type="button" (click)="cambiarEstadoMeta(meta)" class="rounded px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-900/30">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button></td></tr>
-                } @empty { <tr><td colspan="5" class="px-3 py-5 text-center text-gray-500">No hay metas configuradas.</td></tr> }
-              </tbody>
-            </table>
-          </div>
         </div>
       }
 
@@ -344,6 +294,47 @@ import { Router } from '@angular/router';
           </div>
         }
       </div>
+      </main>
+
+      @if (mostrarGestionMetas()) {
+        <aside class="w-full shrink-0 rounded-xl bg-white p-4 shadow-md dark:bg-gray-800 xl:sticky xl:top-4 xl:w-80">
+          <div class="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-gray-800 dark:text-white">Gestionar meta</h2>
+              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ filtros.tipoMeta === 'INTERNA' ? 'Meta Interna' : 'Meta SIP' }}</p>
+            </div>
+            <button type="button" (click)="alternarGestionMetas()" class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-700 dark:hover:text-white" aria-label="Cerrar panel">
+              <lucide-angular name="x" [size]="18"></lucide-angular>
+            </button>
+          </div>
+
+          <div class="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Valor de meta</label>
+              <input type="number" min="0" [(ngModel)]="valorMetaNueva" placeholder="0.00" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Vigencia</label>
+              <input type="date" [(ngModel)]="fechaVigenciaNueva" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <button type="button" (click)="guardarMeta()" [disabled]="guardandoMeta() || valorMetaNueva === null" class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Guardar meta</button>
+          </div>
+
+          <div class="mt-4">
+            <div class="mb-2 flex items-center justify-between"><h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Metas configuradas</h3><button type="button" (click)="cargarGestionMetas()" class="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">Actualizar</button></div>
+            <div class="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+              @for (meta of metas(); track meta.id) {
+                <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <div class="flex items-center justify-between gap-2"><span class="font-semibold text-gray-900 dark:text-white">S/ {{ meta.valorMeta | number:'1.2-2' }}</span><span [class]="meta.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="rounded-full px-2 py-0.5 text-xs font-semibold">{{ meta.activo ? 'Activa' : 'Inactiva' }}</span></div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Vigencia: {{ meta.fechaVigencia }}</p>
+                  <button type="button" (click)="cambiarEstadoMeta(meta)" class="mt-2 text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button>
+                </div>
+              } @empty { <p class="py-4 text-center text-sm text-gray-500">No hay metas configuradas.</p> }
+            </div>
+          </div>
+        </aside>
+      }
+      </div>
     </div>
   `,
   styles: []
@@ -369,17 +360,12 @@ export class ProduccionReportComponent implements OnInit {
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
 
-  // Horas disponibles (0-23)
-  horas = Array.from({ length: 24 }, (_, i) => i);
-
   // Filtros
   filtros = {
     fecha: '',
     idProveedor: null as number | null,
     idCartera: null as number | null,
     idSubcartera: null as number | null,
-    horaDesde: null as number | null,
-    horaHasta: null as number | null,
     tipoMeta: 'INTERNA' as TipoMetaReporteProduccion
   };
 
@@ -570,8 +556,6 @@ export class ProduccionReportComponent implements OnInit {
       idCartera: this.filtros.idCartera!,
       idSubcartera: this.filtros.idSubcartera!,
       tipoMeta: this.filtros.tipoMeta,
-      horaDesde: this.filtros.horaDesde ?? undefined,
-      horaHasta: this.filtros.horaHasta ?? undefined,
       valorMetaSimulada: this.simulacionActiva && this.valorMetaSimulada !== null ? this.valorMetaSimulada : undefined
     };
   }

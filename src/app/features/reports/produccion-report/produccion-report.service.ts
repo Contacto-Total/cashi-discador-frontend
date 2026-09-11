@@ -41,8 +41,6 @@ export interface FiltrosReporteProduccion {
   idCartera: number;
   idSubcartera: number;
   tipoMeta: TipoMetaReporteProduccion;
-  horaDesde?: number;
-  horaHasta?: number;
   valorMetaSimulada?: number;
 }
 
@@ -89,8 +87,6 @@ export class ProduccionReportService {
     params = params.set('idCartera', filtros.idCartera.toString());
     params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
-    if (filtros.horaDesde !== undefined) params = params.set('horaDesde', filtros.horaDesde.toString());
-    if (filtros.horaHasta !== undefined) params = params.set('horaHasta', filtros.horaHasta.toString());
     if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get<ReporteProduccionResponse>(this.baseUrl, { params });
@@ -104,8 +100,6 @@ export class ProduccionReportService {
     params = params.set('idCartera', filtros.idCartera.toString());
     params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
-    if (filtros.horaDesde !== undefined) params = params.set('horaDesde', filtros.horaDesde.toString());
-    if (filtros.horaHasta !== undefined) params = params.set('horaHasta', filtros.horaHasta.toString());
     if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get(`${this.baseUrl}/excel`, {
