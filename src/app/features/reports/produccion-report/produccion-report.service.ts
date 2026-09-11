@@ -84,9 +84,9 @@ export class ProduccionReportService {
     let params = new HttpParams();
 
     if (filtros.fecha) params = params.set('fecha', filtros.fecha);
-    if (filtros.idTenant !== undefined) params = params.set('idTenant', filtros.idTenant.toString());
-    if (filtros.idCartera !== undefined) params = params.set('idCartera', filtros.idCartera.toString());
-    if (filtros.idSubcartera !== undefined) params = params.set('idSubcartera', filtros.idSubcartera.toString());
+    if (filtros.idTenant != null) params = params.set('idTenant', filtros.idTenant.toString());
+    if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
+    if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
     if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
@@ -97,9 +97,9 @@ export class ProduccionReportService {
     let params = new HttpParams();
 
     if (filtros.fecha) params = params.set('fecha', filtros.fecha);
-    if (filtros.idTenant !== undefined) params = params.set('idTenant', filtros.idTenant.toString());
-    if (filtros.idCartera !== undefined) params = params.set('idCartera', filtros.idCartera.toString());
-    if (filtros.idSubcartera !== undefined) params = params.set('idSubcartera', filtros.idSubcartera.toString());
+    if (filtros.idTenant != null) params = params.set('idTenant', filtros.idTenant.toString());
+    if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
+    if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
     if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 

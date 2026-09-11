@@ -519,9 +519,9 @@ export class ProduccionReportComponent implements OnInit {
   private construirFiltros(): FiltrosReporteProduccion {
     return {
       fecha: this.filtros.fecha || undefined,
-      idTenant: this.filtros.idProveedor!,
-      idCartera: this.filtros.idCartera!,
-      idSubcartera: this.filtros.idSubcartera!,
+      idTenant: this.filtros.idProveedor ?? undefined,
+      idCartera: this.filtros.idCartera ?? undefined,
+      idSubcartera: this.filtros.idSubcartera ?? undefined,
       tipoMeta: this.filtros.tipoMeta,
       valorMetaSimulada: this.simulacionActiva && this.valorMetaSimulada !== null ? this.valorMetaSimulada : undefined
     };
