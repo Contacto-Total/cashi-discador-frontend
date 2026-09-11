@@ -150,6 +150,11 @@
   grid-column: 1 / -1;
 }
 
+/* Mantiene las secciones de configuración como elementos de la cuadrícula padre. */
+.readonly-configuration--overview {
+  display: contents;
+}
+
 .form-section.section-error {
   border-color: #ef4444;
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
