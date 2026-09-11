@@ -361,7 +361,7 @@ interface ParteMensaje {
 
             <section [class]="estilos.tarjeta + ' lg:col-span-2'">
               <h2 class="!m-0 text-[15px] font-bold">Filtros</h2>
-              <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <div role="group" aria-labelledby="tenor-rangos" class="flex flex-col gap-[9px]">
                   <span id="tenor-rangos" [class]="estilos.etiqueta">Rangos</span>
                   @for (r of rangos; track $index; let i = $index) {
@@ -396,7 +396,7 @@ interface ParteMensaje {
                   }
                 </div>
 
-                <div role="group" aria-labelledby="tenor-restricciones" class="flex flex-col gap-[9px]">
+                <div role="group" aria-labelledby="tenor-restricciones" class="flex flex-col gap-[9px] xl:border-l xl:border-[#eef1f5] xl:pl-6 dark:border-slate-800">
                   <span id="tenor-restricciones" [class]="estilos.etiqueta">Restricciones</span>
                   <label class="relative flex cursor-pointer items-start gap-[9px] text-[13px]">
                     <input type="checkbox" class="peer sr-only" [ngModel]="sinPromesaVigente" (ngModelChange)="sinPromesaVigente = $event; marcarCambio()" />
@@ -417,6 +417,15 @@ interface ParteMensaje {
                   } @else {
                     <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Esta subcartera no recibe contención.</p>
                   }
+                </div>
+
+                <div role="group" aria-labelledby="tenor-contactos-control" class="flex flex-col gap-[9px] xl:border-l xl:border-[#eef1f5] xl:pl-6 dark:border-slate-800">
+                  <span id="tenor-contactos-control" [class]="estilos.etiqueta">Contactos de control</span>
+                  <label class="relative flex cursor-pointer items-start gap-[9px] text-[13px]">
+                    <input type="checkbox" class="peer sr-only" [ngModel]="incluirContactosControl" (ngModelChange)="incluirContactosControl = $event; marcarCambio()" />
+                    <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
+                    <span>Incluirlos al inicio del archivo <span class="text-[#5f6c80] dark:text-slate-400">(reciben el mismo SMS con los importes y datos de un cliente del archivo)</span></span>
+                  </label>
                 </div>
               </div>
             </section>
@@ -627,6 +636,8 @@ export class TenorFormComponent implements OnInit {
   sinPromesaVigente = true;
   sinListaNegra = true;
   soloNoContenido = false;
+  /** Si el archivo empieza con los contactos de control. Marcado por defecto. */
+  incluirContactosControl = true;
 
   /** Hay cambios sin guardar: el archivo se genera con la versión guardada. */
   private sinGuardar = false;
@@ -1068,6 +1079,7 @@ export class TenorFormComponent implements OnInit {
         this.sinPromesaVigente = tenor.restricciones.sinPromesaVigente;
         this.sinListaNegra = tenor.restricciones.sinListaNegra;
         this.soloNoContenido = tenor.restricciones.soloNoContenido;
+        this.incluirContactosControl = tenor.incluirContactosControl ?? true;
         this.idInquilino = tenor.idInquilino;
         this.idCartera = tenor.idCartera;
         this.idSubcartera = tenor.idSubcartera;
@@ -1150,7 +1162,8 @@ export class TenorFormComponent implements OnInit {
         sinPromesaVigente: this.sinPromesaVigente,
         sinListaNegra: this.sinListaNegra,
         soloNoContenido: this.soloNoContenido
-      }
+      },
+      incluirContactosControl: this.incluirContactosControl
     };
   }
 }

@@ -39,6 +39,8 @@ export interface TenorGuardar {
   rangos: RangoTenor[];
   restricciones: RestriccionesTenor;
   combinadas: CombinadaTenor[];
+  /** Si el archivo empieza con los contactos de control. */
+  incluirContactosControl: boolean;
 }
 
 export type EstadoTenor = 'ACTIVO' | 'ARCHIVADO';
@@ -56,6 +58,7 @@ export interface Tenor {
   rangos: RangoTenor[];
   restricciones: RestriccionesTenor;
   combinadas: CombinadaTenor[];
+  incluirContactosControl: boolean;
   estado: EstadoTenor;
   origen: string;
   /** Último conteo guardado; nulo si el tenor no se pudo calcular. */
@@ -114,6 +117,18 @@ export interface PreviewTenor {
 export interface ExportableTenor {
   exportable: boolean;
   motivo: string | null;
+}
+
+/**
+ * Persona del equipo que recibe el mismo SMS al inicio del archivo, para validar
+ * el mensaje. Nombre, documento y celular son suyos; el resto de su fila se copia
+ * de un cliente del archivo.
+ */
+export interface ContactoControl {
+  id: number | null;
+  nombre: string;
+  documento: string | null;
+  telefono: string;
 }
 
 export interface RespuestaApi<T> {
