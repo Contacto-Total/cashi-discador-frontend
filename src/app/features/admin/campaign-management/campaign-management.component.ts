@@ -420,7 +420,9 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   get paginatedCampaigns(): Campaign[] {
     const start = (this.currentPage - 1) * this.pageSize;
-    return this.campaigns.slice(start, start + this.pageSize);
+    return [...this.campaigns]
+      .sort((a, b) => Number(b.status === 'ACTIVE' && b.estaDiscando) - Number(a.status === 'ACTIVE' && a.estaDiscando))
+      .slice(start, start + this.pageSize);
   }
 
   goToPage(page: number): void {

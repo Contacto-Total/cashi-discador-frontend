@@ -41,6 +41,8 @@ export interface Campaign {
   tenantId?: number;
   portfolioId?: number;
   subPortfolioId?: number;
+  portfolioName?: string;
+  subPortfolioName?: string;
 
   // Grupo dirigido: null/undefined = todos los asesores de la subcartera
   idGrupoAsesores?: number | null;

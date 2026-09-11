@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -108,6 +108,12 @@ export class CampaignFormComponent implements OnInit {
   campaignFilters: CampaignFilterRange[] = [];
   private campaignFiltersLoaded = false;
   readonly campaignOrderFields = signal<CampaignOrderField[]>([]);
+  private readonly orderableFilterFields = signal<Omit<OrderableCampaignField, 'orderDirection' | 'orderPriority'>[]>([]);
+  readonly inactiveOrderFields = computed(() => {
+    const configured = this.campaignOrderFields();
+    return this.orderableFilterFields().filter(field =>
+      !configured.some(order => order.fieldCode === field.fieldCode));
+  });
   selectedFieldId: number = 0;
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
@@ -637,6 +643,7 @@ export class CampaignFormComponent implements OnInit {
         this.campaignFilters = filters;
         this.campaignFiltersLoaded = true;
         this.pruneInactiveOrderFields();
+        this.syncOrderableFilterFields();
         console.log('Filtros de campaña cargados:', filters);
       },
       error: (err) => console.error('Error loading campaign filters:', err)
@@ -701,6 +708,7 @@ export class CampaignFormComponent implements OnInit {
       this.availableYears = [];
       this.selectedTipoContacto = null;
       this.error = null;
+      this.syncOrderableFilterFields();
       return;
     }
 
@@ -726,6 +734,7 @@ export class CampaignFormComponent implements OnInit {
       this.newFilterSelectedDueDates = [];
       this.selectedTipoContacto = null;
       this.error = null;
+      this.syncOrderableFilterFields();
       return;
     }
 
@@ -777,6 +786,7 @@ export class CampaignFormComponent implements OnInit {
     this.newFilterSelectedYears = [];
     this.selectedTipoContacto = null;
     this.error = null;
+    this.syncOrderableFilterFields();
   }
 
   getTipoFiltroEstadoDescripcion(): string {
@@ -811,11 +821,13 @@ export class CampaignFormComponent implements OnInit {
     const index = this.campaignFilters.indexOf(filter);
     if (index >= 0) this.campaignFilters.splice(index, 1);
     this.pruneInactiveOrderFields();
+    this.syncOrderableFilterFields();
   }
 
   clearFilters(): void {
     this.campaignFilters = [];
     this.pruneInactiveOrderFields();
+    this.syncOrderableFilterFields();
   }
 
   reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
@@ -833,15 +845,11 @@ export class CampaignFormComponent implements OnInit {
   }
 
   getOrderableFields(): OrderableCampaignField[] {
-    const seen = new Set<string>();
-    return this.campaignFilters
-      .filter(filter => !!filter.fieldCode && !seen.has(filter.fieldCode) && !!seen.add(filter.fieldCode))
-      .map(filter => {
-        const order = this.campaignOrderFields().find(item => item.fieldCode === filter.fieldCode);
+    return this.orderableFilterFields()
+      .map(field => {
+        const order = this.campaignOrderFields().find(item => item.fieldCode === field.fieldCode);
         return order ? order : {
-          fieldDefinitionId: filter.fieldDefinitionId,
-          fieldCode: filter.fieldCode,
-          fieldName: filter.fieldName,
+          ...field,
           orderDirection: 'NA'
         };
       });
@@ -933,6 +941,17 @@ export class CampaignFormComponent implements OnInit {
       .map(filter => filter.fieldCode));
     this.campaignOrderFields.update(fields =>
       this.normalizeOrderPriorities(fields.filter(field => activeFilterCodes.has(field.fieldCode))));
+  }
+
+  private syncOrderableFilterFields(): void {
+    const seen = new Set<string>();
+    this.orderableFilterFields.set(this.campaignFilters
+      .filter(filter => !!filter.fieldCode && !seen.has(filter.fieldCode) && !!seen.add(filter.fieldCode))
+      .map(filter => ({
+        fieldDefinitionId: filter.fieldDefinitionId,
+        fieldCode: filter.fieldCode,
+        fieldName: filter.fieldName
+      })));
   }
 
   getPhoneSelectionDescription(): string {

@@ -1,5 +1,57 @@
 /* CASHI Design - Campaign Management Panel - Theme-Aware */
 
+.campaign-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+}
+
+.campaign-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+}
+
+.campaign-table th {
+  padding: 0.65rem 0.75rem;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.72);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.campaign-table td {
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid #334155;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
+.campaign-table tbody tr:hover { background: rgba(59, 130, 246, 0.08); }
+.campaign-table tbody tr.is-dialing { box-shadow: inset 3px 0 #10b981; }
+.campaign-name-cell { min-width: 200px; cursor: pointer; }
+.campaign-name-cell strong { display: block; color: #f8fafc; font-size: 0.84rem; }
+.campaign-name-cell small { display: block; max-width: 250px; overflow: hidden; color: #94a3b8; font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+.campaign-contact-stats { white-space: nowrap; }
+.campaign-contact-stats span { display: inline-flex; flex-direction: column; margin-right: 0.55rem; color: #e2e8f0; font-family: 'SF Mono', Monaco, monospace; font-size: 0.76rem; font-weight: 700; }
+.campaign-contact-stats small { color: #64748b; font-family: inherit; font-size: 0.62rem; font-weight: 500; }
+.campaign-date-cell { white-space: nowrap; }
+.campaign-date-cell small { display: block; margin-top: 0.2rem; color: #60a5fa; font-size: 0.66rem; }
+.campaign-actions-cell { min-width: 175px; white-space: nowrap; }
+.campaign-actions-cell .btn-action-small { margin-right: 0.25rem; }
+
+:host-context(body.light-theme) .campaign-table-wrap { border-color: #dbeafe; background: #fff; }
+:host-context(body.light-theme) .campaign-table th { color: #64748b; background: #f8fafc; }
+:host-context(body.light-theme) .campaign-table td { border-top-color: #e2e8f0; color: #1e293b; }
+:host-context(body.light-theme) .campaign-table tbody tr:hover { background: #eff6ff; }
+:host-context(body.light-theme) .campaign-name-cell strong { color: #0f172a; }
+:host-context(body.light-theme) .campaign-contact-stats span { color: #1e293b; }
+
 /* ========================================
    DARK THEME (Default)
    ======================================== */

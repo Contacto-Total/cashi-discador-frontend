@@ -521,18 +521,14 @@
             <div class="order-field-item" *ngFor="let field of campaignOrderFields(); let i = index" cdkDrag>
               <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
-              <select class="order-direction-control" [value]="field.orderDirection" (mousedown)="$event.stopPropagation()" (change)="setOrderDirection(field.fieldCode, $any($event.target).value)">
-                <option value="NA">NA</option><option value="DESC">DESC</option><option value="ASC">ASC</option>
-              </select>
+              <button type="button" class="btn-filter-sort active" (click)="onOrderDirectionClick($event, field.fieldCode)">{{ field.orderDirection }}</button>
             </div>
           </div>
-          <div class="order-fields-list order-fields-list--inactive" *ngIf="getInactiveOrderFields().length > 0">
-            <div class="order-field-item order-field-item--inactive" *ngFor="let field of getInactiveOrderFields()">
+          <div class="order-fields-list order-fields-list--inactive" *ngIf="inactiveOrderFields().length > 0">
+            <div class="order-field-item order-field-item--inactive" *ngFor="let field of inactiveOrderFields()">
               <span class="order-field-priority order-field-priority--na">NA</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
-              <select class="order-direction-control" value="NA" (mousedown)="$event.stopPropagation()" (change)="setOrderDirection(field.fieldCode, $any($event.target).value)">
-                <option value="NA">NA</option><option value="DESC">DESC</option><option value="ASC">ASC</option>
-              </select>
+              <button type="button" class="btn-filter-sort" (click)="onOrderDirectionClick($event, field.fieldCode)">NA</button>
             </div>
           </div>
         </div>

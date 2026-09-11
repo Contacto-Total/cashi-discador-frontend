@@ -39,86 +39,32 @@
         <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
       </div>
 
-      <div *ngFor="let campaign of paginatedCampaigns; trackBy: trackByCampaignId"
-           class="campaign-card"
-           [class.is-active]="campaign.status === 'ACTIVE'"
-           [class.is-dialing]="campaign.estaDiscando">
-
-        <!-- Left accent bar -->
-        <div class="card-accent" [style.background]="getStatusColor(campaign.status)"></div>
-
-        <div class="card-content">
-          <!-- Row 1: Title + Status + Actions -->
-          <div class="card-top">
-            <div class="card-title-row" (click)="viewCampaignDetail(campaign)" style="cursor: pointer;">
-              <h3>{{ campaign.name }}</h3>
-              <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
-                {{ getStatusText(campaign.status) }}
-              </span>
-              <span *ngIf="campaign.estaDiscando" class="dialing-indicator">
-                <span class="pulse-dot"></span> Discando
-              </span>
-            </div>
-            <div class="card-actions">
-              <button class="btn-action-small btn-view" (click)="viewCampaignDetail(campaign)" title="Ver detalle">
-                <lucide-angular name="eye" [size]="15"></lucide-angular>
-              </button>
-               <button class="btn-action-small btn-edit" [routerLink]="['/admin/campaigns', campaign.id, 'edit']" title="Editar">
-                 <lucide-angular name="pencil" [size]="15"></lucide-angular>
-               </button>
-               <button class="btn-action-small btn-duplicate" (click)="showDuplicatePreview(campaign)" title="Duplicar campaña">
-                 <lucide-angular name="copy" [size]="15"></lucide-angular>
-               </button>
-              <button *ngIf="canToggle(campaign)"
-                [class]="getToggleButtonClass(campaign)"
-                (click)="toggleCampaign(campaign)"
-                [title]="getToggleButtonTitle(campaign)">
-                <lucide-angular [name]="getToggleButtonIcon(campaign)" [size]="15"></lucide-angular>
-              </button>
-              <button *ngIf="campaign.status !== 'ACTIVE'" class="btn-action-small btn-delete" (click)="deleteCampaign(campaign)" title="Eliminar">
-                <lucide-angular name="trash-2" [size]="15"></lucide-angular>
-              </button>
-            </div>
-          </div>
-
-          <!-- Row 2: Description (optional) -->
-          <p *ngIf="campaign.description" class="card-description">{{ campaign.description }}</p>
-
-          <!-- Row 3: Stats + Meta -->
-          <div class="card-bottom">
-            <div class="card-stats" *ngIf="campaign.totalContacts !== undefined">
-              <div class="stat-pill">
-                <span class="stat-pill-value">{{ campaign.totalContacts || 0 }}</span>
-                <span class="stat-pill-label">Total</span>
-              </div>
-              <div class="stat-pill stat-pending">
-                <span class="stat-pill-value">{{ campaign.pendingContacts || 0 }}</span>
-                <span class="stat-pill-label">Pend.</span>
-              </div>
-              <div class="stat-pill stat-contacted">
-                <span class="stat-pill-value">{{ campaign.contactedContacts || 0 }}</span>
-                <span class="stat-pill-label">Contact.</span>
-              </div>
-            </div>
-            <div class="card-meta">
-              <span class="meta-tag">{{ campaign.dialMode }}</span>
-              <span class="meta-tag">Max: {{ campaign.maxAttempts }}</span>
-              <span class="meta-tag">Int: {{ campaign.intensidad || 50 }}</span>
-              <span class="meta-tag meta-date" *ngIf="campaign.createdAt">{{ campaign.createdAt | appDateTime }}</span>
-            </div>
-            <div class="card-meta" *ngIf="campaign.primeraActivacion || campaign.ultimaActivacion || campaign.ultimaDesactivacion" style="margin-top: 4px;">
-              <span class="meta-tag" *ngIf="campaign.primeraActivacion" style="color: #10B981;" title="Primera activación">
-                1ra: {{ campaign.primeraActivacion | appDateTime: 'dayMonth' }}
-              </span>
-              <span class="meta-tag" *ngIf="campaign.ultimaActivacion" style="color: #3B82F6;" title="Última activación">
-                Act: {{ campaign.ultimaActivacion | appDateTime: 'dayMonth' }}
-              </span>
-              <span class="meta-tag" *ngIf="campaign.ultimaDesactivacion" style="color: #EF4444;" title="Última desactivación">
-                Des: {{ campaign.ultimaDesactivacion | appDateTime: 'dayMonth' }}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div class="campaign-table-wrap" *ngIf="campaigns.length > 0">
+        <table class="campaign-table">
+          <thead>
+            <tr><th>Campaña</th><th>Cartera</th><th>Subcartera</th><th>Inicio</th><th>Fin</th><th>Intensidad</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let campaign of paginatedCampaigns; trackBy: trackByCampaignId" [class.is-dialing]="campaign.estaDiscando">
+              <td class="campaign-name-cell" (click)="viewCampaignDetail(campaign)">
+                <strong>{{ campaign.name }}</strong>
+              </td>
+              <td>{{ campaign.portfolioName || ('#' + (campaign.portfolioId || '-')) }}</td>
+              <td>{{ campaign.subPortfolioName || ('#' + (campaign.subPortfolioId || '-')) }}</td>
+              <td class="campaign-date-cell">{{ campaign.startDate ? (campaign.startDate | appDateTime: 'dayMonth') : '-' }}</td>
+              <td class="campaign-date-cell">{{ campaign.endDate ? (campaign.endDate | appDateTime: 'dayMonth') : '-' }}</td>
+              <td>{{ campaign.intensidad || 50 }}</td>
+              <td><span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">{{ getStatusText(campaign.status) }}</span><span *ngIf="campaign.estaDiscando" class="dialing-indicator"><span class="pulse-dot"></span>Discando</span></td>
+              <td class="campaign-actions-cell">
+                <button class="btn-action-small btn-view" (click)="viewCampaignDetail(campaign)" title="Ver detalle"><lucide-angular name="eye" [size]="15"></lucide-angular></button>
+                <button class="btn-action-small btn-edit" [routerLink]="['/admin/campaigns', campaign.id, 'edit']" title="Editar"><lucide-angular name="pencil" [size]="15"></lucide-angular></button>
+                <button class="btn-action-small btn-duplicate" (click)="showDuplicatePreview(campaign)" title="Duplicar campaña"><lucide-angular name="copy" [size]="15"></lucide-angular></button>
+                <button *ngIf="canToggle(campaign)" [class]="getToggleButtonClass(campaign)" (click)="toggleCampaign(campaign)" [title]="getToggleButtonTitle(campaign)"><lucide-angular [name]="getToggleButtonIcon(campaign)" [size]="15"></lucide-angular></button>
+                <button *ngIf="campaign.status !== 'ACTIVE'" class="btn-action-small btn-delete" (click)="deleteCampaign(campaign)" title="Eliminar"><lucide-angular name="trash-2" [size]="15"></lucide-angular></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
