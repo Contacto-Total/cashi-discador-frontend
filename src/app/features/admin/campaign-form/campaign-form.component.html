@@ -29,13 +29,14 @@
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading" (ngSubmit)="onSubmit()"
+  <form *ngIf="!loading" (ngSubmit)="onSubmit()" novalidate
         class="form-content !gap-3 [&_.form-group]:!mb-2 [&_.form-group_label]:!mb-1 [&_.form-group_label]:!text-xs [&_.form-input]:!rounded-md [&_.form-input]:!px-2.5 [&_.form-input]:!py-1.5 [&_.form-input]:!text-sm [&_.form-select]:!rounded-md [&_.form-select]:!px-2.5 [&_.form-select]:!py-1.5 [&_.form-select]:!text-sm [&_.form-textarea]:!rounded-md [&_.form-textarea]:!px-2.5 [&_.form-textarea]:!py-1.5 [&_.form-textarea]:!text-sm [&_.form-section_h2]:!mb-3 [&_.form-section_h2]:!pb-2 [&_.section-description]:!mb-2 [&_.section-description]:!text-xs">
 
     <!-- SECCIÓN SUPERIOR: Info básica + Asignación -->
     <div class="top-sections !gap-3">
       <!-- Información Básica -->
-      <div class="form-section !rounded-lg !p-3">
+      <div id="basic-info-section" class="form-section !rounded-lg !p-3"
+           [class.section-error]="invalidSections.basic" [class.section-valid]="resolvedSections.basic">
         <h2>
           <lucide-angular name="file-text" [size]="20"></lucide-angular>
           Información Básica
@@ -46,8 +47,9 @@
           <input
             type="text"
             id="name"
-            [(ngModel)]="campaign.name"
-            name="name"
+             [(ngModel)]="campaign.name"
+             name="name"
+             (ngModelChange)="onBasicChanged()"
             placeholder="Ej: Campaña Cobranza Enero 2025"
             class="form-input"
             required>
@@ -80,7 +82,8 @@
       </div>
 
       <!-- Asignación -->
-      <div class="form-section !rounded-lg !p-3">
+      <div id="assignment-section" class="form-section !rounded-lg !p-3"
+           [class.section-error]="invalidSections.assignment" [class.section-valid]="resolvedSections.assignment">
         <h2>
           <lucide-angular name="building-2" [size]="20"></lucide-angular>
           Asignación
@@ -92,7 +95,7 @@
             id="tenant"
             [(ngModel)]="selectedTenantId"
             name="tenant"
-            (ngModelChange)="onTenantChange()"
+             (ngModelChange)="onTenantChange(); onAssignmentChanged()"
             class="form-select"
             required>
             <option [ngValue]="0">Seleccione un proveedor...</option>
@@ -109,7 +112,7 @@
               id="portfolio"
               [(ngModel)]="selectedPortfolioId"
               name="portfolio"
-              (ngModelChange)="onPortfolioChange()"
+             (ngModelChange)="onPortfolioChange(); onAssignmentChanged()"
               [disabled]="selectedTenantId === 0"
               class="form-select"
               required>
@@ -126,7 +129,7 @@
               id="subportfolio"
               [(ngModel)]="selectedSubPortfolioId"
               name="subportfolio"
-              (ngModelChange)="onSubPortfolioChange()"
+             (ngModelChange)="onSubPortfolioChange(); onAssignmentChanged()"
               [disabled]="selectedPortfolioId === 0"
               class="form-select"
               required>
@@ -185,13 +188,12 @@
             min="1"
             max="100"
             placeholder="50">
-          <small>Llamadas simultáneas (1-100)</small>
         </div>
       </div>
     </div>
 
     <!-- SECCIÓN: Configuración de Estado de Cliente -->
-    <div class="form-section full-width !rounded-lg !p-3">
+    <div class="form-section full-width state-segmentation-section !rounded-lg !p-3">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
         Segmentación por Estado de Cliente
@@ -209,18 +211,6 @@
               {{ tipo.nombre }}
             </option>
           </select>
-          <small class="help-text">
-            {{ getTipoFiltroEstadoDescripcion() }}
-          </small>
-        </div>
-
-        <div class="tipos-contacto-info">
-          <label>Tipos de Contacto Disponibles:</label>
-          <div class="tipos-badges">
-            <span *ngFor="let tipo of tiposContacto" class="tipo-badge" [style.background-color]="tipo.color">
-              {{ tipo.codigo }} - {{ tipo.nombre }}
-            </span>
-          </div>
         </div>
       </div>
     </div>
@@ -231,11 +221,7 @@
         <lucide-angular name="calendar-range" [size]="20"></lucide-angular>
         Filtro por Antigüedad de Mora
       </h2>
-      <p class="section-description">
-        Seleccione los rangos de antigüedad que desea incluir en la campaña. Si no selecciona ninguno, se incluirán todos.
-      </p>
-
-      <div class="rango-antiguedad-grid">
+      <div class="rango-antiguedad-grid rango-antiguedad-grid--compact">
         <label
           *ngFor="let rango of rangosAntiguedad"
           class="rango-checkbox-label"
@@ -260,10 +246,6 @@
         <lucide-angular name="phone" [size]="20"></lucide-angular>
         Teléfonos y Contactabilidad
       </h2>
-      <p class="section-description">
-        Seleccione los tipos de teléfono y la cantidad máxima de números elegibles por cliente.
-      </p>
-
       <div class="rango-antiguedad-grid">
         <label
           *ngFor="let tipo of tiposTelefono"
@@ -273,9 +255,7 @@
             type="checkbox"
             [checked]="isTipoTelefonoSelected(tipo.codigo)"
             (change)="toggleTipoTelefono(tipo.codigo)">
-          <span class="rango-checkbox-text">{{ tipo.nombre }}
-            <small style="display:block; opacity:0.7; font-weight:normal;">{{ tipo.descripcion }}</small>
-          </span>
+          <span class="rango-checkbox-text">{{ tipo.nombre }}</span>
         </label>
       </div>
 
@@ -341,11 +321,9 @@
         <lucide-angular name="filter" [size]="20"></lucide-angular>
         Filtros de Segmentación por Rango
       </h2>
-
       <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
         <div class="filter-add-section !mb-3 !rounded-lg !p-3">
-          <h3>Agregar Filtro de Rango</h3>
           <div class="filter-add-grid">
             <div class="form-group">
               <label for="tipoContacto">Tipo de Contacto</label>
@@ -362,7 +340,7 @@
             </div>
 
             <div class="form-group">
-              <label for="filterField">Campo a Filtrar <small>(opcional si solo filtra por estado)</small></label>
+              <label for="filterField">Campo a Filtrar</label>
               <select
                 id="filterField"
                 [(ngModel)]="selectedFieldId"
@@ -508,81 +486,58 @@
           </div>
         </div>
 
+        <div class="filter-results-layout" *ngIf="campaignFilters.length > 0">
         <!-- Lista de filtros agregados -->
         <div class="filters-list" *ngIf="campaignFilters.length > 0">
-          <h3>
-            <lucide-angular name="list-filter" [size]="18"></lucide-angular>
-            Filtros Activos ({{ campaignFilters.length }})
-          </h3>
-          <div class="filter-cards">
-            <div class="filter-card" *ngFor="let filter of campaignFilters; let i = index">
-              <div class="filter-card-header">
-                <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
-                  {{ getTipoContactoNombre(filter.tipoContacto) }}
-                </span>
-                <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
-                <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
-                <!-- Temporalmente oculto: el backend anterior solo admite el ordenamiento heredado. -->
-                <!-- <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
-                  <button type="button" class="btn-filter-sort"
-                          (click)="toggleFilterOrder(filter); $event.stopPropagation()"
-                          [title]="getFilterOrderLabel(filter) === 'DESC' ? 'Mayor a menor. Cambiar a ascendente' : 'Menor a mayor. Cambiar a descendente'">
-                    {{ getFilterOrderLabel(filter) }}
-                  </button>
-                </div> -->
-                <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
-                  <lucide-angular name="trash-2" [size]="16"></lucide-angular>
-                </button>
-              </div>
-              <!-- NUMERICO filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'BOOLEAN' && filter.dataType !== 'FECHA'">
-                <div class="range-display">
-                  <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
-                    <span class="range-label">Mínimo</span>
-                    <span class="range-number">{{ filter.minValue | appNumber }}</span>
-                  </div>
-                  <div class="range-separator" *ngIf="filter.minValue !== undefined && filter.maxValue !== undefined">
-                    <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
-                  </div>
-                  <div class="range-value" *ngIf="filter.maxValue !== undefined && filter.maxValue !== null">
-                    <span class="range-label">Máximo</span>
-                    <span class="range-number">{{ filter.maxValue | appNumber }}</span>
-                  </div>
-                </div>
-              </div>
-              <!-- TEXTO/BOOLEAN filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && (filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN')">
-                <div class="texto-filter-values">
-                  <span class="texto-value-tag" *ngFor="let val of (filter.selectedValues || '').split(',')">{{ val }}</span>
-                </div>
-              </div>
-              <!-- FECHA filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType === 'FECHA'">
-                <div class="range-display">
-                  <div class="range-value" *ngIf="filter.minDate">
-                    <span class="range-label">Desde</span>
-                    <span class="range-number">{{ filter.minDate }}</span>
-                  </div>
-                  <div class="range-separator" *ngIf="filter.minDate && filter.maxDate">
-                    <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
-                  </div>
-                  <div class="range-value" *ngIf="filter.maxDate">
-                    <span class="range-label">Hasta</span>
-                    <span class="range-number">{{ filter.maxDate }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="filter-card-body filter-estado-only" *ngIf="!filter.fieldCode">
-                <span>Filtra todos los clientes con este estado de contacto</span>
-              </div>
-            </div>
+          <div class="active-filters-table-wrap">
+            <table class="active-filters-table">
+              <thead>
+                <tr><th>Tipo de contacto</th><th>Campo</th><th>Rango</th><th aria-label="Acciones"></th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let filter of campaignFilters">
+                  <td><span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">{{ getTipoContactoNombre(filter.tipoContacto) }}</span></td>
+                  <td class="active-filter-field">{{ filter.fieldCode ? filter.fieldName : 'Solo por Estado' }}</td>
+                  <td class="active-filter-range">
+                    <ng-container *ngIf="filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN'; else dateOrNumeric">{{ filter.selectedValues }}</ng-container>
+                    <ng-template #dateOrNumeric>
+                      <ng-container *ngIf="filter.dataType === 'FECHA'; else numericRange">{{ filter.minDate || 'Sin mínimo' }} <lucide-angular name="arrow-right" [size]="16"></lucide-angular> {{ filter.maxDate || 'Sin máximo' }}</ng-container>
+                    </ng-template>
+                    <ng-template #numericRange><ng-container *ngIf="filter.minValue !== undefined && filter.minValue !== null; else noMinimum">{{ filter.minValue | appNumber }}</ng-container><ng-template #noMinimum>Sin mínimo</ng-template> <lucide-angular name="arrow-right" [size]="16"></lucide-angular> <ng-container *ngIf="filter.maxValue !== undefined && filter.maxValue !== null; else noMaximum">{{ filter.maxValue | appNumber }}</ng-container><ng-template #noMaximum>Sin máximo</ng-template></ng-template>
+                  </td>
+                  <td><button type="button" class="btn-remove-filter table-remove-filter" (click)="removeFilter(filter)" title="Eliminar filtro"><lucide-angular name="x" [size]="18"></lucide-angular></button></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div *ngIf="campaignFilters.length === 0 && filterableFields.length > 0" class="no-filters-message">
-          <lucide-angular name="filter-x" [size]="24"></lucide-angular>
-          <span>No hay filtros configurados. Agrega filtros para segmentar los contactos de la campaña.</span>
+        <div class="order-fields-panel">
+          <div class="order-fields-header">
+            <h3><lucide-angular name="sliders" [size]="18"></lucide-angular> Orden de resultados</h3>
+            <span>{{ campaignOrderFields().length }}/5</span>
+          </div>
+          <div class="order-fields-list" *ngIf="campaignOrderFields().length > 0" cdkDropList (cdkDropListDropped)="reorderOrderFields($event)">
+            <div class="order-field-item" *ngFor="let field of campaignOrderFields(); let i = index" cdkDrag>
+              <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
+              <span class="order-field-name">{{ field.fieldName }}</span>
+              <select class="order-direction-control" [value]="field.orderDirection" (mousedown)="$event.stopPropagation()" (change)="setOrderDirection(field.fieldCode, $any($event.target).value)">
+                <option value="NA">NA</option><option value="DESC">DESC</option><option value="ASC">ASC</option>
+              </select>
+            </div>
+          </div>
+          <div class="order-fields-list order-fields-list--inactive" *ngIf="getInactiveOrderFields().length > 0">
+            <div class="order-field-item order-field-item--inactive" *ngFor="let field of getInactiveOrderFields()">
+              <span class="order-field-priority order-field-priority--na">NA</span>
+              <span class="order-field-name">{{ field.fieldName }}</span>
+              <select class="order-direction-control" value="NA" (mousedown)="$event.stopPropagation()" (change)="setOrderDirection(field.fieldCode, $any($event.target).value)">
+                <option value="NA">NA</option><option value="DESC">DESC</option><option value="ASC">ASC</option>
+              </select>
+            </div>
+          </div>
         </div>
+        </div>
+
       </ng-container>
 
       <ng-template #noSubcartera>
@@ -593,7 +548,7 @@
       </ng-template>
     </div>
 
-    <!-- Seguimiento de Promesas temporalmente ocultado para mantener compatibilidad con el backend anterior.
+    <!-- SECCIÓN: Seguimiento de Promesas -->
     <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="handshake" [size]="20"></lucide-angular>
@@ -679,9 +634,9 @@
       <small class="help-text" *ngIf="seguimientoPromesaVencida">
         Solo se considerará la última promesa del cliente, incluso si tiene otras promesas vencidas en el mes.
       </small>
-    </div> -->
+    </div>
 
-    <!-- <div class="phone-selection-panel !mt-0">
+    <div class="phone-selection-panel !mt-0">
       <div>
         <h3>Números por cliente</h3>
         <p>Defina cuántos números elegibles se considerarán para cada cliente.</p>
@@ -700,7 +655,7 @@
         <small>Los clientes que ya registren una tipificación de llamada contestada se excluirán con todos sus números.</small>
         <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
       </div>
-    </div> -->
+    </div>
 
     <!-- Botones de Acción -->
     <div class="form-actions !rounded-lg !p-2.5">

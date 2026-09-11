@@ -1,6 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
+
+.campaign-filter-drag-preview {
+  background: #ffffff !important;
+  border: 1px solid #3b82f6 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22) !important;
+}
+
+.campaign-filter-drag-preview .filter-card-header {
+  background: #eff6ff !important;
+  border-bottom-color: #dbeafe !important;
+}
+
+.campaign-filter-drag-preview .filter-field-name,
+.campaign-filter-drag-preview .range-number {
+  color: #0f2b5c !important;
+}
+
+.campaign-filter-drag-preview .range-label,
+.campaign-filter-drag-preview .range-separator {
+  color: #64748b !important;
+}
 
 /* Configurar dark mode basado en clase .dark (no en preferencia del sistema) */
 @custom-variant dark (&:where(.dark, .dark *));

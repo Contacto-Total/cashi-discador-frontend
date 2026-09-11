@@ -57,6 +57,7 @@ export interface Campaign {
 
   // Filtro tipo de teléfono: CELULAR, FIJO, o ambos separados por coma
   filtroTipoTelefono?: string;
+  maxTelefonosPorCliente?: number;
 
   // Particionado por bloques: intercala contactos de distintos rangos en rondas
   particionadoPorBloques?: boolean;
@@ -193,6 +194,17 @@ export interface CampaignFilterRange {
   minDate?: string;             // Para FECHA: fecha mínima (YYYY-MM-DD)
   maxDate?: string;             // Para FECHA: fecha máxima (YYYY-MM-DD)
   tipoContacto?: TipoContacto; // CD, CI, PR, NC - null = aplica a todos
+  orderDirection?: 'NA' | 'ASC' | 'DESC';
+  orderPriority?: number;
+}
+
+export interface CampaignOrderField {
+  id?: number;
+  fieldDefinitionId: number;
+  fieldCode: string;
+  fieldName: string;
+  orderDirection: 'ASC' | 'DESC';
+  orderPriority?: number;
 }
 
 export interface CampaignPromiseFilter {
@@ -428,6 +440,14 @@ export class CampaignAdminService {
       filters,
       { headers: this.getHeaders() }
     );
+  }
+
+  getCampaignOrderFields(campaignId: number): Observable<CampaignOrderField[]> {
+    return this.http.get<CampaignOrderField[]>(`${this.apiUrl}/${campaignId}/order-fields`, { headers: this.getHeaders() });
+  }
+
+  replaceCampaignOrderFields(campaignId: number, fields: CampaignOrderField[]): Observable<CampaignOrderField[]> {
+    return this.http.put<CampaignOrderField[]>(`${this.apiUrl}/${campaignId}/order-fields`, fields, { headers: this.getHeaders() });
   }
 
   getCampaignPromiseFilter(campaignId: number): Observable<CampaignPromiseFilter | null> {
