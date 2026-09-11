@@ -112,10 +112,16 @@ export interface MonitoringCriterion {
   campo: string;
   etiqueta: string;
   seccion: string;
-  /** Cuántas evaluaciones midieron este criterio; no es el total de audios. */
+  /** Cuántas evaluaciones midieron este criterio; no es el total de audios. 0 = nadie lo calificó. */
   evaluados: number;
   fallados: number;
+  /** null cuando ningún audio calificó el criterio: sigue en la lista porque es parte de la rúbrica. */
   pctFalla: number | null;
+  /**
+   * 'PDP' | 'CD'. La lista trae la rúbrica completa de cada rúbrica que tuvo audios, y
+   * un mismo campo puede aparecer una vez por cada una.
+   */
+  rubrica: string;
 }
 
 export interface MonitoringTotals {
