@@ -412,38 +412,72 @@
         <h3 class="text-[13.5px] font-semibold text-slate-900 dark:text-slate-200 tracking-[-0.01em]">
           Criterios que más se fallan
         </h3>
-        <div class="w-[165px] flex-shrink-0">
-          <app-custom-select [options]="asesoresDisponibles" [(ngModel)]="asesorCriterios"
-                             [compact]="true" placeholder="Todos">
-          </app-custom-select>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!--
+            Solo con Resultado en «Todos»: ahí vienen audios de las dos rúbricas y la card
+            necesita saber cuál listar. Con un Resultado elegido la rúbrica ya está fijada.
+          -->
+          <div *ngIf="!semana!.rubrica" class="w-[90px]">
+            <app-custom-select [options]="rubricasCriterios" [(ngModel)]="rubricaCriterios"
+                               [compact]="true" placeholder="CD">
+            </app-custom-select>
+          </div>
+          <div class="w-[165px]">
+            <app-custom-select [options]="asesoresDisponibles" [(ngModel)]="asesorCriterios"
+                               [compact]="true" placeholder="Todos">
+            </app-custom-select>
+          </div>
         </div>
       </div>
 
       <p class="text-[11px] text-slate-500 dark:text-slate-600 mb-3 tabular-nums">
         {{ asesorCriterios || 'Todos los asesores' }} · {{ audiosDeCriterios }} audios
+        · Rúbrica <b class="text-slate-700 dark:text-slate-400 font-medium">{{ rubricaDeCriterios }}</b>
       </p>
 
-      <div *ngIf="topCriterios.length" class="divide-y divide-slate-100 dark:divide-white/[0.05]">
-        <div *ngFor="let c of topCriterios; trackBy: porCampo" class="flex items-center gap-3 py-2">
-          <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 '
-                         + (COLOR_SECCION[c.seccion] || 'bg-slate-400')"></span>
-          <span class="flex-1 text-[12.5px] text-slate-700 dark:text-slate-300 truncate"
-                [title]="c.etiqueta">{{ c.etiqueta }}</span>
-          <span class="text-[10.5px] text-slate-400 dark:text-slate-600 whitespace-nowrap tabular-nums">
-            {{ c.fallados }}/{{ c.evaluados }}
-          </span>
-          <span class="w-16 h-1 bg-slate-200 dark:bg-slate-950/60 rounded-full overflow-hidden flex-shrink-0">
-            <span class="block h-full bg-rose-500/80 dark:bg-rose-400/70 rounded-full"
-                  [style.width.%]="c.pctFalla || 0"></span>
-          </span>
-          <span class="text-[12px] text-rose-600 dark:text-rose-300/90 w-12 text-right tabular-nums">
-            {{ pct(c.pctFalla) }}
-          </span>
+      <!-- La rúbrica completa, por fase. Dentro de cada fase, el más fallado primero. -->
+      <div *ngIf="criteriosPorFase.length" class="space-y-4">
+        <div *ngFor="let fase of criteriosPorFase; trackBy: porFase">
+          <div class="flex items-center gap-2 pb-1">
+            <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 '
+                           + (COLOR_SECCION[fase.seccion] || 'bg-slate-400')"></span>
+            <span class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:text-slate-400">
+              {{ ETIQUETA_SECCION[fase.seccion] || fase.seccion }}
+            </span>
+            <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums">
+              · {{ fase.criterios.length }}
+            </span>
+          </div>
+
+          <div class="divide-y divide-slate-100 dark:divide-white/[0.05]">
+            <div *ngFor="let c of fase.criterios; trackBy: porCampo" class="flex items-center gap-3 py-2 pl-3.5">
+              <span class="flex-1 text-[12.5px] truncate"
+                    [ngClass]="c.evaluados > 0
+                      ? 'text-slate-700 dark:text-slate-300'
+                      : 'text-slate-400 dark:text-slate-600'"
+                    [title]="c.etiqueta">{{ c.etiqueta }}</span>
+              <span class="text-[10.5px] text-slate-400 dark:text-slate-600 whitespace-nowrap tabular-nums">
+                {{ c.evaluados > 0 ? c.fallados + '/' + c.evaluados : 'sin calificar' }}
+              </span>
+              <span class="w-16 h-1 bg-slate-200 dark:bg-slate-950/60 rounded-full overflow-hidden flex-shrink-0">
+                <span class="block h-full bg-rose-500/80 dark:bg-rose-400/70 rounded-full"
+                      [style.width.%]="c.pctFalla || 0"></span>
+              </span>
+              <span class="text-[12px] w-12 text-right tabular-nums"
+                    [ngClass]="(c.pctFalla ?? 0) > 0
+                      ? 'text-rose-600 dark:text-rose-300/90'
+                      : 'text-slate-400 dark:text-slate-600'">
+                {{ pct(c.pctFalla) }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div *ngIf="!topCriterios.length" class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
-        Sin criterios evaluados en esta selección
+      <div *ngIf="!criteriosPorFase.length" class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
+        {{ hayCriteriosDeOtraRubrica
+            ? 'Sin audios de rúbrica ' + rubricaDeCriterios + ' en esta selección'
+            : 'Sin criterios evaluados en esta selección' }}
       </div>
     </div>
 

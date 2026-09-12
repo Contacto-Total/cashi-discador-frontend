@@ -1,11 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, CampaignOrderField, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -25,6 +25,10 @@ import { MAT_DATE_FORMATS } from '@angular/material/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
+type OrderableCampaignField = Omit<CampaignOrderField, 'orderDirection'> & {
+  orderDirection: 'NA' | 'ASC' | 'DESC';
+};
+
 export const MY_DATE_FORMATS = {
   parse: {
     dateInput: 'DD/MM/YYYY',  // cómo se interpreta al escribir
@@ -36,6 +40,8 @@ export const MY_DATE_FORMATS = {
     monthYearA11yLabel: 'MMMM YYYY',
   },
 };
+
+const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
 
 @Component({
   selector: 'app-campaign-form',
@@ -58,8 +64,6 @@ export const MY_DATE_FORMATS = {
 
 
 export class CampaignFormComponent implements OnInit {
-  // Temporalmente desactivado hasta desplegar el backend de filtros de promesas.
-  private readonly promiseFiltersEnabled = false;
   startDate: Date | null = null;
   endDate: Date | null = null;
 
@@ -83,9 +87,12 @@ export class CampaignFormComponent implements OnInit {
   };
 
   isEditMode: boolean = false;
+  showReadOnlyConfiguration = false;
   loading: boolean = false;
   error: string | null = null;
   campaignId: number | null = null;
+  invalidSections = { basic: false, assignment: false };
+  resolvedSections = { basic: false, assignment: false };
 
   // Datos para selectores en cascada
   tenants: Tenant[] = [];
@@ -102,6 +109,14 @@ export class CampaignFormComponent implements OnInit {
   // Filtros de rango
   filterableFields: FilterableField[] = [];
   campaignFilters: CampaignFilterRange[] = [];
+  private campaignFiltersLoaded = false;
+  readonly campaignOrderFields = signal<CampaignOrderField[]>([]);
+  private readonly orderableFilterFields = signal<Omit<OrderableCampaignField, 'orderDirection' | 'orderPriority'>[]>([]);
+  readonly inactiveOrderFields = computed(() => {
+    const configured = this.campaignOrderFields();
+    return this.orderableFilterFields().filter(field =>
+      !configured.some(order => order.fieldCode === field.fieldCode));
+  });
   selectedFieldId: number = 0;
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
@@ -194,13 +209,69 @@ export class CampaignFormComponent implements OnInit {
     this.startDateString = ahora;
     this.endDateString = ahora;
 
-  this.route.params.subscribe(params => {
-    if (params['id']) {
-      this.isEditMode = true;
-      this.campaignId = +params['id'];
-      this.loadCampaign(this.campaignId);
+   this.route.params.subscribe(params => {
+     if (params['id']) {
+       this.isEditMode = true;
+       this.campaignId = +params['id'];
+       this.loadCampaign(this.campaignId);
+     } else {
+       this.loadDuplicateDraft();
+     }
+   });
+  }
+
+  private loadDuplicateDraft(): void {
+    const rawDraft = sessionStorage.getItem(DUPLICATE_CAMPAIGN_STORAGE_KEY);
+    if (!rawDraft) return;
+    sessionStorage.removeItem(DUPLICATE_CAMPAIGN_STORAGE_KEY);
+
+    try {
+      const draft = JSON.parse(rawDraft);
+      this.campaign = { ...draft, id: undefined, status: 'DRAFT', estaDiscando: false };
+      this.campaignFilters = draft.filters || [];
+      this.campaignOrderFields.set(draft.orderFields || []);
+      this.syncOrderableFilterFields();
+      this.maxTelefonosPorCliente = this.campaign.maxTelefonosPorCliente ?? 1;
+      this.startDateString = this.campaign.startDate ? this.toDateTimeLocal(this.campaign.startDate) : this.startDateString;
+      this.endDateString = this.campaign.endDate ? this.toDateTimeLocal(this.campaign.endDate) : this.endDateString;
+      this.selectedRangosAntiguedad = this.campaign.filtroRangoAntiguedad?.split(',').map(value => value.trim()) || [];
+      this.selectedTiposTelefono = this.campaign.filtroTipoTelefono?.split(',').map(value => value.trim()) || [];
+
+      const promise = draft.promiseFilter as CampaignPromiseFilter | null;
+      if (promise) {
+        this.nivelMontoPromesa = promise.nivelMonto;
+        if (promise.tipo === 'VIGENTE') {
+          this.seguimientoPromesaVigente = true;
+          this.proximaCuotaDesde = promise.fechaDesde || this.fechaHoy;
+          this.proximaCuotaHasta = promise.fechaHasta || '';
+          this.promesaMontoMinimo = promise.montoDesde ?? null;
+          this.promesaMontoMaximo = promise.montoHasta ?? null;
+        } else {
+          this.seguimientoPromesaVencida = true;
+          this.promesaVencidaDesde = promise.fechaDesde || this.inicioMesActual;
+          this.promesaVencidaHasta = promise.fechaHasta || this.fechaHoy;
+          this.promesaVencidaMontoMinimo = promise.montoDesde ?? null;
+          this.promesaVencidaMontoMaximo = promise.montoHasta ?? null;
+        }
+      }
+
+      if (this.campaign.tenantId && this.campaign.portfolioId && this.campaign.subPortfolioId) {
+        forkJoin({
+          portfolios: this.portfolioService.getPortfoliosByTenant(this.campaign.tenantId),
+          subPortfolios: this.portfolioService.getSubPortfoliosByPortfolio(this.campaign.portfolioId)
+        }).subscribe(({ portfolios, subPortfolios }) => {
+          this.portfolios = portfolios;
+          this.subPortfolios = subPortfolios;
+          this.selectedTenantId = this.campaign.tenantId || 0;
+          this.selectedPortfolioId = this.campaign.portfolioId || 0;
+          this.selectedSubPortfolioId = this.campaign.subPortfolioId || 0;
+          this.loadFilterableFields(this.selectedSubPortfolioId);
+          this.loadGrupos(this.selectedSubPortfolioId, this.campaign.idGrupoAsesores ?? undefined);
+        });
+      }
+    } catch (error) {
+      console.error('No se pudo restaurar el borrador duplicado:', error);
     }
-  });
   }
 
   loadTenants(): void {
@@ -461,7 +532,6 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private loadPromiseFilter(campaignId: number): void {
-    if (!this.promiseFiltersEnabled) return;
     this.campaignService.getCampaignPromiseFilter(campaignId).subscribe({
       next: (filter) => {
         if (!filter) return;
@@ -630,6 +700,9 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.getCampaignFilters(campaignId).subscribe({
       next: (filters) => {
         this.campaignFilters = filters;
+        this.campaignFiltersLoaded = true;
+        this.pruneInactiveOrderFields();
+        this.syncOrderableFilterFields();
         console.log('Filtros de campaña cargados:', filters);
       },
       error: (err) => console.error('Error loading campaign filters:', err)
@@ -694,6 +767,7 @@ export class CampaignFormComponent implements OnInit {
       this.availableYears = [];
       this.selectedTipoContacto = null;
       this.error = null;
+      this.syncOrderableFilterFields();
       return;
     }
 
@@ -719,6 +793,7 @@ export class CampaignFormComponent implements OnInit {
       this.newFilterSelectedDueDates = [];
       this.selectedTipoContacto = null;
       this.error = null;
+      this.syncOrderableFilterFields();
       return;
     }
 
@@ -770,6 +845,7 @@ export class CampaignFormComponent implements OnInit {
     this.newFilterSelectedYears = [];
     this.selectedTipoContacto = null;
     this.error = null;
+    this.syncOrderableFilterFields();
   }
 
   getTipoFiltroEstadoDescripcion(): string {
@@ -800,27 +876,159 @@ export class CampaignFormComponent implements OnInit {
     return this.getFiltersByTipoContacto(tipoContacto).length > 0;
   }
 
-  removeFilter(index: number): void {
-    this.campaignFilters.splice(index, 1);
+  removeFilter(filter: CampaignFilterRange): void {
+    const index = this.campaignFilters.indexOf(filter);
+    if (index >= 0) this.campaignFilters.splice(index, 1);
+    this.pruneInactiveOrderFields();
+    this.syncOrderableFilterFields();
+  }
+
+  editFilter(filter: CampaignFilterRange): void {
+    this.selectedTipoContacto = filter.tipoContacto ?? null;
+    this.selectedFieldId = filter.fieldDefinitionId || 0;
+    this.onFieldChange();
+    this.newFilterMinValue = filter.minValue ?? null;
+    this.newFilterMaxValue = filter.maxValue ?? null;
+    this.newFilterSelectedValues = filter.selectedValues?.split(',').filter(Boolean) || [];
+    this.newFilterMinDate = filter.minDate || '';
+    this.newFilterMaxDate = filter.maxDate || '';
+
+    // Preserve the ordering field while the edited range is temporarily out of the list.
+    const index = this.campaignFilters.indexOf(filter);
+    if (index >= 0) this.campaignFilters.splice(index, 1);
+    this.syncOrderableFilterFields();
+    this.error = null;
+    setTimeout(() => document.getElementById('tipoContacto')?.focus());
+  }
+
+  clearFilters(): void {
+    this.campaignFilters = [];
+    this.pruneInactiveOrderFields();
+    this.syncOrderableFilterFields();
   }
 
   reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
     moveItemInArray(this.campaignFilters, event.previousIndex, event.currentIndex);
   }
 
-  toggleFilterOrder(filter: CampaignFilterRange): void {
-    if (!filter.fieldCode) return;
-    const isCurrentField = this.campaign.ordenarPorCampo === filter.fieldCode;
-    this.campaign.ordenarPorCampo = filter.fieldCode;
-    this.campaign.ordenarDireccion = isCurrentField && this.campaign.ordenarDireccion === 'DESC'
-      ? 'ASC'
-      : 'DESC';
+  loadCampaignOrderFields(campaignId: number): void {
+    this.campaignService.getCampaignOrderFields(campaignId).subscribe({
+      next: fields => {
+        this.campaignOrderFields.set(fields);
+        if (this.campaignFiltersLoaded) this.pruneInactiveOrderFields();
+      },
+      error: err => console.error('Error loading campaign order fields:', err)
+    });
   }
 
-  getFilterOrderLabel(filter: CampaignFilterRange): 'ASC' | 'DESC' {
-    return this.campaign.ordenarPorCampo === filter.fieldCode
-      ? this.campaign.ordenarDireccion || 'DESC'
-      : 'DESC';
+  getOrderableFields(): OrderableCampaignField[] {
+    return this.orderableFilterFields()
+      .map(field => {
+        const order = this.campaignOrderFields().find(item => item.fieldCode === field.fieldCode);
+        return order ? order : {
+          ...field,
+          orderDirection: 'NA'
+        };
+      });
+  }
+
+  getInactiveOrderFields(): OrderableCampaignField[] {
+    return this.getOrderableFields().filter(field => field.orderDirection === 'NA');
+  }
+
+  toggleOrderDirection(field: OrderableCampaignField): void {
+    this.toggleOrderField(field.fieldCode);
+  }
+
+  onOrderDirectionClick(event: MouseEvent, fieldCode: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.toggleOrderField(fieldCode);
+  }
+
+  getOrderDirection(fieldCode: string): 'NA' | 'ASC' | 'DESC' {
+    return this.campaignOrderFields().find(field => field.fieldCode === fieldCode)?.orderDirection ?? 'NA';
+  }
+
+  setOrderDirection(fieldCode: string, direction: string): void {
+    const field = this.getOrderableFields().find(item => item.fieldCode === fieldCode);
+    if (!field) return;
+    const orderFields = this.campaignOrderFields();
+    const existingIndex = orderFields.findIndex(item => item.fieldCode === fieldCode);
+
+    if (direction === 'NA') {
+      if (existingIndex >= 0) {
+        this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.filter((_, index) => index !== existingIndex)));
+      }
+      return;
+    }
+    if (direction !== 'ASC' && direction !== 'DESC') return;
+    if (existingIndex < 0) {
+      if (orderFields.length >= 5) {
+        this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
+        return;
+      }
+      this.campaignOrderFields.set(this.normalizeOrderPriorities([
+        ...orderFields,
+        { ...field, orderDirection: direction, orderPriority: orderFields.length + 1 }
+      ]));
+    } else {
+      this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.map((item, index) =>
+        index === existingIndex ? { ...item, orderDirection: direction } : item)));
+    }
+    this.error = null;
+  }
+
+  toggleOrderField(fieldCode: string): void {
+    const field = this.getOrderableFields().find(item => item.fieldCode === fieldCode);
+    if (!field) return;
+    const orderFields = this.campaignOrderFields();
+    const existingIndex = orderFields.findIndex(item => item.fieldCode === fieldCode);
+    if (existingIndex < 0) {
+      if (orderFields.length >= 5) {
+        this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
+        return;
+      }
+      this.campaignOrderFields.set(this.normalizeOrderPriorities([
+        ...orderFields,
+        { ...field, orderDirection: 'DESC', orderPriority: orderFields.length + 1 }
+      ]));
+    } else if (orderFields[existingIndex].orderDirection === 'DESC') {
+      this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.map((item, index) =>
+        index === existingIndex ? { ...item, orderDirection: 'ASC' } : item)));
+    } else {
+      this.campaignOrderFields.set(this.normalizeOrderPriorities(orderFields.filter((_, index) => index !== existingIndex)));
+    }
+    this.error = null;
+  }
+
+  reorderOrderFields(event: CdkDragDrop<CampaignOrderField[]>): void {
+    const reordered = [...this.campaignOrderFields()];
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+    this.campaignOrderFields.set(this.normalizeOrderPriorities(reordered));
+  }
+
+  private normalizeOrderPriorities(fields: CampaignOrderField[]): CampaignOrderField[] {
+    return fields.map((field, index) => ({ ...field, orderPriority: index + 1 }));
+  }
+
+  private pruneInactiveOrderFields(): void {
+    const activeFilterCodes = new Set(this.campaignFilters
+      .filter(filter => !!filter.fieldCode)
+      .map(filter => filter.fieldCode));
+    this.campaignOrderFields.update(fields =>
+      this.normalizeOrderPriorities(fields.filter(field => activeFilterCodes.has(field.fieldCode))));
+  }
+
+  private syncOrderableFilterFields(): void {
+    const seen = new Set<string>();
+    this.orderableFilterFields.set(this.campaignFilters
+      .filter(filter => !!filter.fieldCode && !seen.has(filter.fieldCode) && !!seen.add(filter.fieldCode))
+      .map(filter => ({
+        fieldDefinitionId: filter.fieldDefinitionId,
+        fieldCode: filter.fieldCode,
+        fieldName: filter.fieldName
+      })));
   }
 
   getPhoneSelectionDescription(): string {
@@ -859,6 +1067,7 @@ export class CampaignFormComponent implements OnInit {
       next: (campaign) => {
         console.log('✅ Campaign loaded:', campaign);
         this.campaign = campaign;
+        this.maxTelefonosPorCliente = campaign.maxTelefonosPorCliente ?? 1;
 
         // Convertir fechas para datetime-local
         if (campaign.startDate) {
@@ -910,10 +1119,11 @@ export class CampaignFormComponent implements OnInit {
                 this.loadFilterableFields(campaign.subPortfolioId);
                 this.loadGrupos(campaign.subPortfolioId, campaign.idGrupoAsesores ?? undefined);
               }
-               if (campaign.id) {
-                 this.loadCampaignFilters(campaign.id);
-                 this.loadPromiseFilter(campaign.id);
-               }
+                if (campaign.id) {
+                  this.loadCampaignFilters(campaign.id);
+                  this.loadCampaignOrderFields(campaign.id);
+                  this.loadPromiseFilter(campaign.id);
+                }
 
               // Restaurar selección de rangos de antigüedad
               if (campaign.filtroRangoAntiguedad) {
@@ -947,6 +1157,21 @@ export class CampaignFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.invalidSections.basic = !this.campaign.name?.trim();
+    this.invalidSections.assignment = !this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId;
+
+    if (this.invalidSections.basic) {
+      this.error = 'Complete el nombre de la campaña';
+      this.scrollToSection('basic-info-section');
+      return;
+    }
+
+    if (this.invalidSections.assignment) {
+      this.error = 'Debe seleccionar proveedor, cartera y subcartera';
+      this.scrollToSection('assignment-section');
+      return;
+    }
+
     if (!this.campaign.name) {
       this.error = 'El nombre de la campaña es requerido';
       return;
@@ -970,21 +1195,18 @@ export class CampaignFormComponent implements OnInit {
       this.campaign.endDate = this.endDateString;
     }
 
-    // Filtro rango antigüedad: convertir selección a comma-separated string
-    this.campaign.filtroRangoAntiguedad = this.selectedRangosAntiguedad.length > 0
-      ? this.selectedRangosAntiguedad.join(',')
-      : undefined;
-
-    // Filtro tipo teléfono
-    this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
-      ? this.selectedTiposTelefono.join(',')
-      : undefined;
-
-    // Grupo dirigido (null = todos los asesores de la subcartera)
-    this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
-
-    // El campo está oculto temporalmente; el backend anterior recibe siempre cero.
-    this.campaign.retryInterval = 0;
+    if (!this.isEditMode) {
+      this.campaign.filtroRangoAntiguedad = this.selectedRangosAntiguedad.length > 0
+        ? this.selectedRangosAntiguedad.join(',')
+        : undefined;
+      this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
+        ? this.selectedTiposTelefono.join(',')
+        : undefined;
+      this.campaign.maxTelefonosPorCliente = this.maxTelefonosPorCliente;
+      this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
+      // El campo está oculto temporalmente; el backend anterior recibe siempre cero.
+      this.campaign.retryInterval = 0;
+    }
 
     this.error = null;
 
@@ -993,7 +1215,8 @@ export class CampaignFormComponent implements OnInit {
       this.loading = true;
       this.campaignService.updateCampaign(this.campaignId, this.campaign).subscribe({
         next: () => {
-          this.saveFiltersAndNavigate(this.campaignId!);
+          this.loading = false;
+          this.router.navigate(['/admin/campaigns']);
         },
         error: (err) => {
           console.error('Error updating campaign:', err);
@@ -1005,6 +1228,29 @@ export class CampaignFormComponent implements OnInit {
       // Para nueva campaña, mostrar preview primero
       this.showPreview();
     }
+  }
+
+  onBasicChanged(): void {
+    if (this.invalidSections.basic && this.campaign.name?.trim()) {
+      this.invalidSections.basic = false;
+      this.resolvedSections.basic = true;
+      this.error = null;
+    }
+  }
+
+  onAssignmentChanged(): void {
+    if (this.invalidSections.assignment
+      && this.selectedTenantId > 0
+      && this.selectedPortfolioId > 0
+      && this.selectedSubPortfolioId > 0) {
+      this.invalidSections.assignment = false;
+      this.resolvedSections.assignment = true;
+      this.error = null;
+    }
+  }
+
+  private scrollToSection(sectionId: string): void {
+    setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   }
 
   /**
@@ -1073,23 +1319,18 @@ export class CampaignFormComponent implements OnInit {
         // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
         this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
           next: () => {
-            // 3) El backend anterior no conoce filtros de promesas.
-            this.campaignService.previewImportacionSP(
-              newCampaignId,
-              this.selectedTenantId,
-              this.selectedPortfolioId,
-              this.selectedSubPortfolioId,
-              this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
-              filtroRangoAnt,
-              filtroTipoTel
-            ).subscribe({
-              next: (preview) => {
-                this.previewData = preview;
-                this.previewLoading = false;
-              },
+            this.campaignService.replaceCampaignOrderFields(newCampaignId, this.campaignOrderFields()).subscribe({
+              next: () => this.campaignService.replaceCampaignPromiseFilter(newCampaignId, this.buildPromiseFilter()).subscribe({
+                next: () => this.previewImportacion(newCampaignId, filtroRangoAnt, filtroTipoTel),
+                error: (err) => {
+                  console.error('Error guardando filtro de promesa:', err);
+                  this.previewError = 'Error al guardar el filtro de promesa';
+                  this.previewLoading = false;
+                }
+              }),
               error: (err) => {
-                console.error('Error preview V2:', err);
-                this.previewError = 'Error al obtener el preview';
+                console.error('Error guardando prioridades de ordenamiento:', err);
+                this.previewError = 'Error al guardar las prioridades de ordenamiento';
                 this.previewLoading = false;
               }
             });
@@ -1104,6 +1345,28 @@ export class CampaignFormComponent implements OnInit {
       error: (err) => {
         console.error('Error creando campaña draft:', err);
         this.previewError = 'Error al crear la campaña draft';
+        this.previewLoading = false;
+      }
+    });
+  }
+
+  private previewImportacion(campaignId: number, filtroRangoAnt?: string, filtroTipoTel?: string): void {
+    this.campaignService.previewImportacionSP(
+      campaignId,
+      this.selectedTenantId,
+      this.selectedPortfolioId,
+      this.selectedSubPortfolioId,
+      this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+      filtroRangoAnt,
+      filtroTipoTel
+    ).subscribe({
+      next: (preview) => {
+        this.previewData = preview;
+        this.previewLoading = false;
+      },
+      error: (err) => {
+        console.error('Error preview V2:', err);
+        this.previewError = 'Error al obtener el preview';
         this.previewLoading = false;
       }
     });
@@ -1242,13 +1505,30 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        // Solo exportar Excel para campañas NUEVAS, no en edición.
-        if (exportExcel) {
-          this.exportCampaignToExcel(campaignId);
-        } else {
-          this.loading = false;
-          this.router.navigate(['/admin/campaigns']);
-        }
+        this.campaignService.replaceCampaignOrderFields(campaignId, this.campaignOrderFields()).subscribe({
+          next: () => {
+            this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
+              next: () => {
+                if (exportExcel) {
+                  this.exportCampaignToExcel(campaignId);
+                } else {
+                  this.loading = false;
+                  this.router.navigate(['/admin/campaigns']);
+                }
+              },
+              error: (err) => {
+                console.error('Error guardando filtro de promesa:', err);
+                this.loading = false;
+                this.router.navigate(['/admin/campaigns']);
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Error guardando prioridades de ordenamiento:', err);
+            this.loading = false;
+            this.router.navigate(['/admin/campaigns']);
+          }
+        });
       },
       error: (err) => {
         console.error('Error guardando filtros:', err);
@@ -1385,27 +1665,55 @@ export class CampaignFormComponent implements OnInit {
         });
         rowNum += 2;
 
-        // Sección: Filtros aplicados
-        if (this.campaignFilters.length > 0) {
-          wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
-          const filtrosTitle = wsResumen.getCell(`A${rowNum}`);
-          filtrosTitle.value = 'FILTROS APLICADOS';
-          filtrosTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
-          filtrosTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F59E0B' } };
-          filtrosTitle.alignment = { horizontal: 'center' };
-          rowNum++;
+        // Sección: Configuración y filtros aplicados al generar la campaña.
+        wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
+        const filtrosTitle = wsResumen.getCell(`A${rowNum}`);
+        filtrosTitle.value = 'CONFIGURACIÓN Y FILTROS APLICADOS';
+        filtrosTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
+        filtrosTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F59E0B' } };
+        filtrosTitle.alignment = { horizontal: 'center' };
+        rowNum++;
 
-          this.campaignFilters.forEach(f => {
-            const filtroDesc = f.fieldCode
-              ? `${f.fieldName}: ${f.minValue ?? 'N/A'} - ${f.maxValue ?? 'N/A'}`
-              : 'Solo por Estado';
-            const row = wsResumen.getRow(rowNum);
-            row.getCell(1).value = this.getTipoContactoNombre(f.tipoContacto);
-            row.getCell(2).value = filtroDesc;
-            wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
-            rowNum++;
-          });
-        }
+        const promise = this.buildPromiseFilter();
+        const settings: Array<[string, string | number]> = [
+          ['Filtro de estado', this.getTipoFiltroEstadoDescripcion() || 'Sin filtro'],
+          ['Rangos de antigüedad', this.selectedRangosAntiguedad.join(', ') || 'Sin filtro'],
+          ['Tipo de teléfono', this.selectedTiposTelefono.join(', ') || 'Todos'],
+          ['Números por cliente', this.getPhoneSelectionDescription()],
+          ['Modo de discado', this.campaign.dialMode],
+          ['Intentos máximos', this.campaign.maxAttempts ?? '-'],
+          ['Intensidad', this.campaign.intensidad ?? '-'],
+          ['Seguimiento de promesa', promise
+            ? `${promise.tipo} | ${promise.nivelMonto} | Fechas: ${promise.fechaDesde || 'sin mínimo'} a ${promise.fechaHasta || 'sin máximo'} | Monto: ${promise.montoDesde ?? 'sin mínimo'} a ${promise.montoHasta ?? 'sin máximo'}`
+            : 'Sin filtro']
+        ];
+
+        settings.forEach(([label, value]) => {
+          this.addLabelValueRow(wsResumen, rowNum, `${label}:`, value);
+          wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+          rowNum++;
+        });
+
+        this.campaignFilters.forEach((filter, index) => {
+          const range = filter.selectedValues
+            || (filter.dataType === 'FECHA'
+              ? `${filter.minDate || 'Sin mínimo'} - ${filter.maxDate || 'Sin máximo'}`
+              : `${filter.minValue ?? 'Sin mínimo'} - ${filter.maxValue ?? 'Sin máximo'}`);
+          this.addLabelValueRow(
+            wsResumen,
+            rowNum,
+            `Segmentación ${index + 1}:`,
+            `${this.getTipoContactoNombre(filter.tipoContacto)} | ${filter.fieldCode ? filter.fieldName : 'Solo por estado'} | ${range}`
+          );
+          wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+          rowNum++;
+        });
+
+        this.campaignOrderFields().forEach(order => {
+          this.addLabelValueRow(wsResumen, rowNum, `Orden ${order.orderPriority}:`, `${order.fieldName} (${order.orderDirection})`);
+          wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+          rowNum++;
+        });
 
         // === HOJA 2: CLIENTES ===
         const wsClientes = workbook.addWorksheet('Clientes', {

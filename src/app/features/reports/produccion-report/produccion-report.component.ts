@@ -5,34 +5,43 @@ import { LucideAngularModule } from 'lucide-angular';
 import {
   ProduccionReportService,
   ReporteProduccionDTO,
-  ResumenProduccion
+  ResumenProduccion,
+  MetaReporteProduccion,
+  TipoMetaReporteProduccion,
+  FiltrosReporteProduccion
 } from './produccion-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
+import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-produccion-report',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe],
   template: `
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
+    <div class="min-h-screen bg-gray-100 p-4 dark:bg-gray-900 md:p-6">
+      <div class="mx-auto flex max-w-[1800px] flex-col items-start gap-4 xl:flex-row">
+      <main class="min-w-0 flex-1">
       <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-          <lucide-angular name="bar-chart-3" [size]="28" class="text-teal-500"></lucide-angular>
-          Reporte de Producción
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Producción diaria por cartera: Meta, Generación, Proyectado, Pagos y Puntos
-        </p>
+      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <lucide-angular name="bar-chart-3" [size]="28" class="shrink-0 text-teal-500"></lucide-angular>
+            Reporte de Producción
+          </h1>
+          <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            Producción diaria por cartera: Meta, Generación, Proyectado, Pagos y Puntos
+          </p>
+        </div>
       </div>
 
       <!-- Filtros -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+      <div class="mb-4 rounded-xl bg-white p-3 shadow-md dark:bg-gray-800">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <!-- Fecha -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha</label>
+            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Fecha</label>
             <input type="date" [(ngModel)]="filtros.fecha"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
@@ -41,12 +50,12 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Proveedor -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
+            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Proveedor</label>
             <select [(ngModel)]="filtros.idProveedor" (ngModelChange)="onProveedorChange($event)"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-              <option [ngValue]="null">Todos</option>
+              <option [ngValue]="null">Todos los proveedores</option>
               @for (prov of proveedores(); track prov.id) {
                 <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
               }
@@ -55,14 +64,13 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Cartera -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cartera</label>
+            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Cartera</label>
             <select [(ngModel)]="filtros.idCartera" (ngModelChange)="onCarteraChange($event)"
-              [disabled]="!filtros.idProveedor"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500
                      disabled:opacity-50 disabled:cursor-not-allowed">
-              <option [ngValue]="null">Todas</option>
+              <option [ngValue]="null">Todas las carteras</option>
               @for (cart of carteras(); track cart.id) {
                 <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
               }
@@ -71,52 +79,24 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Subcartera -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcartera</label>
-            <select [(ngModel)]="filtros.idSubcartera" [disabled]="!filtros.idCartera"
+            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Subcartera</label>
+            <select [(ngModel)]="filtros.idSubcartera" (ngModelChange)="onSubcarteraChange()"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500
                      disabled:opacity-50 disabled:cursor-not-allowed">
-              <option [ngValue]="null">Todas</option>
+              <option [ngValue]="null">Todas las subcarteras</option>
               @for (sub of subcarteras(); track sub.id) {
                 <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
               }
             </select>
           </div>
 
-          <!-- Hora Desde -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora Desde</label>
-            <select [(ngModel)]="filtros.horaDesde"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-              <option [ngValue]="null">--</option>
-              @for (h of horas; track h) {
-                <option [ngValue]="h">{{ h.toString().padStart(2, '0') }}:00</option>
-              }
-            </select>
-          </div>
-
-          <!-- Hora Hasta -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora Hasta</label>
-            <select [(ngModel)]="filtros.horaHasta"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-              <option [ngValue]="null">--</option>
-              @for (h of horas; track h) {
-                <option [ngValue]="h">{{ h.toString().padStart(2, '0') }}:00</option>
-              }
-            </select>
-          </div>
-
           <!-- Botones -->
-          <div class="flex items-end gap-2">
+            <div class="flex min-w-0 items-end gap-2 sm:col-span-2 lg:col-span-1">
             <button (click)="buscar()"
               [disabled]="loading()"
-              class="flex-1 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold
+              class="min-w-0 flex-1 whitespace-nowrap px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold
                      rounded-lg transition-colors flex items-center justify-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed">
               @if (loading()) {
@@ -128,12 +108,13 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </button>
             <button (click)="exportarExcel()"
               [disabled]="loading() || data().length === 0"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
+              class="flex-1 whitespace-nowrap px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
                      rounded-lg transition-colors flex items-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed">
               <lucide-angular name="download" [size]="18"></lucide-angular>
               Excel
             </button>
+            <button (click)="irAHistorico()" [disabled]="!contextoSeleccionado()" class="flex-1 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">Histórico</button>
           </div>
         </div>
       </div>
@@ -142,9 +123,9 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
       @if (resumen()) {
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <!-- Total Meta -->
-          <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-gray-300 uppercase">Meta Total</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalMeta | number:'1.2-2' }}</p>
+          <div class="bg-gradient-to-r from-slate-800 to-slate-950 rounded-xl shadow-md p-4 text-white">
+             <p class="text-xs font-semibold text-white uppercase">Meta Total</p>
+             <p class="text-xl font-extrabold text-white">S/ {{ resumen()!.totalMeta | number:'1.2-2' }}</p>
           </div>
 
           <!-- Generación -->
@@ -194,7 +175,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cartera</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Subcartera</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Meta (Monto Capital)</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Generación Hoy</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Proyectado Hoy</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagos Hoy</th>
@@ -286,6 +267,52 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           </div>
         }
       </div>
+      </main>
+
+        <aside class="w-full shrink-0 rounded-xl bg-white p-3 shadow-md dark:bg-gray-800 xl:sticky xl:top-4 xl:w-64">
+          <div class="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-bold text-gray-800 dark:text-white">Configuración de meta</h2>
+            </div>
+            <div class="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-700"><button type="button" (click)="seleccionarTipoMeta('INTERNA')" [class]="filtros.tipoMeta === 'INTERNA' ? 'bg-teal-600 text-white' : 'text-gray-600 dark:text-gray-300'" class="rounded-md px-2 py-1 text-xs font-semibold">Interna</button><button type="button" (click)="seleccionarTipoMeta('SIP')" [class]="filtros.tipoMeta === 'SIP' ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300'" class="rounded-md px-2 py-1 text-xs font-semibold">SIP</button></div>
+          </div>
+
+          @if (!contextoSeleccionado()) {
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">Selecciona proveedor, cartera y subcartera para simular o registrar una meta.</p>
+          }
+
+          <div class="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Simular meta</label>
+              <input type="number" min="0" [(ngModel)]="valorMetaSimulada" placeholder="Monto temporal" [disabled]="!contextoSeleccionado()" class="w-full rounded-lg border border-teal-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:opacity-50 dark:border-teal-700 dark:bg-gray-700 dark:text-white" />
+              <div class="mt-2 flex gap-2"><button type="button" (click)="simular()" [disabled]="valorMetaSimulada === null || !contextoSeleccionado()" class="flex-1 rounded-lg bg-teal-600 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Simular</button><button type="button" (click)="limpiarSimulacion()" [disabled]="!simulacionActiva" class="flex-1 rounded-lg border border-teal-600 px-2 py-1.5 text-xs font-semibold text-teal-700 disabled:opacity-50 dark:text-teal-300">Limpiar</button></div>
+              @if (simulacionActiva) { <p class="mt-1 text-xs font-medium text-teal-700 dark:text-teal-300">Simulación activa</p> }
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Valor de meta</label>
+              <input type="number" min="0" [(ngModel)]="valorMetaNueva" placeholder="0.00" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Vigencia</label>
+              <input type="date" [(ngModel)]="fechaVigenciaNueva" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <button type="button" (click)="guardarMeta()" [disabled]="guardandoMeta() || valorMetaNueva === null || !contextoSeleccionado()" class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Guardar meta</button>
+          </div>
+
+          <div class="mt-4">
+            <div class="mb-2 flex items-center justify-between"><h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Metas configuradas</h3><button type="button" (click)="cargarGestionMetas()" class="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">Actualizar</button></div>
+            <div class="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+              @for (meta of metas(); track meta.id) {
+                <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <div class="flex items-center justify-between gap-2"><span class="font-semibold text-gray-900 dark:text-white">S/ {{ meta.valorMeta | number:'1.2-2' }}</span><span [class]="meta.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="rounded-full px-2 py-0.5 text-xs font-semibold">{{ meta.activo ? 'Activa' : 'Inactiva' }}</span></div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Vigencia: {{ meta.fechaVigencia }}</p>
+                  <button type="button" (click)="cambiarEstadoMeta(meta)" class="mt-2 text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button>
+                </div>
+              } @empty { <p class="py-4 text-center text-sm text-gray-500">No hay metas configuradas.</p> }
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   `,
   styles: []
@@ -297,14 +324,18 @@ export class ProduccionReportComponent implements OnInit {
   loading = signal(false);
   data = signal<ReporteProduccionDTO[]>([]);
   resumen = signal<ResumenProduccion | null>(null);
+  metas = signal<MetaReporteProduccion[]>([]);
+  guardandoMeta = signal(false);
+
+  valorMetaSimulada: number | null = null;
+  simulacionActiva = false;
+  valorMetaNueva: number | null = null;
+  fechaVigenciaNueva = '';
 
   // Dropdowns
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
-
-  // Horas disponibles (0-23)
-  horas = Array.from({ length: 24 }, (_, i) => i);
 
   // Filtros
   filtros = {
@@ -312,13 +343,13 @@ export class ProduccionReportComponent implements OnInit {
     idProveedor: null as number | null,
     idCartera: null as number | null,
     idSubcartera: null as number | null,
-    horaDesde: null as number | null,
-    horaHasta: null as number | null
+    tipoMeta: 'INTERNA' as TipoMetaReporteProduccion
   };
 
   constructor(
     private produccionService: ProduccionReportService,
-    private comisionesService: ComisionesService
+    private comisionesService: ComisionesService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -328,56 +359,55 @@ export class ProduccionReportComponent implements OnInit {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     this.filtros.fecha = `${yyyy}-${mm}-${dd}`;
+    this.fechaVigenciaNueva = this.filtros.fecha;
 
     // Cargar proveedores
     this.comisionesService.obtenerInquilinos().subscribe({
-      next: (data) => this.proveedores.set(data),
+      next: (data) => { this.proveedores.set(data); this.cargarTodasLasCarteras(); this.buscar(); },
       error: (err) => console.error('Error cargando proveedores:', err)
     });
 
-    // Auto-buscar al inicio
-    this.buscar();
   }
 
   onProveedorChange(idProveedor: number | null): void {
     this.filtros.idCartera = null;
     this.filtros.idSubcartera = null;
-    this.carteras.set([]);
     this.subcarteras.set([]);
+    this.limpiarResultados();
 
     if (idProveedor) {
       this.comisionesService.obtenerCarteras(idProveedor).subscribe({
         next: (data) => this.carteras.set(data),
         error: (err) => console.error('Error cargando carteras:', err)
       });
+    } else {
+      this.cargarTodasLasCarteras();
     }
   }
 
   onCarteraChange(idCartera: number | null): void {
     this.filtros.idSubcartera = null;
     this.subcarteras.set([]);
+    this.limpiarResultados();
 
     if (idCartera) {
       this.comisionesService.obtenerSubcarteras(idCartera).subscribe({
         next: (data) => this.subcarteras.set(data),
         error: (err) => console.error('Error cargando subcarteras:', err)
       });
+    } else {
+      this.cargarTodasLasSubcarteras();
     }
   }
 
   buscar(): void {
     this.loading.set(true);
 
-    this.produccionService.getReporte(
-      this.filtros.fecha || undefined,
-      this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined,
-      this.filtros.horaDesde ?? undefined,
-      this.filtros.horaHasta ?? undefined
-    ).subscribe({
+    this.produccionService.getReporte(this.construirFiltros()).subscribe({
       next: (response) => {
         this.data.set(response.data);
         this.resumen.set(response.resumen);
+        this.simulacionActiva = response.simulada;
         this.loading.set(false);
       },
       error: (error) => {
@@ -391,13 +421,7 @@ export class ProduccionReportComponent implements OnInit {
   exportarExcel(): void {
     this.loading.set(true);
 
-    this.produccionService.exportarExcel(
-      this.filtros.fecha || undefined,
-      this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined,
-      this.filtros.horaDesde ?? undefined,
-      this.filtros.horaHasta ?? undefined
-    ).subscribe({
+    this.produccionService.exportarExcel(this.construirFiltros()).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -415,6 +439,126 @@ export class ProduccionReportComponent implements OnInit {
         alert('Error al exportar el reporte a Excel');
       }
     });
+  }
+
+  seleccionarTipoMeta(tipoMeta: TipoMetaReporteProduccion): void {
+    this.filtros.tipoMeta = tipoMeta;
+    this.simulacionActiva = this.valorMetaSimulada !== null;
+    if (this.contextoSeleccionado()) {
+      this.cargarGestionMetas();
+    }
+  }
+
+  onSubcarteraChange(): void {
+    this.limpiarResultados();
+  }
+
+  simular(): void {
+    if (this.valorMetaSimulada === null || this.valorMetaSimulada < 0) return;
+    this.simulacionActiva = true;
+    this.buscar();
+  }
+
+  limpiarSimulacion(): void {
+    this.valorMetaSimulada = null;
+    this.simulacionActiva = false;
+    this.buscar();
+  }
+
+  cargarGestionMetas(): void {
+    if (!this.contextoSeleccionado()) return;
+    const { idProveedor, idCartera, idSubcartera } = this.filtros;
+    this.produccionService.getMetas(idProveedor!, idCartera!, idSubcartera!).subscribe({
+      next: metas => this.metas.set(metas),
+      error: error => console.error('Error cargando metas:', error)
+    });
+  }
+
+  guardarMeta(): void {
+    if (!this.contextoSeleccionado() || this.valorMetaNueva === null || this.valorMetaNueva < 0 || !this.fechaVigenciaNueva) return;
+    this.guardandoMeta.set(true);
+    this.produccionService.crearMeta({
+      idTenant: this.filtros.idProveedor!,
+      idCartera: this.filtros.idCartera!,
+      idSubcartera: this.filtros.idSubcartera!,
+      tipoMeta: this.filtros.tipoMeta,
+      valorMeta: this.valorMetaNueva,
+      fechaVigencia: this.fechaVigenciaNueva,
+      activo: true
+    }).subscribe({
+      next: () => {
+        this.valorMetaNueva = null;
+        this.guardandoMeta.set(false);
+        this.cargarGestionMetas();
+        this.buscar();
+      },
+      error: error => {
+        console.error('Error guardando meta:', error);
+        this.guardandoMeta.set(false);
+        alert('No se pudo guardar la meta. Verifica que no exista otra para la misma fecha.');
+      }
+    });
+  }
+
+  cambiarEstadoMeta(meta: MetaReporteProduccion): void {
+    if (!meta.id) return;
+    const request = meta.activo
+      ? this.produccionService.desactivarMeta(meta.id)
+      : this.produccionService.activarMeta(meta.id);
+    request.subscribe({
+      next: () => {
+        this.cargarGestionMetas();
+        this.buscar();
+      },
+      error: error => console.error('Error actualizando meta:', error)
+    });
+  }
+
+  contextoSeleccionado(): boolean {
+    return this.filtros.idProveedor !== null
+      && this.filtros.idCartera !== null
+      && this.filtros.idSubcartera !== null;
+  }
+
+  private construirFiltros(): FiltrosReporteProduccion {
+    return {
+      fecha: this.filtros.fecha || undefined,
+      idTenant: this.filtros.idProveedor ?? undefined,
+      idCartera: this.filtros.idCartera ?? undefined,
+      idSubcartera: this.filtros.idSubcartera ?? undefined,
+      tipoMeta: this.filtros.tipoMeta,
+      valorMetaSimulada: this.simulacionActiva && this.valorMetaSimulada !== null ? this.valorMetaSimulada : undefined
+    };
+  }
+
+  irAHistorico(): void {
+    if (!this.contextoSeleccionado()) return;
+    this.router.navigate(['/reports/produccion/historico'], {
+      queryParams: {
+        idTenant: this.filtros.idProveedor,
+        idCartera: this.filtros.idCartera,
+        idSubcartera: this.filtros.idSubcartera,
+        tipoMeta: this.filtros.tipoMeta
+      }
+    });
+  }
+
+  private cargarTodasLasCarteras(): void {
+    const solicitudes = this.proveedores().map(proveedor => this.comisionesService.obtenerCarteras(proveedor.id));
+    if (solicitudes.length) forkJoin(solicitudes).subscribe({ next: grupos => this.carteras.set(grupos.flat()) });
+  }
+
+  private cargarTodasLasSubcarteras(): void {
+    const solicitudes = this.carteras().map(cartera => this.comisionesService.obtenerSubcarteras(cartera.id));
+    if (solicitudes.length) forkJoin(solicitudes).subscribe({ next: grupos => this.subcarteras.set(grupos.flat()) });
+  }
+
+  private limpiarResultados(): void {
+    this.data.set([]);
+    this.resumen.set(null);
+    this.metas.set([]);
+    this.simulacionActiva = false;
+    this.valorMetaSimulada = null;
   }
 
   getProgressClass(puntaje: number): string {

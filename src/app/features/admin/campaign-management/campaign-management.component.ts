@@ -10,12 +10,15 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
-import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
+import { AppDatePipe, AppDateTimePipe, AppTimePipe } from '@/shared/pipes/format.pipes';
+import { catchError, forkJoin, of } from 'rxjs';
+
+const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
 
 @Component({
   selector: 'app-campaign-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, AppDateTimePipe],
+  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, AppDatePipe, AppDateTimePipe, AppTimePipe],
   templateUrl: './campaign-management.component.html',
   styleUrls: ['./campaign-management.component.css'],
   encapsulation: ViewEncapsulation.None
@@ -55,6 +58,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   selectedTenantId: number = 0;
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
+  private subPortfolioNames = new Map<number, string>();
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -122,6 +126,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
         this.campaigns = this.filterByUserSubPortfolio(campaigns);
+        this.resolveCampaignScopeNames(this.campaigns);
         if (goToLastPage) {
           this.currentPage = this.totalPages || 1;
         } else if (this.currentPage > this.totalPages) {
@@ -138,7 +143,37 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   showDuplicatePreview(campaign: Campaign): void {
-    this.successMessage = `Duplicar “${campaign.name}” creará un borrador para ajustar antes de importar.`;
+    if (!campaign.id) return;
+    forkJoin({
+      campaign: this.campaignService.getCampaignById(campaign.id),
+      filters: this.campaignService.getCampaignFilters(campaign.id),
+      orderFields: this.campaignService.getCampaignOrderFields(campaign.id),
+      promiseFilter: this.campaignService.getCampaignPromiseFilter(campaign.id)
+    }).subscribe({
+      next: ({ campaign: source, filters, orderFields, promiseFilter }) => {
+        const duplicate = {
+          ...source,
+          id: undefined,
+          name: `${source.name} Copia`,
+          status: 'DRAFT' as const,
+          estaDiscando: false,
+          createdAt: undefined,
+          updatedAt: undefined,
+          primeraActivacion: undefined,
+          ultimaActivacion: undefined,
+          ultimaDesactivacion: undefined,
+          filters,
+          orderFields,
+          promiseFilter
+        };
+        sessionStorage.setItem(DUPLICATE_CAMPAIGN_STORAGE_KEY, JSON.stringify(duplicate));
+        this.router.navigate(['/admin/campaigns/new']);
+      },
+      error: err => {
+        console.error('Error cargando campaña para duplicar:', err);
+        this.error = 'No se pudo cargar la configuración de la campaña';
+      }
+    });
   }
 
   /**
@@ -381,6 +416,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
         this.campaigns = this.filterByUserSubPortfolio(campaigns);
+        this.resolveCampaignScopeNames(this.campaigns);
       },
       error: (err) => {
         console.error('Error refreshing campaigns:', err);
@@ -394,6 +430,32 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       return campaigns.filter(c => c.subPortfolioId === user.subPortfolioId);
     }
     return campaigns;
+  }
+
+  private resolveCampaignScopeNames(campaigns: Campaign[]): void {
+    const portfolioIds = [...new Set(campaigns
+      .filter(campaign => campaign.subPortfolioId != null && campaign.portfolioId != null && !this.subPortfolioNames.has(campaign.subPortfolioId))
+      .map(campaign => campaign.portfolioId!))];
+
+    if (portfolioIds.length === 0) {
+      this.applyCampaignScopeNames(campaigns);
+      return;
+    }
+
+    forkJoin(portfolioIds.map(id => this.campaignService.getSubPortfoliosForCampaigns(id).pipe(catchError(() => of([])))))
+      .subscribe(groups => {
+      groups.flat().forEach(subPortfolio => {
+        this.subPortfolioNames.set(subPortfolio.id, subPortfolio.nombre);
+      });
+      this.applyCampaignScopeNames(campaigns);
+      });
+  }
+
+  private applyCampaignScopeNames(campaigns: Campaign[]): void {
+    campaigns.forEach(campaign => {
+      campaign.subPortfolioName = campaign.subPortfolioId == null ? undefined : this.subPortfolioNames.get(campaign.subPortfolioId);
+    });
+    this.campaigns = [...this.campaigns];
   }
 
   viewCampaignDetail(campaign: Campaign): void {
@@ -420,7 +482,9 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   get paginatedCampaigns(): Campaign[] {
     const start = (this.currentPage - 1) * this.pageSize;
-    return this.campaigns.slice(start, start + this.pageSize);
+    return [...this.campaigns]
+      .sort((a, b) => Number(b.status === 'ACTIVE' && b.estaDiscando) - Number(a.status === 'ACTIVE' && a.estaDiscando))
+      .slice(start, start + this.pageSize);
   }
 
   goToPage(page: number): void {

@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { LucideAngularModule } from 'lucide-angular';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas,
@@ -142,8 +144,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
       ayuda: 'Clientes de la subcartera que nunca han pactado nada.' },
   ] as const;
 
-  /** Pestaña: pulsar la que ya está abierta no hace nada. `abrir` la trataba como ida y vuelta. */
+  /** Pestaña: pulsar la que ya está abierta no hace nada. `abrir` la trataba como ida y vuelta.
+   *  Con una cola abierta, cualquier pestaña (Colas incluida) cierra antes su vista. */
   irAVista(v: 'colas' | 'tonos' | 'reglas' | 'llamadas'): void {
+    if (this.detalleDe != null) this.cerrarDetalleCola();
     if (this.vista !== v) this.abrir(v);
   }
 
@@ -155,13 +159,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
     else if (this.detalleDe != null) this.cerrarDetalleCola();
   }
 
-  /** La cola cuyo detalle está abierto en el panel lateral. */
+  /** La cola abierta en su vista propia. Va en la URL (`?cola=ID`): atrás vuelve a la lista. */
   get colaEnDetalle(): BotCola | undefined {
     return this.detalleDe == null ? undefined : this.colas.find((c) => c.id === this.detalleDe);
   }
 
   cerrarDetalleCola(): void {
-    this.detalleDe = undefined;
+    this.router.navigate([], { relativeTo: this.route, queryParams: { cola: null },
+                               queryParamsHandling: 'merge' });
   }
 
   // ----- Horario: nada, un horario o varias franjas -----
@@ -428,6 +433,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** Cola cuyo detalle esta abierto (el boton del ojo). */
   detalleDe?: number;
+  private subCola?: Subscription;
 
   config?: BotConfig;
   /** Las filas de la cola cuyo detalle esta abierto. Ya no es "la cola de hoy" de
@@ -463,9 +469,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private readonly REFRESCO_MS = 5000;
   private refresco?: ReturnType<typeof setInterval>;
 
-  constructor(private svc: BotVozService) {}
+  constructor(private svc: BotVozService, private router: Router, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
+    // La cola abierta vive en la URL (?cola=ID): el botón atrás vuelve a la lista y el
+    // enlace se puede pasar a otra persona.
+    this.subCola = this.route.queryParamMap.subscribe((q) => {
+      const id = Number(q.get('cola')) || undefined;
+      if (id === this.detalleDe) return;
+      this.detalleDe = id;
+      this.busquedaDetalle = '';
+      this.paginaDetalle = 1;
+      if (id) this.vista = 'colas';
+      this.cargarCola();   // sin id vacía las filas; con id trae también los descartes
+    });
     this.cargarPermisos();
     this.cargarColas();
     this.cargarTonos();
@@ -478,6 +495,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.refresco);
+    this.subCola?.unsubscribe();
     this.pararDemo();       // si no, la muestra sigue sonando al cambiar de pantalla
   }
 
@@ -1698,7 +1716,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         // Si el detalle abierto era el suyo hay que cerrarlo y soltar sus filas: si no,
         // la tabla seguiria pintando los clientes de una cola que ya no existe y el ojo
         // no se podria volver a pulsar para cerrarla.
-        if (this.detalleDe === borrada) { this.detalleDe = undefined; this.cola = []; this.descartes = []; }
+        if (this.detalleDe === borrada) { this.cerrarDetalleCola(); this.cola = []; this.descartes = []; }
         this.cargarColas();
         this.cargarContadores();
         this.flash('Cola eliminada');
@@ -1940,7 +1958,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  barra no se pinta (el *ngIf de la plantilla mira `totalDe`). */
   avanceDe(c: BotCola): number {
     const total = this.totalDe(c);
-    return total ? Math.round((this.gestionadosDe(c) / total) * 100) : 0;
+    // Hacia abajo: con 3 por marcar de 2.039 redondeaba a "100 %" y la cola parecía terminada.
+    return total ? Math.floor((this.gestionadosDe(c) / total) * 100) : 0;
   }
 
   /**
@@ -2008,11 +2027,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Abre la vista de una cola. Va por la URL para que atrás vuelva a la lista. */
   verDetalle(c: BotCola): void {
-    this.detalleDe = this.detalleDe === c.id ? undefined : c.id;
-    this.busquedaDetalle = '';
-    this.paginaDetalle = 1;
-    if (this.detalleDe) this.cargarCola();   // trae también los descartes
+    this.router.navigate([], { relativeTo: this.route, queryParams: { cola: c.id },
+                               queryParamsHandling: 'merge' });
   }
 
   // ---- El detalle de una cola: buscador y paginado ----

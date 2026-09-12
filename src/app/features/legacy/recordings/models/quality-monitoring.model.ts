@@ -112,10 +112,16 @@ export interface MonitoringCriterion {
   campo: string;
   etiqueta: string;
   seccion: string;
-  /** Cuántas evaluaciones midieron este criterio; no es el total de audios. */
+  /** Cuántas evaluaciones midieron este criterio; no es el total de audios. 0 = nadie lo calificó. */
   evaluados: number;
   fallados: number;
+  /** null cuando ningún audio calificó el criterio: sigue en la lista porque es parte de la rúbrica. */
   pctFalla: number | null;
+  /**
+   * 'PDP' | 'CD'. La lista trae la rúbrica completa de cada rúbrica que tuvo audios, y
+   * un mismo campo puede aparecer una vez por cada una.
+   */
+  rubrica: string;
 }
 
 export interface MonitoringTotals {
@@ -300,4 +306,41 @@ export interface MonitoringAudio {
   /** Uno o varios WAV separados por coma. */
   nombre: string;
   tieneTranscripcion: boolean;
+}
+
+/** Qué significa cada sigla de rúbrica. */
+export const NOMBRE_RUBRICA: Record<string, string> = {
+  CD: 'Contacto directo',
+  PDP: 'Promesa de pago'
+};
+
+/**
+ * Cómo se lee cada tipificación en pantalla.
+ *
+ * La BD guarda el RESULTADO en mayúsculas y no siempre con tilde (SIN INTENCION va sin
+ * ella, CON INTENCIÓN con ella), así que no alcanza con pasarlo a minúsculas.
+ */
+const ETIQUETA_TIPIFICACION: Record<string, string> = {
+  'OPORTUNIDAD DE PAGO': 'Oportunidad de pago',
+  'CONTACTO CON TITULAR O ENCARGADO': 'Contacto con titular o encargado',
+  'PROMESA DE PAGO': 'Promesa de pago',
+  'CON INTENCIÓN': 'Con intención',
+  'CON INTENCION': 'Con intención',
+  'SIN INTENCIÓN': 'Sin intención',
+  'SIN INTENCION': 'Sin intención',
+  'REFINANCIAMIENTO': 'Refinanciamiento'
+};
+
+/** La tipificación legible; una que no está en la tabla sale en tipo oración. */
+export function etiquetaTipificacion(resultado: string | null | undefined): string {
+  const valor = (resultado ?? '').trim();
+  if (!valor) {
+    return '';
+  }
+  const conocida = ETIQUETA_TIPIFICACION[valor.toUpperCase()];
+  if (conocida) {
+    return conocida;
+  }
+  const minusculas = valor.toLowerCase();
+  return minusculas.charAt(0).toUpperCase() + minusculas.slice(1);
 }

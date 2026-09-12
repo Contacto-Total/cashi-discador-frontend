@@ -257,6 +257,19 @@ export class QualityMonitorComponent implements OnInit {
   /** Filtro propio de la card de criterios. '' = todos. No toca nada más de la pantalla. */
   asesorCriterios = '';
 
+  /**
+   * La rúbrica que mira la card de criterios cuando Resultado está en «Todos».
+   *
+   * No hay opción «las dos»: la card lista la rúbrica completa por fase, y CD y PDP tienen
+   * criterios distintos, así que mezclarlas daría una lista que no es ninguna de las dos.
+   * Con un Resultado elegido la rúbrica ya queda fijada y este filtro ni se muestra.
+   */
+  rubricaCriterios: 'CD' | 'PDP' = 'CD';
+  readonly rubricasCriterios: SelectOption[] = [
+    { label: 'CD', value: 'CD' },
+    { label: 'PDP', value: 'PDP' }
+  ];
+
   // --- Datos ---
   semana: MonitoringWeek | null = null;
   isLoading = false;
@@ -634,6 +647,7 @@ export class QualityMonitorComponent implements OnInit {
         this.semana = data;
         this.isLoading = false;
         this.recordarAsesores(data);
+        this.ajustarRubricaCriterios(data);
         this.cargarRevision();
 
         if (data.truncado) {
@@ -948,6 +962,7 @@ export class QualityMonitorComponent implements OnInit {
   porCampo = (_: number, c: MonitoringCriterion) => c.campo;
   porIdx = (_: number, a: MonitoringAudio) => a.idx;
   porSeccion = (_: number, s: string) => s;
+  porFase = (_: number, f: { seccion: string }) => f.seccion;
 
   // ------------------------------------------------------------------ rango de fechas
 
@@ -1040,17 +1055,57 @@ export class QualityMonitorComponent implements OnInit {
   }
 
   /**
-   * Los criterios con más falla, recortados a lo que cabe sin volverse un reporte.
+   * Los criterios del asesor elegido en ESTA card, o del total del rango si está en Todos.
    *
-   * Sale del asesor elegido en ESTA card, o del total del rango si está en Todos. El
-   * desglose por persona ya viene en la respuesta de la semana, así que cambiar el
-   * filtro no pide nada al servidor.
+   * El desglose por persona ya viene en la respuesta de la semana, así que cambiar el
+   * filtro no pide nada al servidor. Trae las dos rúbricas mezcladas; el recorte es de
+   * {@link criteriosPorFase}.
    */
-  get topCriterios(): MonitoringCriterion[] {
+  private get fuenteCriterios(): MonitoringCriterion[] {
     const fuente = this.asesorCriterios
       ? this.semana?.asesores.find(a => a.asesor === this.asesorCriterios)?.criteriosMasFallados
       : this.semana?.criteriosMasFallados;
-    return (fuente ?? []).slice(0, 8);
+    return fuente ?? [];
+  }
+
+  /** La rúbrica de la card: la que fija Resultado o, si está en Todos, la elegida en la card. */
+  get rubricaDeCriterios(): string {
+    return this.semana?.rubrica || this.rubricaCriterios;
+  }
+
+  /**
+   * Todos los puntos de la rúbrica, agrupados por fase en el orden de la hoja de calidad.
+   *
+   * Dentro de cada fase conservan el orden del backend —más fallado primero, los que
+   * nadie calificó al final—, así la card sigue respondiendo «qué se falla más» sin
+   * esconder ningún criterio. Una fase sin criterios en la plantilla no se dibuja.
+   */
+  get criteriosPorFase(): { seccion: string; criterios: MonitoringCriterion[] }[] {
+    const rubrica = this.rubricaDeCriterios;
+    const deLaRubrica = this.fuenteCriterios.filter(c => c.rubrica === rubrica);
+    return this.SECCIONES
+      .map(seccion => ({ seccion, criterios: deLaRubrica.filter(c => c.seccion === seccion) }))
+      .filter(fase => fase.criterios.length > 0);
+  }
+
+  /** Si la selección tiene criterios de alguna rúbrica, para distinguir «vacío» de «es de la otra». */
+  get hayCriteriosDeOtraRubrica(): boolean {
+    return this.fuenteCriterios.length > 0;
+  }
+
+  /**
+   * Al cargar una semana con Resultado en Todos, si la rúbrica elegida no tuvo audios y
+   * la otra sí, la card pasa a la otra. Sin esto, abrir una semana solo de promesas
+   * mostraría la card vacía hasta que alguien descubra el desplegable.
+   */
+  private ajustarRubricaCriterios(data: MonitoringWeek): void {
+    if (data.rubrica) {
+      return;
+    }
+    const presentes = new Set(data.criteriosMasFallados.map(c => c.rubrica));
+    if (presentes.size > 0 && !presentes.has(this.rubricaCriterios)) {
+      this.rubricaCriterios = this.rubricaCriterios === 'CD' ? 'PDP' : 'CD';
+    }
   }
 
   /** Cuántos audios respaldan la card de criterios, para que el % no se lea suelto. */

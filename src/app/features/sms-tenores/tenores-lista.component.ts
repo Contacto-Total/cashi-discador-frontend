@@ -9,11 +9,11 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { ToastService } from '../../shared/services/toast.service';
 import { SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoTenor } from './sms-tenores.service';
-import { EstadoTenor, GrupoTenores, MensajeTenor, Tenor, TenorGuardar } from './sms-tenores.models';
+import { ContactoControl, EstadoTenor, GrupoTenores, MensajeTenor, Tenor, TenorGuardar } from './sms-tenores.models';
 
 /** Límite de un SMS, la misma regla que aplicaba el módulo anterior. */
 const LIMITE_SMS = 160;
-const POR_PAGINA = 12;
+const POR_PAGINA = 6;
 /** Variables que muestra la tarjeta antes de "+N". */
 const VARIABLES_VISIBLES = 3;
 
@@ -28,10 +28,12 @@ interface TenorVista extends Tenor {
 
 /** Clases que se repiten en la pantalla. */
 const ESTILOS = {
-  etiqueta: 'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
+  etiqueta: 'text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   select: 'h-[38px] w-full appearance-none rounded-lg border !border-[#8491a3] !bg-white pl-[11px] pr-8 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:disabled:!bg-slate-900 dark:disabled:!text-slate-400',
   flechaSelect: 'pointer-events-none absolute right-[11px] top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400',
   botonSecundario: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  campo: 'h-[38px] w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] text-[13px] !text-[#0f172a] placeholder:text-[#8491a3] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:placeholder:text-slate-500',
+  botonEliminar: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white !text-[#b91c1c] transition-colors hover:bg-[#fdecec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-red-400 dark:hover:bg-red-950/40',
   botonPagina: 'flex h-8 min-w-8 items-center justify-center rounded-[7px] px-2 text-[12.5px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40'
 } as const;
 
@@ -43,7 +45,7 @@ const ESTILOS = {
  * pantalla, que así no lanza consultas sobre la cartera.
  *
  * «Vista previa» abre un panel lateral con el mensaje de un cliente real, para
- * recorrerlos, recalcular, archivar o descargar el archivo desde ahí.
+ * recorrerlos, recalcular, archivar, eliminar o descargar el archivo desde ahí.
  *
  * Estilos: el CSS global del tema claro sobrescribe enlaces, inputs, encabezados
  * y algunas utilidades (`p-3`, `mt-2`, `bg-slate-900`...), y como no está en una
@@ -79,11 +81,18 @@ const ESTILOS = {
               {{ resumen() }}{{ ultimoConteo() ? ' · conteo del ' + (ultimoConteo() | date: 'dd/MM HH:mm') : '' }}
             </p>
           </div>
-          <a routerLink="/sms/tenores/nuevo"
-             class="btn inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#0f172a] px-4 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
-            <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-            Nuevo tenor
-          </a>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" (click)="abrirContactos()"
+                    class="inline-flex h-[38px] items-center gap-[7px] rounded-lg border border-[#8491a3] bg-white px-3.5 text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700">
+              <lucide-angular name="users" [size]="15" class="block"></lucide-angular>
+              Contactos de control
+            </button>
+            <a routerLink="/sms/tenores/nuevo"
+               class="btn inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#0f172a] px-4 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+              <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
+              Nuevo tenor
+            </a>
+          </div>
         </div>
 
         <div class="flex flex-wrap items-end gap-2.5">
@@ -164,19 +173,19 @@ const ESTILOS = {
           </p>
         } @else if (!filtrados().length) {
           <div class="aparecer flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#8491a3] bg-white px-6 py-12 text-center dark:border-slate-600 dark:bg-slate-900">
-            <p class="text-[14.5px] font-bold">{{ hayFiltros() ? 'Ningún tenor coincide con el filtro.' : estado() === 'ACTIVO' ? 'Todavía no hay tenores.' : 'No hay tenores archivados.' }}</p>
+            <p class="text-[14.5px] font-semibold">{{ hayFiltros() ? 'Ningún tenor coincide con el filtro.' : estado() === 'ACTIVO' ? 'Todavía no hay tenores.' : 'No hay tenores archivados.' }}</p>
             @if (!hayFiltros() && estado() === 'ACTIVO') {
               <a routerLink="/sms/tenores/nuevo" class="btn text-[13px] font-semibold text-[#2563eb] hover:underline dark:text-blue-400">Crear el primero</a>
             }
           </div>
         } @else {
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             @for (t of pagina(); track t.id; let i = $index) {
               <article class="aparecer group flex h-full min-h-[300px] flex-col gap-3 rounded-xl border p-4 transition-[translate,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-[#c5ccd6] hover:shadow-[0_14px_32px_rgba(15,23,42,0.10)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:hover:border-slate-600"
                        [style.animation-delay.ms]="i * 35"
                        [ngClass]="claseTarjeta(t)">
                 <div class="flex items-start justify-between gap-2">
-                  <span class="truncate text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
+                  <span class="truncate text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
                   @if (t.estado === 'ARCHIVADO') {
                     <span class="shrink-0 rounded-full bg-[#eef2f7] px-2 py-[2px] text-[11px] font-semibold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">Archivado</span>
                   } @else if (alerta(t)) {
@@ -187,7 +196,7 @@ const ESTILOS = {
                   }
                 </div>
 
-                <h2 class="!m-0 line-clamp-2 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ t.nombre }}</h2>
+                <h2 class="!m-0 line-clamp-2 text-[15px] font-bold leading-snug">{{ t.nombre }}</h2>
 
                 <p class="rounded-[10px] rounded-bl-[3px] px-[13px] py-[10px] text-[13px] leading-[1.55] text-[#334155] dark:text-slate-200"
                    [ngClass]="alerta(t) ? 'bg-[#fbf3e3] dark:bg-amber-950/30' : 'bg-[#f4f6f9] dark:bg-slate-800'">
@@ -219,15 +228,20 @@ const ESTILOS = {
                       <span class="line-clamp-2 max-w-[220px] text-xs font-semibold leading-snug text-[#b45309] dark:text-amber-300">{{ t.conteoError }}</span>
                     } @else {
                       <span class="flex items-baseline gap-1.5">
-                        <span class="text-[22px] font-extrabold leading-none tracking-[-0.02em] tabular-nums" [ngClass]="t.clientesHoy === 0 ? 'text-[#b45309] dark:text-amber-300' : ''">{{ t.clientesHoy === null ? '—' : miles(t.clientesHoy) }}</span>
+                        <span class="text-xl font-bold leading-none tabular-nums" [ngClass]="t.clientesHoy === 0 ? 'text-[#b45309] dark:text-amber-300' : ''">{{ t.clientesHoy === null ? '—' : miles(t.clientesHoy) }}</span>
                         <span class="text-xs text-[#5f6c80] dark:text-slate-400">clientes</span>
                       </span>
                       <span class="whitespace-nowrap text-[11px] tabular-nums text-[#5f6c80] dark:text-slate-400">
                         {{ t.conteoCalculadoAt ? 'Conteo del ' + (t.conteoCalculadoAt | date: 'dd/MM HH:mm') : 'Sin conteo todavía' }}
                       </span>
                     }
+                    @if (t.estado === 'ARCHIVADO') {
+                      <span class="text-[11px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                        {{ t.origen === 'FOH' ? 'Traído de la base anterior' : (t.actualizadoAt ? 'Archivado el ' + (t.actualizadoAt | date: 'dd/MM HH:mm') : 'Archivado') }}
+                      </span>
+                    }
                   </div>
-                  <div class="flex shrink-0 gap-1.5">
+                  <div class="flex shrink-0 items-center gap-1.5">
                     @if (t.estado === 'ACTIVO') {
                       <button type="button" (click)="abrirVistaPrevia(t)" [class]="estilos.botonSecundario">
                         <lucide-angular name="eye" [size]="14" class="block"></lucide-angular>
@@ -238,8 +252,18 @@ const ESTILOS = {
                         Editar
                       </a>
                     } @else {
-                      <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ t.origen === 'FOH' ? 'Traído de la base anterior' : 'Solo referencia' }}</span>
+                      <button type="button" (click)="desarchivar(t)" [disabled]="ocupado() === t.id" [class]="estilos.botonSecundario"
+                              title="Vuelve a la lista de activos y se recalcula su conteo">
+                        <span class="inline-flex" [class.animate-spin]="ocupado() === t.id">
+                          <lucide-angular [name]="ocupado() === t.id ? 'loader-2' : 'archive'" [size]="14" class="block"></lucide-angular>
+                        </span>
+                        Desarchivar
+                      </button>
                     }
+                    <button type="button" (click)="eliminar(t)" [disabled]="ocupado() === t.id"
+                            [class]="estilos.botonEliminar" aria-label="Eliminar tenor" title="Eliminar tenor">
+                      <lucide-angular name="trash-2" [size]="14" class="block"></lucide-angular>
+                    </button>
                   </div>
                 </div>
               </article>
@@ -277,14 +301,120 @@ const ESTILOS = {
         }
       </main>
 
+      @if (contactosAbierto()) {
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div class="fundir absolute inset-0 bg-[#0f172a]/45 backdrop-blur-[2px]" (click)="cerrarContactos()" aria-hidden="true"></div>
+          <div role="dialog" aria-modal="true" aria-labelledby="titulo-contactos"
+               class="aparecer relative flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+              <div class="flex min-w-0 flex-col gap-1">
+                <h2 id="titulo-contactos" class="!m-0 text-[15px] font-bold leading-snug">Contactos de control</h2>
+                <p class="text-[12.5px] leading-snug text-[#5f6c80] dark:text-slate-400">Reciben el mismo SMS al inicio del archivo de los tenores que los incluyen, con los importes y demás datos de un cliente de ese archivo. Aquí se agregan y se corrigen.</p>
+              </div>
+              <button type="button" (click)="cerrarContactos()" aria-label="Cerrar"
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800">
+                <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
+              </button>
+            </div>
+
+            <div class="flex flex-1 flex-col overflow-y-auto px-5 py-2">
+              @if (cargandoContactos()) {
+                <p class="flex items-center gap-2 py-4 text-[13px] text-[#5f6c80] dark:text-slate-400">
+                  <span class="inline-flex animate-spin"><lucide-angular name="loader-2" [size]="16" class="block"></lucide-angular></span>
+                  Cargando…
+                </p>
+              } @else {
+                @if (errorContacto() && contactoEnEdicion() === null) {
+                  <p class="py-3 text-[12.5px] font-semibold text-[#b91c1c] dark:text-red-400">{{ errorContacto() }}</p>
+                }
+                <ul class="!m-0 flex list-none flex-col divide-y divide-[#eef1f5] !p-0 dark:divide-slate-800">
+                  @for (c of contactos(); track c.id) {
+                    @if (contactoEnEdicion() === c.id) {
+                      <li class="py-3">
+                        <form class="flex flex-col gap-2.5" (ngSubmit)="guardarContacto(c)">
+                          <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+                            <label class="flex flex-col gap-1">
+                              <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Nombre</span>
+                              <input name="edicionNombre" [(ngModel)]="edicion.nombre" maxlength="100" autocomplete="off" [class]="estilos.campo">
+                            </label>
+                            <label class="flex flex-col gap-1">
+                              <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Documento</span>
+                              <input name="edicionDocumento" [(ngModel)]="edicion.documento" maxlength="12" autocomplete="off" placeholder="DNI o CE" [class]="estilos.campo">
+                            </label>
+                            <label class="flex flex-col gap-1">
+                              <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Celular</span>
+                              <input name="edicionTelefono" [(ngModel)]="edicion.telefono" maxlength="9" inputmode="numeric" autocomplete="off" placeholder="9XXXXXXXX" [class]="estilos.campo">
+                            </label>
+                          </div>
+                          @if (errorContacto()) {
+                            <p class="text-[12.5px] font-semibold text-[#b91c1c] dark:text-red-400">{{ errorContacto() }}</p>
+                          }
+                          <div class="flex items-center gap-2">
+                            <button type="submit" [disabled]="guardandoContacto()"
+                                    class="inline-flex h-8 items-center gap-1.5 rounded-[7px] bg-[#0f172a] px-3 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                              <span class="inline-flex" [class.animate-spin]="guardandoContacto()"><lucide-angular [name]="guardandoContacto() ? 'loader-2' : 'check'" [size]="14" class="block"></lucide-angular></span>
+                              Guardar
+                            </button>
+                            <button type="button" (click)="cancelarEdicion()" [disabled]="guardandoContacto()" [class]="estilos.botonSecundario">Cancelar</button>
+                          </div>
+                        </form>
+                      </li>
+                    } @else {
+                      <li class="flex items-center justify-between gap-3 py-2.5">
+                        <div class="flex min-w-0 flex-col">
+                          <span class="truncate text-[13.5px] font-semibold">{{ c.nombre }}</span>
+                          <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ c.documento || 'Sin documento' }} · {{ c.telefono }}</span>
+                        </div>
+                        <button type="button" (click)="editarContacto(c)" [disabled]="guardandoContacto()" [class]="estilos.botonSecundario">
+                          <lucide-angular name="pencil" [size]="14" class="block"></lucide-angular>
+                          Editar
+                        </button>
+                      </li>
+                    }
+                  } @empty {
+                    <li class="py-4 text-[13px] text-[#5f6c80] dark:text-slate-400">Todavía no hay contactos de control.</li>
+                  }
+                </ul>
+              }
+            </div>
+
+            <form class="flex flex-col gap-2.5 border-t border-[#e6e9ee] bg-[#f8fafc] px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40" (ngSubmit)="agregarContacto()">
+              <span [class]="estilos.etiqueta">Agregar contacto</span>
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+                <label class="flex flex-col gap-1">
+                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Nombre</span>
+                  <input name="nuevoNombre" [(ngModel)]="nuevoContacto.nombre" maxlength="100" autocomplete="off" placeholder="Nombre y apellido" [class]="estilos.campo">
+                </label>
+                <label class="flex flex-col gap-1">
+                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Celular</span>
+                  <input name="nuevoTelefono" [(ngModel)]="nuevoContacto.telefono" maxlength="9" inputmode="numeric" autocomplete="off" placeholder="9XXXXXXXX" [class]="estilos.campo">
+                </label>
+                <label class="flex flex-col gap-1">
+                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">DNI</span>
+                  <input name="nuevoDocumento" [(ngModel)]="nuevoContacto.documento" maxlength="12" autocomplete="off" placeholder="DNI o CE" [class]="estilos.campo">
+                </label>
+              </div>
+              @if (errorAlta()) {
+                <p class="text-[12.5px] font-semibold text-[#b91c1c] dark:text-red-400">{{ errorAlta() }}</p>
+              }
+              <button type="submit" [disabled]="guardandoContacto()"
+                      class="inline-flex h-[38px] w-fit items-center gap-[7px] rounded-lg bg-[#0f172a] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                <span class="inline-flex" [class.animate-spin]="guardandoContacto()"><lucide-angular [name]="guardandoContacto() ? 'loader-2' : 'plus'" [size]="15" class="block"></lucide-angular></span>
+                Agregar
+              </button>
+            </form>
+          </div>
+        </div>
+      }
+
       @if (vistaPrevia(); as t) {
         <div class="fundir fixed inset-0 z-40 bg-[#0f172a]/45 backdrop-blur-[2px]" (click)="cerrarVistaPrevia()" aria-hidden="true"></div>
         <aside role="dialog" aria-modal="true" [attr.aria-label]="'Vista previa de ' + t.nombre"
                class="deslizar fixed inset-y-0 right-0 z-50 flex w-full max-w-[480px] flex-col bg-white shadow-2xl dark:bg-slate-900">
           <div class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div class="flex min-w-0 flex-col gap-1">
-              <span class="text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
-              <h2 class="!m-0 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ t.nombre }}</h2>
+              <span class="text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ t.nombreSubcartera }}{{ mostrarCartera(t) ? ' · ' + t.nombreCartera : '' }}</span>
+              <h2 class="!m-0 text-[15px] font-bold leading-snug">{{ t.nombre }}</h2>
             </div>
             <button type="button" (click)="cerrarVistaPrevia()" aria-label="Cerrar vista previa"
                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800">
@@ -295,13 +425,13 @@ const ESTILOS = {
           <div class="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             <div class="grid grid-cols-2 gap-2.5">
               <div class="flex flex-col gap-0.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40">
-                <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Clientes hoy</span>
-                <span class="text-[22px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ previewTotal() > 0 || previewMensaje() ? miles(previewTotal()) : (t.clientesHoy === null ? '—' : miles(t.clientesHoy)) }}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Clientes hoy</span>
+                <span class="text-xl font-bold leading-none tabular-nums">{{ previewTotal() > 0 || previewMensaje() ? miles(previewTotal()) : (t.clientesHoy === null ? '—' : miles(t.clientesHoy)) }}</span>
                 <span class="text-[11px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ porcentaje(t) }}</span>
               </div>
               <div class="flex flex-col gap-0.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/40">
-                <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Último conteo</span>
-                <span class="text-[15px] font-bold tabular-nums">{{ t.conteoCalculadoAt ? (t.conteoCalculadoAt | date: 'dd/MM HH:mm') : 'Pendiente' }}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Último conteo</span>
+                <span class="text-[15px] font-semibold tabular-nums">{{ t.conteoCalculadoAt ? (t.conteoCalculadoAt | date: 'dd/MM HH:mm') : 'Pendiente' }}</span>
                 <button type="button" (click)="recalcular(t)" [disabled]="ocupado() === t.id"
                         class="inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-50 dark:text-blue-400">
                   <span class="inline-flex" [class.animate-spin]="ocupado() === t.id"><lucide-angular name="refresh-cw" [size]="11" class="block"></lucide-angular></span>
@@ -388,17 +518,24 @@ const ESTILOS = {
               }
               @if (t.restricciones.sinPromesaVigente) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin promesa vigente</span> }
               @if (t.restricciones.sinListaNegra) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin lista negra</span> }
-              @if (t.restricciones.soloNoContenido) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Solo clientes NO CONTENIDO</span> }
+              @if (t.restricciones.soloNoContenido) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin los clientes contenidos</span> }
               @if (!t.rangos.length && !t.restricciones.sinPromesaVigente && !t.restricciones.sinListaNegra && !t.restricciones.soloNoContenido) {
                 <span class="text-[#5f6c80] dark:text-slate-400">Sin rangos ni restricciones.</span>
               }
             </div>
 
+            <div class="flex flex-wrap items-center gap-1">
             <button type="button" (click)="archivar(t)" [disabled]="ocupado() === t.id"
                     class="inline-flex w-fit items-center gap-1.5 rounded-[7px] px-2 py-1 text-[12.5px] font-semibold text-[#5f6c80] transition-colors hover:bg-[#fef2f2] hover:text-[#b91c1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-red-950/40 dark:hover:text-red-400">
               <lucide-angular name="archive" [size]="13" class="block"></lucide-angular>
               Archivar este tenor
             </button>
+            <button type="button" (click)="eliminar(t)" [disabled]="ocupado() === t.id"
+                    class="inline-flex w-fit items-center gap-1.5 rounded-[7px] px-2 py-1 text-[12.5px] font-semibold text-[#b91c1c] transition-colors hover:bg-[#fef2f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40">
+              <lucide-angular name="trash-2" [size]="13" class="block"></lucide-angular>
+              Eliminar este tenor
+            </button>
+            </div>
           </div>
 
           <div class="flex gap-2 border-t border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
@@ -460,6 +597,18 @@ export class TenoresListaComponent implements OnInit {
   readonly previewIndice = signal(0);
   readonly previewCargando = signal(false);
   readonly previewError = signal<string | null>(null);
+
+  /** Ventana de contactos de control. */
+  readonly contactosAbierto = signal(false);
+  readonly contactos = signal<ContactoControl[]>([]);
+  readonly cargandoContactos = signal(false);
+  readonly guardandoContacto = signal(false);
+  readonly errorContacto = signal<string | null>(null);
+  /** Contacto que se está corrigiendo y lo escrito en sus campos. */
+  readonly contactoEnEdicion = signal<number | null>(null);
+  edicion = { nombre: '', documento: '', telefono: '' };
+  readonly errorAlta = signal<string | null>(null);
+  nuevoContacto = { nombre: '', documento: '', telefono: '' };
 
   readonly activos = computed(() => this.tenores().filter(t => t.estado === 'ACTIVO'));
   readonly archivados = computed(() => this.tenores().filter(t => t.estado === 'ARCHIVADO'));
@@ -627,7 +776,9 @@ export class TenoresListaComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   alPulsarEscape(): void {
-    if (this.vistaPrevia()) {
+    if (this.contactosAbierto()) {
+      this.cerrarContactos();
+    } else if (this.vistaPrevia()) {
       this.cerrarVistaPrevia();
     }
   }
@@ -709,6 +860,142 @@ export class TenoresListaComponent implements OnInit {
     });
   }
 
+  /** Lo devuelve a la lista de activos. El backend recalcula el conteo con la carga de hoy. */
+  desarchivar(t: Tenor): void {
+    this.ocupado.set(t.id);
+    this.api.desarchivar(t.id).subscribe({
+      next: activo => {
+        this.reemplazar(activo);
+        this.toast.success('Tenor desarchivado: vuelve a la lista de activos.');
+        this.ocupado.set(null);
+      },
+      error: err => {
+        this.toast.error(mensajeDeError(err, 'No se pudo desarchivar el tenor.'));
+        this.ocupado.set(null);
+      }
+    });
+  }
+
+  /** Borra el tenor, activo o archivado. No se puede deshacer: por eso pregunta antes. */
+  eliminar(t: Tenor): void {
+    if (!confirm(`¿Eliminar "${t.nombre}"? Se borra para siempre y no se puede deshacer.`)) {
+      return;
+    }
+    this.ocupado.set(t.id);
+    this.api.eliminar(t.id).subscribe({
+      next: () => {
+        this.tenores.update(lista => lista.filter(x => x.id !== t.id));
+        if (this.vistaPrevia()?.id === t.id) {
+          this.cerrarVistaPrevia();
+        }
+        this.toast.success('Tenor eliminado.');
+        this.ocupado.set(null);
+      },
+      error: err => {
+        this.toast.error(mensajeDeError(err, 'No se pudo eliminar el tenor.'));
+        this.ocupado.set(null);
+      }
+    });
+  }
+
+  abrirContactos(): void {
+    this.contactosAbierto.set(true);
+    this.contactoEnEdicion.set(null);
+    this.errorContacto.set(null);
+    this.errorAlta.set(null);
+    this.cargandoContactos.set(true);
+    this.api.contactosControl().subscribe({
+      next: lista => {
+        this.contactos.set(lista);
+        this.cargandoContactos.set(false);
+      },
+      error: err => {
+        this.errorContacto.set(mensajeDeError(err, 'No se pudieron cargar los contactos de control.'));
+        this.cargandoContactos.set(false);
+      }
+    });
+  }
+
+  cerrarContactos(): void {
+    this.contactosAbierto.set(false);
+    this.contactoEnEdicion.set(null);
+  }
+
+  editarContacto(c: ContactoControl): void {
+    this.contactoEnEdicion.set(c.id);
+    this.edicion = { nombre: c.nombre, documento: c.documento ?? '', telefono: c.telefono };
+    this.errorContacto.set(null);
+  }
+
+  cancelarEdicion(): void {
+    this.contactoEnEdicion.set(null);
+    this.errorContacto.set(null);
+  }
+
+  /** Las mismas reglas que el backend, para avisar sin esperar la respuesta. */
+  private problemaContacto(c: { nombre: string; documento: string; telefono: string }): string | null {
+    if (!c.nombre.trim()) {
+      return 'Escribe el nombre.';
+    }
+    if (!/^[0-9A-Za-z]{8,12}$/.test(c.documento.trim())) {
+      return 'El documento tiene que tener entre 8 y 12 letras o dígitos.';
+    }
+    if (!/^9\d{8}$/.test(c.telefono.replace(/\D/g, ''))) {
+      return 'El celular tiene que tener 9 dígitos y empezar en 9.';
+    }
+    return null;
+  }
+
+  guardarContacto(c: ContactoControl): void {
+    const problema = this.problemaContacto(this.edicion);
+    if (problema) {
+      this.errorContacto.set(problema);
+      return;
+    }
+    if (c.id === null) {
+      return;
+    }
+    const id = c.id;
+    const { nombre, documento, telefono } = this.edicion;
+    this.guardandoContacto.set(true);
+    this.errorContacto.set(null);
+    this.api.actualizarContactoControl(id, { id, nombre, documento, telefono }).subscribe({
+      next: guardado => {
+        this.contactos.update(lista => lista.map(x => (x.id === id ? guardado : x)));
+        this.contactoEnEdicion.set(null);
+        this.guardandoContacto.set(false);
+        this.toast.success('Contacto de control actualizado.');
+      },
+      error: err => {
+        this.errorContacto.set(mensajeDeError(err, 'No se pudo guardar el contacto.'));
+        this.guardandoContacto.set(false);
+      }
+    });
+  }
+
+  agregarContacto(): void {
+    const problema = this.problemaContacto(this.nuevoContacto);
+    if (problema) {
+      this.errorAlta.set(problema);
+      return;
+    }
+    const { nombre, documento, telefono } = this.nuevoContacto;
+    this.guardandoContacto.set(true);
+    this.errorAlta.set(null);
+    this.api.crearContactoControl({ id: null, nombre, documento, telefono }).subscribe({
+      next: creado => {
+        this.contactos.update(lista => [...lista, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+        this.nuevoContacto = { nombre: '', documento: '', telefono: '' };
+        this.guardandoContacto.set(false);
+        this.toast.success('Contacto de control agregado.');
+      },
+      error: err => {
+        this.errorAlta.set(mensajeDeError(err, 'No se pudo agregar el contacto.'));
+        this.guardandoContacto.set(false);
+      }
+    });
+  }
+
   /** Un mensaje real del tenor, tal como se guardó. La primera llamada trae también el total. */
   private cargarMensaje(t: Tenor, desde: number): void {
     this.previewCargando.set(true);
@@ -759,7 +1046,8 @@ function borradorDe(t: Tenor): TenorGuardar {
     plantilla: t.plantilla,
     rangos: t.rangos,
     restricciones: t.restricciones,
-    combinadas: t.combinadas
+    combinadas: t.combinadas,
+    incluirContactosControl: t.incluirContactosControl
   };
 }
 

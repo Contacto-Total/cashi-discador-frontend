@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  ContactoControl,
   ConteoTenor,
   ExportableTenor,
   GrupoTenores,
@@ -57,6 +58,16 @@ export class SmsTenoresService {
     return this.http.post<RespuestaApi<Tenor>>(`${this.url}/tenor/${id}/archivar`, null).pipe(map(r => r.data));
   }
 
+  /** Devuelve un tenor archivado a la lista de activos; el backend recalcula su conteo. */
+  desarchivar(id: number): Observable<Tenor> {
+    return this.http.post<RespuestaApi<Tenor>>(`${this.url}/tenor/${id}/desarchivar`, null).pipe(map(r => r.data));
+  }
+
+  /** Borra el tenor, activo o archivado. No se puede deshacer. */
+  eliminar(id: number): Observable<void> {
+    return this.http.delete<RespuestaApi<unknown>>(`${this.url}/tenor/${id}`).pipe(map(() => undefined));
+  }
+
   recalcular(id: number): Observable<Tenor> {
     return this.http.post<RespuestaApi<Tenor>>(`${this.url}/tenor/${id}/recalcular`, null).pipe(map(r => r.data));
   }
@@ -68,6 +79,19 @@ export class SmsTenoresService {
 
   descargar(id: number): Observable<Blob> {
     return this.http.get(`${this.url}/tenor/${id}/export`, { responseType: 'blob' });
+  }
+
+  contactosControl(): Observable<ContactoControl[]> {
+    return this.http.get<RespuestaApi<ContactoControl[]>>(`${this.url}/contactos-control`).pipe(map(r => r.data));
+  }
+
+  crearContactoControl(contacto: ContactoControl): Observable<ContactoControl> {
+    return this.http.post<RespuestaApi<ContactoControl>>(`${this.url}/contactos-control`, contacto).pipe(map(r => r.data));
+  }
+
+  /** Corrige nombre, documento y celular. */
+  actualizarContactoControl(id: number, contacto: ContactoControl): Observable<ContactoControl> {
+    return this.http.put<RespuestaApi<ContactoControl>>(`${this.url}/contactos-control/${id}`, contacto).pipe(map(r => r.data));
   }
 }
 
