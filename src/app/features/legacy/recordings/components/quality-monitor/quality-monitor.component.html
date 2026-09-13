@@ -80,7 +80,7 @@
         en Todos es válido —las celdas son porcentajes— pero entonces la lista de
         criterios más fallados junta dos tarjetas distintas.
       -->
-      <div class="flex flex-col gap-1.5 min-w-0 lg:col-span-2">
+      <div class="flex flex-col gap-1.5 min-w-0 sm:col-span-2 lg:col-span-4">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Resultado</label>
         <div class="flex flex-wrap gap-2">
           <div *ngIf="resultadosPDP.length" class="flex flex-wrap items-center gap-1.5 px-2 py-1 rounded-lg
@@ -425,13 +425,13 @@
     </p>
   </div>
 
-  <div *ngIf="semana" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <div *ngIf="semana" class="grid grid-cols-1 lg:grid-cols-5 gap-4">
     <!--
       Criterios más fallados. Filtro de asesor propio: comparar «lo que más falla X»
       contra el total del rango exige tener las dos lecturas a la vez, y por eso este
       desplegable no habla con el de la card de al lado.
     -->
-    <div class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4">
+    <div class="lg:col-span-2 min-w-0 rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4">
       <div class="flex items-center justify-between gap-3 mb-3">
         <h3 class="text-[13.5px] font-semibold text-slate-900 dark:text-slate-200 tracking-[-0.01em]">
           Criterios que más se fallan
@@ -469,16 +469,19 @@
             </lucide-angular>
             <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 '
                            + (COLOR_SECCION[fase.seccion] || 'bg-slate-400')"></span>
-            <span class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:text-slate-400">
-              {{ ETIQUETA_SECCION[fase.seccion] || fase.seccion }}
-            </span>
-            <!-- Se desvanece al abrir: adentro ya se ve el detalle criterio por criterio. -->
-            <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums
-                         transition-opacity duration-200 group-open:opacity-0">
-              · {{ fase.criterios.length }}
+            <!-- Ancho fijo: deja la pastilla cerca de la etiqueta y alineada en las tres fases. -->
+            <span class="w-[125px] flex-shrink-0 flex items-center gap-2">
+              <span class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:text-slate-400">
+                {{ ETIQUETA_SECCION[fase.seccion] || fase.seccion }}
+              </span>
+              <!-- Se desvanece al abrir: adentro ya se ve el detalle criterio por criterio. -->
+              <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums
+                           transition-opacity duration-200 group-open:opacity-0">
+                · {{ fase.criterios.length }}
+              </span>
             </span>
             <ng-container *ngIf="resumenFase(fase.criterios) as resumen">
-              <span class="ml-auto text-[10.5px] font-medium tabular-nums px-2 py-0.5 rounded-full
+              <span class="text-[10.5px] font-medium tabular-nums px-2 py-0.5 rounded-full
                            bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400">
                 {{ resumen.evaluados > 0 ? (resumen.fallados + '/' + resumen.evaluados + ' fallado · ' + pct(resumen.pctFalla)) : 'sin calificar' }}
               </span>
@@ -522,7 +525,7 @@
       solo apunta su filtro, así el supervisor nunca pierde de vista la lista que estaba
       recorriendo.
     -->
-    <div class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4">
+    <div class="lg:col-span-3 min-w-0 rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4">
       <div class="flex items-center justify-between gap-3 mb-3">
         <h3 class="text-[13.5px] font-semibold text-slate-900 dark:text-slate-200 tracking-[-0.01em]">
           Revisión de reportes
@@ -586,22 +589,16 @@
           decidir que hace falta scroll.
         -->
         <div class="rounded-xl bg-slate-50 dark:bg-slate-950/30 overflow-x-auto">
-          <table class="w-full min-w-[680px] text-[12px] border-collapse">
+          <table class="w-full min-w-[560px] text-[12px] border-collapse">
             <thead>
               <tr class="border-b border-slate-200 dark:border-white/[0.06]">
-                <!-- El día solo tiene sentido si la lista mezcla varios: en una celda es uno solo. -->
-                <th *ngIf="muestraColumnaDia"
-                    class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
-                           text-slate-500 dark:text-slate-500 font-medium">Día</th>
                 <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
-                           text-slate-500 dark:text-slate-500 font-medium">Hora</th>
+                           text-slate-500 dark:text-slate-500 font-medium">Fecha</th>
                 <th *ngIf="!asesorRevision"
                     class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium">Asesor</th>
                 <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium">Documento</th>
-                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
-                           text-slate-500 dark:text-slate-500 font-medium">Rúbrica</th>
                 <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium">Tipificación</th>
                 <th class="px-3 py-2 text-right text-[10px] uppercase tracking-[0.1em]
@@ -613,11 +610,10 @@
             <tbody class="divide-y divide-slate-100 dark:divide-white/[0.05]">
               <tr *ngFor="let a of detallePaginado; trackBy: porIdx"
                   class="hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors">
-                <td *ngIf="muestraColumnaDia"
-                    class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap tabular-nums">
-                  {{ etiquetaDia(a.fecha) }}
+                <td class="px-3 py-2 whitespace-nowrap tabular-nums">
+                  <div class="text-slate-700 dark:text-slate-300">{{ fechaCorta(a.fecha) }}</div>
+                  <div class="text-[10.5px] text-slate-400 dark:text-slate-600">{{ a.hora }}</div>
                 </td>
-                <td class="px-3 py-2 text-slate-600 dark:text-slate-400 tabular-nums">{{ a.hora }}</td>
                 <td *ngIf="!asesorRevision"
                     class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ a.asesor }}</td>
                 <td class="px-3 py-2">
@@ -626,15 +622,11 @@
                        [title]="a.cliente">{{ a.cliente }}</div>
                 </td>
                 <td class="px-3 py-2">
-                  <span [class]="'px-2 py-0.5 rounded-full text-[10px] font-medium ring-1 '
-                                 + (a.rubrica === 'PDP'
-                                    ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-indigo-400/30 dark:ring-indigo-400/20'
-                                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 ring-slate-200 dark:ring-white/10')">
-                    {{ a.rubrica }}
-                  </span>
-                </td>
-                <td class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                  {{ etiquetaTipificacion(a.resultado) }}
+                  <div class="text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ etiquetaTipificacion(a.resultado) }}</div>
+                  <div class="text-[10.5px] font-medium"
+                       [ngClass]="a.rubrica === 'PDP' ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500'">
+                    Rúbrica {{ a.rubrica }}
+                  </div>
                 </td>
                 <td class="px-3 py-2 text-right text-slate-800 dark:text-slate-200 tabular-nums">
                   <div>{{ a.puntos }}/{{ a.posibles }}</div>
