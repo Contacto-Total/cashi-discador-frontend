@@ -100,6 +100,12 @@ const RESULTADOS_TRAMOS: SelectOption[] = [
   R_TODOS, R_OPORTUNIDAD, R_CON_INTENCION, R_SIN_INTENCION, R_REFINANCIAMIENTO, R_PROMESA
 ];
 
+/**
+ * Tramo 5 sin REFINANCIAMIENTO: en septiembre las gestiones con esa tipificación son
+ * todas de Tramo 3 y en Tramo 5 hay cero, así que el chip solo llevaría a una matriz vacía.
+ */
+const RESULTADOS_TRAMO5: SelectOption[] = RESULTADOS_TRAMOS.filter(r => r.value !== R_REFINANCIAMIENTO.value);
+
 /** Lo que ofrece el monitoreo del discador en Tramo Propio y Castigo. */
 const RESULTADOS_PROPIA: SelectOption[] = [R_TODOS, R_OPORTUNIDAD, R_CONTACTO, R_PROMESA];
 
@@ -518,6 +524,9 @@ export class QualityMonitorComponent implements OnInit {
     if (!this.selectedCartera) {
       return RESULTADOS_SIN_TRAMO;
     }
+    if (this.esTramo('TRAMO5')) {
+      return RESULTADOS_TRAMO5;
+    }
     return this.esTramo3o5() ? RESULTADOS_TRAMOS : RESULTADOS_PROPIA;
   }
 
@@ -539,9 +548,14 @@ export class QualityMonitorComponent implements OnInit {
    * los dos árboles.
    */
   private esTramo3o5(): boolean {
+    return TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.some(clave => this.esTramo(clave));
+  }
+
+  /** Si la cartera o la subcartera elegida es ese tramo ('TRAMO3', 'TRAMO5'). */
+  private esTramo(clave: string): boolean {
     const cartera = this.carteras.find(c => c.value === this.selectedCartera);
     return [cartera?.label, this.nombreSubcartera()]
-      .some(nombre => TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.includes(this.claveTramo(nombre)));
+      .some(nombre => this.claveTramo(nombre) === clave);
   }
 
   /**
@@ -1083,6 +1097,12 @@ export class QualityMonitorComponent implements OnInit {
     this.paginaMatriz = 1;
   }
 
+  /** '2026-09-08' -> '08/09/2026'. */
+  fechaCorta(fecha: string): string {
+    const [a, m, d] = fecha.split('-');
+    return `${d}/${m}/${a}`;
+  }
+
   /** 'lun 03' — el encabezado de columna. */
   etiquetaDia(fecha: string): string {
     const [a, m, d] = fecha.split('-').map(Number);
@@ -1179,10 +1199,5 @@ export class QualityMonitorComponent implements OnInit {
       posibles += a.posibles;
     }
     return posibles ? Math.round(puntos * 1000 / posibles) / 10 : null;
-  }
-
-  /** Si la lista mezcla varios días, la columna Día tiene sentido; si no, sobra. */
-  get muestraColumnaDia(): boolean {
-    return this.fechaRevision === null;
   }
 }
