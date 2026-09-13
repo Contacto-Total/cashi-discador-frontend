@@ -469,23 +469,14 @@
             </lucide-angular>
             <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 '
                            + (COLOR_SECCION[fase.seccion] || 'bg-slate-400')"></span>
-            <!-- Ancho fijo: deja la pastilla cerca de la etiqueta y alineada en las tres fases. -->
-            <span class="w-[125px] flex-shrink-0 flex items-center gap-2">
-              <span class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:text-slate-400">
-                {{ ETIQUETA_SECCION[fase.seccion] || fase.seccion }}
-              </span>
-              <!-- Se desvanece al abrir: adentro ya se ve el detalle criterio por criterio. -->
-              <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums
-                           transition-opacity duration-200 group-open:opacity-0">
-                · {{ fase.criterios.length }}
-              </span>
+            <span class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:text-slate-400">
+              {{ ETIQUETA_SECCION[fase.seccion] || fase.seccion }}
             </span>
-            <ng-container *ngIf="resumenFase(fase.criterios) as resumen">
-              <span class="text-[10.5px] font-medium tabular-nums px-2 py-0.5 rounded-full
-                           bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400">
-                {{ resumen.evaluados > 0 ? (resumen.fallados + '/' + resumen.evaluados + ' fallado · ' + pct(resumen.pctFalla)) : 'sin calificar' }}
-              </span>
-            </ng-container>
+            <!-- Se desvanece al abrir: adentro ya se ve el detalle criterio por criterio. -->
+            <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums
+                         transition-opacity duration-200 group-open:opacity-0">
+              · {{ fase.criterios.length }}
+            </span>
           </summary>
 
           <div class="divide-y divide-slate-100 dark:divide-white/[0.05]">
@@ -602,7 +593,17 @@
                 <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium">Tipificación</th>
                 <th class="px-3 py-2 text-right text-[10px] uppercase tracking-[0.1em]
-                           text-slate-500 dark:text-slate-500 font-medium">Puntaje</th>
+                           text-slate-500 dark:text-slate-500 font-medium">
+                  <button type="button" (click)="ordenarPorPuntaje()"
+                          [title]="ordenPuntaje === 'asc' ? 'Ordenar de mayor a menor' : 'Ordenar de menor a mayor'"
+                          class="inline-flex items-center gap-1 uppercase tracking-[0.1em] cursor-pointer
+                                 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                          [ngClass]="ordenPuntaje ? 'text-indigo-600 dark:text-indigo-300' : ''">
+                    Puntaje
+                    <lucide-angular [img]="ordenPuntaje === 'asc' ? ArrowUp : ordenPuntaje === 'desc' ? ArrowDown : ArrowUpDown"
+                                    [size]="11"></lucide-angular>
+                  </button>
+                </th>
                 <th class="px-3 py-2 text-center text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium whitespace-nowrap">Revisar</th>
               </tr>
