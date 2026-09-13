@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule, Search, Eye, TrendingUp, TrendingDown,
-  Minus, User, ArrowLeft, ChevronLeft, ChevronRight
+  Minus, User, ArrowLeft, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown
 } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
@@ -209,6 +209,9 @@ export class QualityMonitorComponent implements OnInit {
   readonly Minus = Minus;
   readonly User = User;
   readonly ArrowLeft = ArrowLeft;
+  readonly ArrowUp = ArrowUp;
+  readonly ArrowDown = ArrowDown;
+  readonly ArrowUpDown = ArrowUpDown;
   readonly ChevronLeft = ChevronLeft;
   readonly ChevronRight = ChevronRight;
   readonly etiquetaTipificacion = etiquetaTipificacion;
@@ -838,12 +841,32 @@ export class QualityMonitorComponent implements OnInit {
 
   // ------------------------------------------------------------------ filtro y paginación
 
+  /** Orden por puntaje de la tabla de revisión. '' = el orden en que llegan (fecha). */
+  ordenPuntaje: '' | 'asc' | 'desc' = '';
+
+  /** El primer click ordena de menor a mayor; los siguientes alternan. */
+  ordenarPorPuntaje(): void {
+    this.ordenPuntaje = this.ordenPuntaje === 'asc' ? 'desc' : 'asc';
+    this.reiniciarPaginado();
+  }
+
   /** Lo que queda después del filtro de rúbrica, antes de paginar. */
   get detalleFiltrado(): MonitoringAudio[] {
     const documento = this.filtroDocumento.trim();
-    return this.detalle
+    const filtrado = this.detalle
       .filter(a => !this.filtroRubrica || a.rubrica === this.filtroRubrica)
       .filter(a => !documento || a.documento.includes(documento));
+    if (!this.ordenPuntaje) {
+      return filtrado;
+    }
+    // Por cumplimiento y no por puntos: 4/16 y 4/12 no valen lo mismo. Sin puntaje va al final.
+    const signo = this.ordenPuntaje === 'asc' ? 1 : -1;
+    return [...filtrado].sort((a, b) => {
+      if (a.cumplimiento == null || b.cumplimiento == null) {
+        return (a.cumplimiento == null ? 1 : 0) - (b.cumplimiento == null ? 1 : 0);
+      }
+      return signo * (a.cumplimiento - b.cumplimiento);
+    });
   }
 
   /** La página que se está viendo. */
@@ -1147,18 +1170,6 @@ export class QualityMonitorComponent implements OnInit {
     return this.SECCIONES
       .map(seccion => ({ seccion, criterios: deLaRubrica.filter(c => c.seccion === seccion) }))
       .filter(fase => fase.criterios.length > 0);
-  }
-
-  /**
-   * El fallado/evaluado de una fase entera, para el encabezado del acordeón.
-   *
-   * Sigue la misma regla que cada criterio suelto: sin nada evaluado, `pctFalla` es
-   * null y la card lo muestra como "sin calificar" en vez de como 0%.
-   */
-  resumenFase(criterios: MonitoringCriterion[]): { evaluados: number; fallados: number; pctFalla: number | null } {
-    const evaluados = criterios.reduce((acc, c) => acc + c.evaluados, 0);
-    const fallados = criterios.reduce((acc, c) => acc + c.fallados, 0);
-    return { evaluados, fallados, pctFalla: evaluados > 0 ? Math.round((fallados / evaluados) * 1000) / 10 : null };
   }
 
   /** Si la selección tiene criterios de alguna rúbrica, para distinguir «vacío» de «es de la otra». */
