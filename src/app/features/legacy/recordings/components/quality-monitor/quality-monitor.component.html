@@ -80,10 +80,34 @@
         en Todos es válido —las celdas son porcentajes— pero entonces la lista de
         criterios más fallados junta dos tarjetas distintas.
       -->
-      <div class="flex flex-col gap-1.5 min-w-0">
+      <div class="flex flex-col gap-1.5 min-w-0 lg:col-span-2">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Resultado</label>
-        <app-custom-select [options]="resultados" [(ngModel)]="selectedResultado" placeholder="Todos">
-        </app-custom-select>
+        <div class="flex flex-wrap gap-2">
+          <div *ngIf="resultadosPDP.length" class="flex flex-wrap items-center gap-1.5 px-2 py-1 rounded-lg
+                                                    bg-slate-100 dark:bg-white/5">
+            <span class="text-[9.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-500 pl-0.5">PDP</span>
+            <button *ngFor="let r of resultadosPDP; trackBy: porValue" type="button"
+                    (click)="toggleResultado(r.value)"
+                    [class]="'h-7 px-3 rounded-full text-[12px] font-medium whitespace-nowrap transition-colors cursor-pointer '
+                             + (selectedResultados.includes(r.value)
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/20')">
+              {{ r.label }}
+            </button>
+          </div>
+          <div *ngIf="resultadosCD.length" class="flex flex-wrap items-center gap-1.5 px-2 py-1 rounded-lg
+                                                   bg-slate-100 dark:bg-white/5">
+            <span class="text-[9.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-500 pl-0.5">CD</span>
+            <button *ngFor="let r of resultadosCD; trackBy: porValue" type="button"
+                    (click)="toggleResultado(r.value)"
+                    [class]="'h-7 px-3 rounded-full text-[12px] font-medium whitespace-nowrap transition-colors cursor-pointer '
+                             + (selectedResultados.includes(r.value)
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/20')">
+              {{ r.label }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -436,18 +460,30 @@
       </p>
 
       <!-- La rúbrica completa, por fase. Dentro de cada fase, el más fallado primero. -->
-      <div *ngIf="criteriosPorFase.length" class="space-y-4">
-        <div *ngFor="let fase of criteriosPorFase; trackBy: porFase">
-          <div class="flex items-center gap-2 pb-1">
+      <div *ngIf="criteriosPorFase.length" class="space-y-2">
+        <details *ngFor="let fase of criteriosPorFase; let primera = first; trackBy: porFase"
+                 class="group" [open]="primera">
+          <summary class="flex items-center gap-2 pb-1 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <lucide-angular [img]="ChevronRight" [size]="12"
+                            class="text-slate-400 dark:text-slate-600 flex-shrink-0 transition-transform group-open:rotate-90">
+            </lucide-angular>
             <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 '
                            + (COLOR_SECCION[fase.seccion] || 'bg-slate-400')"></span>
             <span class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:text-slate-400">
               {{ ETIQUETA_SECCION[fase.seccion] || fase.seccion }}
             </span>
-            <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums">
+            <!-- Se desvanece al abrir: adentro ya se ve el detalle criterio por criterio. -->
+            <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums
+                         transition-opacity duration-200 group-open:opacity-0">
               · {{ fase.criterios.length }}
             </span>
-          </div>
+            <ng-container *ngIf="resumenFase(fase.criterios) as resumen">
+              <span class="ml-auto text-[10.5px] font-medium tabular-nums px-2 py-0.5 rounded-full
+                           bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400">
+                {{ resumen.evaluados > 0 ? (resumen.fallados + '/' + resumen.evaluados + ' fallado · ' + pct(resumen.pctFalla)) : 'sin calificar' }}
+              </span>
+            </ng-container>
+          </summary>
 
           <div class="divide-y divide-slate-100 dark:divide-white/[0.05]">
             <div *ngFor="let c of fase.criterios; trackBy: porCampo" class="flex items-center gap-3 py-2 pl-3.5">
@@ -471,7 +507,7 @@
               </span>
             </div>
           </div>
-        </div>
+        </details>
       </div>
 
       <div *ngIf="!criteriosPorFase.length" class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
@@ -529,6 +565,11 @@
                              placeholder="TODOS">
           </app-custom-select>
         </div>
+        <input type="text" [(ngModel)]="filtroDocumento" (ngModelChange)="reiniciarPaginado()"
+               placeholder="Buscar por DNI…"
+               class="w-[130px] h-8 px-2.5 rounded-lg bg-white dark:bg-slate-950/50 ring-1 ring-slate-300 dark:ring-white/10
+                      text-slate-900 dark:text-slate-100 text-[12px]
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
         <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums">{{ rangoVisible }}</span>
       </div>
 
@@ -545,7 +586,7 @@
           decidir que hace falta scroll.
         -->
         <div class="rounded-xl bg-slate-50 dark:bg-slate-950/30 overflow-x-auto">
-          <table class="w-full min-w-[560px] text-[12px] border-collapse">
+          <table class="w-full min-w-[680px] text-[12px] border-collapse">
             <thead>
               <tr class="border-b border-slate-200 dark:border-white/[0.06]">
                 <!-- El día solo tiene sentido si la lista mezcla varios: en una celda es uno solo. -->
@@ -561,6 +602,8 @@
                            text-slate-500 dark:text-slate-500 font-medium">Documento</th>
                 <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium">Rúbrica</th>
+                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Tipificación</th>
                 <th class="px-3 py-2 text-right text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium">Puntaje</th>
                 <th class="px-3 py-2 text-center text-[10px] uppercase tracking-[0.1em]
@@ -590,9 +633,12 @@
                     {{ a.rubrica }}
                   </span>
                 </td>
+                <td class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  {{ etiquetaTipificacion(a.resultado) }}
+                </td>
                 <td class="px-3 py-2 text-right text-slate-800 dark:text-slate-200 tabular-nums">
-                  {{ a.puntos }}/{{ a.posibles }}
-                  <span class="text-[10.5px] text-slate-400 dark:text-slate-600">{{ pct(a.cumplimiento) }}</span>
+                  <div>{{ a.puntos }}/{{ a.posibles }}</div>
+                  <div class="text-[10.5px] text-slate-400 dark:text-slate-600">{{ pct(a.cumplimiento) }}</div>
                 </td>
                 <td class="px-3 py-2">
                   <!-- Una sola acción por fila: abrir la evaluación. -->
@@ -611,7 +657,7 @@
 
           <div *ngIf="!detalleFiltrado.length"
                class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
-            {{ detalle.length ? 'Ningún audio de esa rúbrica en la selección' : 'Sin audios evaluados' }}
+            {{ detalle.length ? 'Ningún audio con esos filtros en la selección' : 'Sin audios evaluados' }}
           </div>
         </div>
 
