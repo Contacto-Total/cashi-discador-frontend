@@ -42,8 +42,8 @@ export interface MonitoringRequest {
   desde: string;
   /** 'YYYY-MM-DD' inclusive. */
   hasta: string;
-  /** RESULTADO exacto; fija la rúbrica de toda la matriz. Vacío = las dos. */
-  resultado?: string;
+  /** RESULTADO exactos a incluir (OR entre ellos). Vacío = todos. */
+  resultados?: string[];
   /** USUARIOREGISTRA a incluir. Vacío = todos. */
   asesores?: string[];
 }
@@ -64,7 +64,7 @@ export interface MonitoringDetailRequest {
   fecha?: string;
   desde?: string;
   hasta?: string;
-  resultado?: string;
+  resultados?: string[];
 }
 
 /** Un bloque de la rúbrica dentro de una celda. */
@@ -136,7 +136,7 @@ export interface MonitoringWeek {
   tramo: string;
   desde: string;
   hasta: string;
-  resultado: string | null;
+  resultados: string[];
   /** 'PDP' | 'CD', o null si vienen las dos rúbricas mezcladas. */
   rubrica: string | null;
   /** Todos los días del rango, hayan tenido audios o no: son las columnas. */
