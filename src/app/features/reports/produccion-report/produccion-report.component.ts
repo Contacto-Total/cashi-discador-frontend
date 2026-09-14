@@ -16,6 +16,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserRole } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-produccion-report',
@@ -116,7 +117,9 @@ import { AuthService } from '../../../core/services/auth.service';
               <lucide-angular name="download" [size]="18"></lucide-angular>
               Excel
             </button>
-            <button (click)="irAHistorico()" [disabled]="!contextoSeleccionado()" class="flex-1 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">Histórico</button>
+            @if (isAdmin) {
+              <button (click)="irAHistorico()" [disabled]="!contextoSeleccionado()" class="flex-1 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">Histórico</button>
+            }
           </div>
         </div>
       </div>
@@ -348,7 +351,7 @@ export class ProduccionReportComponent implements OnInit {
   ) {}
 
   get isAdmin(): boolean {
-    return this.authService.getCurrentUser()?.role === 'ADMIN';
+    return this.authService.getCurrentUser()?.role === UserRole.ADMIN;
   }
 
   ngOnInit(): void {
@@ -523,7 +526,7 @@ export class ProduccionReportComponent implements OnInit {
   }
 
   irAHistorico(): void {
-    if (!this.contextoSeleccionado()) return;
+    if (!this.isAdmin || !this.contextoSeleccionado()) return;
     this.router.navigate(['/reports/produccion/historico'], {
       queryParams: {
         idTenant: this.filtros.idProveedor,
