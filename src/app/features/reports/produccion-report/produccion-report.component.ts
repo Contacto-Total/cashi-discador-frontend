@@ -122,45 +122,45 @@ import { forkJoin } from 'rxjs';
 
       <!-- Métricas Resumen -->
       @if (resumen()) {
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3">
           <!-- Total Meta -->
-          <div class="bg-gradient-to-r from-slate-800 to-slate-950 rounded-xl shadow-md p-4 text-white">
-             <p class="text-xs font-semibold text-white uppercase">Meta Total</p>
-             <p class="text-xl font-extrabold text-white">S/ {{ resumen()!.totalMeta | number:'1.2-2' }}</p>
+          <div class="rounded-xl bg-gradient-to-r from-slate-800 to-slate-950 p-3 text-white shadow-md">
+            <p class="text-xs font-semibold text-white uppercase">Meta Total</p>
+             <p class="text-lg font-extrabold text-white">S/ {{ resumen()!.totalMeta | number:'1.2-2' }}</p>
           </div>
 
           <!-- Generación -->
-          <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-md p-4 text-white">
+          <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-blue-100 uppercase">Generación Hoy</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalGeneracion | number:'1.2-2' }}</p>
+             <p class="text-lg font-bold">S/ {{ resumen()!.totalGeneracion | number:'1.2-2' }}</p>
           </div>
 
           <!-- Proyectado -->
-          <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-md p-4 text-white">
+          <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-amber-100 uppercase">Proyectado Hoy</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalProyectado | number:'1.2-2' }}</p>
+             <p class="text-lg font-bold">S/ {{ resumen()!.totalProyectado | number:'1.2-2' }}</p>
           </div>
 
           <!-- Pagos -->
-          <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
+          <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-green-100 uppercase">Pagos Hoy</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalPagos | number:'1.2-2' }}</p>
+             <p class="text-lg font-bold">S/ {{ resumen()!.totalPagos | number:'1.2-2' }}</p>
           </div>
 
           <!-- Puntos Global -->
-          <div class="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-md p-4 text-white">
+          <div class="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-teal-100 uppercase">Puntos Global</p>
-            <p class="text-xl font-bold">{{ resumen()!.puntosGlobalPct | number:'1.2-2' }}%</p>
+             <p class="text-lg font-bold">{{ resumen()!.puntosGlobalPct | number:'1.2-2' }}%</p>
           </div>
 
           <!-- Total Carteras -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-                <lucide-angular name="layers" [size]="24" class="text-teal-600 dark:text-teal-400"></lucide-angular>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-3">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                <lucide-angular name="layers" [size]="20" class="text-teal-600 dark:text-teal-400"></lucide-angular>
               </div>
               <div>
-                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ resumen()!.totalCarteras }}</p>
+                <p class="text-xl font-bold text-gray-800 dark:text-white">{{ resumen()!.totalCarteras }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Carteras</p>
               </div>
             </div>
