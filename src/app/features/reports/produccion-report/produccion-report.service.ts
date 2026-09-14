@@ -30,7 +30,6 @@ export interface ReporteProduccionResponse {
   resumen: ResumenProduccion;
   tipoMeta: TipoMetaReporteProduccion;
   valorMetaAplicada: number;
-  simulada: boolean;
   total: number;
 }
 
@@ -42,7 +41,6 @@ export interface FiltrosReporteProduccion {
   idCartera?: number;
   idSubcartera?: number;
   tipoMeta: TipoMetaReporteProduccion;
-  valorMetaSimulada?: number;
 }
 
 export interface MetaReporteProduccion {
@@ -52,7 +50,7 @@ export interface MetaReporteProduccion {
   idSubcartera: number;
   tipoMeta: TipoMetaReporteProduccion;
   valorMeta: number;
-  fechaVigencia: string;
+  mesVigencia: string;
   activo: boolean;
   actualizadoPor?: string;
   fechaCreacion?: string;
@@ -88,7 +86,6 @@ export class ProduccionReportService {
     if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
     if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
-    if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get<ReporteProduccionResponse>(this.baseUrl, { params });
   }
@@ -101,7 +98,6 @@ export class ProduccionReportService {
     if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
     if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
-    if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get(`${this.baseUrl}/excel`, {
       params,
@@ -109,12 +105,22 @@ export class ProduccionReportService {
     });
   }
 
-  getMetas(idTenant: number, idCartera: number, idSubcartera: number): Observable<MetaReporteProduccion[]> {
+  getMetas(
+    idTenant: number,
+    idCartera: number,
+    idSubcartera: number,
+    tipoMeta: TipoMetaReporteProduccion,
+    page: number,
+    size = 10
+  ): Observable<PageResponse<MetaReporteProduccion>> {
     const params = new HttpParams()
       .set('idTenant', idTenant.toString())
       .set('idCartera', idCartera.toString())
-      .set('idSubcartera', idSubcartera.toString());
-    return this.http.get<MetaReporteProduccion[]>(`${this.baseUrl}/metas`, { params });
+      .set('idSubcartera', idSubcartera.toString())
+      .set('tipoMeta', tipoMeta)
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<PageResponse<MetaReporteProduccion>>(`${this.baseUrl}/metas`, { params });
   }
 
   crearMeta(meta: MetaReporteProduccion): Observable<MetaReporteProduccion> {
@@ -122,11 +128,11 @@ export class ProduccionReportService {
   }
 
   activarMeta(id: number): Observable<MetaReporteProduccion> {
-    return this.http.patch<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/activar`, {});
+    return this.http.post<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/activar`, {});
   }
 
   desactivarMeta(id: number): Observable<MetaReporteProduccion> {
-    return this.http.patch<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/desactivar`, {});
+    return this.http.post<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/desactivar`, {});
   }
 
   getHistorial(

@@ -23,6 +23,7 @@ export interface AutoDialerEstadisticas {
   llamadasMarcando: number;
   llamadasNoContestadas: number;
   llamadasAbandonadas: number;
+  tasaAbandono: number;
   llamadasNoCompletadas: number;
   llamadasFallidas: number;
   llamadasConectadasConAsesor: number;
