@@ -15,6 +15,7 @@ import { ComisionesService } from '../../../comisiones/services/comisiones.servi
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-produccion-report',
@@ -261,6 +262,7 @@ import { forkJoin } from 'rxjs';
       </div>
       </main>
 
+        @if (isAdmin) {
         <aside class="w-full shrink-0 rounded-xl bg-white p-3 shadow-md dark:bg-gray-800 xl:sticky xl:top-4 xl:w-64">
           <div class="mb-4 flex items-start justify-between gap-3">
             <div>
@@ -306,6 +308,7 @@ import { forkJoin } from 'rxjs';
              }
           </div>
         </aside>
+        }
       </div>
     </div>
   `,
@@ -340,8 +343,13 @@ export class ProduccionReportComponent implements OnInit {
   constructor(
     private produccionService: ProduccionReportService,
     private comisionesService: ComisionesService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
+
+  get isAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'ADMIN';
+  }
 
   ngOnInit(): void {
     // Fecha por defecto: hoy
