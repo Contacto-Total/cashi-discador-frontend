@@ -174,13 +174,13 @@ import { forkJoin } from 'rxjs';
           <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cartera</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Subcartera</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Generación Hoy</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Proyectado Hoy</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagos Hoy</th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Puntos Hoy %</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cartera</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Subcartera</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Generación Hoy</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Proyectado Hoy</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagos Hoy</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Puntos Hoy %</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -202,33 +202,24 @@ import { forkJoin } from 'rxjs';
               } @else {
                 @for (item of data(); track item.idSubcartera) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-4 py-3 text-gray-900 dark:text-white font-medium">{{ item.nombreCartera }}</td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ item.nombreSubcartera }}</td>
-                    <td class="px-4 py-3 text-right text-gray-900 dark:text-white font-semibold">
+                    <td class="px-3 py-2 text-gray-900 dark:text-white font-medium">{{ item.nombreCartera }}</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ item.nombreSubcartera }}</td>
+                    <td class="px-3 py-2 text-right text-gray-900 dark:text-white font-semibold">
                       S/ {{ item.meta | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-right text-blue-600 dark:text-blue-400 font-semibold">
+                    <td class="px-3 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold">
                       S/ {{ item.generacionHoy | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-right text-amber-600 dark:text-amber-400 font-semibold">
+                    <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400 font-semibold">
                       S/ {{ item.proyectadoHoy | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">
+                    <td class="px-3 py-2 text-right text-green-600 dark:text-green-400 font-semibold">
                       S/ {{ item.pagosHoy | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-center">
-                      <div class="flex items-center justify-center gap-2">
-                        <div class="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
-                          <div
-                            class="h-2.5 rounded-full transition-all"
-                            [class]="getProgressClass(item.puntosHoyPct)"
-                            [style.width.%]="Math.min(item.puntosHoyPct, 100)"
-                          ></div>
-                        </div>
-                        <span class="text-sm font-bold" [class]="getPuntosTextClass(item.puntosHoyPct)">
-                          {{ item.puntosHoyPct | number:'1.2-2' }}%
-                        </span>
-                      </div>
+                    <td class="px-3 py-2 text-center">
+                      <span class="text-sm font-bold" [class]="getPuntosTextClass(item.puntosHoyPct)">
+                        {{ item.puntosHoyPct | number:'1.2-2' }}%
+                      </span>
                     </td>
                   </tr>
                 }
@@ -236,20 +227,20 @@ import { forkJoin } from 'rxjs';
                 <!-- Fila Total -->
                 @if (resumen()) {
                   <tr class="bg-gray-100 dark:bg-gray-700 font-bold border-t-2 border-gray-300 dark:border-gray-500">
-                    <td class="px-4 py-3 text-gray-900 dark:text-white" colspan="2">TOTAL</td>
-                    <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td class="px-3 py-2 text-gray-900 dark:text-white" colspan="2">TOTAL</td>
+                    <td class="px-3 py-2 text-right text-gray-900 dark:text-white">
                       S/ {{ resumen()!.totalMeta | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-right text-blue-700 dark:text-blue-300">
+                    <td class="px-3 py-2 text-right text-blue-700 dark:text-blue-300">
                       S/ {{ resumen()!.totalGeneracion | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-right text-amber-700 dark:text-amber-300">
+                    <td class="px-3 py-2 text-right text-amber-700 dark:text-amber-300">
                       S/ {{ resumen()!.totalProyectado | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-right text-green-700 dark:text-green-300">
+                    <td class="px-3 py-2 text-right text-green-700 dark:text-green-300">
                       S/ {{ resumen()!.totalPagos | number:'1.2-2' }}
                     </td>
-                    <td class="px-4 py-3 text-center text-teal-700 dark:text-teal-300">
+                    <td class="px-3 py-2 text-center text-teal-700 dark:text-teal-300">
                       {{ resumen()!.puntosGlobalPct | number:'1.2-2' }}%
                     </td>
                   </tr>
@@ -279,16 +270,10 @@ import { forkJoin } from 'rxjs';
           </div>
 
           @if (!contextoSeleccionado()) {
-            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">Selecciona proveedor, cartera y subcartera para simular o registrar una meta.</p>
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">Selecciona proveedor, cartera y subcartera para registrar una meta.</p>
           }
 
           <div class="space-y-3 border-b border-gray-200 pb-4 dark:border-gray-700">
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Simular meta</label>
-              <input type="number" min="0" [(ngModel)]="valorMetaSimulada" placeholder="Monto temporal" [disabled]="!contextoSeleccionado()" class="w-full rounded-lg border border-teal-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:opacity-50 dark:border-teal-700 dark:bg-gray-700 dark:text-white" />
-              <div class="mt-2 flex gap-2"><button type="button" (click)="simular()" [disabled]="valorMetaSimulada === null || !contextoSeleccionado()" class="flex-1 rounded-lg bg-teal-600 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Simular</button><button type="button" (click)="limpiarSimulacion()" [disabled]="!simulacionActiva" class="flex-1 rounded-lg border border-teal-600 px-2 py-1.5 text-xs font-semibold text-teal-700 disabled:opacity-50 dark:text-teal-300">Limpiar</button></div>
-              @if (simulacionActiva) { <p class="mt-1 text-xs font-medium text-teal-700 dark:text-teal-300">Simulación activa</p> }
-            </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Valor de meta</label>
               <input type="number" min="0" [(ngModel)]="valorMetaNueva" placeholder="0.00" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
@@ -327,8 +312,6 @@ import { forkJoin } from 'rxjs';
   styles: []
 })
 export class ProduccionReportComponent implements OnInit {
-  Math = Math;
-
   // State
   loading = signal(false);
   data = signal<ReporteProduccionDTO[]>([]);
@@ -337,8 +320,6 @@ export class ProduccionReportComponent implements OnInit {
   paginaMetas = signal<PageResponse<MetaReporteProduccion> | null>(null);
   guardandoMeta = signal(false);
 
-  valorMetaSimulada: number | null = null;
-  simulacionActiva = false;
   valorMetaNueva: number | null = null;
   mesVigenciaNueva = '';
 
@@ -417,7 +398,6 @@ export class ProduccionReportComponent implements OnInit {
       next: (response) => {
         this.data.set(response.data);
         this.resumen.set(response.resumen);
-        this.simulacionActiva = response.simulada;
         this.loading.set(false);
       },
       error: (error) => {
@@ -453,7 +433,6 @@ export class ProduccionReportComponent implements OnInit {
 
   seleccionarTipoMeta(tipoMeta: TipoMetaReporteProduccion): void {
     this.filtros.tipoMeta = tipoMeta;
-    this.simulacionActiva = this.valorMetaSimulada !== null;
     if (this.contextoSeleccionado()) {
       this.cargarGestionMetas();
     }
@@ -464,18 +443,6 @@ export class ProduccionReportComponent implements OnInit {
     if (this.contextoSeleccionado()) {
       this.cargarGestionMetas();
     }
-  }
-
-  simular(): void {
-    if (this.valorMetaSimulada === null || this.valorMetaSimulada < 0) return;
-    this.simulacionActiva = true;
-    this.buscar();
-  }
-
-  limpiarSimulacion(): void {
-    this.valorMetaSimulada = null;
-    this.simulacionActiva = false;
-    this.buscar();
   }
 
   cargarGestionMetas(page = 0): void {
@@ -542,8 +509,7 @@ export class ProduccionReportComponent implements OnInit {
       idTenant: this.filtros.idProveedor ?? undefined,
       idCartera: this.filtros.idCartera ?? undefined,
       idSubcartera: this.filtros.idSubcartera ?? undefined,
-      tipoMeta: this.filtros.tipoMeta,
-      valorMetaSimulada: this.simulacionActiva && this.valorMetaSimulada !== null ? this.valorMetaSimulada : undefined
+      tipoMeta: this.filtros.tipoMeta
     };
   }
 
@@ -574,15 +540,6 @@ export class ProduccionReportComponent implements OnInit {
     this.resumen.set(null);
     this.metas.set([]);
     this.paginaMetas.set(null);
-    this.simulacionActiva = false;
-    this.valorMetaSimulada = null;
-  }
-
-  getProgressClass(puntaje: number): string {
-    if (puntaje >= 100) return 'bg-green-500';
-    if (puntaje >= 50) return 'bg-amber-500';
-    if (puntaje >= 25) return 'bg-orange-500';
-    return 'bg-red-500';
   }
 
   getPuntosTextClass(puntaje: number): string {

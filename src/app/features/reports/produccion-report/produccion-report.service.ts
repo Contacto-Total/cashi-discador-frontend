@@ -30,7 +30,6 @@ export interface ReporteProduccionResponse {
   resumen: ResumenProduccion;
   tipoMeta: TipoMetaReporteProduccion;
   valorMetaAplicada: number;
-  simulada: boolean;
   total: number;
 }
 
@@ -42,7 +41,6 @@ export interface FiltrosReporteProduccion {
   idCartera?: number;
   idSubcartera?: number;
   tipoMeta: TipoMetaReporteProduccion;
-  valorMetaSimulada?: number;
 }
 
 export interface MetaReporteProduccion {
@@ -88,7 +86,6 @@ export class ProduccionReportService {
     if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
     if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
-    if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get<ReporteProduccionResponse>(this.baseUrl, { params });
   }
@@ -101,7 +98,6 @@ export class ProduccionReportService {
     if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
     if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
-    if (filtros.valorMetaSimulada !== undefined) params = params.set('valorMetaSimulada', filtros.valorMetaSimulada.toString());
 
     return this.http.get(`${this.baseUrl}/excel`, {
       params,
