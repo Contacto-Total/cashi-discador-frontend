@@ -468,7 +468,7 @@ export class ProduccionReportComponent implements OnInit {
     if (!this.contextoSeleccionado()) return;
     const { idProveedor, idCartera, idSubcartera } = this.filtros;
     this.produccionService.getMetas(idProveedor!, idCartera!, idSubcartera!).subscribe({
-      next: metas => this.metas.set(metas),
+      next: metas => this.metas.set(metas.filter(meta => meta.tipoMeta === this.filtros.tipoMeta)),
       error: error => console.error('Error cargando metas:', error)
     });
   }
