@@ -301,12 +301,11 @@ import { forkJoin } from 'rxjs';
 
           <div class="mt-4">
             <div class="mb-2 flex items-center justify-between"><h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Metas configuradas</h3><button type="button" (click)="cargarGestionMetas()" class="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">Actualizar</button></div>
-            <div class="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+            <div class="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
               @for (meta of metas(); track meta.id) {
-                <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                  <div class="flex items-center justify-between gap-2"><span class="font-semibold text-gray-900 dark:text-white">S/ {{ meta.valorMeta | number:'1.2-2' }}</span><span [class]="meta.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="rounded-full px-2 py-0.5 text-xs font-semibold">{{ meta.activo ? 'Activa' : 'Inactiva' }}</span></div>
-                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Vigencia: {{ meta.fechaVigencia }}</p>
-                  <button type="button" (click)="cambiarEstadoMeta(meta)" class="mt-2 text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button>
+                <div class="rounded-md border border-gray-200 px-2.5 py-2 dark:border-gray-700">
+                  <div class="flex items-center justify-between gap-2"><span class="text-sm font-bold text-gray-900 dark:text-white">S/ {{ meta.valorMeta | number:'1.2-2' }}</span><span [class]="meta.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold">{{ meta.activo ? 'Activa' : 'Inactiva' }}</span></div>
+                  <div class="mt-1 flex items-center justify-between gap-2 text-xs"><span class="text-gray-500 dark:text-gray-400">{{ meta.fechaVigencia }}</span><button type="button" (click)="cambiarEstadoMeta(meta)" class="font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button></div>
                 </div>
               } @empty { <p class="py-4 text-center text-sm text-gray-500">No hay metas configuradas.</p> }
             </div>

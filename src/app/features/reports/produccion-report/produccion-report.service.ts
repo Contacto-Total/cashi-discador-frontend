@@ -122,11 +122,11 @@ export class ProduccionReportService {
   }
 
   activarMeta(id: number): Observable<MetaReporteProduccion> {
-    return this.http.patch<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/activar`, {});
+    return this.http.post<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/activar`, {});
   }
 
   desactivarMeta(id: number): Observable<MetaReporteProduccion> {
-    return this.http.patch<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/desactivar`, {});
+    return this.http.post<MetaReporteProduccion>(`${this.baseUrl}/metas/${id}/desactivar`, {});
   }
 
   getHistorial(
