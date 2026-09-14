@@ -169,7 +169,7 @@
             <span class="metric-icon"><lucide-angular name="phone-off" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.llamadasAbandonadas }}</span>
-              <span class="metric-label">Abandonadas</span>
+              <span class="metric-label">Abandonadas ({{ autoDialerStats.tasaAbandono | appNumber:'1.2-2' }}%)</span>
             </div>
           </div>
 
