@@ -52,7 +52,7 @@ export interface MetaReporteProduccion {
   idSubcartera: number;
   tipoMeta: TipoMetaReporteProduccion;
   valorMeta: number;
-  fechaVigencia: string;
+  mesVigencia: string;
   activo: boolean;
   actualizadoPor?: string;
   fechaCreacion?: string;
@@ -109,12 +109,22 @@ export class ProduccionReportService {
     });
   }
 
-  getMetas(idTenant: number, idCartera: number, idSubcartera: number): Observable<MetaReporteProduccion[]> {
+  getMetas(
+    idTenant: number,
+    idCartera: number,
+    idSubcartera: number,
+    tipoMeta: TipoMetaReporteProduccion,
+    page: number,
+    size = 10
+  ): Observable<PageResponse<MetaReporteProduccion>> {
     const params = new HttpParams()
       .set('idTenant', idTenant.toString())
       .set('idCartera', idCartera.toString())
-      .set('idSubcartera', idSubcartera.toString());
-    return this.http.get<MetaReporteProduccion[]>(`${this.baseUrl}/metas`, { params });
+      .set('idSubcartera', idSubcartera.toString())
+      .set('tipoMeta', tipoMeta)
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<PageResponse<MetaReporteProduccion>>(`${this.baseUrl}/metas`, { params });
   }
 
   crearMeta(meta: MetaReporteProduccion): Observable<MetaReporteProduccion> {

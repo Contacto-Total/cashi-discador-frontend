@@ -8,7 +8,8 @@ import {
   ResumenProduccion,
   MetaReporteProduccion,
   TipoMetaReporteProduccion,
-  FiltrosReporteProduccion
+  FiltrosReporteProduccion,
+  PageResponse
 } from './produccion-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
@@ -293,8 +294,8 @@ import { forkJoin } from 'rxjs';
               <input type="number" min="0" [(ngModel)]="valorMetaNueva" placeholder="0.00" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
             </div>
             <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Vigencia</label>
-              <input type="date" [(ngModel)]="fechaVigenciaNueva" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+              <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Mes de aplicación</label>
+              <input type="month" [(ngModel)]="mesVigenciaNueva" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
             </div>
             <button type="button" (click)="guardarMeta()" [disabled]="guardandoMeta() || valorMetaNueva === null || !contextoSeleccionado()" class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">Guardar meta</button>
           </div>
@@ -305,10 +306,19 @@ import { forkJoin } from 'rxjs';
               @for (meta of metas(); track meta.id) {
                 <div class="rounded-md border border-gray-200 px-2.5 py-2 dark:border-gray-700">
                   <div class="flex items-center justify-between gap-2"><span class="text-sm font-bold text-gray-900 dark:text-white">S/ {{ meta.valorMeta | number:'1.2-2' }}</span><span [class]="meta.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold">{{ meta.activo ? 'Activa' : 'Inactiva' }}</span></div>
-                  <div class="mt-1 flex items-center justify-between gap-2 text-xs"><span class="text-gray-500 dark:text-gray-400">{{ meta.fechaVigencia }}</span><button type="button" (click)="cambiarEstadoMeta(meta)" class="font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button></div>
-                </div>
-              } @empty { <p class="py-4 text-center text-sm text-gray-500">No hay metas configuradas.</p> }
-            </div>
+                   <div class="mt-1 flex items-center justify-between gap-2 text-xs"><span class="text-gray-500 dark:text-gray-400">{{ meta.mesVigencia }}</span><button type="button" (click)="cambiarEstadoMeta(meta)" class="font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{{ meta.activo ? 'Desactivar' : 'Activar' }}</button></div>
+                 </div>
+               } @empty { <p class="py-4 text-center text-sm text-gray-500">No hay metas configuradas.</p> }
+             </div>
+             @if (paginaMetas(); as pagina) {
+               @if (pagina.totalPages > 1) {
+                 <div class="mt-3 flex items-center justify-between text-xs">
+                   <button type="button" (click)="cargarGestionMetas(pagina.number - 1)" [disabled]="pagina.first" class="rounded border border-gray-300 px-2 py-1 font-semibold disabled:opacity-50 dark:border-gray-600">Anterior</button>
+                   <span class="text-gray-500 dark:text-gray-400">{{ pagina.number + 1 }} / {{ pagina.totalPages }}</span>
+                   <button type="button" (click)="cargarGestionMetas(pagina.number + 1)" [disabled]="pagina.last" class="rounded border border-gray-300 px-2 py-1 font-semibold disabled:opacity-50 dark:border-gray-600">Siguiente</button>
+                 </div>
+               }
+             }
           </div>
         </aside>
       </div>
@@ -324,12 +334,13 @@ export class ProduccionReportComponent implements OnInit {
   data = signal<ReporteProduccionDTO[]>([]);
   resumen = signal<ResumenProduccion | null>(null);
   metas = signal<MetaReporteProduccion[]>([]);
+  paginaMetas = signal<PageResponse<MetaReporteProduccion> | null>(null);
   guardandoMeta = signal(false);
 
   valorMetaSimulada: number | null = null;
   simulacionActiva = false;
   valorMetaNueva: number | null = null;
-  fechaVigenciaNueva = '';
+  mesVigenciaNueva = '';
 
   // Dropdowns
   proveedores = signal<Inquilino[]>([]);
@@ -358,7 +369,7 @@ export class ProduccionReportComponent implements OnInit {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     this.filtros.fecha = `${yyyy}-${mm}-${dd}`;
-    this.fechaVigenciaNueva = this.filtros.fecha;
+    this.mesVigenciaNueva = `${yyyy}-${mm}`;
 
     // Cargar proveedores
     this.comisionesService.obtenerInquilinos().subscribe({
@@ -450,6 +461,9 @@ export class ProduccionReportComponent implements OnInit {
 
   onSubcarteraChange(): void {
     this.limpiarResultados();
+    if (this.contextoSeleccionado()) {
+      this.cargarGestionMetas();
+    }
   }
 
   simular(): void {
@@ -464,17 +478,20 @@ export class ProduccionReportComponent implements OnInit {
     this.buscar();
   }
 
-  cargarGestionMetas(): void {
+  cargarGestionMetas(page = 0): void {
     if (!this.contextoSeleccionado()) return;
     const { idProveedor, idCartera, idSubcartera } = this.filtros;
-    this.produccionService.getMetas(idProveedor!, idCartera!, idSubcartera!).subscribe({
-      next: metas => this.metas.set(metas.filter(meta => meta.tipoMeta === this.filtros.tipoMeta)),
+    this.produccionService.getMetas(idProveedor!, idCartera!, idSubcartera!, this.filtros.tipoMeta, page).subscribe({
+      next: respuesta => {
+        this.metas.set(respuesta.content);
+        this.paginaMetas.set(respuesta);
+      },
       error: error => console.error('Error cargando metas:', error)
     });
   }
 
   guardarMeta(): void {
-    if (!this.contextoSeleccionado() || this.valorMetaNueva === null || this.valorMetaNueva < 0 || !this.fechaVigenciaNueva) return;
+    if (!this.contextoSeleccionado() || this.valorMetaNueva === null || this.valorMetaNueva < 0 || !this.mesVigenciaNueva) return;
     this.guardandoMeta.set(true);
     this.produccionService.crearMeta({
       idTenant: this.filtros.idProveedor!,
@@ -482,7 +499,7 @@ export class ProduccionReportComponent implements OnInit {
       idSubcartera: this.filtros.idSubcartera!,
       tipoMeta: this.filtros.tipoMeta,
       valorMeta: this.valorMetaNueva,
-      fechaVigencia: this.fechaVigenciaNueva,
+      mesVigencia: this.mesVigenciaNueva,
       activo: true
     }).subscribe({
       next: () => {
@@ -494,7 +511,7 @@ export class ProduccionReportComponent implements OnInit {
       error: error => {
         console.error('Error guardando meta:', error);
         this.guardandoMeta.set(false);
-        alert('No se pudo guardar la meta. Verifica que no exista otra para la misma fecha.');
+        alert('No se pudo guardar la meta. Verifica que no exista otra para el mismo mes.');
       }
     });
   }
@@ -556,6 +573,7 @@ export class ProduccionReportComponent implements OnInit {
     this.data.set([]);
     this.resumen.set(null);
     this.metas.set([]);
+    this.paginaMetas.set(null);
     this.simulacionActiva = false;
     this.valorMetaSimulada = null;
   }
