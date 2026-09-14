@@ -1,5 +1,13 @@
 /* Las pantallas del bot usan Tailwind con el mismo sistema que Gestión de Tenores.
-   Aquí solo quedan las animaciones: los estilos del componente sí quedan aislados. */
+   Aquí solo quedan las animaciones y el host: los estilos del componente sí quedan aislados. */
+
+/* Angular deja el host como elemento en línea y sin altura, así que el `min-h-*` del
+   div raíz no tenía contra qué resolver: el fondo acababa donde acababa el contenido
+   y al scrollear asomaba el blanco de `.main-content` por debajo. */
+:host {
+  display: block;
+  min-height: 100%;
+}
 @keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes deslizar { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
 @keyframes fundir { from { opacity: 0; } to { opacity: 1; } }
