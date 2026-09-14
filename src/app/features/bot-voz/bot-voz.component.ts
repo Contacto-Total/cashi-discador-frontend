@@ -1958,7 +1958,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  barra no se pinta (el *ngIf de la plantilla mira `totalDe`). */
   avanceDe(c: BotCola): number {
     const total = this.totalDe(c);
-    return total ? Math.round((this.gestionadosDe(c) / total) * 100) : 0;
+    // Hacia abajo: con 3 por marcar de 2.039 redondeaba a "100 %" y la cola parecía terminada.
+    return total ? Math.floor((this.gestionadosDe(c) / total) * 100) : 0;
   }
 
   /**

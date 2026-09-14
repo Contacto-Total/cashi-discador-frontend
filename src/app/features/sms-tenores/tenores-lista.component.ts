@@ -235,6 +235,11 @@ const ESTILOS = {
                         {{ t.conteoCalculadoAt ? 'Conteo del ' + (t.conteoCalculadoAt | date: 'dd/MM HH:mm') : 'Sin conteo todavía' }}
                       </span>
                     }
+                    @if (t.estado === 'ARCHIVADO') {
+                      <span class="text-[11px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                        {{ t.origen === 'FOH' ? 'Traído de la base anterior' : (t.actualizadoAt ? 'Archivado el ' + (t.actualizadoAt | date: 'dd/MM HH:mm') : 'Archivado') }}
+                      </span>
+                    }
                   </div>
                   <div class="flex shrink-0 items-center gap-1.5">
                     @if (t.estado === 'ACTIVO') {
@@ -247,7 +252,13 @@ const ESTILOS = {
                         Editar
                       </a>
                     } @else {
-                      <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ t.origen === 'FOH' ? 'Traído de la base anterior' : 'Solo referencia' }}</span>
+                      <button type="button" (click)="desarchivar(t)" [disabled]="ocupado() === t.id" [class]="estilos.botonSecundario"
+                              title="Vuelve a la lista de activos y se recalcula su conteo">
+                        <span class="inline-flex" [class.animate-spin]="ocupado() === t.id">
+                          <lucide-angular [name]="ocupado() === t.id ? 'loader-2' : 'archive'" [size]="14" class="block"></lucide-angular>
+                        </span>
+                        Desarchivar
+                      </button>
                     }
                     <button type="button" (click)="eliminar(t)" [disabled]="ocupado() === t.id"
                             [class]="estilos.botonEliminar" aria-label="Eliminar tenor" title="Eliminar tenor">
@@ -507,7 +518,7 @@ const ESTILOS = {
               }
               @if (t.restricciones.sinPromesaVigente) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin promesa vigente</span> }
               @if (t.restricciones.sinListaNegra) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin lista negra</span> }
-              @if (t.restricciones.soloNoContenido) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Solo clientes NO CONTENIDO</span> }
+              @if (t.restricciones.soloNoContenido) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin los clientes contenidos</span> }
               @if (!t.rangos.length && !t.restricciones.sinPromesaVigente && !t.restricciones.sinListaNegra && !t.restricciones.soloNoContenido) {
                 <span class="text-[#5f6c80] dark:text-slate-400">Sin rangos ni restricciones.</span>
               }
@@ -844,6 +855,22 @@ export class TenoresListaComponent implements OnInit {
       },
       error: err => {
         this.toast.error(mensajeDeError(err, 'No se pudo archivar el tenor.'));
+        this.ocupado.set(null);
+      }
+    });
+  }
+
+  /** Lo devuelve a la lista de activos. El backend recalcula el conteo con la carga de hoy. */
+  desarchivar(t: Tenor): void {
+    this.ocupado.set(t.id);
+    this.api.desarchivar(t.id).subscribe({
+      next: activo => {
+        this.reemplazar(activo);
+        this.toast.success('Tenor desarchivado: vuelve a la lista de activos.');
+        this.ocupado.set(null);
+      },
+      error: err => {
+        this.toast.error(mensajeDeError(err, 'No se pudo desarchivar el tenor.'));
         this.ocupado.set(null);
       }
     });

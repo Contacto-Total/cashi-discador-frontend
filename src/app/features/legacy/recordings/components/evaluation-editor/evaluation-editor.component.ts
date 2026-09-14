@@ -10,7 +10,9 @@ import { QualityMonitoringService } from '../../services/quality-monitoring.serv
 import { HistoricalRecordingsService } from '../../services/historical-recordings.service';
 import { RecordingDownloadService } from '../../services/recording-download.service';
 import { AudioPlaybackService } from '../../services/audio-playback.service';
-import { AudioPart, EvaluationCriterion, EvaluationDetail, MonitoringMode } from '../../models/quality-monitoring.model';
+import {
+  AudioPart, EvaluationCriterion, EvaluationDetail, MonitoringMode, NOMBRE_RUBRICA, etiquetaTipificacion
+} from '../../models/quality-monitoring.model';
 import { Transcription } from '../../models/transcription.model';
 
 /** Los criterios de una sección, para dibujarlos agrupados como en el Excel. */
@@ -125,6 +127,24 @@ export class EvaluationEditorComponent implements OnDestroy {
   ficha: EvaluationDetail | null = null;
   isLoading = false;
   isSaving = false;
+
+  /**
+   * «CD - Contacto con titular o encargado»: la sigla sola no dice por qué el audio se
+   * puntuó contra esa rúbrica, y varias tipificaciones caen en la misma.
+   */
+  get etiquetaRubrica(): string {
+    if (!this.ficha) {
+      return '';
+    }
+    const tipificacion = etiquetaTipificacion(this.ficha.resultado);
+    return tipificacion ? `${this.ficha.rubrica} - ${tipificacion}` : this.ficha.rubrica;
+  }
+
+  /** El tooltip del distintivo: qué significa la sigla. */
+  get significadoRubrica(): string {
+    const nombre = this.ficha ? NOMBRE_RUBRICA[this.ficha.rubrica] : '';
+    return nombre ? `${this.ficha!.rubrica}: rúbrica de ${nombre.toLowerCase()}` : '';
+  }
 
   /** campo -> valor elegido en pantalla. Arranca como copia de lo que trajo el backend. */
   valores: Record<string, number | null> = {};

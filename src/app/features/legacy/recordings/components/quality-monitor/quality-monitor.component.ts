@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule, Search, Eye, TrendingUp, TrendingDown,
-  Minus, User, ArrowLeft, ChevronLeft, ChevronRight
+  Minus, User, ArrowLeft, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown
 } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
@@ -12,7 +12,7 @@ import { QualityMonitoringService } from '../../services/quality-monitoring.serv
 import { EvaluationEditorComponent } from '../evaluation-editor/evaluation-editor.component';
 import {
   MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringMode,
-  MonitoringModeConfig, MonitoringWeek, MONITORING_MODES
+  MonitoringModeConfig, MonitoringWeek, MONITORING_MODES, etiquetaTipificacion
 } from '../../models/quality-monitoring.model';
 import { TenantService } from '../../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../../maintenance/services/portfolio.service';
@@ -62,6 +62,22 @@ const R_SIN_INTENCION: SelectOption = { label: 'Sin intención', value: 'SIN INT
 const R_REFINANCIAMIENTO: SelectOption = { label: 'Refinanciamiento', value: 'REFINANCIAMIENTO' };
 
 /**
+ * Qué rúbrica evalúa cada resultado, para agrupar los chips del filtro.
+ *
+ * Espejo a mano de `EvaluationRubric.RUTAS_PDP` en el backend (PROMESA DE PAGO y
+ * REFINANCIAMIENTO caen en PDP, el resto en CD) — si se agrega un resultado nuevo acá,
+ * hay que agregarlo ahí también o el chip queda sin grupo.
+ */
+const RUBRICA_DE_RESULTADO: Record<string, 'PDP' | 'CD'> = {
+  [R_PROMESA.value as string]: 'PDP',
+  [R_REFINANCIAMIENTO.value as string]: 'PDP',
+  [R_OPORTUNIDAD.value as string]: 'CD',
+  [R_CONTACTO.value as string]: 'CD',
+  [R_CON_INTENCION.value as string]: 'CD',
+  [R_SIN_INTENCION.value as string]: 'CD'
+};
+
+/**
  * Lo que ofrece el monitoreo legacy, que evalúa la historia de FOH.
  *
  * Son las tres de `_RUTAS_N2_EVALUABLES` en `cashi_read.py`, que es lo único que el
@@ -83,6 +99,12 @@ const RESULTADOS_LEGACY: SelectOption[] = [R_TODOS, R_CONTACTO, R_PROMESA, R_OPO
 const RESULTADOS_TRAMOS: SelectOption[] = [
   R_TODOS, R_OPORTUNIDAD, R_CON_INTENCION, R_SIN_INTENCION, R_REFINANCIAMIENTO, R_PROMESA
 ];
+
+/**
+ * Tramo 5 sin REFINANCIAMIENTO: en septiembre las gestiones con esa tipificación son
+ * todas de Tramo 3 y en Tramo 5 hay cero, así que el chip solo llevaría a una matriz vacía.
+ */
+const RESULTADOS_TRAMO5: SelectOption[] = RESULTADOS_TRAMOS.filter(r => r.value !== R_REFINANCIAMIENTO.value);
 
 /** Lo que ofrece el monitoreo del discador en Tramo Propio y Castigo. */
 const RESULTADOS_PROPIA: SelectOption[] = [R_TODOS, R_OPORTUNIDAD, R_CONTACTO, R_PROMESA];
@@ -187,8 +209,12 @@ export class QualityMonitorComponent implements OnInit {
   readonly Minus = Minus;
   readonly User = User;
   readonly ArrowLeft = ArrowLeft;
+  readonly ArrowUp = ArrowUp;
+  readonly ArrowDown = ArrowDown;
+  readonly ArrowUpDown = ArrowUpDown;
   readonly ChevronLeft = ChevronLeft;
   readonly ChevronRight = ChevronRight;
+  readonly etiquetaTipificacion = etiquetaTipificacion;
 
   /** El orden en que se dibujan las tres barras de una celda. */
   readonly SECCIONES = ['PRESENTACION', 'NEGOCIACION', 'CIERRE'];
@@ -230,7 +256,26 @@ export class QualityMonitorComponent implements OnInit {
   selectedProveedor = 0;
   selectedCartera = 0;
   selectedSubcartera = 0;
-  selectedResultado = '';
+  /** Resultados tildados como chip. Vacío = Todos, igual que el placeholder de antes. */
+  selectedResultados: string[] = [];
+
+  /** Los chips de Resultado, agrupados por rúbrica (el de valor '' es "Todos": no es un chip). */
+  get resultadosPDP(): SelectOption[] {
+    return this.resultados.filter(r => r.value && RUBRICA_DE_RESULTADO[String(r.value)] === 'PDP');
+  }
+
+  get resultadosCD(): SelectOption[] {
+    return this.resultados.filter(r => r.value && RUBRICA_DE_RESULTADO[String(r.value)] !== 'PDP');
+  }
+
+  toggleResultado(value: string): void {
+    const i = this.selectedResultados.indexOf(value);
+    if (i === -1) {
+      this.selectedResultados.push(value);
+    } else {
+      this.selectedResultados.splice(i, 1);
+    }
+  }
 
   /**
    * Las subcarteras crudas del nivel abierto.
@@ -305,6 +350,9 @@ export class QualityMonitorComponent implements OnInit {
     { label: 'CD', value: 'CD' },
     { label: 'PDP', value: 'PDP' }
   ];
+
+  /** Filtro por documento, tan local al panel como el de rúbrica: recorta lo ya cargado. */
+  filtroDocumento = '';
 
   // --- Paginación del panel ---
   pagina = 1;
@@ -453,9 +501,10 @@ export class QualityMonitorComponent implements OnInit {
   private recalcularResultados(): void {
     this.resultados = this.resultadosDelTramo();
 
-    if (!this.resultados.some(r => String(r.value) === this.selectedResultado)) {
-      this.selectedResultado = '';
-    }
+    // Se filtra en vez de resetear a [] entero: si de los tildados solo uno dejó de
+    // existir en la cartera nueva, los demás se conservan.
+    this.selectedResultados = this.selectedResultados.filter(v =>
+      this.resultados.some(r => String(r.value) === v));
   }
 
   /**
@@ -478,6 +527,9 @@ export class QualityMonitorComponent implements OnInit {
     if (!this.selectedCartera) {
       return RESULTADOS_SIN_TRAMO;
     }
+    if (this.esTramo('TRAMO5')) {
+      return RESULTADOS_TRAMO5;
+    }
     return this.esTramo3o5() ? RESULTADOS_TRAMOS : RESULTADOS_PROPIA;
   }
 
@@ -499,9 +551,14 @@ export class QualityMonitorComponent implements OnInit {
    * los dos árboles.
    */
   private esTramo3o5(): boolean {
+    return TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.some(clave => this.esTramo(clave));
+  }
+
+  /** Si la cartera o la subcartera elegida es ese tramo ('TRAMO3', 'TRAMO5'). */
+  private esTramo(clave: string): boolean {
     const cartera = this.carteras.find(c => c.value === this.selectedCartera);
     return [cartera?.label, this.nombreSubcartera()]
-      .some(nombre => TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.includes(this.claveTramo(nombre)));
+      .some(nombre => this.claveTramo(nombre) === clave);
   }
 
   /**
@@ -641,7 +698,7 @@ export class QualityMonitorComponent implements OnInit {
       tramo: this.nombreSubcartera(),
       desde: this.desde,
       hasta: this.hasta,
-      resultado: this.selectedResultado || undefined
+      resultados: this.selectedResultados.length ? this.selectedResultados : undefined
     }).subscribe({
       next: (data) => {
         this.semana = data;
@@ -756,7 +813,7 @@ export class QualityMonitorComponent implements OnInit {
       tramo: this.nombreSubcartera(),
       // Vacío = todos. El backend acepta el asesor en blanco desde este cambio.
       asesor: this.asesorRevision || undefined,
-      resultado: this.selectedResultado || undefined,
+      resultados: this.selectedResultados.length ? this.selectedResultados : undefined,
       // Una de las dos ventanas, nunca las dos: el backend prioriza `fecha`.
       fecha: this.fechaRevision ?? undefined,
       desde: this.fechaRevision ? undefined : this.desde,
@@ -784,12 +841,32 @@ export class QualityMonitorComponent implements OnInit {
 
   // ------------------------------------------------------------------ filtro y paginación
 
+  /** Orden por puntaje de la tabla de revisión. '' = el orden en que llegan (fecha). */
+  ordenPuntaje: '' | 'asc' | 'desc' = '';
+
+  /** El primer click ordena de menor a mayor; los siguientes alternan. */
+  ordenarPorPuntaje(): void {
+    this.ordenPuntaje = this.ordenPuntaje === 'asc' ? 'desc' : 'asc';
+    this.reiniciarPaginado();
+  }
+
   /** Lo que queda después del filtro de rúbrica, antes de paginar. */
   get detalleFiltrado(): MonitoringAudio[] {
-    if (!this.filtroRubrica) {
-      return this.detalle;
+    const documento = this.filtroDocumento.trim();
+    const filtrado = this.detalle
+      .filter(a => !this.filtroRubrica || a.rubrica === this.filtroRubrica)
+      .filter(a => !documento || a.documento.includes(documento));
+    if (!this.ordenPuntaje) {
+      return filtrado;
     }
-    return this.detalle.filter(a => a.rubrica === this.filtroRubrica);
+    // Por cumplimiento y no por puntos: 4/16 y 4/12 no valen lo mismo. Sin puntaje va al final.
+    const signo = this.ordenPuntaje === 'asc' ? 1 : -1;
+    return [...filtrado].sort((a, b) => {
+      if (a.cumplimiento == null || b.cumplimiento == null) {
+        return (a.cumplimiento == null ? 1 : 0) - (b.cumplimiento == null ? 1 : 0);
+      }
+      return signo * (a.cumplimiento - b.cumplimiento);
+    });
   }
 
   /** La página que se está viendo. */
@@ -963,6 +1040,7 @@ export class QualityMonitorComponent implements OnInit {
   porIdx = (_: number, a: MonitoringAudio) => a.idx;
   porSeccion = (_: number, s: string) => s;
   porFase = (_: number, f: { seccion: string }) => f.seccion;
+  porValue = (_: number, r: SelectOption) => r.value;
 
   // ------------------------------------------------------------------ rango de fechas
 
@@ -1040,6 +1118,12 @@ export class QualityMonitorComponent implements OnInit {
 
   reiniciarPaginadoMatriz(): void {
     this.paginaMatriz = 1;
+  }
+
+  /** '2026-09-08' -> '08/09/2026'. */
+  fechaCorta(fecha: string): string {
+    const [a, m, d] = fecha.split('-');
+    return `${d}/${m}/${a}`;
   }
 
   /** 'lun 03' — el encabezado de columna. */
@@ -1126,10 +1210,5 @@ export class QualityMonitorComponent implements OnInit {
       posibles += a.posibles;
     }
     return posibles ? Math.round(puntos * 1000 / posibles) / 10 : null;
-  }
-
-  /** Si la lista mezcla varios días, la columna Día tiene sentido; si no, sobra. */
-  get muestraColumnaDia(): boolean {
-    return this.fechaRevision === null;
   }
 }

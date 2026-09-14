@@ -42,8 +42,8 @@ export interface MonitoringRequest {
   desde: string;
   /** 'YYYY-MM-DD' inclusive. */
   hasta: string;
-  /** RESULTADO exacto; fija la rúbrica de toda la matriz. Vacío = las dos. */
-  resultado?: string;
+  /** RESULTADO exactos a incluir (OR entre ellos). Vacío = todos. */
+  resultados?: string[];
   /** USUARIOREGISTRA a incluir. Vacío = todos. */
   asesores?: string[];
 }
@@ -64,7 +64,7 @@ export interface MonitoringDetailRequest {
   fecha?: string;
   desde?: string;
   hasta?: string;
-  resultado?: string;
+  resultados?: string[];
 }
 
 /** Un bloque de la rúbrica dentro de una celda. */
@@ -136,7 +136,7 @@ export interface MonitoringWeek {
   tramo: string;
   desde: string;
   hasta: string;
-  resultado: string | null;
+  resultados: string[];
   /** 'PDP' | 'CD', o null si vienen las dos rúbricas mezcladas. */
   rubrica: string | null;
   /** Todos los días del rango, hayan tenido audios o no: son las columnas. */
@@ -306,4 +306,41 @@ export interface MonitoringAudio {
   /** Uno o varios WAV separados por coma. */
   nombre: string;
   tieneTranscripcion: boolean;
+}
+
+/** Qué significa cada sigla de rúbrica. */
+export const NOMBRE_RUBRICA: Record<string, string> = {
+  CD: 'Contacto directo',
+  PDP: 'Promesa de pago'
+};
+
+/**
+ * Cómo se lee cada tipificación en pantalla.
+ *
+ * La BD guarda el RESULTADO en mayúsculas y no siempre con tilde (SIN INTENCION va sin
+ * ella, CON INTENCIÓN con ella), así que no alcanza con pasarlo a minúsculas.
+ */
+const ETIQUETA_TIPIFICACION: Record<string, string> = {
+  'OPORTUNIDAD DE PAGO': 'Oportunidad de pago',
+  'CONTACTO CON TITULAR O ENCARGADO': 'Contacto con titular o encargado',
+  'PROMESA DE PAGO': 'Promesa de pago',
+  'CON INTENCIÓN': 'Con intención',
+  'CON INTENCION': 'Con intención',
+  'SIN INTENCIÓN': 'Sin intención',
+  'SIN INTENCION': 'Sin intención',
+  'REFINANCIAMIENTO': 'Refinanciamiento'
+};
+
+/** La tipificación legible; una que no está en la tabla sale en tipo oración. */
+export function etiquetaTipificacion(resultado: string | null | undefined): string {
+  const valor = (resultado ?? '').trim();
+  if (!valor) {
+    return '';
+  }
+  const conocida = ETIQUETA_TIPIFICACION[valor.toUpperCase()];
+  if (conocida) {
+    return conocida;
+  }
+  const minusculas = valor.toLowerCase();
+  return minusculas.charAt(0).toUpperCase() + minusculas.slice(1);
 }
