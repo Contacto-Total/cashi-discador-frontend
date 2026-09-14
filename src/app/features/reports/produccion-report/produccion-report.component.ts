@@ -433,6 +433,7 @@ export class ProduccionReportComponent implements OnInit {
 
   seleccionarTipoMeta(tipoMeta: TipoMetaReporteProduccion): void {
     this.filtros.tipoMeta = tipoMeta;
+    this.buscar();
     if (this.contextoSeleccionado()) {
       this.cargarGestionMetas();
     }
