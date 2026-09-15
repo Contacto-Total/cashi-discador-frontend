@@ -590,6 +590,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** Lo escrito en el buscador de llamadas. */
   busquedaLlamadas = '';
+  /** Bloque de 100 que se esta viendo. El backend pagina de 100 en 100. */
+  bloqueSesiones = 0;
+  private tempBusqueda?: ReturnType<typeof setTimeout>;
 
   // ----- Las pastillas de la pantalla de llamadas -----
   //
@@ -677,6 +680,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   cambiarColaLlamadas(id: number | null): void {
     this.colaLlamadas = id;
     this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
     this.cargarSesiones();
   }
 
@@ -687,6 +691,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // en vez de dejar seleccionada una cola que ya no sale en la lista.
     this.refrescarColasFiltro();
     this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
     this.cargarSesiones();
   }
 
@@ -994,22 +999,36 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * otra vez no cambiaría nada, pero dejaría dos sitios donde decidir lo mismo, que es
    * como se acaba con dos criterios distintos.
    */
-  get sesionesFiltradas(): BotSesion[] {
-    const q = this.busquedaLlamadas.trim().toLowerCase();
-    if (!q) return this.sesiones;
-    return this.sesiones.filter((s) =>
-      (s.documento || '').toLowerCase().includes(q)
-      || (s.nombreCliente || '').toLowerCase().includes(q)
-      || (s.telefono || '').includes(q)
-      || (s.resultadoNegocio || '').toLowerCase().includes(q));
-  }
+  /** Ya viene filtrado del servidor: filtrar otra vez aqui recortaria sobre lo
+   *  recortado y escondería filas que el backend si considero validas. */
+  get sesionesFiltradas(): BotSesion[] { return this.sesiones; }
 
   get sesionesPagina(): BotSesion[] {
     return this.pagina(this.sesionesFiltradas, this.paginaSesiones, (n) => (this.paginaSesiones = n));
   }
 
-  /** Buscar vuelve a la primera pagina: si no, buscas y caes en una que ya no existe. */
-  alBuscarLlamadas(): void { this.paginaSesiones = 1; }
+  /** Buscar vuelve a la primera pagina: si no, buscas y caes en una que ya no existe.
+   *  Y recarga desde el servidor, porque el historico entero no cabe en el navegador.
+   *  Los 350 ms evitan una peticion por cada tecla. */
+  alBuscarLlamadas(): void {
+    this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
+    clearTimeout(this.tempBusqueda);
+    this.tempBusqueda = setTimeout(() => this.cargarSesiones(), 350);
+  }
+
+  /** Bloques de 100. `hayMasAntiguas` es una suposicion honesta: si vino la pagina
+   *  llena puede haber mas detras; el backend no devuelve el total. */
+  get hayMasAntiguas(): boolean { return this.sesiones.length >= 100; }
+  irABloque(n: number): void {
+    const destino = Math.max(0, n);
+    if (destino === this.bloqueSesiones) return;
+    if (destino > this.bloqueSesiones && !this.hayMasAntiguas) return;
+    this.bloqueSesiones = destino;
+    this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
+    this.cargarSesiones();
+  }
   totalPaginas(filas: unknown[]): number {
     return Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
   }
@@ -2666,7 +2685,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
     // Fecha vacia = todas las llamadas de la cola elegida, del dia que sean.
     this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
-                         this.fechaLlamadas || null, g?.hablo ?? null).subscribe({
+                         this.fechaLlamadas || null, g?.hablo ?? null,
+                         this.busquedaLlamadas.trim() || null,
+                         this.bloqueSesiones).subscribe({
       next: (s) => {
         this.sesiones = s;
         this.errorSesiones = false;

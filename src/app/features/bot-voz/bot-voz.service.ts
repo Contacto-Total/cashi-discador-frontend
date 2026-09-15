@@ -542,7 +542,8 @@ export class BotVozService {
 
   getSesiones(estados?: string[], resultados?: string[],
               idCola?: number | null, fecha?: string | null,
-              hablo?: boolean | null): Observable<BotSesion[]> {
+              hablo?: boolean | null, q?: string | null,
+              pagina = 0): Observable<BotSesion[]> {
     let p = new HttpParams();
     (estados ?? []).forEach((e) => (p = p.append('estados', e)));
     (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
@@ -551,6 +552,10 @@ export class BotVozService {
     // distintos. Vacía = hoy, que es lo que decide el backend.
     if (fecha) p = p.set('fecha', fecha);
     if (hablo != null) p = p.set('hablo', String(hablo));
+    // La busqueda va al SERVIDOR: en el navegador solo estan las 100 de la pagina
+    // cargada, y buscar un documento de hace semanas no daba nada aunque existiera.
+    if (q) p = p.set('q', q);
+    if (pagina > 0) p = p.set('pagina', String(pagina));
     return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
   }
 
