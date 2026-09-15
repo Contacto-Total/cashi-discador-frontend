@@ -1,8 +1,11 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, Output, SimpleChanges, inject } from '@angular/core';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { Subscription } from 'rxjs';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CuotaResumenConciliacion, PagoResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { AdjuntoResumenConciliacion, CuotaResumenConciliacion, PagoResumenConciliacion, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { BcpPagosService } from '../services/bcp-pagos.service';
 import { CorreccionPagosService } from '../services/correccion-pagos.service';
 import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/correccion-pagos.model';
 
@@ -201,6 +204,14 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                           </tbody>
                         </table>
                       </div>
+
+                      @if ((promesa.adjuntos || []).length > 0) {
+                        <button type="button" (click)="abrirVisorVoucher(promesa)" class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+                          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.6 12.2 20.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+                          Ver voucher
+                          <span class="rounded-full bg-white px-1.5 text-[10px] leading-4 text-blue-700">{{ promesa.adjuntos!.length }}</span>
+                        </button>
+                      }
                     </div>
                   </details>
                 } @empty {
@@ -467,12 +478,60 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
           </div>
         </div>
       }
+
+      @if (visorVoucherPromesa; as promesaVoucher) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4" (click)="cerrarVisorVoucher()">
+          <div role="dialog" aria-modal="true" aria-labelledby="visor-voucher-titulo" class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <div class="min-w-0">
+                <h3 id="visor-voucher-titulo" class="text-sm font-bold text-slate-900 dark:text-white">
+                  Voucher · Cuota {{ getVoucherActual()?.numeroCuota }}
+                </h3>
+                <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                  Gestión {{ promesaVoucher.idGestion }} · {{ promesaVoucher.nombreAgente || 'Sin agente' }} · subido {{ formatDateTime(getVoucherActual()?.fechaCreacion) }}
+                </p>
+              </div>
+              <button type="button" (click)="cerrarVisorVoucher()" class="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
+            </div>
+
+            <div class="flex min-h-[280px] flex-1 items-center justify-center overflow-auto bg-slate-100 p-3 dark:bg-slate-800/60">
+              @if (visorVoucherCargando) {
+                <p class="text-sm text-slate-500 dark:text-slate-400">Cargando voucher...</p>
+              } @else if (visorVoucherError) {
+                <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ visorVoucherError }}</p>
+              } @else if (visorVoucherUrl && esImagen(getVoucherActual()?.tipoArchivo)) {
+                <img [src]="visorVoucherUrl" [alt]="'Voucher de la cuota ' + getVoucherActual()?.numeroCuota" class="max-h-[65vh] max-w-full rounded-md object-contain shadow" />
+              } @else if (visorVoucherUrl) {
+                <a [href]="visorVoucherUrl" target="_blank" rel="noopener" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Abrir archivo</a>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-2.5 text-xs dark:border-slate-700">
+              <span class="min-w-0 truncate text-slate-500 dark:text-slate-400">
+                {{ getVoucherActual()?.nombreArchivo }} · {{ formatTamano(getVoucherActual()?.tamanoBytes) }}
+              </span>
+              <div class="flex items-center gap-2">
+                @if (visorVoucherUrl) {
+                  <a [href]="visorVoucherUrl" target="_blank" rel="noopener" class="rounded-lg px-2 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30">Tamaño completo</a>
+                }
+                @if ((promesaVoucher.adjuntos || []).length > 1) {
+                  <button type="button" (click)="moverVoucher(-1)" [disabled]="visorVoucherIndice === 0" class="rounded-lg border border-slate-300 px-2 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Anterior</button>
+                  <span class="tabular-nums text-slate-500 dark:text-slate-400">{{ visorVoucherIndice + 1 }} de {{ promesaVoucher.adjuntos!.length }}</span>
+                  <button type="button" (click)="moverVoucher(1)" [disabled]="visorVoucherIndice >= promesaVoucher.adjuntos!.length - 1" class="rounded-lg border border-slate-300 px-2 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Siguiente</button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
     }
   `
 })
-export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
+export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDestroy {
   private fmt = inject(FormatService);
   private correccionPagosService = inject(CorreccionPagosService);
+  private bcpPagosService = inject(BcpPagosService);
+  private sanitizer = inject(DomSanitizer);
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
   @Input() loading = false;
@@ -534,12 +593,111 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   pagoEliminar: PagoResumenConciliacion | null = null;
   eliminarPagoError: string | null = null;
   eliminandoPago = false;
+  visorVoucherPromesa: PromesaResumenConciliacion | null = null;
+  visorVoucherIndice = 0;
+  visorVoucherUrl: SafeUrl | null = null;
+  visorVoucherCargando = false;
+  visorVoucherError: string | null = null;
+  private visorVoucherObjectUrl: string | null = null;
+  private visorVoucherSub: Subscription | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
       this.cargarCuotasValidasTipificar();
       this.cargarPagosModificables();
     }
+    if (changes['open'] && !this.open) {
+      this.cerrarVisorVoucher();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.liberarVoucherActual();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.visorVoucherPromesa) {
+      this.cerrarVisorVoucher();
+    }
+  }
+
+  abrirVisorVoucher(promesa: PromesaResumenConciliacion): void {
+    if (!(promesa.adjuntos || []).length) return;
+    this.visorVoucherPromesa = promesa;
+    this.cargarVoucher(0);
+  }
+
+  cerrarVisorVoucher(): void {
+    this.liberarVoucherActual();
+    this.visorVoucherPromesa = null;
+    this.visorVoucherIndice = 0;
+    this.visorVoucherError = null;
+  }
+
+  moverVoucher(delta: number): void {
+    const total = this.visorVoucherPromesa?.adjuntos?.length || 0;
+    const siguiente = this.visorVoucherIndice + delta;
+    if (siguiente < 0 || siguiente >= total) return;
+    this.cargarVoucher(siguiente);
+  }
+
+  getVoucherActual(): AdjuntoResumenConciliacion | null {
+    return this.visorVoucherPromesa?.adjuntos?.[this.visorVoucherIndice] || null;
+  }
+
+  esImagen(tipoArchivo: string | null | undefined): boolean {
+    return String(tipoArchivo || '').toLowerCase().startsWith('image/');
+  }
+
+  formatTamano(bytes: number | null | undefined): string {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  private cargarVoucher(indice: number): void {
+    const adjunto = this.visorVoucherPromesa?.adjuntos?.[indice];
+    if (!adjunto) return;
+
+    this.liberarVoucherActual();
+    this.visorVoucherIndice = indice;
+    this.visorVoucherError = null;
+
+    if (!this.hasRequiredContext()) {
+      this.visorVoucherError = 'Selecciona proveedor, cartera y subcartera para ver el voucher.';
+      return;
+    }
+
+    this.visorVoucherCargando = true;
+    this.visorVoucherSub = this.bcpPagosService.obtenerArchivoComprobante(adjunto.uuid, {
+      tenantId: Number(this.tenantId),
+      carteraId: Number(this.carteraId),
+      subcarteraId: Number(this.subcarteraId)
+    }).subscribe({
+      next: (blob) => {
+        this.visorVoucherObjectUrl = URL.createObjectURL(blob);
+        this.visorVoucherUrl = this.sanitizer.bypassSecurityTrustUrl(this.visorVoucherObjectUrl);
+        this.visorVoucherCargando = false;
+      },
+      error: (error) => {
+        this.visorVoucherError = error?.status === 404
+          ? 'El voucher no está disponible: fue eliminado, no pertenece a esta subcartera o el archivo ya no está en el servidor.'
+          : 'No se pudo cargar el voucher. Intenta de nuevo.';
+        this.visorVoucherCargando = false;
+      }
+    });
+  }
+
+  private liberarVoucherActual(): void {
+    this.visorVoucherSub?.unsubscribe();
+    this.visorVoucherSub = null;
+    if (this.visorVoucherObjectUrl) {
+      URL.revokeObjectURL(this.visorVoucherObjectUrl);
+    }
+    this.visorVoucherObjectUrl = null;
+    this.visorVoucherUrl = null;
+    this.visorVoucherCargando = false;
   }
 
   onBackdropClick(): void {
