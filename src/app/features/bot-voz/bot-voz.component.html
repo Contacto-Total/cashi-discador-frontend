@@ -563,10 +563,17 @@
             } @else if (sesiones.length === 0) {
               <p class="!m-0 px-4 py-8 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Aún no hay llamadas registradas.</p>
             }
-            @if (totalPaginas(sesionesFiltradas) > 1) {
+            @if (totalPaginas(sesionesFiltradas) > 1 || bloqueSesiones > 0 || hayMasAntiguas) {
               <nav aria-label="Paginación de llamadas" class="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f5] px-4 py-3 dark:border-slate-800">
                 <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                  Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} · {{ sesionesFiltradas.length }} de las 100 últimas
+                  Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} · {{ sesionesFiltradas.length }} llamada(s)
+                  @if (bloqueSesiones > 0) { · bloque {{ bloqueSesiones + 1 }} }
+                </span>
+                <span class="flex items-center gap-1">
+                  <button type="button" (click)="irABloque(bloqueSesiones - 1)" [disabled]="bloqueSesiones === 0"
+                          [class]="ui.botonSecundarioAlto" title="Llamadas más recientes">‹ Recientes</button>
+                  <button type="button" (click)="irABloque(bloqueSesiones + 1)" [disabled]="!hayMasAntiguas"
+                          [class]="ui.botonSecundarioAlto" title="Llamadas más antiguas">Más antiguas ›</button>
                 </span>
                 <span class="flex items-center gap-1">
                   <button type="button" (click)="irA('sesiones', paginaSesiones - 1)" [disabled]="paginaSesiones === 1" aria-label="Página anterior" [class]="ui.botonIcono">
