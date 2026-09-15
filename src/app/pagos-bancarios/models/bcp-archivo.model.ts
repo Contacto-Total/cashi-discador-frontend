@@ -178,13 +178,10 @@ export interface PromesaResumenConciliacion {
   nombreAgente: string;
   rutaTipificacion: string;
   cuotas: CuotaResumenConciliacion[];
-  adjuntos?: AdjuntoResumenConciliacion[];
 }
 
 export interface AdjuntoResumenConciliacion {
   uuid: string;
-  cuotaId: number;
-  numeroCuota: number;
   nombreArchivo: string;
   tipoArchivo: string;
   tamanoBytes: number;
@@ -200,6 +197,7 @@ export interface CuotaResumenConciliacion {
   fechaPagoReal: string | null;
   montoPagadoReal: number | null;
   pagos: PagoResumenConciliacion[];
+  adjuntos?: AdjuntoResumenConciliacion[];
 }
 
 export interface PagoResumenConciliacion {
