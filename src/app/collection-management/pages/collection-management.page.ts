@@ -2838,8 +2838,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     num_cuenta: 'Número de cuenta',
     numero_cuenta: 'Número de cuenta',
     num_cuenta_pmcp: 'Número de cuenta',
-    dias_mora_asig: 'Días mora',
+    // El vigente va primero: clientHeaderFields() deduplica por etiqueta y gana el
+    // primero con valor. Con el orden invertido la cabecera mostraba la mora de
+    // asignación mientras rango_mora y clientDiasMora() usaban la vigente.
     dias_mora: 'Días mora',
+    dias_mora_asig: 'Días mora',
     periodo_castigo: 'Período castigo',
     rango_mora: 'Rango mora',
     rango_mora_asig: 'Rango mora',
