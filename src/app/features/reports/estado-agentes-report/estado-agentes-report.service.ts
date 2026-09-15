@@ -19,37 +19,54 @@ export interface RegistroEstadoDTO {
 }
 
 /**
- * CONECTADO = todo menos DESCONECTADO
- * |- PAUSAS  = REFRIGERIO + SSHH
- * `- JORNADA = CONECTADO - PAUSAS
- *    |- REUNION = EN_REUNION
- *    `- (base)  = JORNADA - REUNION
- *       |- OCIOSO     = DISPONIBLE
- *       `- PRODUCTIVO = el resto
+ * CONECTADO (Jornada) = todo menos DESCONECTADO
+ * |- EN COLA          = DISPONIBLE + EN_LLAMADA + TIPIFICANDO + EN_MANUAL
+ * `- FUERA DE LA COLA = CONECTADO - EN COLA
+ *    |- EN LINEA      = EN_LINEA
+ *    |- OTRAS TAREAS  = GESTION_MANUAL + SEGUIMIENTO + WHATSAPP + CONSULTA_TIEMPOS
+ *    |- REUNION Y CAP = EN_REUNION + CAPACITACION
+ *    `- PAUSAS        = REFRIGERIO + COMIDA + SSHH + AUSENTE + SOPORTE
+ *
+ * PRODUCTIVO cruza los dos grupos, no es subtotal de ninguno:
+ *   EN_LLAMADA + TIPIFICANDO + EN_MANUAL + GESTION_MANUAL + SEGUIMIENTO
  */
 export interface ResumenPorAgente {
   idUsuario: number;
   nombreAgente: string;
   username: string;
   segundosPorEstado: { [estado: string]: number };
+
   totalSegundosConectado: number;
+  totalSegundosEnCola: number;
+  totalSegundosFueraDeCola: number;
   totalSegundosProductivo: number;
   totalSegundosOcioso: number;
-  totalSegundosPausa: number;
+  totalSegundosEnLinea: number;
+  totalSegundosOtrasTareas: number;
   totalSegundosReunion: number;
-  /** productivo / (jornada - reunion) */
-  porcentajeOcupacion: number;
+  totalSegundosPausa: number;
+
   tiempoConectadoFormateado: string;
+  tiempoEnColaFormateado: string;
+  tiempoFueraDeColaFormateado: string;
   tiempoProductivoFormateado: string;
   tiempoOciosoFormateado: string;
-  tiempoPausaFormateado: string;
+  tiempoEnLineaFormateado: string;
+  tiempoOtrasTareasFormateado: string;
   tiempoReunionFormateado: string;
+  tiempoPausaFormateado: string;
+
+  /** Productivo / (Conectado - Pausas) */
+  porcentajeOcupacion: number;
+  porcentajeEnCola: number;
+  porcentajeFueraDeCola: number;
+  /** Ocioso / En cola. Mide al discador, no al asesor. */
+  porcentajeOcioso: number;
+  porcentajePausas: number;
+
   horaEntrada: string | null;
   horaSalida: string | null;
   cantidadSesiones: number;
-  /** CONECTADO - PAUSAS (incluye la reunion), no salida - entrada */
-  jornadaTotalFormateada: string | null;
-  jornadaTotalSegundos: number;
 }
 
 export interface ResumenEstadoAgentes {

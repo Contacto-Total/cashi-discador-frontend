@@ -1090,12 +1090,18 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'EN_LLAMADA': 'En Llamada',
       'TIPIFICANDO': 'Tipificando',
       'EN_REUNION': 'En Reunión',
-      'REFRIGERIO': 'Refrigerio',
+      'REFRIGERIO': 'BREAK',
       'SSHH': 'SSHH',
       'EN_MANUAL': 'Modo Manual',
       'GESTION_MANUAL': 'Gestión Manual',
       'SEGUIMIENTO': 'Seguimiento',
-      'DESCONECTADO': 'Desconectado'
+      'DESCONECTADO': 'Desconectado',
+      'EN_LINEA': 'En Línea',
+      'CAPACITACION': 'Capacitación',
+      'CONSULTA_TIEMPOS': 'Consulta de Tiempos',
+      'COMIDA': 'Comida',
+      'AUSENTE': 'Ausente',
+      'SOPORTE': 'Soporte'
     };
     return estados[estado] || estado || 'Sin estado';
   }
@@ -1106,11 +1112,17 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'EN_LLAMADA': 'en llamada',
       'TIPIFICANDO': 'tipificando',
       'EN_REUNION': 'en reunión',
-      'REFRIGERIO': 'refrigerio',
+      'REFRIGERIO': 'en break',
       'SSHH': 'en el baño',
       'EN_MANUAL': 'modo manual',
       'GESTION_MANUAL': 'gestión manual',
-      'SEGUIMIENTO': 'seguimiento'
+      'SEGUIMIENTO': 'seguimiento',
+      'EN_LINEA': 'en línea',
+      'CAPACITACION': 'en capacitación',
+      'CONSULTA_TIEMPOS': 'consultando sus tiempos',
+      'COMIDA': 'en el almuerzo',
+      'AUSENTE': 'ausente',
+      'SOPORTE': 'con soporte técnico'
     };
     return estados[estado] || estado;
   }
