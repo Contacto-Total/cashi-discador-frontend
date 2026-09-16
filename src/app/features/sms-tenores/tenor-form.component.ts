@@ -38,11 +38,11 @@ const SEGMENTOS = 8;
 /** Clases que se repiten en la pantalla. */
 const ESTILOS = {
   tarjeta: 'flex flex-col gap-[13px] rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900',
-  panel: 'flex flex-col gap-2.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-3 dark:border-slate-800 dark:bg-slate-950/40',
+  panel: 'flex flex-col gap-3 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3.5 py-3.5 dark:border-slate-800 dark:bg-slate-950/40',
   etiqueta: 'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   contador: 'rounded-full border border-[#e2e8f0] bg-white px-2 py-px text-xs font-semibold tabular-nums text-[#5f6c80] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
-  chip: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-medium text-[#334155] transition-[background-color,transform,box-shadow] duration-150 hover:bg-[#f4f6f9] hover:shadow-[0_2px_8px_rgba(15,23,42,0.08)] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
-  chipUsado: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#0f172a] bg-[#0f172a] px-[11px] text-[12.5px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#1e293b] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 dark:border-white dark:bg-white dark:text-slate-900',
+  chip: 'inline-flex h-8 items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8491a3] bg-white px-3 text-[12.5px] font-medium text-[#334155] transition-[background-color,transform,box-shadow] duration-150 hover:bg-[#f4f6f9] hover:shadow-[0_2px_8px_rgba(15,23,42,0.08)] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
+  chipUsado: 'inline-flex h-8 items-center gap-[5px] whitespace-nowrap rounded-full border border-[#0f172a] bg-[#0f172a] px-3 text-[12.5px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#1e293b] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 dark:border-white dark:bg-white dark:text-slate-900',
   select: 'h-[34px] w-full appearance-none rounded-lg border !border-[#8491a3] !bg-white pl-[11px] pr-8 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:disabled:!bg-slate-900 dark:disabled:!text-slate-400',
   flechaSelect: 'pointer-events-none absolute right-[11px] top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400',
   campo: 'h-[38px] rounded-lg border !border-[#8491a3] !bg-white px-3 text-[13.5px] !text-[#0f172a] placeholder:text-[#5f6c80] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:placeholder:text-slate-400',
@@ -167,44 +167,11 @@ interface ParteMensaje {
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 gap-x-4 gap-y-[13px] md:grid-cols-2">
-                <label class="flex flex-col gap-1">
-                  <span [class]="estilos.etiqueta">Nombre del tenor</span>
-                  <input type="text" [ngModel]="nombre" (ngModelChange)="alCambiarNombre($event)" maxlength="150"
-                         placeholder="Ej.: SMS Castigo — LTD" [class]="estilos.campo" />
-                </label>
-
-                <div class="flex flex-col gap-1">
-                  <label for="nombre-archivo" [class]="estilos.etiqueta">Nombre del archivo</label>
-                  <input id="nombre-archivo" type="text" [ngModel]="nombreArchivo" (ngModelChange)="alCambiarNombreArchivo($event)"
-                         (blur)="archivoTocado = true" [maxlength]="maxNombreArchivo" autocomplete="off" spellcheck="false"
-                         placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-ayuda nombre-archivo-resultado"
-                         [attr.aria-invalid]="errorArchivoVisible() ? true : null"
-                         [class]="errorArchivoVisible() ? estilos.campo + ' !border-[#b91c1c] dark:!border-red-400' : estilos.campo" />
-                  <span id="nombre-archivo-ayuda" class="text-[12px] leading-snug text-[#5f6c80] dark:text-slate-400">
-                    La fecha de descarga se agrega sola al final, con el mismo separador que uses: guion bajo o guion.
-                  </span>
-                  <span id="nombre-archivo-resultado" aria-live="polite"
-                        class="mt-0.5 flex min-h-[36px] items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[12.5px] leading-snug"
-                        [ngClass]="errorArchivoVisible()
-                          ? 'border-[#f5c2c2] bg-[#fdecec] dark:border-red-900 dark:bg-red-950/40'
-                          : 'border-[#eef1f5] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-950/40'">
-                    @if (errorArchivoVisible()) {
-                      <lucide-angular name="alert-circle" [size]="15" class="block shrink-0 text-[#b91c1c] dark:text-red-400" aria-hidden="true"></lucide-angular>
-                      <span class="font-semibold text-[#b91c1c] dark:text-red-400">{{ problemaArchivo() }}</span>
-                    } @else if (problemaArchivo()) {
-                      <lucide-angular name="file-spreadsheet" [size]="15" class="block shrink-0 text-[#8491a3] dark:text-slate-500" aria-hidden="true"></lucide-angular>
-                      <span class="text-[#5f6c80] dark:text-slate-400">Escribe un nombre para ver cómo se descargará.</span>
-                    } @else {
-                      <lucide-angular name="file-spreadsheet" [size]="15" class="block shrink-0 text-[#15803d] dark:text-green-400" aria-hidden="true"></lucide-angular>
-                      <span class="min-w-0">
-                        <span class="text-[#5f6c80] dark:text-slate-400">Se descargará como </span>
-                        <span class="break-all font-mono font-medium text-[#0f172a] dark:text-slate-100">{{ vistaPreviaArchivo() }}</span>
-                      </span>
-                    }
-                  </span>
-                </div>
-              </div>
+              <label class="flex flex-col gap-1">
+                <span [class]="estilos.etiqueta">Nombre del tenor</span>
+                <input type="text" [ngModel]="nombre" (ngModelChange)="alCambiarNombre($event)" maxlength="150"
+                       placeholder="Ej.: SMS Castigo — LTD" [class]="estilos.campo" />
+              </label>
 
               <label class="flex flex-col gap-1">
                 <span [class]="estilos.etiqueta">Texto del SMS</span>
@@ -217,25 +184,39 @@ interface ParteMensaje {
               </label>
             </section>
 
-            <section [class]="estilos.tarjeta">
+            <section [class]="estilos.tarjeta + ' flex-1'">
               <div class="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 class="!m-0 text-[15px] font-bold">Variables</h2>
                 <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Toca una variable para insertarla en el mensaje · tócala otra vez para quitarla</span>
               </div>
-              <div class="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-[0.9fr_2.6fr_0.9fr]">
-                <div [class]="estilos.panel">
-                  <div class="flex items-center gap-2">
-                    <span [class]="estilos.etiqueta">Cliente</span>
-                    <span [class]="estilos.contador">{{ vars.cliente.length }}</span>
+              <div class="grid flex-1 grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                <div class="flex min-w-0 flex-col gap-3">
+                  <div [class]="estilos.panel">
+                    <div class="flex items-center gap-2">
+                      <span [class]="estilos.etiqueta">Cliente</span>
+                      <span [class]="estilos.contador">{{ vars.cliente.length }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      @for (v of vars.cliente; track v.token) {
+                        <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
+                      }
+                    </div>
                   </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (v of vars.cliente; track v.token) {
-                      <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
-                    }
+
+                  <div [class]="estilos.panel + ' flex-1'">
+                    <div class="flex items-center gap-2">
+                      <span [class]="estilos.etiqueta">Fechas</span>
+                      <span [class]="estilos.contador">{{ vars.fechas.length }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      @for (v of vars.fechas; track v.token) {
+                        <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
+                      }
+                    </div>
                   </div>
                 </div>
 
-                <div class="flex flex-col gap-2.5 rounded-[10px] border border-[#dbe7fb] bg-[#f5f9ff] px-3 py-3 dark:border-blue-900 dark:bg-blue-950/30">
+                <div class="flex min-w-0 flex-col gap-3 rounded-[10px] border border-[#dbe7fb] bg-[#f5f9ff] px-3.5 py-3.5 dark:border-blue-900 dark:bg-blue-950/30">
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                       <span [class]="estilos.etiqueta">Montos</span>
@@ -247,7 +228,7 @@ interface ParteMensaje {
                     </span>
                   </div>
                   @if (vars.montos.length) {
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap gap-2">
                       @for (v of vars.montos; track v.token) {
                         <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">
                           @if (usada(v)) {
@@ -264,23 +245,23 @@ interface ParteMensaje {
                           <lucide-angular name="layers" [size]="12" class="block"></lucide-angular>
                           Combinados
                         </span>
-                        <div class="flex flex-wrap gap-1.5">
+                        <div class="flex flex-wrap gap-2">
                           @for (c of combinadas; track c.token; let i = $index) {
                             <span class="inline-flex items-center rounded-full" [ngClass]="usadaCombinada(c) ? 'bg-[#0f172a] dark:bg-white' : 'border border-[#8491a3] bg-white dark:border-slate-600 dark:bg-slate-800'">
                               <button type="button" (click)="insertarCombinada(c)" [attr.aria-pressed]="usadaCombinada(c)" [attr.title]="resumenCombinada(c)"
-                                      class="inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-l-full pl-[11px] pr-1.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      class="inline-flex h-8 items-center gap-[5px] whitespace-nowrap rounded-l-full pl-3 pr-1.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                                       [ngClass]="usadaCombinada(c) ? 'font-semibold text-white dark:text-slate-900' : 'font-medium text-[#334155] hover:bg-[#f4f6f9] dark:text-slate-200 dark:hover:bg-slate-700'">
                                 <lucide-angular name="layers" [size]="11" class="block"></lucide-angular>
                                 {{ c.etiqueta }}
                                 <span class="rounded-full px-1.5 text-[10px] tabular-nums" [ngClass]="usadaCombinada(c) ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-[#eef2f7] text-[#5f6c80] dark:bg-slate-700 dark:text-slate-300'">{{ c.columnas.length }}</span>
                               </button>
                               <button type="button" (click)="editarCombinada(i)" [attr.aria-label]="'Editar ' + c.etiqueta"
-                                      class="flex h-[30px] w-6 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      class="flex h-8 w-6 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                                       [ngClass]="usadaCombinada(c) ? 'text-white/80 hover:text-white dark:text-slate-700' : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400'">
                                 <lucide-angular name="pencil" [size]="11" class="block"></lucide-angular>
                               </button>
                               <button type="button" (click)="quitarCombinada(i)" [attr.aria-label]="'Quitar ' + c.etiqueta"
-                                      class="flex h-[30px] w-6 items-center justify-center rounded-r-full pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      class="flex h-8 w-6 items-center justify-center rounded-r-full pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                                       [ngClass]="usadaCombinada(c) ? 'text-white/80 hover:text-white dark:text-slate-700' : 'text-[#5f6c80] hover:text-[#b91c1c] dark:text-slate-400'">
                                 <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
                               </button>
@@ -307,17 +288,6 @@ interface ParteMensaje {
                   }
                 </div>
 
-                <div [class]="estilos.panel">
-                  <div class="flex items-center gap-2">
-                    <span [class]="estilos.etiqueta">Fechas</span>
-                    <span [class]="estilos.contador">{{ vars.fechas.length }}</span>
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (v of vars.fechas; track v.token) {
-                      <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
-                    }
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -357,7 +327,7 @@ interface ParteMensaje {
               </div>
             </section>
 
-            <section [class]="estilos.tarjeta + ' flex-1'">
+            <section [class]="estilos.tarjeta">
               <div class="flex items-center justify-between gap-3">
                 <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
                 @if (totalPreview() > 0) {
@@ -374,8 +344,8 @@ interface ParteMensaje {
                   </div>
                 }
               </div>
-              <div class="flex flex-1 flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
-                <div class="flex min-h-[176px] flex-1 flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
+              <div class="flex flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
+                <div class="flex min-h-[176px] flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
                   <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
                     <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
                     <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
@@ -399,6 +369,38 @@ interface ParteMensaje {
                   }
                 </div>
               </div>
+            </section>
+
+            <section [class]="estilos.tarjeta + ' flex-1'" aria-labelledby="titulo-archivo">
+              <h2 id="titulo-archivo" class="!m-0 text-[15px] font-bold">Archivo</h2>
+              <div class="flex flex-col gap-1">
+                <label for="nombre-archivo" [class]="estilos.etiqueta">Nombre del archivo</label>
+                <input id="nombre-archivo" type="text" [ngModel]="nombreArchivo" (ngModelChange)="alCambiarNombreArchivo($event)"
+                       (blur)="archivoTocado = true" [maxlength]="maxNombreArchivo" autocomplete="off" spellcheck="false"
+                       placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-resultado nombre-archivo-ayuda"
+                       [attr.aria-invalid]="errorArchivoVisible() ? true : null"
+                       [class]="errorArchivoVisible() ? estilos.campo + ' !border-[#b91c1c] dark:!border-red-400' : estilos.campo" />
+              </div>
+              <div id="nombre-archivo-resultado" aria-live="polite"
+                   class="flex min-h-[40px] items-center gap-2 rounded-lg border px-2.5 py-2 text-[12.5px] leading-snug"
+                   [ngClass]="errorArchivoVisible()
+                     ? 'border-[#f5c2c2] bg-[#fdecec] dark:border-red-900 dark:bg-red-950/40'
+                     : 'border-[#eef1f5] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-950/40'">
+                @if (errorArchivoVisible()) {
+                  <lucide-angular name="alert-circle" [size]="15" class="mt-px block shrink-0 self-start text-[#b91c1c] dark:text-red-400" aria-hidden="true"></lucide-angular>
+                  <span class="font-semibold text-[#b91c1c] dark:text-red-400">{{ problemaArchivo() }}</span>
+                } @else if (problemaArchivo()) {
+                  <lucide-angular name="file-spreadsheet" [size]="16" class="block shrink-0 text-[#8491a3] dark:text-slate-500" aria-hidden="true"></lucide-angular>
+                  <span class="text-[#5f6c80] dark:text-slate-400">Escribe un nombre para ver cómo se descargará.</span>
+                } @else {
+                  <lucide-angular name="file-spreadsheet" [size]="16" class="block shrink-0 text-[#15803d] dark:text-green-400" aria-hidden="true"></lucide-angular>
+                  <span class="min-w-0 font-mono text-xs font-medium text-[#0f172a] dark:text-slate-100" [attr.aria-label]="'Se descargará como ' + vistaPreviaArchivo()"><span class="break-all">{{ nombreArchivo.trim() }}</span><span class="whitespace-nowrap text-[#15803d] dark:text-green-400">{{ sufijoArchivo() }}</span></span>
+                }
+              </div>
+              <p id="nombre-archivo-ayuda" class="mt-auto flex items-center justify-center gap-1.5 border-t border-[#eef1f5] pt-3 text-center text-xs text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">
+                <lucide-angular name="info" [size]="13" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                <span>La fecha se agrega sola, con tu separador (<span class="font-mono font-semibold text-[#334155] dark:text-slate-200">_</span> o <span class="font-mono font-semibold text-[#334155] dark:text-slate-200">-</span>).</span>
+              </p>
             </section>
           </div>
 
@@ -980,6 +982,11 @@ export class TenorFormComponent implements OnInit {
 
   vistaPreviaArchivo(): string {
     return nombreArchivoConFecha(this.nombreArchivo);
+  }
+
+  /** Fecha y extensión que se agregan al nombre; van resaltadas y sin partirse en dos líneas. */
+  sufijoArchivo(): string {
+    return this.vistaPreviaArchivo().slice(this.nombreArchivo.trim().length);
   }
 
   /** El textarea crece con el texto: así la copia que pinta las variables queda alineada. */
