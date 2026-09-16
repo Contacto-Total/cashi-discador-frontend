@@ -3130,10 +3130,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // se resetea al guardar. No usamos isTipifying porque la carga manual lo
   // activa en la entrada sin que haya habido llamada.
   protected llamadaRealizada = signal(false);
+  private isPageRefreshing = false;
   // Referencias estables para registrar/desregistrar en el lock service y el
   // listener de beforeunload (deben ser la MISMA referencia en add/remove).
   private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
   private boundBeforeUnload = (e: BeforeUnloadEvent) => {
+    this.isPageRefreshing = true;
     if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
       e.preventDefault();
       e.returnValue = '';
@@ -4766,10 +4768,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       // Si el asesor abandonó la gestión sin una llamada SIP activa, no debe quedar
       // bloqueado en TIPIFICANDO. La marca permite completar el cambio tras un reload.
-      if (!this.salidaAutorizada && !this.callActive() && !this.rellamadaCallActive() && !this.hasRecoverablePredictiveContext()) {
+      const preservePredictiveCheckpoint = this.isPageRefreshing && this.hasRecoverablePredictiveContext();
+      if (!this.salidaAutorizada && !this.callActive() && !this.rellamadaCallActive() && !preservePredictiveCheckpoint) {
         const userId = this.authService.getCurrentUser()?.id;
         if (userId) {
           const releaseKey = `tipification-release-pending-${userId}`;
+          // Una navegación interna aprobada descarta la gestión pendiente. En una
+          // recarga se mantiene para recuperar la misma ficha al iniciar de nuevo.
+          if (this.hasRecoverablePredictiveContext()) {
+            sessionStorage.removeItem('predictive_call_data');
+          }
           this.markTipificationReleasePending();
           this.agentStatusService.finalizarTipificacion(userId).subscribe({
             next: () => {
