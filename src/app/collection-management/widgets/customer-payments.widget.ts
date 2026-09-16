@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { CustomerCancellationAttempt, CustomerPaymentsContext } from '../models/customer-payments.model';
+import { CustomerCancellationReconciliation, CustomerPaymentsContext, CustomerPaymentsPage } from '../models/customer-payments.model';
 import { CustomerPaymentsService } from '../services/customer-payments.service';
 
 @Component({
@@ -15,27 +15,49 @@ import { CustomerPaymentsService } from '../services/customer-payments.service';
       } @else if (error) {
         <div class="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
       } @else if (!canLoad()) {
-        <div class="py-6 text-center text-xs text-slate-500 dark:text-slate-400">Los pagos estarán disponibles al cargar los datos del cliente.</div>
+        <div class="py-6 text-center text-xs text-slate-500 dark:text-slate-400">Las cancelaciones estarán disponibles al cargar los datos del cliente.</div>
       } @else {
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Cancelaciones</span>
-          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ cancellationAttempts.length }}</span>
+          <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">{{ page.totalElements }} cancelaciones</span>
+          @if (page.totalPages > 1) {
+            <span class="text-[10px] text-slate-500 dark:text-slate-400">Página {{ page.page + 1 }} de {{ page.totalPages }}</span>
+          }
         </div>
 
-        @for (attempt of cancellationAttempts; track attempt.idGestion) {
-          <div class="rounded-md border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800/50">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <p class="text-xs font-bold text-slate-800 dark:text-white">Gestión {{ attempt.idGestion }}</p>
-                <p class="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{{ formatDateTime(attempt.fechaGestion) }}</p>
-              </div>
-              <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="methodClass(attempt.metodoContacto)">
-                {{ methodLabel(attempt.metodoContacto) }}
-              </span>
-            </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[38rem] text-left text-[10px]">
+            <thead class="border-b border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              <tr>
+                <th class="px-1.5 py-1.5 font-semibold">Fecha</th>
+                <th class="px-1.5 py-1.5 text-right font-semibold">Cancelación</th>
+                <th class="px-1.5 py-1.5 font-semibold">Banco</th>
+                <th class="px-1.5 py-1.5 text-right font-semibold">Monto banco</th>
+                <th class="px-1.5 py-1.5 font-semibold">Fecha banco</th>
+                <th class="px-1.5 py-1.5 font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              @for (cancelacion of page.content; track cancelacion.correccionId) {
+                <tr>
+                  <td class="whitespace-nowrap px-1.5 py-2 text-slate-700 dark:text-slate-300">{{ formatDate(cancelacion.fechaPago ?? cancelacion.fechaRegistro) }}</td>
+                  <td class="whitespace-nowrap px-1.5 py-2 text-right font-semibold text-slate-800 dark:text-white">{{ formatMoney(cancelacion.montoCancelacion) }}</td>
+                  <td class="max-w-24 truncate px-1.5 py-2 text-slate-700 dark:text-slate-300" [title]="cancelacion.banco ?? ''">{{ cancelacion.banco ?? '—' }}</td>
+                  <td class="whitespace-nowrap px-1.5 py-2 text-right text-slate-700 dark:text-slate-300">{{ formatMoney(cancelacion.montoBanco) }}</td>
+                  <td class="whitespace-nowrap px-1.5 py-2 text-slate-700 dark:text-slate-300">{{ formatDate(cancelacion.fechaBanco) }}</td>
+                  <td class="px-1.5 py-2"><span class="whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="statusClass(cancelacion.estadoConciliacion)">{{ statusLabel(cancelacion.estadoConciliacion) }}</span></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="px-1.5 py-5 text-center text-xs text-slate-500 dark:text-slate-400">No hay cancelaciones para este cliente.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (page.totalPages > 1) {
+          <div class="flex justify-end gap-1">
+            <button type="button" (click)="changePage(page.page - 1)" [disabled]="page.first" class="rounded px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-800">Anterior</button>
+            <button type="button" (click)="changePage(page.page + 1)" [disabled]="page.last" class="rounded px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-800">Siguiente</button>
           </div>
-        } @empty {
-          <div class="rounded-md border border-slate-200 p-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">No hay cancelaciones para este cliente.</div>
         }
       }
     </div>
@@ -49,15 +71,16 @@ export class CustomerPaymentsWidget implements OnChanges, OnDestroy {
 
   loading = false;
   error: string | null = null;
-  cancellationAttempts: CustomerCancellationAttempt[] = [];
+  page: CustomerPaymentsPage = this.emptyPage();
 
+  private readonly pageSize = 10;
   private requestSubscription?: Subscription;
   private requestVersion = 0;
 
   constructor(private customerPaymentsService: CustomerPaymentsService) {}
 
   ngOnChanges(_changes: SimpleChanges): void {
-    this.loadPayments();
+    this.loadCancelaciones(0);
   }
 
   ngOnDestroy(): void {
@@ -68,13 +91,39 @@ export class CustomerPaymentsWidget implements OnChanges, OnDestroy {
     return !!this.documento && !!this.tenantId && !!this.carteraId && !!this.subcarteraId;
   }
 
-  private loadPayments(): void {
+  changePage(page: number): void {
+    if (page >= 0 && page < this.page.totalPages) this.loadCancelaciones(page);
+  }
+
+  formatDate(value: string | null): string {
+    return value ? new Date(value).toLocaleDateString() : '—';
+  }
+
+  formatMoney(value: number | null): string {
+    return value == null ? '—' : `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  statusLabel(status: CustomerCancellationReconciliation['estadoConciliacion']): string {
+    return status === 'CONCILIADO' ? 'Conciliado'
+      : status === 'PENDIENTE_CONCILIACION' ? 'Pendiente'
+      : status === 'ELIMINADO' ? 'Eliminado'
+      : 'Inconsistente';
+  }
+
+  statusClass(status: CustomerCancellationReconciliation['estadoConciliacion']): string {
+    return status === 'CONCILIADO' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+      : status === 'PENDIENTE_CONCILIACION' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+      : status === 'ELIMINADO' ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  }
+
+  private loadCancelaciones(pageNumber: number): void {
     this.requestSubscription?.unsubscribe();
-    this.cancellationAttempts = [];
     this.error = null;
 
     if (!this.canLoad()) {
       this.loading = false;
+      this.page = this.emptyPage();
       return;
     }
 
@@ -86,10 +135,12 @@ export class CustomerPaymentsWidget implements OnChanges, OnDestroy {
     };
 
     this.loading = true;
-    this.requestSubscription = this.customerPaymentsService.getSummary(this.documento!, context).subscribe({
-      next: summary => {
+    this.requestSubscription = this.customerPaymentsService.getCancelaciones(
+      this.documento!, context, pageNumber, this.pageSize
+    ).subscribe({
+      next: response => {
         if (requestVersion !== this.requestVersion) return;
-        this.cancellationAttempts = summary.intentosCancelacion ?? [];
+        this.page = response;
         this.loading = false;
       },
       error: () => {
@@ -100,18 +151,7 @@ export class CustomerPaymentsWidget implements OnChanges, OnDestroy {
     });
   }
 
-  formatDateTime(value: string): string {
-    return new Date(value).toLocaleString();
-  }
-
-  methodLabel(method: CustomerCancellationAttempt['metodoContacto']): string {
-    return method?.replace('GESTION_', '') ?? 'SIN MÉTODO';
-  }
-
-  methodClass(method: CustomerCancellationAttempt['metodoContacto']): string {
-    if (method === 'GESTION_PREDICTIVO') return 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300';
-    if (method === 'GESTION_MANUAL') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
-    if (method === 'GESTION_PROGRESIVO') return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300';
-    return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+  private emptyPage(): CustomerPaymentsPage {
+    return { content: [], page: 0, size: this.pageSize, totalElements: 0, totalPages: 0, first: true, last: true };
   }
 }
