@@ -210,6 +210,8 @@ export interface PagoResumenConciliacion {
   verificadoBanco: boolean;
   pagoBancarioId: number | null;
   fechaVerificacion: string | null;
+  /** Inferido en backend: la cancelación que registró el pago subió voucher. */
+  tieneVoucher?: boolean;
 }
 
 export interface HistorialArchivosCargaRequest {

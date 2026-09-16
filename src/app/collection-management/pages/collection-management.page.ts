@@ -3130,10 +3130,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // se resetea al guardar. No usamos isTipifying porque la carga manual lo
   // activa en la entrada sin que haya habido llamada.
   protected llamadaRealizada = signal(false);
+  private isPageRefreshing = false;
   // Referencias estables para registrar/desregistrar en el lock service y el
   // listener de beforeunload (deben ser la MISMA referencia en add/remove).
   private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
   private boundBeforeUnload = (e: BeforeUnloadEvent) => {
+    this.isPageRefreshing = true;
     if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
       e.preventDefault();
       e.returnValue = '';
@@ -3235,6 +3237,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
   }
 
+  /**
+   * El contexto predictivo es un checkpoint de la gestión pendiente: sobrevive a
+   * una recarga para poder consultar la ficha por UUID, incluso tras el hangup.
+   */
+  private hasRecoverablePredictiveContext(): boolean {
+    try {
+      const rawContext = sessionStorage.getItem('predictive_call_data');
+      const context = rawContext ? JSON.parse(rawContext) : null;
+      return !!context?.callUuid
+        && context.agentId === this.authService.getCurrentUser()?.id;
+    } catch {
+      return false;
+    }
+  }
+
   /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
   puedeSalir(_nextUrl: string): boolean {
     return this.salidaAutorizada || !this.hasGestionEnCurso();
@@ -3333,6 +3350,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.callActive.set(true);
       this.startCall(); // Iniciar timer automáticamente
       this.playCallAlertBeep(); // Beep de alerta al agente
+    } else if ((initialCallState === CallState.IDLE || initialCallState === CallState.ENDED) && this.hasRecoverablePredictiveContext()) {
+      // Tras recargar una tipificación, SIP ya está IDLE pero la ficha sigue pendiente.
+      this.isTipifying.set(true);
+      this.sipService.blockIncomingCallsMode(true);
     }
 
     // Suscribirse a cambios de estado de llamada
@@ -3992,24 +4013,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     // ========================================
-    // FAST PATH: Usar datos buffereados del WebSocket PREDICTIVE_CALL_CONNECTED
-    // El backend envía phoneNumber, contactId, etc. ANTES del bridge.
-    // app.component los guarda en sessionStorage porque llegan antes de que esta página cargue.
+    // FAST PATH: Usar el checkpoint del WebSocket PREDICTIVE_CALL_CONNECTED.
+    // Se conserva hasta guardar para rehidratar la misma ficha tras una recarga.
     // ========================================
     if (retryCount === 0 && !forceRefresh) {
       const predictiveDataStr = sessionStorage.getItem('predictive_call_data');
       if (predictiveDataStr) {
-        sessionStorage.removeItem('predictive_call_data');
         try {
           const predictiveData = JSON.parse(predictiveDataStr);
-          if (predictiveData.callUuid && predictiveData.agentId) {
+          if (predictiveData.callUuid && predictiveData.agentId === currentUser.id) {
             console.log(`📞 [FAST-PATH] Rehidratando contexto predictivo: ${predictiveData.callUuid}`);
             this.setPredictiveCallContext(predictiveData);
             this.loadPredictiveCustomer(predictiveData.callUuid, predictiveData.agentId);
             return;
           }
+          sessionStorage.removeItem('predictive_call_data');
         } catch (e) {
           console.warn('⚠️ [FAST-PATH] Error parseando datos buffereados:', e);
+          sessionStorage.removeItem('predictive_call_data');
         }
       }
     }
@@ -4747,10 +4768,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       // Si el asesor abandonó la gestión sin una llamada SIP activa, no debe quedar
       // bloqueado en TIPIFICANDO. La marca permite completar el cambio tras un reload.
-      if (!this.salidaAutorizada && !this.callActive() && !this.rellamadaCallActive()) {
+      const preservePredictiveCheckpoint = this.isPageRefreshing && this.hasRecoverablePredictiveContext();
+      if (!this.salidaAutorizada && !this.callActive() && !this.rellamadaCallActive() && !preservePredictiveCheckpoint) {
         const userId = this.authService.getCurrentUser()?.id;
         if (userId) {
           const releaseKey = `tipification-release-pending-${userId}`;
+          // Una navegación interna aprobada descarta la gestión pendiente. En una
+          // recarga se mantiene para recuperar la misma ficha al iniciar de nuevo.
+          if (this.hasRecoverablePredictiveContext()) {
+            sessionStorage.removeItem('predictive_call_data');
+          }
           this.markTipificationReleasePending();
           this.agentStatusService.finalizarTipificacion(userId).subscribe({
             next: () => {
@@ -6670,6 +6697,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.callDuration.set(0);
     this.callStartTime = undefined;
     this.setActiveCallContext({ ...EMPTY_CALL_CONTEXT });
+    sessionStorage.removeItem('predictive_call_data');
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
 
