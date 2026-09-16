@@ -1525,7 +1525,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   cargarColas(): void {
     this.svc.getColas().subscribe({
-      // Llegan ordenadas del backend, la ultima creada arriba.
+      // Llegan ordenadas del backend: las que estan discando arriba y luego la ultima creada.
       next: (c) => { this.colas = c; this.componerOpcionesCartera(); this.refrescarColasFiltro(); },
       error: () => this.flash('No se pudieron cargar las colas', true),
     });
@@ -1957,6 +1957,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
       next: (actualizada) => {
         c.estaDiscando = actualizada.estaDiscando;
         this.flash(c.estaDiscando ? 'Cola iniciada' : 'Cola detenida');
+        // Encenderla o apagarla la cambia de sitio: las que discan van arriba. Se recarga
+        // ya en vez de esperar al refresco, y al iniciarla se vuelve a la pagina 1, que es
+        // donde queda; si no, desaparece de la pagina en la que se pulso.
+        if (c.estaDiscando) this.paginaColas = 1;
+        this.cargarColas();
       },
       error: () => this.flash('No se pudo cambiar el estado de la cola', true),
     });
