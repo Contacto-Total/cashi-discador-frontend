@@ -11,7 +11,7 @@ export interface CustomerCancellationReconciliation {
   banco: string | null;
   montoBanco: number | null;
   fechaBanco: string | null;
-  estadoConciliacion: 'CONCILIADO' | 'PENDIENTE_CONCILIACION' | 'INCONSISTENTE' | 'ELIMINADO';
+  estadoConciliacion: 'CONCILIADO' | 'PENDIENTE_CONCILIACION' | 'INCONSISTENTE';
 }
 
 export interface CustomerPaymentsPage {

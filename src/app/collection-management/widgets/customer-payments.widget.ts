@@ -96,14 +96,12 @@ export class CustomerPaymentsWidget implements OnChanges, OnDestroy {
   statusLabel(status: CustomerCancellationReconciliation['estadoConciliacion']): string {
     return status === 'CONCILIADO' ? 'Conciliado'
       : status === 'PENDIENTE_CONCILIACION' ? 'Pendiente'
-      : status === 'ELIMINADO' ? 'Eliminado'
       : 'Inconsistente';
   }
 
   statusClass(status: CustomerCancellationReconciliation['estadoConciliacion']): string {
     return status === 'CONCILIADO' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
       : status === 'PENDIENTE_CONCILIACION' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-      : status === 'ELIMINADO' ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
       : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
   }
 
