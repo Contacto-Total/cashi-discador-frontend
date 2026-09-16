@@ -24,33 +24,23 @@ import { CustomerPaymentsService } from '../services/customer-payments.service';
           }
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[38rem] text-left text-[10px]">
-            <thead class="border-b border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              <tr>
-                <th class="px-1.5 py-1.5 font-semibold">Fecha</th>
-                <th class="px-1.5 py-1.5 text-right font-semibold">Cancelación</th>
-                <th class="px-1.5 py-1.5 font-semibold">Banco</th>
-                <th class="px-1.5 py-1.5 text-right font-semibold">Monto banco</th>
-                <th class="px-1.5 py-1.5 font-semibold">Fecha banco</th>
-                <th class="px-1.5 py-1.5 font-semibold">Estado</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-              @for (cancelacion of page.content; track cancelacion.correccionId) {
-                <tr>
-                  <td class="whitespace-nowrap px-1.5 py-2 text-slate-700 dark:text-slate-300">{{ formatDate(cancelacion.fechaPago ?? cancelacion.fechaRegistro) }}</td>
-                  <td class="whitespace-nowrap px-1.5 py-2 text-right font-semibold text-slate-800 dark:text-white">{{ formatMoney(cancelacion.montoCancelacion) }}</td>
-                  <td class="max-w-24 truncate px-1.5 py-2 text-slate-700 dark:text-slate-300" [title]="cancelacion.banco ?? ''">{{ cancelacion.banco ?? '—' }}</td>
-                  <td class="whitespace-nowrap px-1.5 py-2 text-right text-slate-700 dark:text-slate-300">{{ formatMoney(cancelacion.montoBanco) }}</td>
-                  <td class="whitespace-nowrap px-1.5 py-2 text-slate-700 dark:text-slate-300">{{ formatDate(cancelacion.fechaBanco) }}</td>
-                  <td class="px-1.5 py-2"><span class="whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="statusClass(cancelacion.estadoConciliacion)">{{ statusLabel(cancelacion.estadoConciliacion) }}</span></td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="px-1.5 py-5 text-center text-xs text-slate-500 dark:text-slate-400">No hay cancelaciones para este cliente.</td></tr>
-              }
-            </tbody>
-          </table>
+        <div class="divide-y divide-slate-200 dark:divide-slate-700">
+          @for (cancelacion of page.content; track cancelacion.id) {
+            <div class="py-2">
+              <div class="grid grid-cols-4 gap-x-2">
+                <div><p class="text-[9px] font-medium uppercase text-slate-400">Fecha</p><p class="mt-0.5 text-[11px] font-semibold text-slate-800 dark:text-white">{{ formatDate(cancelacion.fechaCancelacion) }}</p></div>
+                <div><p class="text-[9px] font-medium uppercase text-slate-400">Cancelación</p><p class="mt-0.5 text-[11px] font-semibold text-slate-800 dark:text-white">{{ formatMoney(cancelacion.montoCancelacion) }}</p></div>
+                <div><p class="text-[9px] font-medium uppercase text-slate-400">Banco</p><p class="mt-0.5 truncate text-[11px] text-slate-700 dark:text-slate-300" [title]="cancelacion.banco ?? ''">{{ cancelacion.banco ?? '—' }}</p></div>
+                <div><p class="text-[9px] font-medium uppercase text-slate-400">Estado</p><span class="mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="statusClass(cancelacion.estadoConciliacion)">{{ statusLabel(cancelacion.estadoConciliacion) }}</span></div>
+              </div>
+              <div class="mt-2 grid grid-cols-2 gap-x-2">
+                <div><p class="text-[9px] font-medium uppercase text-slate-400">Monto banco</p><p class="mt-0.5 text-[11px] text-slate-700 dark:text-slate-300">{{ formatMoney(cancelacion.montoBanco) }}</p></div>
+                <div><p class="text-[9px] font-medium uppercase text-slate-400">Fecha banco</p><p class="mt-0.5 text-[11px] text-slate-700 dark:text-slate-300">{{ formatDate(cancelacion.fechaBanco) }}</p></div>
+              </div>
+            </div>
+          } @empty {
+            <div class="py-5 text-center text-xs text-slate-500 dark:text-slate-400">No hay cancelaciones para este cliente.</div>
+          }
         </div>
 
         @if (page.totalPages > 1) {

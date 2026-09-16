@@ -5,14 +5,10 @@ export interface CustomerPaymentsContext {
 }
 
 export interface CustomerCancellationReconciliation {
-  correccionId: number;
-  pagoCuotaId: number | null;
-  cuotaId: number | null;
-  fechaRegistro: string;
-  fechaPago: string | null;
+  id: number;
+  fechaCancelacion: string;
   montoCancelacion: number | null;
   banco: string | null;
-  numeroOperacion: string | null;
   montoBanco: number | null;
   fechaBanco: string | null;
   estadoConciliacion: 'CONCILIADO' | 'PENDIENTE_CONCILIACION' | 'INCONSISTENTE' | 'ELIMINADO';
