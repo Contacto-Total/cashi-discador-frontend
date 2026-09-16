@@ -59,6 +59,18 @@ export class BcpPagosService {
     return this.http.get<ResumenConciliacionCliente>(`${this.baseUrl}/clientes/${encodeURIComponent(documento)}/resumen-conciliacion`, { params });
   }
 
+  /**
+   * Descarga la imagen de un voucher subido por el asesor (como Blob, para enviar el token).
+   */
+  obtenerArchivoComprobante(uuid: string, request: ResumenConciliacionClienteRequest): Observable<Blob> {
+    const params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    return this.http.get(`${this.baseUrl}/comprobantes/${encodeURIComponent(uuid)}/archivo`, { params, responseType: 'blob' });
+  }
+
   listarHistorialArchivosCarga(request: HistorialArchivosCargaRequest): Observable<ArchivoCargaHistorialPage> {
     let params = new HttpParams()
       .set('tenantId', request.tenantId.toString())

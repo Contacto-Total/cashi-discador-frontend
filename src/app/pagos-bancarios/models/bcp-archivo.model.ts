@@ -180,6 +180,14 @@ export interface PromesaResumenConciliacion {
   cuotas: CuotaResumenConciliacion[];
 }
 
+export interface AdjuntoResumenConciliacion {
+  uuid: string;
+  nombreArchivo: string;
+  tipoArchivo: string;
+  tamanoBytes: number;
+  fechaCreacion: string;
+}
+
 export interface CuotaResumenConciliacion {
   cuotaId: number;
   numeroCuota: number;
@@ -189,6 +197,7 @@ export interface CuotaResumenConciliacion {
   fechaPagoReal: string | null;
   montoPagadoReal: number | null;
   pagos: PagoResumenConciliacion[];
+  adjuntos?: AdjuntoResumenConciliacion[];
 }
 
 export interface PagoResumenConciliacion {

@@ -64,6 +64,7 @@ export interface ProductivitySummary {
   totalAgentes: number;
   // Cards de gestion y proyeccion
   rotasCantidad: number;
+  rotasPdp: number;
   rotasMonto: number;
   colchonCantidad: number;
   colchonMonto: number;

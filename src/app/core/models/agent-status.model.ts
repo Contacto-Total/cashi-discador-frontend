@@ -26,7 +26,14 @@ export enum AgentState {
   DESCONECTADO = 'DESCONECTADO',
   GESTION_MANUAL = 'GESTION_MANUAL',
   SEGUIMIENTO = 'SEGUIMIENTO',
-  WHATSAPP = 'WHATSAPP'
+  WHATSAPP = 'WHATSAPP',
+  // Agregados 2026-09, mismo orden que el enum de Java y el ENUM de MySQL
+  EN_LINEA = 'EN_LINEA',
+  CAPACITACION = 'CAPACITACION',
+  CONSULTA_TIEMPOS = 'CONSULTA_TIEMPOS',
+  COMIDA = 'COMIDA',
+  AUSENTE = 'AUSENTE',
+  SOPORTE = 'SOPORTE'
 }
 
 export interface AgentStatusResponse {
@@ -56,11 +63,13 @@ export interface EstadosDisponibles {
   todosLosEstados: string[];
 }
 
-// Labels amigables para los estados
+// Labels amigables para los estados.
+// REFRIGERIO se muestra como BREAK desde 2026-09: el almuerzo salio a COMIDA y el
+// estado quedo solo para el break corto. El valor en BD sigue siendo REFRIGERIO.
 export const AGENT_STATE_LABELS: Record<AgentState, string> = {
   [AgentState.DISPONIBLE]: 'Disponible',
   [AgentState.EN_REUNION]: 'En Reunión',
-  [AgentState.REFRIGERIO]: 'Refrigerio',
+  [AgentState.REFRIGERIO]: 'BREAK',
   [AgentState.SSHH]: 'Baño',
   [AgentState.EN_LLAMADA]: 'En Llamada',
   [AgentState.TIPIFICANDO]: 'Tipificando',
@@ -68,14 +77,28 @@ export const AGENT_STATE_LABELS: Record<AgentState, string> = {
   [AgentState.DESCONECTADO]: 'Desconectado',
   [AgentState.GESTION_MANUAL]: 'Gestión Manual',
   [AgentState.SEGUIMIENTO]: 'Seguimiento',
-  [AgentState.WHATSAPP]: 'WhatsApp'
+  [AgentState.WHATSAPP]: 'WhatsApp',
+  [AgentState.EN_LINEA]: 'En Línea',
+  [AgentState.CAPACITACION]: 'Capacitación',
+  [AgentState.CONSULTA_TIEMPOS]: 'Consulta de Tiempos',
+  [AgentState.COMIDA]: 'Comida',
+  [AgentState.AUSENTE]: 'Ausente',
+  [AgentState.SOPORTE]: 'Soporte'
 };
 
-// Estados que el agente puede cambiar manualmente
+// Estados que el agente elige desde su selector, en el orden en que los ve.
+// NO estan aca a proposito:
+//   EN_LINEA          lo pone el sistema al entrar y al salir de cada actividad (fase 3)
+//   CONSULTA_TIEMPOS  se prende solo al entrar a la pantalla de indicadores
+//   EN_MANUAL         legacy, ninguna pantalla lo usa
 export const MANUAL_STATES = [
   AgentState.DISPONIBLE,
+  AgentState.GESTION_MANUAL,
   AgentState.EN_REUNION,
+  AgentState.CAPACITACION,
   AgentState.REFRIGERIO,
+  AgentState.COMIDA,
   AgentState.SSHH,
-  AgentState.GESTION_MANUAL
+  AgentState.AUSENTE,
+  AgentState.SOPORTE
 ];

@@ -343,7 +343,13 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       [AgentState.DESCONECTADO]: '#9e9e9e',
       [AgentState.GESTION_MANUAL]: '#009688',
       [AgentState.SEGUIMIENTO]: '#E91E63',
-      [AgentState.WHATSAPP]: '#25D366'
+      [AgentState.WHATSAPP]: '#25D366',
+      [AgentState.EN_LINEA]: '#78909c',
+      [AgentState.CAPACITACION]: '#3f51b5',
+      [AgentState.CONSULTA_TIEMPOS]: '#795548',
+      [AgentState.COMIDA]: '#ef6c00',
+      [AgentState.AUSENTE]: '#c62828',
+      [AgentState.SOPORTE]: '#00838f'
     };
     return colors[state] || '#757575';
   }

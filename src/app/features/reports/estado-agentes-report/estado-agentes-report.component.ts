@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import {
   EstadoAgentesReportService,
   ResumenEstadoAgentes,
+  ResumenPorAgente,
   RegistroAsistenciaDTO,
   ResumenAsistencia,
   AgenteOption
@@ -293,9 +294,9 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
         </button>
       </div>
 
-      <!-- KPI Cards -->
+      <!-- KPI Cards: los 5 indicadores del catalogo, sobre el total del equipo -->
       @if (resumen() && activeTab() !== 'asistencia') {
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
@@ -310,24 +311,36 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
-              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <lucide-angular name="repeat" [size]="24" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <lucide-angular name="clock" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
               </div>
               <div>
-                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ resumen()!.totalCambiosEstado | number }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Cambios de Estado</p>
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ totales().pOcupacion }}%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" title="Productivo / (Conectado - Pausas)">% Ocupacion</p>
               </div>
             </div>
           </div>
 
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
-              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <lucide-angular name="clock" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
+              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <lucide-angular name="repeat" [size]="24" class="text-blue-600 dark:text-blue-400"></lucide-angular>
               </div>
               <div>
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ avgOcupacion() }}%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Ocupacion Promedio</p>
+                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ totales().pEnCola }}%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" title="En cola / Conectado">% En cola</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                <lucide-angular name="timer" [size]="24" class="text-sky-600 dark:text-sky-400"></lucide-angular>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-sky-600 dark:text-sky-400">{{ totales().pFueraDeCola }}%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" title="Fuera de la cola / Conectado">% Fuera de la cola</p>
               </div>
             </div>
           </div>
@@ -335,11 +348,23 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                <lucide-angular name="coffee" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+                <lucide-angular name="user-x" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
               </div>
               <div>
-                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ totalBreakTime() }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Tiempo Ocioso Total</p>
+                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ totales().pOcioso }}%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" title="Ocioso / En cola. Mide al discador, no al asesor.">% Ocioso</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <lucide-angular name="coffee" [size]="24" class="text-orange-600 dark:text-orange-400"></lucide-angular>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ totales().pPausas }}%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" title="Pausas / Conectado">% Pausas</p>
               </div>
             </div>
           </div>
@@ -351,88 +376,185 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
       @if (activeTab() === 'resumen' && resumen()) {
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Entrada</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Salida</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase"
-                      title="Tiempo pagado: conectado menos pausas. Incluye la reunion.">Jornada</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase"
-                      title="En llamada + tipificando + gestion manual + seguimiento + en manual">Productivo</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase"
-                      title="Tiempo en DISPONIBLE: en su puesto esperando llamada">Ocioso</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase"
-                      title="Tiempo en EN_REUNION. Es jornada, pero sale del calculo de ocupacion.">Reunion</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase"
-                      title="Refrigerio + SSHH. No es jornada.">Pausas</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase"
-                      title="Productivo / (Jornada - Reunion)">% Ocupacion</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">En Llamada</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tipificando</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Gestion Manual</th>
+            <table class="w-full text-xs whitespace-nowrap">
+              <thead>
+                <!-- Fila de grupos -->
+                <tr class="text-[9px] uppercase tracking-wider">
+                  <th class="sticky left-0 z-20 bg-gray-50 dark:bg-gray-700 px-3 py-1.5"></th>
+                  <th colspan="3" class="bg-gray-50 dark:bg-gray-700"></th>
+                  <th colspan="4" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
+                      bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">En cola</th>
+                  <th colspan="2" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
+                      bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300">Fuera de la cola</th>
+                  <th colspan="5" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
+                      bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300">Otras tareas</th>
+                  <th colspan="3" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
+                      bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300">Reunion y capacitacion</th>
+                  <th colspan="6" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
+                      bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300">Pausas</th>
+                  <th colspan="6" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
+                      bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300">Indicadores</th>
+                </tr>
+                <!-- Fila de columnas -->
+                <tr class="bg-gray-50 dark:bg-gray-700 text-[10px] font-semibold
+                           text-gray-600 dark:text-gray-300 uppercase">
+                  <th class="sticky left-0 z-20 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-left
+                             border-r border-gray-300 dark:border-gray-600">Agente</th>
+                  <th class="px-3 py-2">Entrada</th>
+                  <th class="px-3 py-2">Salida</th>
+                  <th class="px-3 py-2 text-indigo-600 dark:text-indigo-400"
+                      title="Suma de todos los estados menos Desconectado">Conectado<br>(Jornada)</th>
+
+                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
+                      title="Ocioso + Interactuando + Tipificando">En cola</th>
+                  <th class="px-3 py-2">Interactuando</th>
+                  <th class="px-3 py-2">Tipificando</th>
+                  <th class="px-3 py-2" title="Tiempo en la cola sin recibir llamada">Ocioso</th>
+
+                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
+                      title="Conectado - En cola">Fuera de<br>la cola</th>
+                  <th class="px-3 py-2" title="Conectado fuera de la cola, sin otra actividad">En linea</th>
+
+                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
+                      title="Ocupado + Seguimiento + WhatsApp + Consulta de tiempos">Otras<br>tareas</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Ocupado</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Seguimiento</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">WhatsApp</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Consulta de<br>tiempos</th>
+
+                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600">Reunion y<br>capacitacion</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Reunion</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Capacitacion</th>
+
+                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
+                      title="BREAK + Comida + SSHH + Ausente + Soporte">Pausas</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">BREAK</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Comida</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">SSHH</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Ausente</th>
+                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Soporte</th>
+
+                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
+                      title="Interactuando + Tipificando + Ocupado + Seguimiento. No incluye WhatsApp.">Productivo</th>
+                  <th class="px-3 py-2" title="Productivo / (Conectado - Pausas)">% Ocupacion</th>
+                  <th class="px-3 py-2" title="En cola / Conectado">% En cola</th>
+                  <th class="px-3 py-2" title="Fuera de la cola / Conectado">% Fuera de<br>la cola</th>
+                  <th class="px-3 py-2" title="Ocioso / En cola. Mide al discador, no al asesor.">% Ocioso</th>
+                  <th class="px-3 py-2" title="Pausas / Conectado">% Pausas</th>
                 </tr>
               </thead>
+
               <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 @for (agente of resumen()!.agentes; track agente.idUsuario) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-3 py-2">
+                    <td class="sticky left-0 z-10 bg-white dark:bg-gray-800 px-3 py-2 text-left
+                               border-r border-gray-300 dark:border-gray-600">
                       <div class="text-gray-900 dark:text-white font-medium">{{ agente.nombreAgente }}</div>
-                      <div class="text-xs text-gray-500 dark:text-gray-400">{{ agente.username }}</div>
+                      <div class="text-[10px] text-gray-500 dark:text-gray-400">{{ agente.username }}</div>
                     </td>
-                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400 text-xs font-medium">
-                      {{ agente.horaEntrada || '-' }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400 text-xs font-medium">
-                      {{ agente.horaSalida || '-' }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-indigo-700 dark:text-indigo-300 font-semibold text-xs">
-                      {{ agente.jornadaTotalFormateada || '-' }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-green-600 dark:text-green-400 font-medium">
-                      {{ agente.tiempoProductivoFormateado }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-amber-600 dark:text-amber-400 font-medium">
-                      {{ agente.tiempoOciosoFormateado }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-sky-600 dark:text-sky-400 font-medium">
-                      {{ agente.tiempoReunionFormateado }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-orange-600 dark:text-orange-400 font-medium">
-                      {{ agente.tiempoPausaFormateado }}
-                    </td>
+                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400">{{ agente.horaEntrada || '-' }}</td>
+                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400">{{ agente.horaSalida || '-' }}</td>
+                    <td class="px-3 py-2 text-center font-semibold text-indigo-700 dark:text-indigo-300">{{ agente.tiempoConectadoFormateado }}</td>
+
+                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100">{{ agente.tiempoEnColaFormateado }}</td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['EN_LLAMADA']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['TIPIFICANDO']) }}</td>
+                    <td class="px-3 py-2 text-center font-medium text-amber-600 dark:text-amber-400">{{ agente.tiempoOciosoFormateado }}</td>
+
+                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100">{{ agente.tiempoFueraDeColaFormateado }}</td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.tiempoEnLineaFormateado }}</td>
+
+                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-teal-700 dark:text-teal-300">{{ agente.tiempoOtrasTareasFormateado }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['GESTION_MANUAL']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['SEGUIMIENTO']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['WHATSAPP']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['CONSULTA_TIEMPOS']) }}</td>
+
+                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-sky-700 dark:text-sky-300">{{ agente.tiempoReunionFormateado }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['EN_REUNION']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['CAPACITACION']) }}</td>
+
+                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-orange-700 dark:text-orange-300">{{ agente.tiempoPausaFormateado }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['REFRIGERIO']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['COMIDA']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['SSHH']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['AUSENTE']) }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['SOPORTE']) }}</td>
+
+                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-green-600 dark:text-green-400">{{ agente.tiempoProductivoFormateado }}</td>
                     <td class="px-3 py-2 text-center">
                       <div class="flex items-center justify-center gap-2">
-                        <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                          <div
-                            class="h-2 rounded-full"
-                            [style.width.%]="agente.porcentajeOcupacion"
-                            [style.background-color]="getOcupacionColor(agente.porcentajeOcupacion)"
-                          ></div>
+                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div class="h-1.5 rounded-full"
+                               [style.width.%]="agente.porcentajeOcupacion"
+                               [style.background-color]="getOcupacionColor(agente.porcentajeOcupacion)"></div>
                         </div>
-                        <span class="text-xs font-semibold" [style.color]="getOcupacionColor(agente.porcentajeOcupacion)">
+                        <span class="font-semibold" [style.color]="getOcupacionColor(agente.porcentajeOcupacion)">
                           {{ agente.porcentajeOcupacion }}%
                         </span>
                       </div>
                     </td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatSeg(agente.segundosPorEstado['EN_LLAMADA']) }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatSeg(agente.segundosPorEstado['TIPIFICANDO']) }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatSeg(agente.segundosPorEstado['GESTION_MANUAL']) }}
-                    </td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.porcentajeEnCola }}%</td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.porcentajeFueraDeCola }}%</td>
+                    <td class="px-3 py-2 text-center font-semibold"
+                        [style.color]="getOciosoColor(agente.porcentajeOcioso)">{{ agente.porcentajeOcioso }}%</td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.porcentajePausas }}%</td>
                   </tr>
                 }
+
                 @if (resumen()!.agentes.length === 0) {
                   <tr>
-                    <td colspan="12" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colspan="30" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
                       <p>No hay datos para mostrar</p>
                     </td>
+                  </tr>
+                } @else {
+                  <!-- Fila de totales: se suman los segundos y recien despues se divide -->
+                  <tr class="bg-gray-100 dark:bg-gray-900/50 font-bold text-gray-900 dark:text-white
+                             border-t-2 border-gray-300 dark:border-gray-600">
+                    <td class="sticky left-0 z-10 bg-gray-100 dark:bg-gray-900/50 px-3 py-2 text-left
+                               border-r border-gray-300 dark:border-gray-600">
+                      TOTAL
+                      <div class="text-[10px] font-normal text-gray-500 dark:text-gray-400">
+                        {{ resumen()!.agentes.length }} agentes
+                      </div>
+                    </td>
+                    <td class="px-3 py-2 text-center">&mdash;</td>
+                    <td class="px-3 py-2 text-center">&mdash;</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().conectado) }}</td>
+
+                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().enCola) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().interactuando) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().tipificando) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().ocioso) }}</td>
+
+                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().fueraDeCola) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().enLinea) }}</td>
+
+                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().otrasTareas) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().ocupado) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().seguimiento) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().whatsapp) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().consultaTiempos) }}</td>
+
+                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().reunionCap) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().reunion) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().capacitacion) }}</td>
+
+                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().pausas) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().brk) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().comida) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().sshh) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().ausente) }}</td>
+                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().soporte) }}</td>
+
+                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600 text-green-700 dark:text-green-400">{{ formatSeg(totales().productivo) }}</td>
+                    <td class="px-3 py-2 text-center" [style.color]="getOcupacionColor(totales().pOcupacion)">{{ totales().pOcupacion }}%</td>
+                    <td class="px-3 py-2 text-center">{{ totales().pEnCola }}%</td>
+                    <td class="px-3 py-2 text-center">{{ totales().pFueraDeCola }}%</td>
+                    <td class="px-3 py-2 text-center" [style.color]="getOciosoColor(totales().pOcioso)">{{ totales().pOcioso }}%</td>
+                    <td class="px-3 py-2 text-center">{{ totales().pPausas }}%</td>
                   </tr>
                 }
               </tbody>
@@ -859,18 +981,58 @@ export class EstadoAgentesReportComponent implements OnInit {
   }
 
   // Helpers
-  avgOcupacion(): string {
-    const r = this.resumen();
-    if (!r || !r.agentes || r.agentes.length === 0) return '0';
-    const avg = r.agentes.reduce((sum, a) => sum + a.porcentajeOcupacion, 0) / r.agentes.length;
-    return avg.toFixed(1);
-  }
 
-  totalBreakTime(): string {
-    const r = this.resumen();
-    if (!r || !r.agentes) return '0s';
-    const totalSeg = r.agentes.reduce((sum, a) => sum + (a.totalSegundosOcioso || 0), 0);
-    return this.formatSeg(totalSeg);
+  /**
+   * Totales del equipo. Se suman los segundos y recien despues se divide: promediar
+   * los porcentajes de cada agente da un numero distinto, porque pesa igual al que
+   * estuvo 8 horas que al que estuvo 20 minutos.
+   */
+  totales = computed(() => {
+    const agentes = this.resumen()?.agentes ?? [];
+    const sum = (f: (a: ResumenPorAgente) => number) =>
+      agentes.reduce((t, a) => t + (f(a) || 0), 0);
+
+    // Los estados sueltos salen del mapa que manda el backend
+    const est = (clave: string) =>
+      agentes.reduce((t, a) => t + (a.segundosPorEstado?.[clave] || 0), 0);
+
+    const conectado = sum(a => a.totalSegundosConectado);
+    const enCola = sum(a => a.totalSegundosEnCola);
+    const pausas = sum(a => a.totalSegundosPausa);
+    const productivo = sum(a => a.totalSegundosProductivo);
+    const ocioso = sum(a => a.totalSegundosOcioso);
+    const fueraDeCola = conectado - enCola;
+
+    return {
+      conectado, enCola, fueraDeCola, pausas, productivo, ocioso,
+      enLinea: sum(a => a.totalSegundosEnLinea),
+      otrasTareas: sum(a => a.totalSegundosOtrasTareas),
+      reunionCap: sum(a => a.totalSegundosReunion),
+      interactuando: est('EN_LLAMADA'),
+      tipificando: est('TIPIFICANDO'),
+      ocupado: est('GESTION_MANUAL'),
+      seguimiento: est('SEGUIMIENTO'),
+      whatsapp: est('WHATSAPP'),
+      consultaTiempos: est('CONSULTA_TIEMPOS'),
+      reunion: est('EN_REUNION'),
+      capacitacion: est('CAPACITACION'),
+      brk: est('REFRIGERIO'),
+      comida: est('COMIDA'),
+      sshh: est('SSHH'),
+      ausente: est('AUSENTE'),
+      soporte: est('SOPORTE'),
+      pOcupacion: this.pct(productivo, conectado - pausas),
+      pEnCola: this.pct(enCola, conectado),
+      pFueraDeCola: this.pct(fueraDeCola, conectado),
+      pOcioso: this.pct(ocioso, enCola),
+      pPausas: this.pct(pausas, conectado)
+    };
+  });
+
+  /** Denominador 0 o negativo devuelve 0, no infinito. Misma regla que el backend. */
+  private pct(parte: number, total: number): number {
+    if (total <= 0) return 0;
+    return Math.round((parte / total) * 10000) / 100;
   }
 
   /** Misma regla que formatSegundos del backend, para que no convivan dos formatos. */
@@ -888,6 +1050,13 @@ export class EstadoAgentesReportComponent implements OnInit {
     if (porcentaje >= 80) return '#10b981';
     if (porcentaje >= 60) return '#f59e0b';
     return '#ef4444';
+  }
+
+  /** Al reves que ocupacion: mucho ocioso es malo. */
+  getOciosoColor(porcentaje: number): string {
+    if (porcentaje > 40) return '#ef4444';
+    if (porcentaje > 25) return '#f59e0b';
+    return '#10b981';
   }
 
   // ==================== ASISTENCIA ====================
