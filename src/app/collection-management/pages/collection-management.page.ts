@@ -50,6 +50,7 @@ import { GestionLockService } from '../../core/services/gestion-lock.service';
 import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
 import { FormatService } from '@/shared/services/format.service';
 import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
+import { CustomerPaymentsWidget } from '../widgets/customer-payments.widget';
 
 interface ActiveCallContext {
   llamadaId: number | null;
@@ -109,7 +110,8 @@ type EvaluacionConvenio =
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
     StatusAlarmClockComponent,
-    AppCurrencyPipe
+    AppCurrencyPipe,
+    CustomerPaymentsWidget
   ],
   template: `
     <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
@@ -483,16 +485,13 @@ type EvaluacionConvenio =
                 }
               }
 
-              @if (activeTab() === 'pautas') {
-                <div class="flex flex-col items-center justify-center h-full py-8">
-                  <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
-                    <lucide-angular name="wrench" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
-                  </div>
-                  <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Funcionalidad en Desarrollo</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center px-4">
-                    Las pautas de gestión estarán disponibles próximamente
-                  </p>
-                </div>
+              @if (activeTab() === 'pagos') {
+                <app-customer-payments-widget
+                  [documento]="customerData()?.numero_documento ?? null"
+                  [tenantId]="selectedTenantId"
+                  [carteraId]="selectedPortfolioId"
+                  [subcarteraId]="selectedSubPortfolioId">
+                </app-customer-payments-widget>
               }
             </div>
           </div>
@@ -2323,7 +2322,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },
-    { id: 'pautas', label: 'Pautas', icon: 'book-open' }
+    { id: 'pagos', label: 'Pagos', icon: 'credit-card' }
   ];
 
   managementForm: ManagementForm = {
