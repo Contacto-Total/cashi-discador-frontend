@@ -222,11 +222,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           });
         }
 
-        // Si está DESCONECTADO, cambiar a DISPONIBLE automáticamente
+        // Si está DESCONECTADO, lo activamos EN LÍNEA, no en DISPONIBLE: queda conectado
+        // pero fuera de la cola, y entra a la cola cuando él elige Disponible.
         if (response.estadoActual === 'DESCONECTADO') {
-          console.log('[AgentDashboard] Agente DESCONECTADO - activando como DISPONIBLE');
+          console.log('[AgentDashboard] Agente DESCONECTADO - activando como EN_LINEA');
           this.agentStatusService.changeStatus(this.userId!, {
-            estado: AgentState.DISPONIBLE,
+            estado: AgentState.EN_LINEA,
             notas: 'Entró a la pantalla de agente'
           }).subscribe();
         }
@@ -238,11 +239,11 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
         this.error = 'Error al cargar el estado del agente';
         this.loading = false;
 
-        // Si no existe estado (agente nuevo o desconectado), crear como DISPONIBLE
+        // Si no existe estado (agente nuevo o desconectado), crear EN LÍNEA
         if (err.status === 404 && this.userId) {
-          console.log('[AgentDashboard] Sin estado previo - creando como DISPONIBLE');
+          console.log('[AgentDashboard] Sin estado previo - creando como EN_LINEA');
           this.agentStatusService.changeStatus(this.userId, {
-            estado: AgentState.DISPONIBLE,
+            estado: AgentState.EN_LINEA,
             notas: 'Entró a la pantalla de agente (nuevo)'
           }).subscribe();
         }
