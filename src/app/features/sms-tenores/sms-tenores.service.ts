@@ -5,7 +5,6 @@ import { environment } from '../../../environments/environment';
 import {
   ContactoControl,
   ConteoTenor,
-  CorreosExcluidos,
   ExportableTenor,
   GrupoTenores,
   PreviewTenor,
@@ -80,16 +79,6 @@ export class SmsTenoresService {
 
   descargar(id: number): Observable<Blob> {
     return this.http.get(`${this.url}/tenor/${id}/export`, { responseType: 'blob' });
-  }
-
-  /** Quién queda fuera por su correo con la carga vigente, por motivo. */
-  correosExcluidos(id: number): Observable<CorreosExcluidos> {
-    return this.http.get<RespuestaApi<CorreosExcluidos>>(`${this.url}/tenor/${id}/correos-excluidos`).pipe(map(r => r.data));
-  }
-
-  /** Reporte en Excel de los que quedan fuera por su correo, con la carga vigente. */
-  descargarCorreosExcluidos(id: number): Observable<Blob> {
-    return this.http.get(`${this.url}/tenor/${id}/correos-excluidos/export`, { responseType: 'blob' });
   }
 
   contactosControl(): Observable<ContactoControl[]> {

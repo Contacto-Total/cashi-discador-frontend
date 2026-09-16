@@ -23,7 +23,6 @@ import {
 import {
   CombinadaTenor,
   ConteoTenor,
-  CorreosExcluidos,
   MensajeTenor,
   PreviewTenor,
   RangoTenor,
@@ -318,20 +317,6 @@ interface ParteMensaje {
                   <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">de {{ miles(vars.clientesEnCartera) }} en la cartera {{ nombreSubcartera() }}</span>
                 </div>
               </div>
-              @if (fueraPorCorreo(); as fuera) {
-                <div class="flex items-center justify-between gap-2.5 rounded-lg border border-[#f3dca9] bg-[#fdf6e7] py-1.5 pl-3 pr-1.5 dark:border-amber-900 dark:bg-amber-950/30">
-                  <span class="flex min-w-0 items-center gap-2 text-[12.5px] text-[#92400e] dark:text-amber-300">
-                    <lucide-angular name="mail" [size]="14" class="block shrink-0" aria-hidden="true"></lucide-angular>
-                    <span><span class="font-bold tabular-nums">{{ miles(fuera) }}</span> fuera por correo</span>
-                  </span>
-                  <button type="button" (click)="abrirCorreos()" [disabled]="!editando()"
-                          [attr.title]="editando() ? null : 'Guarda el tenor para ver el detalle'"
-                          class="inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] px-2 text-xs font-semibold text-[#92400e] transition-colors hover:bg-[#f8e8c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-300 dark:hover:bg-amber-950/60">
-                    Ver detalle
-                    <lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular>
-                  </button>
-                </div>
-              }
               <div class="flex items-center justify-between gap-2.5 border-t border-[#eef1f5] pt-3 dark:border-slate-800">
                 <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ pendiente() ? 'Hay cambios sin recalcular' : 'Calculado con la carga vigente' }}</span>
                 <button type="button" (click)="recalcular()" [disabled]="calculando() || !plantilla.trim()"
@@ -347,7 +332,18 @@ interface ParteMensaje {
 
             <section [class]="estilos.tarjeta">
               <div class="flex items-center justify-between gap-3">
-                <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
+                <div class="flex items-center gap-2.5">
+                  <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
+                  <div role="tablist" aria-label="Qué previsualizar" class="flex rounded-md bg-[#eef1f5] p-0.5 dark:bg-slate-800">
+                    @for (opcion of vistasPrevia; track opcion.valor) {
+                      <button type="button" role="tab" (click)="mostrarPrevia(opcion.valor)" [attr.aria-selected]="vistaPrevia() === opcion.valor"
+                              class="h-6 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                              [ngClass]="vistaPrevia() === opcion.valor ? 'bg-white text-[#0f172a] shadow-sm dark:bg-slate-600 dark:text-white' : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-white'">
+                        {{ opcion.etiqueta }}
+                      </button>
+                    }
+                  </div>
+                </div>
                 @if (totalPreview() > 0) {
                   <div class="flex items-center gap-1.5">
                     <button type="button" (click)="verMensaje(-1)" [disabled]="indicePreview() === 0" aria-label="Mensaje anterior"
@@ -362,31 +358,55 @@ interface ParteMensaje {
                   </div>
                 }
               </div>
-              <div class="flex flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
-                <div class="flex min-h-[176px] flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
-                  <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
-                    <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
-                    <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
-                  </div>
+              @if (vistaPrevia() === 'excel') {
+                <div class="overflow-y-auto overscroll-contain" [style.height.px]="altoPrevia">
                   @if (mensaje(); as m) {
-                    @for (actual of [m]; track actual.telefono + actual.texto) {
-                      <div class="aparecer flex flex-col gap-1.5">
-                        <div class="flex items-center gap-2">
-                          <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(actual.nombre) }}</span>
-                          <span class="text-[13px] font-semibold">{{ actual.nombre || 'Cliente' }}</span>
-                          <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ actual.telefono }}</span>
-                        </div>
-                        <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ actual.texto }}</p>
-                        <span class="text-[11px] tabular-nums" [ngClass]="actual.caracteres > limite() ? 'font-semibold text-[#b91c1c] dark:text-red-400' : 'text-[#5f6c80] dark:text-slate-400'">
-                          {{ actual.caracteres }} / {{ limite() }} caracteres{{ actual.caracteres > limite() ? ' · pasa del límite, el archivo no se generará' : '' }}
-                        </span>
+                    <dl class="!m-0 flex flex-col divide-y divide-[#eef1f5] dark:divide-slate-800">
+                      <div class="flex items-baseline gap-3 py-2 text-[13px]">
+                        <dt class="w-12 shrink-0 text-[11px] font-semibold text-[#8491a3] dark:text-slate-500">Celular</dt>
+                        <dd class="!m-0 min-w-0 flex-1 truncate font-mono text-[12.5px] text-[#0f172a] dark:text-slate-100">{{ m.telefono }}</dd>
                       </div>
-                    }
+                      @for (c of filasExcel(m); track c.token) {
+                        <div class="flex items-baseline gap-3 py-2 text-[13px]">
+                          <dt class="w-12 shrink-0 text-[11px] font-semibold tabular-nums text-[#8491a3] dark:text-slate-500">VAR{{ c.numero }}</dt>
+                          <dd class="!m-0 flex min-w-0 flex-1 items-baseline justify-between gap-3">
+                            <span class="shrink-0 text-[#5f6c80] dark:text-slate-400">{{ c.etiqueta }}@if (c.soloExcel) {<span class="text-[#8491a3] dark:text-slate-500"> · solo Excel</span>}</span>
+                            <span class="min-w-0 truncate text-right font-mono text-[12.5px] text-[#0f172a] dark:text-slate-100" [attr.title]="c.valor">{{ c.valor || '—' }}</span>
+                          </dd>
+                        </div>
+                      }
+                    </dl>
                   } @else {
-                    <p class="my-auto px-2 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
+                    <p class="px-2 py-6 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
                   }
                 </div>
-              </div>
+              } @else {
+                <div #celularPrevia class="flex flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
+                  <div class="flex min-h-[176px] flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
+                    <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
+                      <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
+                      <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
+                    </div>
+                    @if (mensaje(); as m) {
+                      @for (actual of [m]; track actual.telefono + actual.texto) {
+                        <div class="aparecer flex flex-col gap-1.5">
+                          <div class="flex items-center gap-2">
+                            <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(actual.nombre) }}</span>
+                            <span class="text-[13px] font-semibold">{{ actual.nombre || 'Cliente' }}</span>
+                            <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ actual.telefono }}</span>
+                          </div>
+                          <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ actual.texto }}</p>
+                          <span class="text-[11px] tabular-nums" [ngClass]="actual.caracteres > limite() ? 'font-semibold text-[#b91c1c] dark:text-red-400' : 'text-[#5f6c80] dark:text-slate-400'">
+                            {{ actual.caracteres }} / {{ limite() }} caracteres{{ actual.caracteres > limite() ? ' · pasa del límite, el archivo no se generará' : '' }}
+                          </span>
+                        </div>
+                      }
+                    } @else {
+                      <p class="my-auto px-2 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
+                    }
+                  </div>
+                </div>
+              }
             </section>
 
             <section [class]="estilos.tarjeta + ' flex-1 !gap-2.5'" aria-labelledby="titulo-archivo">
@@ -571,74 +591,6 @@ interface ParteMensaje {
           </div>
         </main>
       }
-      @if (correosAbierto()) {
-        <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
-          <div #panelCorreos role="dialog" aria-modal="true" aria-labelledby="titulo-correos" aria-describedby="ayuda-correos"
-               (keydown.tab)="atraparFoco($event, panelCorreos)" (keydown.shift.tab)="atraparFoco($event, panelCorreos)"
-               class="emerger flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl border border-[#e6e9ee] bg-white text-[#0f172a] shadow-[0_24px_64px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
-            <div class="flex items-start gap-3 border-b border-[#eef1f5] px-6 py-4 dark:border-slate-800">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#fdf6e7] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300">
-                <lucide-angular name="mail" [size]="16" class="block"></lucide-angular>
-              </span>
-              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span id="titulo-correos" class="text-[15.5px] font-bold">Correos que quedan fuera</span>
-                <span id="ayuda-correos" class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Clientes que cumplen el resto del tenor pero no reciben el mensaje por su correo. Descarga el reporte para que lo corrijan en la carga.</span>
-              </div>
-              <button type="button" (click)="cerrarCorreos()" aria-label="Cerrar"
-                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] hover:text-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
-                <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
-              </button>
-            </div>
-
-            <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-6 py-5">
-              @if (cargandoCorreos()) {
-                <p class="flex items-center gap-2 text-[13px] text-[#5f6c80] dark:text-slate-400">
-                  <span class="inline-flex animate-spin"><lucide-angular name="loader-2" [size]="16" class="block"></lucide-angular></span>
-                  Revisando los correos de la carga…
-                </p>
-              } @else if (errorCorreos()) {
-                <p class="flex items-start gap-2 text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">
-                  <lucide-angular name="alert-circle" [size]="15" class="mt-px block shrink-0" aria-hidden="true"></lucide-angular>
-                  {{ errorCorreos() }}
-                </p>
-              } @else if (correos(); as c) {
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div class="flex flex-col">
-                    <span class="text-[26px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(c.total) }}</span>
-                    <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">clientes fuera con la carga vigente</span>
-                  </div>
-                  <button type="button" (click)="descargarReporteCorreos()" [disabled]="descargandoReporte() || c.total === 0"
-                          class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0f172a] px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
-                    <span class="inline-flex" [class.animate-spin]="descargandoReporte()">
-                      <lucide-angular [name]="descargandoReporte() ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
-                    </span>
-                    Descargar reporte
-                  </button>
-                </div>
-
-                <ul class="!m-0 flex list-none flex-col divide-y divide-[#eef1f5] rounded-xl border border-[#eef1f5] !p-0 dark:divide-slate-800 dark:border-slate-800">
-                  @for (m of c.motivos; track m.motivo) {
-                    <li class="flex items-start justify-between gap-4 px-4 py-3" [class.opacity-50]="m.clientes === 0">
-                      <div class="flex min-w-0 flex-col gap-0.5">
-                        <span class="text-[13.5px] font-semibold">{{ m.etiqueta }}</span>
-                        <span class="text-xs leading-snug text-[#5f6c80] dark:text-slate-400">{{ m.descripcion }}</span>
-                        @if (m.ejemplos.length) {
-                          <span class="mt-1 flex flex-wrap gap-1.5">
-                            @for (e of m.ejemplos; track e) {
-                              <span class="max-w-full truncate rounded-md bg-[#f4f6f9] px-1.5 py-0.5 font-mono text-[11.5px] text-[#334155] dark:bg-slate-800 dark:text-slate-300">{{ e }}</span>
-                            }
-                          </span>
-                        }
-                      </div>
-                      <span class="shrink-0 text-[17px] font-extrabold tabular-nums">{{ miles(m.clientes) }}</span>
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-          </div>
-        </div>
-      }
       @if (columnasAbierto()) {
         <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
           <div #panelColumnas role="dialog" aria-modal="true" aria-labelledby="titulo-columnas" aria-describedby="ayuda-columnas"
@@ -813,6 +765,13 @@ export class TenorFormComponent implements OnInit {
 
   @ViewChild('editor') private editor?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('nombreCombinada') private nombreCombinada?: ElementRef<HTMLInputElement>;
+  @ViewChild('celularPrevia') private celularPrevia?: ElementRef<HTMLElement>;
+
+  readonly vistasPrevia = [{ valor: 'sms', etiqueta: 'SMS' }, { valor: 'excel', etiqueta: 'Excel' }] as const;
+  /** SMS muestra el mensaje en el celular; Excel, la fila del archivo de ese mismo cliente. */
+  readonly vistaPrevia = signal<'sms' | 'excel'>('sms');
+  /** Alto del celular al cambiar a Excel: la lista lo ocupa igual para no mover la pantalla. */
+  altoPrevia: number | null = null;
 
   readonly estilos = ESTILOS;
   readonly miles = miles;
@@ -829,14 +788,6 @@ export class TenorFormComponent implements OnInit {
   readonly cargandoVariables = signal(false);
   readonly errorVariables = signal<string | null>(null);
   readonly conteo = signal<ConteoTenor | null>(null);
-  /** Clientes fuera por correo en el último recálculo; nulo si el mensaje no usa {CORREO}. */
-  readonly fueraPorCorreo = signal<number | null>(null);
-  /** Ventana de correos que quedan fuera. */
-  readonly correosAbierto = signal(false);
-  readonly correos = signal<CorreosExcluidos | null>(null);
-  readonly cargandoCorreos = signal(false);
-  readonly errorCorreos = signal<string | null>(null);
-  readonly descargandoReporte = signal(false);
   readonly mensaje = signal<MensajeTenor | null>(null);
   readonly totalPreview = signal(0);
   readonly indicePreview = signal(0);
@@ -959,7 +910,8 @@ export class TenorFormComponent implements OnInit {
     const editor = this.editor?.nativeElement;
     if (this.usada(v)) {
       const escapado = token.replace(/[{}]/g, '\\$&');
-      this.plantilla = this.plantilla.replace(new RegExp(' ?' + escapado, 'g'), '');
+      // Si era la primera, el espacio que queda suelto es el de despues: el mensaje no empieza con espacio.
+      this.plantilla = this.plantilla.replace(new RegExp(' ?' + escapado, 'g'), '').replace(/^\s+/, '');
       this.marcarCambio();
       setTimeout(() => this.ajustarAltura());
       return;
@@ -982,6 +934,25 @@ export class TenorFormComponent implements OnInit {
 
   usadaCombinada(c: CombinadaTenor): boolean {
     return this.plantilla.includes(`{${c.token}}`);
+  }
+
+  mostrarPrevia(vista: 'sms' | 'excel'): void {
+    if (vista === 'excel' && this.vistaPrevia() === 'sms') {
+      this.altoPrevia = this.celularPrevia?.nativeElement.offsetHeight ?? null;
+    }
+    this.vistaPrevia.set(vista);
+  }
+
+  /** Columnas del Excel de un mensaje, en el orden en que las calculó el backend. */
+  filasExcel(m: MensajeTenor): { token: string; etiqueta: string; valor: string; numero: number; soloExcel: boolean }[] {
+    const enMensaje = this.tokensMensaje();
+    return Object.entries(m.columnas ?? {}).map(([token, valor], i) => ({
+      token,
+      etiqueta: this.etiquetaDeToken(token),
+      valor,
+      numero: i + 2,
+      soloExcel: !enMensaje.includes(token)
+    }));
   }
 
   /** Variables del mensaje que ocupan columna en el Excel, en su orden: {HOY} y {MANANA} no. */
@@ -1102,59 +1073,7 @@ export class TenorFormComponent implements OnInit {
       this.cerrarCombinada();
     } else if (this.columnasAbierto()) {
       this.cerrarColumnas();
-    } else if (this.correosAbierto()) {
-      this.cerrarCorreos();
     }
-  }
-
-  /** Se consulta al abrir: refleja la versión guardada del tenor y la carga de hoy. */
-  abrirCorreos(): void {
-    const id = this.idTenor();
-    if (!id) {
-      return;
-    }
-    this.focoPrevio = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    this.correosAbierto.set(true);
-    this.correos.set(null);
-    this.errorCorreos.set(null);
-    this.cargandoCorreos.set(true);
-    this.api.correosExcluidos(id).subscribe({
-      next: correos => {
-        this.correos.set(correos);
-        this.cargandoCorreos.set(false);
-      },
-      error: err => {
-        this.errorCorreos.set(mensajeDeError(err, 'No se pudieron revisar los correos.'));
-        this.cargandoCorreos.set(false);
-      }
-    });
-  }
-
-  cerrarCorreos(): void {
-    this.correosAbierto.set(false);
-    const previo = this.focoPrevio;
-    this.focoPrevio = null;
-    previo?.focus();
-  }
-
-  /** Reporte de hoy: la lista no se guarda, así que se descarga con la carga vigente. */
-  descargarReporteCorreos(): void {
-    const id = this.idTenor();
-    const correos = this.correos();
-    if (!id || !correos) {
-      return;
-    }
-    this.descargandoReporte.set(true);
-    this.api.descargarCorreosExcluidos(id).subscribe({
-      next: blob => {
-        guardarArchivo(blob, correos.nombreReporte);
-        this.descargandoReporte.set(false);
-      },
-      error: () => {
-        this.toast.error('No se pudo descargar el reporte.');
-        this.descargandoReporte.set(false);
-      }
-    });
   }
 
   /** Tab no sale del modal: del último control vuelve al primero y al revés. */
@@ -1263,7 +1182,7 @@ export class TenorFormComponent implements OnInit {
   /** Quita la combinada del tenor, del mensaje y de los rangos que la usaban. */
   quitarCombinada(indice: number): void {
     const c = this.combinadas[indice];
-    this.plantilla = this.plantilla.replace(new RegExp(' ?' + `{${c.token}}`.replace(/[{}]/g, '\\$&'), 'g'), '');
+    this.plantilla = this.plantilla.replace(new RegExp(' ?' + `{${c.token}}`.replace(/[{}]/g, '\\$&'), 'g'), '').replace(/^\s+/, '');
     this.rangos = this.rangos.filter(r => r.columna !== c.token);
     this.combinadas = this.combinadas.filter((_, i) => i !== indice);
     this.columnasExcel = this.columnasExcel.filter(t => t !== c.token);
@@ -1342,7 +1261,6 @@ export class TenorFormComponent implements OnInit {
     this.api.preview(this.borrador(), 0).subscribe({
       next: preview => {
         this.conteo.set({ clientes: preview.total, clientesEnCartera: vars.clientesEnCartera });
-        this.fueraPorCorreo.set(preview.fueraPorCorreo ?? null);
         this.aplicarPreview(preview);
         this.pendiente.set(false);
         this.calculando.set(false);
@@ -1556,7 +1474,6 @@ export class TenorFormComponent implements OnInit {
     this.cargandoVariables.set(false);
     this.errorVariables.set(null);
     this.conteo.set(null);
-    this.fueraPorCorreo.set(null);
     this.mensaje.set(null);
     this.totalPreview.set(0);
     this.indicePreview.set(0);
