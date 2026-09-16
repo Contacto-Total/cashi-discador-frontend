@@ -43,6 +43,8 @@ export interface TenorGuardar {
   incluirContactosControl: boolean;
   /** Nombre del Excel sin fecha ni extensión: la fecha la agrega el backend al descargar. */
   nombreArchivo: string;
+  /** Tokens que van como columna del Excel sin escribirse en el mensaje, en su orden. */
+  columnasExcel: string[];
 }
 
 export type EstadoTenor = 'ACTIVO' | 'ARCHIVADO';
@@ -63,6 +65,8 @@ export interface Tenor {
   incluirContactosControl: boolean;
   /** Nombre del Excel sin fecha ni extensión. */
   nombreArchivo: string;
+  /** Tokens que van como columna del Excel sin escribirse en el mensaje. */
+  columnasExcel: string[];
   estado: EstadoTenor;
   origen: string;
   /** Último conteo guardado; nulo si el tenor no se pudo calcular. */
@@ -101,6 +105,8 @@ export interface VariablesSubcartera {
 export interface ConteoTenor {
   clientes: number;
   clientesEnCartera: number;
+  /** Clientes que quedan fuera por su correo; nulo si el mensaje no usa {CORREO}. */
+  fueraPorCorreo?: number | null;
 }
 
 export interface MensajeTenor {
@@ -116,6 +122,25 @@ export interface PreviewTenor {
   total: number;
   desde: number;
   mensajes: MensajeTenor[];
+  /** Solo en la primera página y si el mensaje usa {CORREO}; nulo en otro caso. */
+  fueraPorCorreo: number | null;
+}
+
+/** Por qué un correo no sirve. Llegan los cinco, en su orden, también los que no tienen clientes. */
+export interface MotivoCorreoExcluido {
+  motivo: 'VACIO' | 'FORMATO' | 'RELLENO' | 'DOMINIO_MAL_ESCRITO' | 'COMPARTIDO';
+  etiqueta: string;
+  descripcion: string;
+  clientes: number;
+  /** Algunos correos tal como vienen en la carga. */
+  ejemplos: string[];
+}
+
+/** Con la carga vigente: no se guarda, el reporte se descarga el mismo día. */
+export interface CorreosExcluidos {
+  total: number;
+  motivos: MotivoCorreoExcluido[];
+  nombreReporte: string;
 }
 
 export interface ExportableTenor {

@@ -23,6 +23,7 @@ import {
 import {
   CombinadaTenor,
   ConteoTenor,
+  CorreosExcluidos,
   MensajeTenor,
   PreviewTenor,
   RangoTenor,
@@ -49,6 +50,9 @@ const ESTILOS = {
   numeroRango: 'h-8 w-0 min-w-0 flex-1 border-0 !bg-transparent px-1 text-[13px] tabular-nums !text-[#334155] placeholder:text-[#8491a3] [appearance:textfield] focus:outline-none focus:!shadow-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none dark:!text-slate-200 dark:placeholder:text-slate-500',
   casilla: 'mt-px flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] border-[#8491a3] bg-white text-transparent peer-checked:border-[#0f172a] peer-checked:bg-[#0f172a] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#2563eb] peer-focus-visible:ring-offset-1 dark:border-slate-500 dark:bg-slate-800 dark:peer-checked:border-white dark:peer-checked:bg-white dark:peer-checked:text-slate-900'
 } as const;
+
+/** Columnas de variables del Excel: las 16 del formato menos el celular y el mensaje. */
+const MAX_COLUMNAS_EXCEL = 14;
 
 interface ParteMensaje {
   texto: string;
@@ -314,6 +318,20 @@ interface ParteMensaje {
                   <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">de {{ miles(vars.clientesEnCartera) }} en la cartera {{ nombreSubcartera() }}</span>
                 </div>
               </div>
+              @if (fueraPorCorreo(); as fuera) {
+                <div class="flex items-center justify-between gap-2.5 rounded-lg border border-[#f3dca9] bg-[#fdf6e7] py-1.5 pl-3 pr-1.5 dark:border-amber-900 dark:bg-amber-950/30">
+                  <span class="flex min-w-0 items-center gap-2 text-[12.5px] text-[#92400e] dark:text-amber-300">
+                    <lucide-angular name="mail" [size]="14" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span><span class="font-bold tabular-nums">{{ miles(fuera) }}</span> fuera por correo</span>
+                  </span>
+                  <button type="button" (click)="abrirCorreos()" [disabled]="!editando()"
+                          [attr.title]="editando() ? null : 'Guarda el tenor para ver el detalle'"
+                          class="inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] px-2 text-xs font-semibold text-[#92400e] transition-colors hover:bg-[#f8e8c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-300 dark:hover:bg-amber-950/60">
+                    Ver detalle
+                    <lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular>
+                  </button>
+                </div>
+              }
               <div class="flex items-center justify-between gap-2.5 border-t border-[#eef1f5] pt-3 dark:border-slate-800">
                 <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ pendiente() ? 'Hay cambios sin recalcular' : 'Calculado con la carga vigente' }}</span>
                 <button type="button" (click)="recalcular()" [disabled]="calculando() || !plantilla.trim()"
@@ -371,36 +389,65 @@ interface ParteMensaje {
               </div>
             </section>
 
-            <section [class]="estilos.tarjeta + ' flex-1'" aria-labelledby="titulo-archivo">
+            <section [class]="estilos.tarjeta + ' flex-1 !gap-2.5'" aria-labelledby="titulo-archivo">
               <h2 id="titulo-archivo" class="!m-0 text-[15px] font-bold">Archivo</h2>
               <div class="flex flex-col gap-1">
                 <label for="nombre-archivo" [class]="estilos.etiqueta">Nombre del archivo</label>
                 <input id="nombre-archivo" type="text" [ngModel]="nombreArchivo" (ngModelChange)="alCambiarNombreArchivo($event)"
                        (blur)="archivoTocado = true" [maxlength]="maxNombreArchivo" autocomplete="off" spellcheck="false"
-                       placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-resultado nombre-archivo-ayuda"
+                       placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-resultado"
                        [attr.aria-invalid]="errorArchivoVisible() ? true : null"
                        [class]="errorArchivoVisible() ? estilos.campo + ' !border-[#b91c1c] dark:!border-red-400' : estilos.campo" />
-              </div>
-              <div id="nombre-archivo-resultado" aria-live="polite"
-                   class="flex min-h-[40px] items-center gap-2 rounded-lg border px-2.5 py-2 text-[12.5px] leading-snug"
+                <p id="nombre-archivo-resultado" aria-live="polite" class="flex min-w-0 gap-1.5 pt-1 text-xs leading-snug"
                    [ngClass]="errorArchivoVisible()
-                     ? 'border-[#f5c2c2] bg-[#fdecec] dark:border-red-900 dark:bg-red-950/40'
-                     : 'border-[#eef1f5] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-950/40'">
-                @if (errorArchivoVisible()) {
-                  <lucide-angular name="alert-circle" [size]="15" class="mt-px block shrink-0 self-start text-[#b91c1c] dark:text-red-400" aria-hidden="true"></lucide-angular>
-                  <span class="font-semibold text-[#b91c1c] dark:text-red-400">{{ problemaArchivo() }}</span>
-                } @else if (problemaArchivo()) {
-                  <lucide-angular name="file-spreadsheet" [size]="16" class="block shrink-0 text-[#8491a3] dark:text-slate-500" aria-hidden="true"></lucide-angular>
-                  <span class="text-[#5f6c80] dark:text-slate-400">Escribe un nombre para ver cómo se descargará.</span>
+                     ? 'items-start font-semibold text-[#b91c1c] dark:text-red-400'
+                     : problemaArchivo() ? 'items-center text-[#8491a3] dark:text-slate-500' : 'items-center text-[#15803d] dark:text-green-400'">
+                  @if (errorArchivoVisible()) {
+                    <lucide-angular name="alert-circle" [size]="13" class="mt-px block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span>{{ problemaArchivo() }}</span>
+                  } @else if (problemaArchivo()) {
+                    <lucide-angular name="file-spreadsheet" [size]="13" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span>La fecha de descarga se agrega sola al final.</span>
+                  } @else {
+                    <lucide-angular name="file-spreadsheet" [size]="13" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span class="min-w-0 break-all font-mono" title="Se descarga con este nombre"><span class="sr-only">Se descarga como </span>{{ vistaPreviaArchivo() }}</span>
+                  }
+                </p>
+              </div>
+
+              <div class="mt-1 flex flex-col gap-2 border-t border-[#eef1f5] pt-2.5 dark:border-slate-800">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span [class]="estilos.etiqueta" title="No se escriben en el mensaje; van después de las variables del texto. Los montos dejan fuera a quien no tiene el dato">Columnas solo en el Excel</span>
+                    @if (columnasExcelVisibles().length) {
+                      <span [class]="estilos.contador">{{ columnasExcelVisibles().length }}</span>
+                    }
+                  </div>
+                  <button type="button" (click)="abrirColumnas()" [disabled]="columnasLlenas()" aria-haspopup="dialog"
+                          [attr.title]="columnasLlenas() ? 'Llegaste a las ' + maxColumnasExcel + ' columnas del Excel: quita una para agregar otra' : null"
+                          class="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold text-[#1d4ed8] transition-colors hover:bg-[#eef4ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-950/50">
+                    <lucide-angular name="plus" [size]="13" class="block"></lucide-angular>
+                    Agregar
+                  </button>
+                </div>
+                @if (columnasExcelVisibles().length) {
+                  <div class="flex flex-wrap gap-2">
+                    @for (c of columnasExcelVisibles(); track c.token) {
+                      <span class="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#d5dbe3] bg-[#f1f4f8] pl-2.5 pr-1 text-[12.5px] font-medium text-[#334155] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <lucide-angular name="table-2" [size]="12" class="block text-[#5f6c80] dark:text-slate-400" aria-hidden="true"></lucide-angular>
+                        <span class="text-[11.5px] font-semibold tabular-nums text-[#5f6c80] dark:text-slate-400">VAR{{ c.numero }}</span>
+                        <span>{{ c.etiqueta }}</span>
+                        <button type="button" (click)="quitarColumnaExcel(c.token)" [attr.aria-label]="'Quitar ' + c.etiqueta + ' de las columnas del Excel'"
+                                class="flex h-6 w-6 items-center justify-center rounded-full text-[#5f6c80] transition-colors hover:bg-[#e2e8f0] hover:text-[#b91c1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-700">
+                          <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                        </button>
+                      </span>
+                    }
+                  </div>
                 } @else {
-                  <lucide-angular name="file-spreadsheet" [size]="16" class="block shrink-0 text-[#15803d] dark:text-green-400" aria-hidden="true"></lucide-angular>
-                  <span class="min-w-0 font-mono text-xs font-medium text-[#0f172a] dark:text-slate-100" [attr.aria-label]="'Se descargará como ' + vistaPreviaArchivo()"><span class="break-all">{{ nombreArchivo.trim() }}</span><span class="whitespace-nowrap text-[#15803d] dark:text-green-400">{{ sufijoArchivo() }}</span></span>
+                  <span class="text-xs text-[#8491a3] dark:text-slate-500">Ninguna: solo van las variables del mensaje.</span>
                 }
               </div>
-              <p id="nombre-archivo-ayuda" class="mt-auto flex items-center justify-center gap-1.5 border-t border-[#eef1f5] pt-3 text-center text-xs text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">
-                <lucide-angular name="info" [size]="13" class="block shrink-0" aria-hidden="true"></lucide-angular>
-                <span>La fecha se agrega sola, con tu separador (<span class="font-mono font-semibold text-[#334155] dark:text-slate-200">_</span> o <span class="font-mono font-semibold text-[#334155] dark:text-slate-200">-</span>).</span>
-              </p>
             </section>
           </div>
 
@@ -523,6 +570,139 @@ interface ParteMensaje {
             <p class="text-[13px] text-[#5f6c80] dark:text-slate-400">De la subcartera salen las variables, los rangos y las restricciones que puede usar el tenor.</p>
           </div>
         </main>
+      }
+      @if (correosAbierto()) {
+        <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
+          <div #panelCorreos role="dialog" aria-modal="true" aria-labelledby="titulo-correos" aria-describedby="ayuda-correos"
+               (keydown.tab)="atraparFoco($event, panelCorreos)" (keydown.shift.tab)="atraparFoco($event, panelCorreos)"
+               class="emerger flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl border border-[#e6e9ee] bg-white text-[#0f172a] shadow-[0_24px_64px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            <div class="flex items-start gap-3 border-b border-[#eef1f5] px-6 py-4 dark:border-slate-800">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#fdf6e7] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300">
+                <lucide-angular name="mail" [size]="16" class="block"></lucide-angular>
+              </span>
+              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span id="titulo-correos" class="text-[15.5px] font-bold">Correos que quedan fuera</span>
+                <span id="ayuda-correos" class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Clientes que cumplen el resto del tenor pero no reciben el mensaje por su correo. Descarga el reporte para que lo corrijan en la carga.</span>
+              </div>
+              <button type="button" (click)="cerrarCorreos()" aria-label="Cerrar"
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] hover:text-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+                <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
+              </button>
+            </div>
+
+            <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-6 py-5">
+              @if (cargandoCorreos()) {
+                <p class="flex items-center gap-2 text-[13px] text-[#5f6c80] dark:text-slate-400">
+                  <span class="inline-flex animate-spin"><lucide-angular name="loader-2" [size]="16" class="block"></lucide-angular></span>
+                  Revisando los correos de la carga…
+                </p>
+              } @else if (errorCorreos()) {
+                <p class="flex items-start gap-2 text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">
+                  <lucide-angular name="alert-circle" [size]="15" class="mt-px block shrink-0" aria-hidden="true"></lucide-angular>
+                  {{ errorCorreos() }}
+                </p>
+              } @else if (correos(); as c) {
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex flex-col">
+                    <span class="text-[26px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(c.total) }}</span>
+                    <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">clientes fuera con la carga vigente</span>
+                  </div>
+                  <button type="button" (click)="descargarReporteCorreos()" [disabled]="descargandoReporte() || c.total === 0"
+                          class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0f172a] px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                    <span class="inline-flex" [class.animate-spin]="descargandoReporte()">
+                      <lucide-angular [name]="descargandoReporte() ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
+                    </span>
+                    Descargar reporte
+                  </button>
+                </div>
+
+                <ul class="!m-0 flex list-none flex-col divide-y divide-[#eef1f5] rounded-xl border border-[#eef1f5] !p-0 dark:divide-slate-800 dark:border-slate-800">
+                  @for (m of c.motivos; track m.motivo) {
+                    <li class="flex items-start justify-between gap-4 px-4 py-3" [class.opacity-50]="m.clientes === 0">
+                      <div class="flex min-w-0 flex-col gap-0.5">
+                        <span class="text-[13.5px] font-semibold">{{ m.etiqueta }}</span>
+                        <span class="text-xs leading-snug text-[#5f6c80] dark:text-slate-400">{{ m.descripcion }}</span>
+                        @if (m.ejemplos.length) {
+                          <span class="mt-1 flex flex-wrap gap-1.5">
+                            @for (e of m.ejemplos; track e) {
+                              <span class="max-w-full truncate rounded-md bg-[#f4f6f9] px-1.5 py-0.5 font-mono text-[11.5px] text-[#334155] dark:bg-slate-800 dark:text-slate-300">{{ e }}</span>
+                            }
+                          </span>
+                        }
+                      </div>
+                      <span class="shrink-0 text-[17px] font-extrabold tabular-nums">{{ miles(m.clientes) }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          </div>
+        </div>
+      }
+      @if (columnasAbierto()) {
+        <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
+          <div #panelColumnas role="dialog" aria-modal="true" aria-labelledby="titulo-columnas" aria-describedby="ayuda-columnas"
+               (keydown.tab)="atraparFoco($event, panelColumnas)" (keydown.shift.tab)="atraparFoco($event, panelColumnas)"
+               class="emerger flex max-h-full w-full max-w-[520px] flex-col overflow-hidden rounded-2xl border border-[#e6e9ee] bg-white text-[#0f172a] shadow-[0_24px_64px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            <div class="flex items-start gap-3 border-b border-[#eef1f5] px-6 py-4 dark:border-slate-800">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#eef2f7] text-[#334155] dark:bg-slate-800 dark:text-slate-200">
+                <lucide-angular name="table-2" [size]="16" class="block"></lucide-angular>
+              </span>
+              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span id="titulo-columnas" class="text-[15.5px] font-bold">Columnas solo en el Excel</span>
+                <span id="ayuda-columnas" class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Marca las variables que van como columna del archivo sin escribirse en el mensaje. Los montos, igual que en el mensaje, dejan fuera a quien no tiene el dato.</span>
+              </div>
+              <button type="button" (click)="cerrarColumnas()" aria-label="Cerrar sin guardar"
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] hover:text-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+                <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
+              </button>
+            </div>
+
+            <div class="flex min-h-0 flex-1 flex-col gap-3 px-6 py-4">
+              <label class="relative block">
+                <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
+                  <lucide-angular name="search" [size]="14" class="block"></lucide-angular>
+                </span>
+                <span class="sr-only">Buscar variable</span>
+                <input id="buscar-columnas" type="text" [ngModel]="busquedaColumnas" (ngModelChange)="busquedaColumnas = $event"
+                       autocomplete="off" spellcheck="false" placeholder="Buscar variable…" [class]="estilos.campo + ' w-full pl-9'" />
+              </label>
+              <ul class="!m-0 min-h-0 max-h-[300px] list-none divide-y divide-[#eef1f5] overflow-y-auto overscroll-contain rounded-xl border border-[#eef1f5] !p-0 dark:divide-slate-800 dark:border-slate-800">
+                @for (c of candidatasColumnas(); track c.token) {
+                  <li>
+                    <label class="relative flex items-center gap-3 px-4 py-2.5 text-[13.5px]"
+                           [ngClass]="columnaBloqueada(c.token) ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:bg-[#f8fafc] dark:hover:bg-slate-800/60'">
+                      <input type="checkbox" class="peer sr-only" [checked]="borradorColumnas.includes(c.token)"
+                             [disabled]="columnaBloqueada(c.token)" (change)="alternarColumna(c.token)" />
+                      <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
+                      <span class="min-w-0 flex-1 truncate" [class.font-semibold]="borradorColumnas.includes(c.token)">{{ c.etiqueta }}</span>
+                      <span class="shrink-0 text-[10.5px] font-semibold uppercase tracking-[0.04em] text-[#8491a3] dark:text-slate-500">{{ c.grupo }}</span>
+                    </label>
+                  </li>
+                } @empty {
+                  <li class="px-4 py-4 text-[13px] text-[#5f6c80] dark:text-slate-400">
+                    {{ busquedaColumnas.trim() ? 'Ninguna variable coincide con «' + busquedaColumnas.trim() + '». Revisa si ya está en el mensaje.' : 'Todas las variables ya están en el mensaje.' }}
+                  </li>
+                }
+              </ul>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f5] px-6 py-3.5 dark:border-slate-800">
+              <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                <strong class="font-bold text-[#0f172a] dark:text-slate-100">{{ borradorColumnas.length }}</strong> marcadas ·
+                {{ tokensMensaje().length + borradorColumnas.length }} de {{ maxColumnasExcel }} columnas
+              </span>
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="cerrarColumnas()" class="h-9 rounded-lg px-3.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-[#eef1f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+                <button type="button" (click)="aplicarColumnas()"
+                        class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0f172a] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                  <lucide-angular name="check" [size]="15" class="block"></lucide-angular>
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       }
       @if (combinadaEnEdicion(); as edicion) {
         <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
@@ -649,6 +829,14 @@ export class TenorFormComponent implements OnInit {
   readonly cargandoVariables = signal(false);
   readonly errorVariables = signal<string | null>(null);
   readonly conteo = signal<ConteoTenor | null>(null);
+  /** Clientes fuera por correo en el último recálculo; nulo si el mensaje no usa {CORREO}. */
+  readonly fueraPorCorreo = signal<number | null>(null);
+  /** Ventana de correos que quedan fuera. */
+  readonly correosAbierto = signal(false);
+  readonly correos = signal<CorreosExcluidos | null>(null);
+  readonly cargandoCorreos = signal(false);
+  readonly errorCorreos = signal<string | null>(null);
+  readonly descargandoReporte = signal(false);
   readonly mensaje = signal<MensajeTenor | null>(null);
   readonly totalPreview = signal(0);
   readonly indicePreview = signal(0);
@@ -665,6 +853,13 @@ export class TenorFormComponent implements OnInit {
   readonly tokenDe = tokenDe;
 
   combinadas: CombinadaTenor[] = [];
+  /** Tokens que van como columna del Excel sin escribirse en el mensaje, en su orden. */
+  columnasExcel: string[] = [];
+  readonly maxColumnasExcel = MAX_COLUMNAS_EXCEL;
+  /** Ventana de columnas solo Excel: se marca en borrador y se aplica al final. */
+  readonly columnasAbierto = signal(false);
+  borradorColumnas: string[] = [];
+  busquedaColumnas = '';
 
   readonly porcentaje = computed(() => {
     const c = this.conteo();
@@ -772,6 +967,8 @@ export class TenorFormComponent implements OnInit {
     const inicio = editor?.selectionStart ?? this.plantilla.length;
     const fin = editor?.selectionEnd ?? inicio;
     this.plantilla = this.plantilla.slice(0, inicio) + token + this.plantilla.slice(fin);
+    // Si iba solo como columna del Excel, pasa al mensaje: ya tiene su columna ahi.
+    this.columnasExcel = this.columnasExcel.filter(t => t !== v.token);
     this.marcarCambio();
     if (editor) {
       const posicion = inicio + token.length;
@@ -785,6 +982,91 @@ export class TenorFormComponent implements OnInit {
 
   usadaCombinada(c: CombinadaTenor): boolean {
     return this.plantilla.includes(`{${c.token}}`);
+  }
+
+  /** Variables del mensaje que ocupan columna en el Excel, en su orden: {HOY} y {MANANA} no. */
+  tokensMensaje(): string[] {
+    const tokens = [...this.plantilla.matchAll(/\{([A-Z0-9_]+)\}/g)].map(m => m[1]);
+    return [...new Set(tokens)].filter(t => t !== 'HOY' && t !== 'MANANA');
+  }
+
+  /** Columnas solo Excel que siguen fuera del mensaje, con la VAR que les toca: van después de las del mensaje. */
+  columnasExcelVisibles(): { token: string; etiqueta: string; numero: number }[] {
+    const enMensaje = this.tokensMensaje();
+    const base = enMensaje.length + 2;
+    return this.columnasExcel
+      .filter(t => !enMensaje.includes(t))
+      .map((token, i) => ({ token, etiqueta: this.etiquetaDeToken(token), numero: base + i }));
+  }
+
+  columnasLlenas(): boolean {
+    return this.tokensMensaje().length + this.columnasExcelVisibles().length >= MAX_COLUMNAS_EXCEL;
+  }
+
+  /** Lo que se puede agregar como columna: datos de la carga y combinadas que no están en el mensaje. */
+  candidatasColumnas(): { token: string; etiqueta: string; grupo: string }[] {
+    const vars = this.variables();
+    if (!vars) {
+      return [];
+    }
+    const enMensaje = this.tokensMensaje();
+    const plano = (texto: string) => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const busqueda = plano(this.busquedaColumnas.trim());
+    return [
+      ...vars.cliente.map(v => ({ v, grupo: 'cliente' })),
+      ...vars.montos.map(v => ({ v, grupo: 'monto' })),
+      ...this.combinadas.map(c => ({ v: { token: c.token, columna: 'combinada', etiqueta: c.etiqueta, filtra: true }, grupo: 'combinado' })),
+      ...vars.fechas.map(v => ({ v, grupo: 'fecha' }))
+    ]
+      .filter(({ v }) => v.columna !== null && !enMensaje.includes(v.token))
+      .filter(({ v }) => !busqueda || plano(v.etiqueta).includes(busqueda))
+      .map(({ v, grupo }) => ({ token: v.token, etiqueta: v.etiqueta, grupo }));
+  }
+
+  columnaBloqueada(token: string): boolean {
+    return !this.borradorColumnas.includes(token)
+      && this.tokensMensaje().length + this.borradorColumnas.length >= MAX_COLUMNAS_EXCEL;
+  }
+
+  abrirColumnas(): void {
+    this.focoPrevio = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const enMensaje = this.tokensMensaje();
+    this.borradorColumnas = this.columnasExcel.filter(t => !enMensaje.includes(t));
+    this.busquedaColumnas = '';
+    this.columnasAbierto.set(true);
+    setTimeout(() => document.getElementById('buscar-columnas')?.focus());
+  }
+
+  cerrarColumnas(): void {
+    this.columnasAbierto.set(false);
+    const previo = this.focoPrevio;
+    this.focoPrevio = null;
+    previo?.focus();
+  }
+
+  alternarColumna(token: string): void {
+    this.borradorColumnas = this.borradorColumnas.includes(token)
+      ? this.borradorColumnas.filter(t => t !== token)
+      : [...this.borradorColumnas, token];
+  }
+
+  /** Las que ya estaban conservan su lugar; las nuevas van al final en el orden en que se marcaron. */
+  aplicarColumnas(): void {
+    const actuales = this.columnasExcel.filter(t => this.borradorColumnas.includes(t));
+    this.columnasExcel = [...actuales, ...this.borradorColumnas.filter(t => !actuales.includes(t))];
+    this.marcarCambio();
+    this.cerrarColumnas();
+  }
+
+  quitarColumnaExcel(token: string): void {
+    this.columnasExcel = this.columnasExcel.filter(t => t !== token);
+    this.marcarCambio();
+  }
+
+  private etiquetaDeToken(token: string): string {
+    const vars = this.variables();
+    const variable = vars ? [...vars.cliente, ...vars.montos, ...vars.fechas].find(v => v.token === token) : undefined;
+    return variable?.etiqueta ?? this.combinadas.find(c => c.token === token)?.etiqueta ?? token;
   }
 
   /** Inserta o quita la combinada del mensaje, igual que una variable normal. */
@@ -818,7 +1100,61 @@ export class TenorFormComponent implements OnInit {
   alPulsarEscape(): void {
     if (this.combinadaEnEdicion()) {
       this.cerrarCombinada();
+    } else if (this.columnasAbierto()) {
+      this.cerrarColumnas();
+    } else if (this.correosAbierto()) {
+      this.cerrarCorreos();
     }
+  }
+
+  /** Se consulta al abrir: refleja la versión guardada del tenor y la carga de hoy. */
+  abrirCorreos(): void {
+    const id = this.idTenor();
+    if (!id) {
+      return;
+    }
+    this.focoPrevio = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.correosAbierto.set(true);
+    this.correos.set(null);
+    this.errorCorreos.set(null);
+    this.cargandoCorreos.set(true);
+    this.api.correosExcluidos(id).subscribe({
+      next: correos => {
+        this.correos.set(correos);
+        this.cargandoCorreos.set(false);
+      },
+      error: err => {
+        this.errorCorreos.set(mensajeDeError(err, 'No se pudieron revisar los correos.'));
+        this.cargandoCorreos.set(false);
+      }
+    });
+  }
+
+  cerrarCorreos(): void {
+    this.correosAbierto.set(false);
+    const previo = this.focoPrevio;
+    this.focoPrevio = null;
+    previo?.focus();
+  }
+
+  /** Reporte de hoy: la lista no se guarda, así que se descarga con la carga vigente. */
+  descargarReporteCorreos(): void {
+    const id = this.idTenor();
+    const correos = this.correos();
+    if (!id || !correos) {
+      return;
+    }
+    this.descargandoReporte.set(true);
+    this.api.descargarCorreosExcluidos(id).subscribe({
+      next: blob => {
+        guardarArchivo(blob, correos.nombreReporte);
+        this.descargandoReporte.set(false);
+      },
+      error: () => {
+        this.toast.error('No se pudo descargar el reporte.');
+        this.descargandoReporte.set(false);
+      }
+    });
   }
 
   /** Tab no sale del modal: del último control vuelve al primero y al revés. */
@@ -930,6 +1266,7 @@ export class TenorFormComponent implements OnInit {
     this.plantilla = this.plantilla.replace(new RegExp(' ?' + `{${c.token}}`.replace(/[{}]/g, '\\$&'), 'g'), '');
     this.rangos = this.rangos.filter(r => r.columna !== c.token);
     this.combinadas = this.combinadas.filter((_, i) => i !== indice);
+    this.columnasExcel = this.columnasExcel.filter(t => t !== c.token);
     this.marcarCambio();
     setTimeout(() => this.ajustarAltura());
   }
@@ -984,10 +1321,6 @@ export class TenorFormComponent implements OnInit {
     return nombreArchivoConFecha(this.nombreArchivo);
   }
 
-  /** Fecha y extensión que se agregan al nombre; van resaltadas y sin partirse en dos líneas. */
-  sufijoArchivo(): string {
-    return this.vistaPreviaArchivo().slice(this.nombreArchivo.trim().length);
-  }
 
   /** El textarea crece con el texto: así la copia que pinta las variables queda alineada. */
   ajustarAltura(): void {
@@ -1009,6 +1342,7 @@ export class TenorFormComponent implements OnInit {
     this.api.preview(this.borrador(), 0).subscribe({
       next: preview => {
         this.conteo.set({ clientes: preview.total, clientesEnCartera: vars.clientesEnCartera });
+        this.fueraPorCorreo.set(preview.fueraPorCorreo ?? null);
         this.aplicarPreview(preview);
         this.pendiente.set(false);
         this.calculando.set(false);
@@ -1169,6 +1503,7 @@ export class TenorFormComponent implements OnInit {
         this.plantilla = tenor.plantilla;
         this.rangos = tenor.rangos.map(r => ({ ...r }));
         this.combinadas = (tenor.combinadas ?? []).map(c => ({ ...c, columnas: [...c.columnas] }));
+        this.columnasExcel = [...(tenor.columnasExcel ?? [])];
         this.sinPromesaVigente = tenor.restricciones.sinPromesaVigente;
         this.sinListaNegra = tenor.restricciones.sinListaNegra;
         this.soloNoContenido = tenor.restricciones.soloNoContenido;
@@ -1221,12 +1556,14 @@ export class TenorFormComponent implements OnInit {
     this.cargandoVariables.set(false);
     this.errorVariables.set(null);
     this.conteo.set(null);
+    this.fueraPorCorreo.set(null);
     this.mensaje.set(null);
     this.totalPreview.set(0);
     this.indicePreview.set(0);
     this.pendiente.set(false);
     this.rangos = [];
     this.combinadas = [];
+    this.columnasExcel = [];
     this.combinadaEnEdicion.set(null);
     this.soloNoContenido = false;
   }
@@ -1257,7 +1594,8 @@ export class TenorFormComponent implements OnInit {
         soloNoContenido: this.soloNoContenido
       },
       incluirContactosControl: this.incluirContactosControl,
-      nombreArchivo: this.nombreArchivo.trim()
+      nombreArchivo: this.nombreArchivo.trim(),
+      columnasExcel: this.columnasExcelVisibles().map(c => c.token)
     };
   }
 }
