@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 import { ClientSearchService, DynamicClient, GlobalSearchResult } from '../../core/services/client-search.service';
 import { AgentStatusService } from '../../core/services/agent-status.service';
@@ -35,6 +36,8 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   foundResults = signal<GlobalSearchResult[]>([]);
 
   private previousState: string | null = null;
+  private statusSubscription?: Subscription;
+  private transferringToCollection = false;
 
   constructor(
     private router: Router,
@@ -48,7 +51,7 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?.id) {
       // Guardar estado anterior para restaurarlo al salir
-      this.agentStatusService.currentStatus$.subscribe(status => {
+      this.statusSubscription = this.agentStatusService.currentStatus$.subscribe(status => {
         if (status && !this.previousState && status.estadoActual !== 'GESTION_MANUAL') {
           this.previousState = status.estadoActual;
         }
@@ -65,6 +68,12 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.statusSubscription?.unsubscribe();
+
+    // Collection toma control del estado al abrir una ficha manual. Restaurarlo
+    // desde aquí puede llegar tarde y sobrescribir su finalización a DISPONIBLE.
+    if (this.transferringToCollection) return;
+
     // Restaurar estado anterior al salir (DISPONIBLE por defecto)
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?.id) {
@@ -190,6 +199,7 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   goToManagement(result: GlobalSearchResult): void {
     if (!result?.clientData?.documento) return;
 
+    this.transferringToCollection = true;
     this.router.navigate(['/collection-management'], {
       queryParams: {
         documento: result.clientData.documento,
@@ -198,6 +208,8 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
         subPortfolioId: result.subPortfolioId,
         source: 'manual'
       }
+    }).then(navigated => {
+      if (!navigated) this.transferringToCollection = false;
     });
   }
 
