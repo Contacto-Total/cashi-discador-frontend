@@ -609,6 +609,7 @@
                     <th [class]="ui.th">Qué salió</th>
                     <th [class]="ui.thDerecha">Duración</th>
                     <th [class]="ui.thDerecha">Costo</th>
+                    <th [class]="ui.th"><span class="sr-only">Audio</span></th>
                     <th [class]="ui.th"><span class="sr-only">Abrir</span></th>
                   </tr>
                 </thead>
@@ -629,6 +630,15 @@
                       <td [class]="ui.td" [ngClass]="queSeConsiguio(s) === '—' ? 'text-[#5f6c80] dark:text-slate-400' : ''">{{ queSeConsiguio(s) }}</td>
                       <td [class]="ui.td + ' text-right tabular-nums'">{{ s.duracionSeg ? s.duracionSeg + ' s' : '—' }}</td>
                       <td [class]="ui.td + ' text-right tabular-nums'">{{ s.costoEstimadoUsd ? ('$' + s.costoEstimadoUsd) : '—' }}</td>
+                      <td [class]="ui.td">
+                        <!-- Descarga el audio sin abrir la fila: el clic no sube al <tr>. Sin duración no hay audio (WAV vacío). -->
+                        <button type="button" (click)="descargarGrabacion(s, $event)" (keydown.enter)="$event.stopPropagation()"
+                                [disabled]="!s.duracionSeg || descargando === s.id"
+                                [title]="!s.duracionSeg ? 'Esta llamada no tiene audio' : 'Descargar la grabación'"
+                                aria-label="Descargar la grabación" [class]="ui.botonIcono">
+                          <lucide-angular [name]="descargando === s.id ? 'loader-2' : 'download'" [size]="14" class="block" [class.animate-spin]="descargando === s.id"></lucide-angular>
+                        </button>
+                      </td>
                       <td [class]="ui.td + ' text-[#8491a3]'"><lucide-angular name="chevron-right" [size]="16" class="block"></lucide-angular></td>
                     </tr>
                   }

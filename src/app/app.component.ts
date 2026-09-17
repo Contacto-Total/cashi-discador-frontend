@@ -11,6 +11,7 @@ import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
+import { AgentPresenceService } from './core/services/agent-presence.service';
 import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
 import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
@@ -93,6 +94,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private inactivityService: InactivityService,
     private sessionConfig: SessionConfigService,
     private agentStatusService: AgentStatusService,
+    private agentPresence: AgentPresenceService,
     private recordatoriosService: RecordatoriosService,
     private notificacionesService: NotificacionesSistemaService,
     private menuPermissionService: MenuPermissionService,
@@ -164,6 +166,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Si el asesor esta en la cola y abre una pantalla que no maneja estado, pasa a
+    // EN_LINEA para que el discador no le timbre estando en otra pantalla.
+    this.agentPresence.iniciar();
+
     // Auto-colapsar sidebar en pantalla de tipificación
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)

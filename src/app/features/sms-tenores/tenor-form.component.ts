@@ -38,17 +38,20 @@ const SEGMENTOS = 8;
 /** Clases que se repiten en la pantalla. */
 const ESTILOS = {
   tarjeta: 'flex flex-col gap-[13px] rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900',
-  panel: 'flex flex-col gap-2.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-3 dark:border-slate-800 dark:bg-slate-950/40',
+  panel: 'flex flex-col gap-3 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3.5 py-3.5 dark:border-slate-800 dark:bg-slate-950/40',
   etiqueta: 'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   contador: 'rounded-full border border-[#e2e8f0] bg-white px-2 py-px text-xs font-semibold tabular-nums text-[#5f6c80] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
-  chip: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-medium text-[#334155] transition-[background-color,transform,box-shadow] duration-150 hover:bg-[#f4f6f9] hover:shadow-[0_2px_8px_rgba(15,23,42,0.08)] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
-  chipUsado: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#0f172a] bg-[#0f172a] px-[11px] text-[12.5px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#1e293b] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 dark:border-white dark:bg-white dark:text-slate-900',
+  chip: 'inline-flex h-8 items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8491a3] bg-white px-3 text-[12.5px] font-medium text-[#334155] transition-[background-color,transform,box-shadow] duration-150 hover:bg-[#f4f6f9] hover:shadow-[0_2px_8px_rgba(15,23,42,0.08)] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
+  chipUsado: 'inline-flex h-8 items-center gap-[5px] whitespace-nowrap rounded-full border border-[#0f172a] bg-[#0f172a] px-3 text-[12.5px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#1e293b] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 dark:border-white dark:bg-white dark:text-slate-900',
   select: 'h-[34px] w-full appearance-none rounded-lg border !border-[#8491a3] !bg-white pl-[11px] pr-8 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:disabled:!bg-slate-900 dark:disabled:!text-slate-400',
   flechaSelect: 'pointer-events-none absolute right-[11px] top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400',
   campo: 'h-[38px] rounded-lg border !border-[#8491a3] !bg-white px-3 text-[13.5px] !text-[#0f172a] placeholder:text-[#5f6c80] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:placeholder:text-slate-400',
   numeroRango: 'h-8 w-0 min-w-0 flex-1 border-0 !bg-transparent px-1 text-[13px] tabular-nums !text-[#334155] placeholder:text-[#8491a3] [appearance:textfield] focus:outline-none focus:!shadow-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none dark:!text-slate-200 dark:placeholder:text-slate-500',
   casilla: 'mt-px flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] border-[#8491a3] bg-white text-transparent peer-checked:border-[#0f172a] peer-checked:bg-[#0f172a] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#2563eb] peer-focus-visible:ring-offset-1 dark:border-slate-500 dark:bg-slate-800 dark:peer-checked:border-white dark:peer-checked:bg-white dark:peer-checked:text-slate-900'
 } as const;
+
+/** Columnas de variables del Excel: las 16 del formato menos el celular y el mensaje. */
+const MAX_COLUMNAS_EXCEL = 14;
 
 interface ParteMensaje {
   texto: string;
@@ -167,44 +170,11 @@ interface ParteMensaje {
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 gap-x-4 gap-y-[13px] md:grid-cols-2">
-                <label class="flex flex-col gap-1">
-                  <span [class]="estilos.etiqueta">Nombre del tenor</span>
-                  <input type="text" [ngModel]="nombre" (ngModelChange)="alCambiarNombre($event)" maxlength="150"
-                         placeholder="Ej.: SMS Castigo — LTD" [class]="estilos.campo" />
-                </label>
-
-                <div class="flex flex-col gap-1">
-                  <label for="nombre-archivo" [class]="estilos.etiqueta">Nombre del archivo</label>
-                  <input id="nombre-archivo" type="text" [ngModel]="nombreArchivo" (ngModelChange)="alCambiarNombreArchivo($event)"
-                         (blur)="archivoTocado = true" [maxlength]="maxNombreArchivo" autocomplete="off" spellcheck="false"
-                         placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-ayuda nombre-archivo-resultado"
-                         [attr.aria-invalid]="errorArchivoVisible() ? true : null"
-                         [class]="errorArchivoVisible() ? estilos.campo + ' !border-[#b91c1c] dark:!border-red-400' : estilos.campo" />
-                  <span id="nombre-archivo-ayuda" class="text-[12px] leading-snug text-[#5f6c80] dark:text-slate-400">
-                    La fecha de descarga se agrega sola al final, con el mismo separador que uses: guion bajo o guion.
-                  </span>
-                  <span id="nombre-archivo-resultado" aria-live="polite"
-                        class="mt-0.5 flex min-h-[36px] items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[12.5px] leading-snug"
-                        [ngClass]="errorArchivoVisible()
-                          ? 'border-[#f5c2c2] bg-[#fdecec] dark:border-red-900 dark:bg-red-950/40'
-                          : 'border-[#eef1f5] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-950/40'">
-                    @if (errorArchivoVisible()) {
-                      <lucide-angular name="alert-circle" [size]="15" class="block shrink-0 text-[#b91c1c] dark:text-red-400" aria-hidden="true"></lucide-angular>
-                      <span class="font-semibold text-[#b91c1c] dark:text-red-400">{{ problemaArchivo() }}</span>
-                    } @else if (problemaArchivo()) {
-                      <lucide-angular name="file-spreadsheet" [size]="15" class="block shrink-0 text-[#8491a3] dark:text-slate-500" aria-hidden="true"></lucide-angular>
-                      <span class="text-[#5f6c80] dark:text-slate-400">Escribe un nombre para ver cómo se descargará.</span>
-                    } @else {
-                      <lucide-angular name="file-spreadsheet" [size]="15" class="block shrink-0 text-[#15803d] dark:text-green-400" aria-hidden="true"></lucide-angular>
-                      <span class="min-w-0">
-                        <span class="text-[#5f6c80] dark:text-slate-400">Se descargará como </span>
-                        <span class="break-all font-mono font-medium text-[#0f172a] dark:text-slate-100">{{ vistaPreviaArchivo() }}</span>
-                      </span>
-                    }
-                  </span>
-                </div>
-              </div>
+              <label class="flex flex-col gap-1">
+                <span [class]="estilos.etiqueta">Nombre del tenor</span>
+                <input type="text" [ngModel]="nombre" (ngModelChange)="alCambiarNombre($event)" maxlength="150"
+                       placeholder="Ej.: SMS Castigo — LTD" [class]="estilos.campo" />
+              </label>
 
               <label class="flex flex-col gap-1">
                 <span [class]="estilos.etiqueta">Texto del SMS</span>
@@ -217,25 +187,39 @@ interface ParteMensaje {
               </label>
             </section>
 
-            <section [class]="estilos.tarjeta">
+            <section [class]="estilos.tarjeta + ' flex-1'">
               <div class="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 class="!m-0 text-[15px] font-bold">Variables</h2>
                 <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Toca una variable para insertarla en el mensaje · tócala otra vez para quitarla</span>
               </div>
-              <div class="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-[0.9fr_2.6fr_0.9fr]">
-                <div [class]="estilos.panel">
-                  <div class="flex items-center gap-2">
-                    <span [class]="estilos.etiqueta">Cliente</span>
-                    <span [class]="estilos.contador">{{ vars.cliente.length }}</span>
+              <div class="grid flex-1 grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                <div class="flex min-w-0 flex-col gap-3">
+                  <div [class]="estilos.panel">
+                    <div class="flex items-center gap-2">
+                      <span [class]="estilos.etiqueta">Cliente</span>
+                      <span [class]="estilos.contador">{{ vars.cliente.length }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      @for (v of vars.cliente; track v.token) {
+                        <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
+                      }
+                    </div>
                   </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (v of vars.cliente; track v.token) {
-                      <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
-                    }
+
+                  <div [class]="estilos.panel + ' flex-1'">
+                    <div class="flex items-center gap-2">
+                      <span [class]="estilos.etiqueta">Fechas</span>
+                      <span [class]="estilos.contador">{{ vars.fechas.length }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      @for (v of vars.fechas; track v.token) {
+                        <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
+                      }
+                    </div>
                   </div>
                 </div>
 
-                <div class="flex flex-col gap-2.5 rounded-[10px] border border-[#dbe7fb] bg-[#f5f9ff] px-3 py-3 dark:border-blue-900 dark:bg-blue-950/30">
+                <div class="flex min-w-0 flex-col gap-3 rounded-[10px] border border-[#dbe7fb] bg-[#f5f9ff] px-3.5 py-3.5 dark:border-blue-900 dark:bg-blue-950/30">
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                       <span [class]="estilos.etiqueta">Montos</span>
@@ -247,7 +231,7 @@ interface ParteMensaje {
                     </span>
                   </div>
                   @if (vars.montos.length) {
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap gap-2">
                       @for (v of vars.montos; track v.token) {
                         <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">
                           @if (usada(v)) {
@@ -264,23 +248,23 @@ interface ParteMensaje {
                           <lucide-angular name="layers" [size]="12" class="block"></lucide-angular>
                           Combinados
                         </span>
-                        <div class="flex flex-wrap gap-1.5">
+                        <div class="flex flex-wrap gap-2">
                           @for (c of combinadas; track c.token; let i = $index) {
                             <span class="inline-flex items-center rounded-full" [ngClass]="usadaCombinada(c) ? 'bg-[#0f172a] dark:bg-white' : 'border border-[#8491a3] bg-white dark:border-slate-600 dark:bg-slate-800'">
                               <button type="button" (click)="insertarCombinada(c)" [attr.aria-pressed]="usadaCombinada(c)" [attr.title]="resumenCombinada(c)"
-                                      class="inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-l-full pl-[11px] pr-1.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      class="inline-flex h-8 items-center gap-[5px] whitespace-nowrap rounded-l-full pl-3 pr-1.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                                       [ngClass]="usadaCombinada(c) ? 'font-semibold text-white dark:text-slate-900' : 'font-medium text-[#334155] hover:bg-[#f4f6f9] dark:text-slate-200 dark:hover:bg-slate-700'">
                                 <lucide-angular name="layers" [size]="11" class="block"></lucide-angular>
                                 {{ c.etiqueta }}
                                 <span class="rounded-full px-1.5 text-[10px] tabular-nums" [ngClass]="usadaCombinada(c) ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-[#eef2f7] text-[#5f6c80] dark:bg-slate-700 dark:text-slate-300'">{{ c.columnas.length }}</span>
                               </button>
                               <button type="button" (click)="editarCombinada(i)" [attr.aria-label]="'Editar ' + c.etiqueta"
-                                      class="flex h-[30px] w-6 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      class="flex h-8 w-6 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                                       [ngClass]="usadaCombinada(c) ? 'text-white/80 hover:text-white dark:text-slate-700' : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400'">
                                 <lucide-angular name="pencil" [size]="11" class="block"></lucide-angular>
                               </button>
                               <button type="button" (click)="quitarCombinada(i)" [attr.aria-label]="'Quitar ' + c.etiqueta"
-                                      class="flex h-[30px] w-6 items-center justify-center rounded-r-full pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      class="flex h-8 w-6 items-center justify-center rounded-r-full pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                                       [ngClass]="usadaCombinada(c) ? 'text-white/80 hover:text-white dark:text-slate-700' : 'text-[#5f6c80] hover:text-[#b91c1c] dark:text-slate-400'">
                                 <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
                               </button>
@@ -307,17 +291,6 @@ interface ParteMensaje {
                   }
                 </div>
 
-                <div [class]="estilos.panel">
-                  <div class="flex items-center gap-2">
-                    <span [class]="estilos.etiqueta">Fechas</span>
-                    <span [class]="estilos.contador">{{ vars.fechas.length }}</span>
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (v of vars.fechas; track v.token) {
-                      <button type="button" (click)="insertar(v)" [attr.aria-pressed]="usada(v)" [class]="claseChip(v)">{{ v.etiqueta }}</button>
-                    }
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -357,9 +330,20 @@ interface ParteMensaje {
               </div>
             </section>
 
-            <section [class]="estilos.tarjeta + ' flex-1'">
+            <section [class]="estilos.tarjeta">
               <div class="flex items-center justify-between gap-3">
-                <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
+                <div class="flex items-center gap-2.5">
+                  <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
+                  <div role="tablist" aria-label="Qué previsualizar" class="flex rounded-md bg-[#eef1f5] p-0.5 dark:bg-slate-800">
+                    @for (opcion of vistasPrevia; track opcion.valor) {
+                      <button type="button" role="tab" (click)="mostrarPrevia(opcion.valor)" [attr.aria-selected]="vistaPrevia() === opcion.valor"
+                              class="h-6 rounded px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                              [ngClass]="vistaPrevia() === opcion.valor ? 'bg-white text-[#0f172a] shadow-sm dark:bg-slate-600 dark:text-white' : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-white'">
+                        {{ opcion.etiqueta }}
+                      </button>
+                    }
+                  </div>
+                </div>
                 @if (totalPreview() > 0) {
                   <div class="flex items-center gap-1.5">
                     <button type="button" (click)="verMensaje(-1)" [disabled]="indicePreview() === 0" aria-label="Mensaje anterior"
@@ -374,30 +358,115 @@ interface ParteMensaje {
                   </div>
                 }
               </div>
-              <div class="flex flex-1 flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
-                <div class="flex min-h-[176px] flex-1 flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
-                  <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
-                    <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
-                    <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
-                  </div>
+              @if (vistaPrevia() === 'excel') {
+                <div class="overflow-y-auto overscroll-contain" [style.height.px]="altoPrevia">
                   @if (mensaje(); as m) {
-                    @for (actual of [m]; track actual.telefono + actual.texto) {
-                      <div class="aparecer flex flex-col gap-1.5">
-                        <div class="flex items-center gap-2">
-                          <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(actual.nombre) }}</span>
-                          <span class="text-[13px] font-semibold">{{ actual.nombre || 'Cliente' }}</span>
-                          <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ actual.telefono }}</span>
-                        </div>
-                        <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ actual.texto }}</p>
-                        <span class="text-[11px] tabular-nums" [ngClass]="actual.caracteres > limite() ? 'font-semibold text-[#b91c1c] dark:text-red-400' : 'text-[#5f6c80] dark:text-slate-400'">
-                          {{ actual.caracteres }} / {{ limite() }} caracteres{{ actual.caracteres > limite() ? ' · pasa del límite, el archivo no se generará' : '' }}
-                        </span>
+                    <dl class="!m-0 flex flex-col divide-y divide-[#eef1f5] dark:divide-slate-800">
+                      <div class="flex items-baseline gap-3 py-2 text-[13px]">
+                        <dt class="w-12 shrink-0 text-[11px] font-semibold text-[#8491a3] dark:text-slate-500">Celular</dt>
+                        <dd class="!m-0 min-w-0 flex-1 truncate font-mono text-[12.5px] text-[#0f172a] dark:text-slate-100">{{ m.telefono }}</dd>
                       </div>
-                    }
+                      @for (c of filasExcel(m); track c.token) {
+                        <div class="flex items-baseline gap-3 py-2 text-[13px]">
+                          <dt class="w-12 shrink-0 text-[11px] font-semibold tabular-nums text-[#8491a3] dark:text-slate-500">VAR{{ c.numero }}</dt>
+                          <dd class="!m-0 flex min-w-0 flex-1 items-baseline justify-between gap-3">
+                            <span class="shrink-0 text-[#5f6c80] dark:text-slate-400">{{ c.etiqueta }}@if (c.soloExcel) {<span class="text-[#8491a3] dark:text-slate-500"> · solo Excel</span>}</span>
+                            <span class="min-w-0 truncate text-right font-mono text-[12.5px] text-[#0f172a] dark:text-slate-100" [attr.title]="c.valor">{{ c.valor || '—' }}</span>
+                          </dd>
+                        </div>
+                      }
+                    </dl>
                   } @else {
-                    <p class="my-auto px-2 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
+                    <p class="px-2 py-6 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
                   }
                 </div>
+              } @else {
+                <div #celularPrevia class="flex flex-col rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
+                  <div class="flex min-h-[176px] flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
+                    <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
+                      <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
+                      <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
+                    </div>
+                    @if (mensaje(); as m) {
+                      @for (actual of [m]; track actual.telefono + actual.texto) {
+                        <div class="aparecer flex flex-col gap-1.5">
+                          <div class="flex items-center gap-2">
+                            <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(actual.nombre) }}</span>
+                            <span class="text-[13px] font-semibold">{{ actual.nombre || 'Cliente' }}</span>
+                            <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ actual.telefono }}</span>
+                          </div>
+                          <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ actual.texto }}</p>
+                          <span class="text-[11px] tabular-nums" [ngClass]="actual.caracteres > limite() ? 'font-semibold text-[#b91c1c] dark:text-red-400' : 'text-[#5f6c80] dark:text-slate-400'">
+                            {{ actual.caracteres }} / {{ limite() }} caracteres{{ actual.caracteres > limite() ? ' · pasa del límite, el archivo no se generará' : '' }}
+                          </span>
+                        </div>
+                      }
+                    } @else {
+                      <p class="my-auto px-2 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
+                    }
+                  </div>
+                </div>
+              }
+            </section>
+
+            <section [class]="estilos.tarjeta + ' flex-1 !gap-2.5'" aria-labelledby="titulo-archivo">
+              <h2 id="titulo-archivo" class="!m-0 text-[15px] font-bold">Archivo</h2>
+              <div class="flex flex-col gap-1">
+                <label for="nombre-archivo" [class]="estilos.etiqueta">Nombre del archivo</label>
+                <input id="nombre-archivo" type="text" [ngModel]="nombreArchivo" (ngModelChange)="alCambiarNombreArchivo($event)"
+                       (blur)="archivoTocado = true" [maxlength]="maxNombreArchivo" autocomplete="off" spellcheck="false"
+                       placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-resultado"
+                       [attr.aria-invalid]="errorArchivoVisible() ? true : null"
+                       [class]="errorArchivoVisible() ? estilos.campo + ' !border-[#b91c1c] dark:!border-red-400' : estilos.campo" />
+                <p id="nombre-archivo-resultado" aria-live="polite" class="flex min-w-0 gap-1.5 pt-1 text-xs leading-snug"
+                   [ngClass]="errorArchivoVisible()
+                     ? 'items-start font-semibold text-[#b91c1c] dark:text-red-400'
+                     : problemaArchivo() ? 'items-center text-[#8491a3] dark:text-slate-500' : 'items-center text-[#15803d] dark:text-green-400'">
+                  @if (errorArchivoVisible()) {
+                    <lucide-angular name="alert-circle" [size]="13" class="mt-px block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span>{{ problemaArchivo() }}</span>
+                  } @else if (problemaArchivo()) {
+                    <lucide-angular name="file-spreadsheet" [size]="13" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span>La fecha de descarga se agrega sola al final.</span>
+                  } @else {
+                    <lucide-angular name="file-spreadsheet" [size]="13" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                    <span class="min-w-0 break-all font-mono" title="Se descarga con este nombre"><span class="sr-only">Se descarga como </span>{{ vistaPreviaArchivo() }}</span>
+                  }
+                </p>
+              </div>
+
+              <div class="mt-1 flex flex-col gap-2 border-t border-[#eef1f5] pt-2.5 dark:border-slate-800">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span [class]="estilos.etiqueta" title="No se escriben en el mensaje; van después de las variables del texto. Los montos dejan fuera a quien no tiene el dato">Columnas solo en el Excel</span>
+                    @if (columnasExcelVisibles().length) {
+                      <span [class]="estilos.contador">{{ columnasExcelVisibles().length }}</span>
+                    }
+                  </div>
+                  <button type="button" (click)="abrirColumnas()" [disabled]="columnasLlenas()" aria-haspopup="dialog"
+                          [attr.title]="columnasLlenas() ? 'Llegaste a las ' + maxColumnasExcel + ' columnas del Excel: quita una para agregar otra' : null"
+                          class="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold text-[#1d4ed8] transition-colors hover:bg-[#eef4ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-950/50">
+                    <lucide-angular name="plus" [size]="13" class="block"></lucide-angular>
+                    Agregar
+                  </button>
+                </div>
+                @if (columnasExcelVisibles().length) {
+                  <div class="flex flex-wrap gap-2">
+                    @for (c of columnasExcelVisibles(); track c.token) {
+                      <span class="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#d5dbe3] bg-[#f1f4f8] pl-2.5 pr-1 text-[12.5px] font-medium text-[#334155] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <lucide-angular name="table-2" [size]="12" class="block text-[#5f6c80] dark:text-slate-400" aria-hidden="true"></lucide-angular>
+                        <span class="text-[11.5px] font-semibold tabular-nums text-[#5f6c80] dark:text-slate-400">VAR{{ c.numero }}</span>
+                        <span>{{ c.etiqueta }}</span>
+                        <button type="button" (click)="quitarColumnaExcel(c.token)" [attr.aria-label]="'Quitar ' + c.etiqueta + ' de las columnas del Excel'"
+                                class="flex h-6 w-6 items-center justify-center rounded-full text-[#5f6c80] transition-colors hover:bg-[#e2e8f0] hover:text-[#b91c1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-700">
+                          <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                        </button>
+                      </span>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-xs text-[#8491a3] dark:text-slate-500">Ninguna: solo van las variables del mensaje.</span>
+                }
               </div>
             </section>
           </div>
@@ -522,6 +591,71 @@ interface ParteMensaje {
           </div>
         </main>
       }
+      @if (columnasAbierto()) {
+        <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
+          <div #panelColumnas role="dialog" aria-modal="true" aria-labelledby="titulo-columnas" aria-describedby="ayuda-columnas"
+               (keydown.tab)="atraparFoco($event, panelColumnas)" (keydown.shift.tab)="atraparFoco($event, panelColumnas)"
+               class="emerger flex max-h-full w-full max-w-[520px] flex-col overflow-hidden rounded-2xl border border-[#e6e9ee] bg-white text-[#0f172a] shadow-[0_24px_64px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            <div class="flex items-start gap-3 border-b border-[#eef1f5] px-6 py-4 dark:border-slate-800">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#eef2f7] text-[#334155] dark:bg-slate-800 dark:text-slate-200">
+                <lucide-angular name="table-2" [size]="16" class="block"></lucide-angular>
+              </span>
+              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span id="titulo-columnas" class="text-[15.5px] font-bold">Columnas solo en el Excel</span>
+                <span id="ayuda-columnas" class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Marca las variables que van como columna del archivo sin escribirse en el mensaje. Los montos, igual que en el mensaje, dejan fuera a quien no tiene el dato.</span>
+              </div>
+              <button type="button" (click)="cerrarColumnas()" aria-label="Cerrar sin guardar"
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] hover:text-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
+                <lucide-angular name="x" [size]="16" class="block"></lucide-angular>
+              </button>
+            </div>
+
+            <div class="flex min-h-0 flex-1 flex-col gap-3 px-6 py-4">
+              <label class="relative block">
+                <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
+                  <lucide-angular name="search" [size]="14" class="block"></lucide-angular>
+                </span>
+                <span class="sr-only">Buscar variable</span>
+                <input id="buscar-columnas" type="text" [ngModel]="busquedaColumnas" (ngModelChange)="busquedaColumnas = $event"
+                       autocomplete="off" spellcheck="false" placeholder="Buscar variable…" [class]="estilos.campo + ' w-full pl-9'" />
+              </label>
+              <ul class="!m-0 min-h-0 max-h-[300px] list-none divide-y divide-[#eef1f5] overflow-y-auto overscroll-contain rounded-xl border border-[#eef1f5] !p-0 dark:divide-slate-800 dark:border-slate-800">
+                @for (c of candidatasColumnas(); track c.token) {
+                  <li>
+                    <label class="relative flex items-center gap-3 px-4 py-2.5 text-[13.5px]"
+                           [ngClass]="columnaBloqueada(c.token) ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:bg-[#f8fafc] dark:hover:bg-slate-800/60'">
+                      <input type="checkbox" class="peer sr-only" [checked]="borradorColumnas.includes(c.token)"
+                             [disabled]="columnaBloqueada(c.token)" (change)="alternarColumna(c.token)" />
+                      <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
+                      <span class="min-w-0 flex-1 truncate" [class.font-semibold]="borradorColumnas.includes(c.token)">{{ c.etiqueta }}</span>
+                      <span class="shrink-0 text-[10.5px] font-semibold uppercase tracking-[0.04em] text-[#8491a3] dark:text-slate-500">{{ c.grupo }}</span>
+                    </label>
+                  </li>
+                } @empty {
+                  <li class="px-4 py-4 text-[13px] text-[#5f6c80] dark:text-slate-400">
+                    {{ busquedaColumnas.trim() ? 'Ninguna variable coincide con «' + busquedaColumnas.trim() + '». Revisa si ya está en el mensaje.' : 'Todas las variables ya están en el mensaje.' }}
+                  </li>
+                }
+              </ul>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f5] px-6 py-3.5 dark:border-slate-800">
+              <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                <strong class="font-bold text-[#0f172a] dark:text-slate-100">{{ borradorColumnas.length }}</strong> marcadas ·
+                {{ tokensMensaje().length + borradorColumnas.length }} de {{ maxColumnasExcel }} columnas
+              </span>
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="cerrarColumnas()" class="h-9 rounded-lg px-3.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-[#eef1f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+                <button type="button" (click)="aplicarColumnas()"
+                        class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0f172a] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                  <lucide-angular name="check" [size]="15" class="block"></lucide-angular>
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
       @if (combinadaEnEdicion(); as edicion) {
         <div class="fundir fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 px-4 py-6">
           <div #panelCombinada role="dialog" aria-modal="true" aria-labelledby="titulo-combinada" aria-describedby="ayuda-combinada"
@@ -631,6 +765,13 @@ export class TenorFormComponent implements OnInit {
 
   @ViewChild('editor') private editor?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('nombreCombinada') private nombreCombinada?: ElementRef<HTMLInputElement>;
+  @ViewChild('celularPrevia') private celularPrevia?: ElementRef<HTMLElement>;
+
+  readonly vistasPrevia = [{ valor: 'sms', etiqueta: 'SMS' }, { valor: 'excel', etiqueta: 'Excel' }] as const;
+  /** SMS muestra el mensaje en el celular; Excel, la fila del archivo de ese mismo cliente. */
+  readonly vistaPrevia = signal<'sms' | 'excel'>('sms');
+  /** Alto del celular al cambiar a Excel: la lista lo ocupa igual para no mover la pantalla. */
+  altoPrevia: number | null = null;
 
   readonly estilos = ESTILOS;
   readonly miles = miles;
@@ -663,6 +804,13 @@ export class TenorFormComponent implements OnInit {
   readonly tokenDe = tokenDe;
 
   combinadas: CombinadaTenor[] = [];
+  /** Tokens que van como columna del Excel sin escribirse en el mensaje, en su orden. */
+  columnasExcel: string[] = [];
+  readonly maxColumnasExcel = MAX_COLUMNAS_EXCEL;
+  /** Ventana de columnas solo Excel: se marca en borrador y se aplica al final. */
+  readonly columnasAbierto = signal(false);
+  borradorColumnas: string[] = [];
+  busquedaColumnas = '';
 
   readonly porcentaje = computed(() => {
     const c = this.conteo();
@@ -762,7 +910,8 @@ export class TenorFormComponent implements OnInit {
     const editor = this.editor?.nativeElement;
     if (this.usada(v)) {
       const escapado = token.replace(/[{}]/g, '\\$&');
-      this.plantilla = this.plantilla.replace(new RegExp(' ?' + escapado, 'g'), '');
+      // Si era la primera, el espacio que queda suelto es el de despues: el mensaje no empieza con espacio.
+      this.plantilla = this.plantilla.replace(new RegExp(' ?' + escapado, 'g'), '').replace(/^\s+/, '');
       this.marcarCambio();
       setTimeout(() => this.ajustarAltura());
       return;
@@ -770,6 +919,8 @@ export class TenorFormComponent implements OnInit {
     const inicio = editor?.selectionStart ?? this.plantilla.length;
     const fin = editor?.selectionEnd ?? inicio;
     this.plantilla = this.plantilla.slice(0, inicio) + token + this.plantilla.slice(fin);
+    // Si iba solo como columna del Excel, pasa al mensaje: ya tiene su columna ahi.
+    this.columnasExcel = this.columnasExcel.filter(t => t !== v.token);
     this.marcarCambio();
     if (editor) {
       const posicion = inicio + token.length;
@@ -783,6 +934,110 @@ export class TenorFormComponent implements OnInit {
 
   usadaCombinada(c: CombinadaTenor): boolean {
     return this.plantilla.includes(`{${c.token}}`);
+  }
+
+  mostrarPrevia(vista: 'sms' | 'excel'): void {
+    if (vista === 'excel' && this.vistaPrevia() === 'sms') {
+      this.altoPrevia = this.celularPrevia?.nativeElement.offsetHeight ?? null;
+    }
+    this.vistaPrevia.set(vista);
+  }
+
+  /** Columnas del Excel de un mensaje, en el orden en que las calculó el backend. */
+  filasExcel(m: MensajeTenor): { token: string; etiqueta: string; valor: string; numero: number; soloExcel: boolean }[] {
+    const enMensaje = this.tokensMensaje();
+    return Object.entries(m.columnas ?? {}).map(([token, valor], i) => ({
+      token,
+      etiqueta: this.etiquetaDeToken(token),
+      valor,
+      numero: i + 2,
+      soloExcel: !enMensaje.includes(token)
+    }));
+  }
+
+  /** Variables del mensaje que ocupan columna en el Excel, en su orden: {HOY} y {MANANA} no. */
+  tokensMensaje(): string[] {
+    const tokens = [...this.plantilla.matchAll(/\{([A-Z0-9_]+)\}/g)].map(m => m[1]);
+    return [...new Set(tokens)].filter(t => t !== 'HOY' && t !== 'MANANA');
+  }
+
+  /** Columnas solo Excel que siguen fuera del mensaje, con la VAR que les toca: van después de las del mensaje. */
+  columnasExcelVisibles(): { token: string; etiqueta: string; numero: number }[] {
+    const enMensaje = this.tokensMensaje();
+    const base = enMensaje.length + 2;
+    return this.columnasExcel
+      .filter(t => !enMensaje.includes(t))
+      .map((token, i) => ({ token, etiqueta: this.etiquetaDeToken(token), numero: base + i }));
+  }
+
+  columnasLlenas(): boolean {
+    return this.tokensMensaje().length + this.columnasExcelVisibles().length >= MAX_COLUMNAS_EXCEL;
+  }
+
+  /** Lo que se puede agregar como columna: datos de la carga y combinadas que no están en el mensaje. */
+  candidatasColumnas(): { token: string; etiqueta: string; grupo: string }[] {
+    const vars = this.variables();
+    if (!vars) {
+      return [];
+    }
+    const enMensaje = this.tokensMensaje();
+    const plano = (texto: string) => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const busqueda = plano(this.busquedaColumnas.trim());
+    return [
+      ...vars.cliente.map(v => ({ v, grupo: 'cliente' })),
+      ...vars.montos.map(v => ({ v, grupo: 'monto' })),
+      ...this.combinadas.map(c => ({ v: { token: c.token, columna: 'combinada', etiqueta: c.etiqueta, filtra: true }, grupo: 'combinado' })),
+      ...vars.fechas.map(v => ({ v, grupo: 'fecha' }))
+    ]
+      .filter(({ v }) => v.columna !== null && !enMensaje.includes(v.token))
+      .filter(({ v }) => !busqueda || plano(v.etiqueta).includes(busqueda))
+      .map(({ v, grupo }) => ({ token: v.token, etiqueta: v.etiqueta, grupo }));
+  }
+
+  columnaBloqueada(token: string): boolean {
+    return !this.borradorColumnas.includes(token)
+      && this.tokensMensaje().length + this.borradorColumnas.length >= MAX_COLUMNAS_EXCEL;
+  }
+
+  abrirColumnas(): void {
+    this.focoPrevio = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const enMensaje = this.tokensMensaje();
+    this.borradorColumnas = this.columnasExcel.filter(t => !enMensaje.includes(t));
+    this.busquedaColumnas = '';
+    this.columnasAbierto.set(true);
+    setTimeout(() => document.getElementById('buscar-columnas')?.focus());
+  }
+
+  cerrarColumnas(): void {
+    this.columnasAbierto.set(false);
+    const previo = this.focoPrevio;
+    this.focoPrevio = null;
+    previo?.focus();
+  }
+
+  alternarColumna(token: string): void {
+    this.borradorColumnas = this.borradorColumnas.includes(token)
+      ? this.borradorColumnas.filter(t => t !== token)
+      : [...this.borradorColumnas, token];
+  }
+
+  /** Las que ya estaban conservan su lugar; las nuevas van al final en el orden en que se marcaron. */
+  aplicarColumnas(): void {
+    const actuales = this.columnasExcel.filter(t => this.borradorColumnas.includes(t));
+    this.columnasExcel = [...actuales, ...this.borradorColumnas.filter(t => !actuales.includes(t))];
+    this.marcarCambio();
+    this.cerrarColumnas();
+  }
+
+  quitarColumnaExcel(token: string): void {
+    this.columnasExcel = this.columnasExcel.filter(t => t !== token);
+    this.marcarCambio();
+  }
+
+  private etiquetaDeToken(token: string): string {
+    const vars = this.variables();
+    const variable = vars ? [...vars.cliente, ...vars.montos, ...vars.fechas].find(v => v.token === token) : undefined;
+    return variable?.etiqueta ?? this.combinadas.find(c => c.token === token)?.etiqueta ?? token;
   }
 
   /** Inserta o quita la combinada del mensaje, igual que una variable normal. */
@@ -816,6 +1071,8 @@ export class TenorFormComponent implements OnInit {
   alPulsarEscape(): void {
     if (this.combinadaEnEdicion()) {
       this.cerrarCombinada();
+    } else if (this.columnasAbierto()) {
+      this.cerrarColumnas();
     }
   }
 
@@ -925,9 +1182,10 @@ export class TenorFormComponent implements OnInit {
   /** Quita la combinada del tenor, del mensaje y de los rangos que la usaban. */
   quitarCombinada(indice: number): void {
     const c = this.combinadas[indice];
-    this.plantilla = this.plantilla.replace(new RegExp(' ?' + `{${c.token}}`.replace(/[{}]/g, '\\$&'), 'g'), '');
+    this.plantilla = this.plantilla.replace(new RegExp(' ?' + `{${c.token}}`.replace(/[{}]/g, '\\$&'), 'g'), '').replace(/^\s+/, '');
     this.rangos = this.rangos.filter(r => r.columna !== c.token);
     this.combinadas = this.combinadas.filter((_, i) => i !== indice);
+    this.columnasExcel = this.columnasExcel.filter(t => t !== c.token);
     this.marcarCambio();
     setTimeout(() => this.ajustarAltura());
   }
@@ -981,6 +1239,7 @@ export class TenorFormComponent implements OnInit {
   vistaPreviaArchivo(): string {
     return nombreArchivoConFecha(this.nombreArchivo);
   }
+
 
   /** El textarea crece con el texto: así la copia que pinta las variables queda alineada. */
   ajustarAltura(): void {
@@ -1162,6 +1421,7 @@ export class TenorFormComponent implements OnInit {
         this.plantilla = tenor.plantilla;
         this.rangos = tenor.rangos.map(r => ({ ...r }));
         this.combinadas = (tenor.combinadas ?? []).map(c => ({ ...c, columnas: [...c.columnas] }));
+        this.columnasExcel = [...(tenor.columnasExcel ?? [])];
         this.sinPromesaVigente = tenor.restricciones.sinPromesaVigente;
         this.sinListaNegra = tenor.restricciones.sinListaNegra;
         this.soloNoContenido = tenor.restricciones.soloNoContenido;
@@ -1220,6 +1480,7 @@ export class TenorFormComponent implements OnInit {
     this.pendiente.set(false);
     this.rangos = [];
     this.combinadas = [];
+    this.columnasExcel = [];
     this.combinadaEnEdicion.set(null);
     this.soloNoContenido = false;
   }
@@ -1250,7 +1511,8 @@ export class TenorFormComponent implements OnInit {
         soloNoContenido: this.soloNoContenido
       },
       incluirContactosControl: this.incluirContactosControl,
-      nombreArchivo: this.nombreArchivo.trim()
+      nombreArchivo: this.nombreArchivo.trim(),
+      columnasExcel: this.columnasExcelVisibles().map(c => c.token)
     };
   }
 }

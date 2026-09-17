@@ -1069,7 +1069,8 @@ function borradorDe(t: Tenor): TenorGuardar {
     restricciones: t.restricciones,
     combinadas: t.combinadas,
     incluirContactosControl: t.incluirContactosControl,
-    nombreArchivo: t.nombreArchivo
+    nombreArchivo: t.nombreArchivo,
+    columnasExcel: t.columnasExcel ?? []
   };
 }
 

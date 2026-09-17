@@ -43,6 +43,8 @@ export interface TenorGuardar {
   incluirContactosControl: boolean;
   /** Nombre del Excel sin fecha ni extensión: la fecha la agrega el backend al descargar. */
   nombreArchivo: string;
+  /** Tokens que van como columna del Excel sin escribirse en el mensaje, en su orden. */
+  columnasExcel: string[];
 }
 
 export type EstadoTenor = 'ACTIVO' | 'ARCHIVADO';
@@ -63,6 +65,8 @@ export interface Tenor {
   incluirContactosControl: boolean;
   /** Nombre del Excel sin fecha ni extensión. */
   nombreArchivo: string;
+  /** Tokens que van como columna del Excel sin escribirse en el mensaje. */
+  columnasExcel: string[];
   estado: EstadoTenor;
   origen: string;
   /** Último conteo guardado; nulo si el tenor no se pudo calcular. */
@@ -110,6 +114,8 @@ export interface MensajeTenor {
   codificacion: 'GSM7' | 'UCS2';
   caracteres: number;
   segmentos: number;
+  /** Valor de cada columna del Excel por token, en el orden del archivo: primero las del mensaje. */
+  columnas: Record<string, string>;
 }
 
 export interface PreviewTenor {
