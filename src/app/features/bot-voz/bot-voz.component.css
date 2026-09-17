@@ -3,9 +3,15 @@
 
 /* Angular deja el host como elemento en línea y sin altura, así que el `min-h-*` del
    div raíz no tenía contra qué resolver: el fondo acababa donde acababa el contenido
-   y al scrollear asomaba el blanco de `.main-content` por debajo. */
+   y al scrollear asomaba el blanco de `.main-content` por debajo.
+   `position: relative` porque `.main-content` hace scroll pero no está posicionado: los
+   `absolute` de dentro (el `sr-only` de la cabecera de la tabla, las anclas del
+   `cdkTrapFocus` del detalle) se medían contra la página y la hacían más alta que la
+   ventana. Con la rueda sobre el panel de la llamada, que es `fixed`, el que scrolleaba
+   era el documento: subía la pantalla entera y dejaba el blanco del `body` debajo. */
 :host {
   display: block;
+  position: relative;
   min-height: 100%;
 }
 @keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

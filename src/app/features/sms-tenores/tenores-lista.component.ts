@@ -8,7 +8,7 @@ import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { ToastService } from '../../shared/services/toast.service';
-import { SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoTenor } from './sms-tenores.service';
+import { CORREO_VALIDO, SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoConFecha } from './sms-tenores.service';
 import { ContactoControl, EstadoTenor, GrupoTenores, MensajeTenor, Tenor, TenorGuardar } from './sms-tenores.models';
 
 /** Límite de un SMS, la misma regla que aplicaba el módulo anterior. */
@@ -309,7 +309,7 @@ const ESTILOS = {
             <div class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
               <div class="flex min-w-0 flex-col gap-1">
                 <h2 id="titulo-contactos" class="!m-0 text-[15px] font-bold leading-snug">Contactos de control</h2>
-                <p class="text-[12.5px] leading-snug text-[#5f6c80] dark:text-slate-400">Reciben el mismo SMS al inicio del archivo de los tenores que los incluyen, con los importes y demás datos de un cliente de ese archivo. Aquí se agregan y se corrigen.</p>
+                <p class="text-[12.5px] leading-snug text-[#5f6c80] dark:text-slate-400">Reciben el mismo mensaje al inicio del archivo de los tenores que los incluyen, con los importes y demás datos de un cliente de ese archivo. En los tenores que usan el correo solo van los que tienen uno. Aquí se agregan y se corrigen.</p>
               </div>
               <button type="button" (click)="cerrarContactos()" aria-label="Cerrar"
                       class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-400 dark:hover:bg-slate-800">
@@ -345,6 +345,10 @@ const ESTILOS = {
                               <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Celular</span>
                               <input name="edicionTelefono" [(ngModel)]="edicion.telefono" maxlength="9" inputmode="numeric" autocomplete="off" placeholder="9XXXXXXXX" [class]="estilos.campo">
                             </label>
+                            <label class="flex flex-col gap-1 sm:col-span-3">
+                              <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Correo <span class="text-[#8491a3] dark:text-slate-500">(opcional)</span></span>
+                              <input name="edicionCorreo" type="email" [(ngModel)]="edicion.correo" maxlength="150" inputmode="email" autocomplete="off" spellcheck="false" placeholder="nombre@contactototal.com.pe" [class]="estilos.campo">
+                            </label>
                           </div>
                           @if (errorContacto()) {
                             <p class="text-[12.5px] font-semibold text-[#b91c1c] dark:text-red-400">{{ errorContacto() }}</p>
@@ -364,6 +368,14 @@ const ESTILOS = {
                         <div class="flex min-w-0 flex-col">
                           <span class="truncate text-[13.5px] font-semibold">{{ c.nombre }}</span>
                           <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ c.documento || 'Sin documento' }} · {{ c.telefono }}</span>
+                          @if (c.correo) {
+                            <span class="flex min-w-0 items-center gap-1 text-[12px] text-[#5f6c80] dark:text-slate-400">
+                              <lucide-angular name="mail" [size]="12" class="block shrink-0" aria-hidden="true"></lucide-angular>
+                              <span class="truncate" [title]="c.correo">{{ c.correo }}</span>
+                            </span>
+                          } @else {
+                            <span class="text-[12px] italic text-[#8491a3] dark:text-slate-500">Sin correo</span>
+                          }
                         </div>
                         <button type="button" (click)="editarContacto(c)" [disabled]="guardandoContacto()" [class]="estilos.botonSecundario">
                           <lucide-angular name="pencil" [size]="14" class="block"></lucide-angular>
@@ -392,6 +404,10 @@ const ESTILOS = {
                 <label class="flex flex-col gap-1">
                   <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">DNI</span>
                   <input name="nuevoDocumento" [(ngModel)]="nuevoContacto.documento" maxlength="12" autocomplete="off" placeholder="DNI o CE" [class]="estilos.campo">
+                </label>
+                <label class="flex flex-col gap-1 sm:col-span-3">
+                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Correo <span class="text-[#8491a3] dark:text-slate-500">(opcional)</span></span>
+                  <input name="nuevoCorreo" type="email" [(ngModel)]="nuevoContacto.correo" maxlength="150" inputmode="email" autocomplete="off" spellcheck="false" placeholder="nombre@contactototal.com.pe" [class]="estilos.campo">
                 </label>
               </div>
               @if (errorAlta()) {
@@ -606,9 +622,9 @@ export class TenoresListaComponent implements OnInit {
   readonly errorContacto = signal<string | null>(null);
   /** Contacto que se está corrigiendo y lo escrito en sus campos. */
   readonly contactoEnEdicion = signal<number | null>(null);
-  edicion = { nombre: '', documento: '', telefono: '' };
+  edicion = { nombre: '', documento: '', telefono: '', correo: '' };
   readonly errorAlta = signal<string | null>(null);
-  nuevoContacto = { nombre: '', documento: '', telefono: '' };
+  nuevoContacto = { nombre: '', documento: '', telefono: '', correo: '' };
 
   readonly activos = computed(() => this.tenores().filter(t => t.estado === 'ACTIVO'));
   readonly archivados = computed(() => this.tenores().filter(t => t.estado === 'ARCHIVADO'));
@@ -811,7 +827,7 @@ export class TenoresListaComponent implements OnInit {
         }
         this.api.descargar(t.id).subscribe({
           next: blob => {
-            guardarArchivo(blob, nombreArchivoTenor(t.id));
+            guardarArchivo(blob, estado.nombreArchivo ?? nombreArchivoConFecha(t.nombreArchivo));
             this.ocupado.set(null);
           },
           error: () => {
@@ -923,7 +939,7 @@ export class TenoresListaComponent implements OnInit {
 
   editarContacto(c: ContactoControl): void {
     this.contactoEnEdicion.set(c.id);
-    this.edicion = { nombre: c.nombre, documento: c.documento ?? '', telefono: c.telefono };
+    this.edicion = { nombre: c.nombre, documento: c.documento ?? '', telefono: c.telefono, correo: c.correo ?? '' };
     this.errorContacto.set(null);
   }
 
@@ -933,7 +949,7 @@ export class TenoresListaComponent implements OnInit {
   }
 
   /** Las mismas reglas que el backend, para avisar sin esperar la respuesta. */
-  private problemaContacto(c: { nombre: string; documento: string; telefono: string }): string | null {
+  private problemaContacto(c: { nombre: string; documento: string; telefono: string; correo: string }): string | null {
     if (!c.nombre.trim()) {
       return 'Escribe el nombre.';
     }
@@ -942,6 +958,9 @@ export class TenoresListaComponent implements OnInit {
     }
     if (!/^9\d{8}$/.test(c.telefono.replace(/\D/g, ''))) {
       return 'El celular tiene que tener 9 dígitos y empezar en 9.';
+    }
+    if (c.correo.trim() && !CORREO_VALIDO.test(c.correo.trim())) {
+      return 'El correo no tiene un formato válido.';
     }
     return null;
   }
@@ -957,9 +976,10 @@ export class TenoresListaComponent implements OnInit {
     }
     const id = c.id;
     const { nombre, documento, telefono } = this.edicion;
+    const correo = this.edicion.correo.trim() || null;
     this.guardandoContacto.set(true);
     this.errorContacto.set(null);
-    this.api.actualizarContactoControl(id, { id, nombre, documento, telefono }).subscribe({
+    this.api.actualizarContactoControl(id, { id, nombre, documento, telefono, correo }).subscribe({
       next: guardado => {
         this.contactos.update(lista => lista.map(x => (x.id === id ? guardado : x)));
         this.contactoEnEdicion.set(null);
@@ -980,12 +1000,13 @@ export class TenoresListaComponent implements OnInit {
       return;
     }
     const { nombre, documento, telefono } = this.nuevoContacto;
+    const correo = this.nuevoContacto.correo.trim() || null;
     this.guardandoContacto.set(true);
     this.errorAlta.set(null);
-    this.api.crearContactoControl({ id: null, nombre, documento, telefono }).subscribe({
+    this.api.crearContactoControl({ id: null, nombre, documento, telefono, correo }).subscribe({
       next: creado => {
         this.contactos.update(lista => [...lista, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-        this.nuevoContacto = { nombre: '', documento: '', telefono: '' };
+        this.nuevoContacto = { nombre: '', documento: '', telefono: '', correo: '' };
         this.guardandoContacto.set(false);
         this.toast.success('Contacto de control agregado.');
       },
@@ -1047,7 +1068,8 @@ function borradorDe(t: Tenor): TenorGuardar {
     rangos: t.rangos,
     restricciones: t.restricciones,
     combinadas: t.combinadas,
-    incluirContactosControl: t.incluirContactosControl
+    incluirContactosControl: t.incluirContactosControl,
+    nombreArchivo: t.nombreArchivo
   };
 }
 
