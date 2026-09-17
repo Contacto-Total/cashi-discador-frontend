@@ -307,6 +307,16 @@ export class BotVozService {
 
   getConfig(): Observable<BotConfig> { return this.http.get<BotConfig>(`${this.apiUrl}/config`); }
 
+  /**
+   * El audio de una llamada del bot, listo para guardar. Es el mismo endpoint que usa
+   * la pantalla de grabaciones del discador: la llamada del bot vive también en
+   * `marcador_llamadas`, y el backend la saca del disco del día o del `.opus` de S3 y la
+   * entrega en WAV. Va por HttpClient y no por `<a href>` para que viaje el JWT.
+   */
+  descargarGrabacion(uuidLlamada: string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/recordings/download/${uuidLlamada}`, { responseType: 'blob' });
+  }
+
   // No hay PUT de configuración: `bot_config` ya no es configuración editable, son los
   // límites del sistema. Y de esos solo queda la ventana legal (Ley 29571), que no se
   // negocia. El techo de llamadas simultáneas se quitó de aquí: es de cada cola.

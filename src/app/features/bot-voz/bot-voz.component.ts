@@ -2696,6 +2696,45 @@ export class BotVozComponent implements OnInit, OnDestroy {
   turnos: BotTurno[] = [];
   cargandoTurnos = false;
 
+  /** Qué fila está bajando su audio; el botón de esa fila gira y se bloquea. */
+  descargando: number | null = null;
+
+  /**
+   * Guarda el audio de la llamada con el nombre con el que se piden a mano:
+   * NOMBRE_DNI_AAAA-MM-DD_HHMM.wav. Para el bloqueo hay un solo estado y no uno por
+   * fila: bajar dos a la vez no es un caso de uso.
+   */
+  descargarGrabacion(s: BotSesion, ev: Event): void {
+    ev.stopPropagation();
+    if (!s.duracionSeg || this.descargando != null) return;
+    this.descargando = s.id;
+    this.svc.descargarGrabacion(s.uuidLlamada).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = this.nombreDeGrabacion(s);
+        a.click();
+        URL.revokeObjectURL(url);
+        this.descargando = null;
+      },
+      error: () => {
+        this.descargando = null;
+        this.flash('No se encontró la grabación de esta llamada', true);
+      },
+    });
+  }
+
+  private nombreDeGrabacion(s: BotSesion): string {
+    const nombre = (s.nombreCliente || 'CLIENTE').trim().split(/\s+/)[0].toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
+    const dni = s.documento || s.telefono || String(s.idCliente ?? s.id);
+    const f = s.inicio ? new Date(s.inicio) : null;
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const fecha = f ? `${f.getFullYear()}-${dos(f.getMonth() + 1)}-${dos(f.getDate())}_${dos(f.getHours())}${dos(f.getMinutes())}` : 'sin-fecha';
+    return `${nombre}_${dni}_${fecha}.wav`;
+  }
+
   abrirDetalle(s: BotSesion): void {
     this.sesionAbierta = s;
     this.turnos = [];
