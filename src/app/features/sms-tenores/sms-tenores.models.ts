@@ -41,8 +41,6 @@ export interface TenorGuardar {
   combinadas: CombinadaTenor[];
   /** Si el archivo empieza con los contactos de control. */
   incluirContactosControl: boolean;
-  /** Nombre del Excel sin fecha ni extensión: la fecha la agrega el backend al descargar. */
-  nombreArchivo: string;
 }
 
 export type EstadoTenor = 'ACTIVO' | 'ARCHIVADO';
@@ -61,8 +59,6 @@ export interface Tenor {
   restricciones: RestriccionesTenor;
   combinadas: CombinadaTenor[];
   incluirContactosControl: boolean;
-  /** Nombre del Excel sin fecha ni extensión. */
-  nombreArchivo: string;
   estado: EstadoTenor;
   origen: string;
   /** Último conteo guardado; nulo si el tenor no se pudo calcular. */
@@ -121,22 +117,18 @@ export interface PreviewTenor {
 export interface ExportableTenor {
   exportable: boolean;
   motivo: string | null;
-  /** Nombre final, con la fecha de hoy en Lima y la extensión; con él se descarga. */
-  nombreArchivo: string | null;
 }
 
 /**
- * Persona del equipo que recibe el mismo mensaje al inicio del archivo, para
- * validarlo. Nombre, documento, celular y correo son suyos; el resto de su fila se
- * copia de un cliente del archivo.
+ * Persona del equipo que recibe el mismo SMS al inicio del archivo, para validar
+ * el mensaje. Nombre, documento y celular son suyos; el resto de su fila se copia
+ * de un cliente del archivo.
  */
 export interface ContactoControl {
   id: number | null;
   nombre: string;
   documento: string | null;
   telefono: string;
-  /** Opcional; sin él, el contacto no va en los tenores que usan {CORREO}. */
-  correo: string | null;
 }
 
 export interface RespuestaApi<T> {

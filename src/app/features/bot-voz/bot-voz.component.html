@@ -1,113 +1,46 @@
 <div class="min-h-screen bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-  <!-- Cabecera con la misma estructura que Gestión de Tenores: título y resumen a la izquierda,
-       acciones a la derecha y, debajo, filtros, buscador y el selector de sección. -->
-  <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+  <!-- Cabecera: las colas son la pestaña de entrada porque es lo que se usa a diario. -->
+  <div class="flex flex-col gap-3 border-b border-[#e6e9ee] bg-white px-7 pt-5 dark:border-slate-800 dark:bg-slate-900">
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex flex-col gap-[3px]">
-        <h1 class="!m-0 text-xl font-bold tracking-[-0.01em]">Bot de voz</h1>
-        <p class="!m-0 flex items-center gap-1.5 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-          @if (hayDiscando) {
-            <span class="relative flex h-2 w-2" aria-hidden="true">
-              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-60 motion-reduce:animate-none"></span>
-              <span class="relative inline-flex h-2 w-2 rounded-full bg-[#16a34a]"></span>
-            </span>
-          }
-          {{ estadoBot }}
-        </p>
+      <div class="flex items-center gap-3">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
+              [ngClass]="hayDiscando ? 'bg-[#e8f6ee] text-[#15803d] dark:bg-emerald-950 dark:text-emerald-300' : 'bg-[#eef2f7] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400'">
+          <lucide-angular name="bot" [size]="19" class="block"></lucide-angular>
+        </span>
+        <div class="flex flex-col gap-[3px]">
+          <h1 class="!m-0 text-xl font-bold tracking-[-0.01em]">Bot de voz</h1>
+          <p class="!m-0 flex items-center gap-1.5 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            @if (hayDiscando) {
+              <span class="relative flex h-2 w-2" aria-hidden="true">
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-60 motion-reduce:animate-none"></span>
+                <span class="relative inline-flex h-2 w-2 rounded-full bg-[#16a34a]"></span>
+              </span>
+            }
+            {{ estadoBot }}
+          </p>
+        </div>
       </div>
-      <!-- Voces y tonos y Reglas se configuran de vez en cuando: botones, como "Contactos de
-           control" en Tenores. Marcados mientras se está dentro. -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="button" (click)="irAVista('tonos')" [attr.aria-pressed]="vista === 'tonos'"
-                [class]="vista === 'tonos' ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">
-          <lucide-angular name="mic" [size]="15" class="block"></lucide-angular>
-          Voces y tonos
+      @if (vista === 'colas' && !colaEnDetalle && puedeCrearCola) {
+        <button type="button" (click)="abrirModalCola()" [class]="ui.botonPrimario">
+          <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
+          Nueva cola
         </button>
-        <button type="button" (click)="irAVista('reglas')" [attr.aria-pressed]="vista === 'reglas'"
-                [class]="vista === 'reglas' ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">
-          <lucide-angular name="clipboard-list" [size]="15" class="block"></lucide-angular>
-          Reglas
-        </button>
-        @if (vista === 'colas' && !colaEnDetalle && puedeCrearCola) {
-          <button type="button" (click)="abrirModalCola()" [class]="ui.botonPrimario">
-            <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-            Nueva cola
-          </button>
-        }
-      </div>
+      }
     </div>
 
-    <div class="flex flex-wrap items-end gap-2.5">
-      <!-- Filtros y buscador solo donde filtran algo: la lista de colas y las llamadas. -->
-      @if ((vista === 'colas' && !colaEnDetalle) || vista === 'llamadas') {
-        <label class="flex min-w-[150px] flex-col gap-1">
-          <span [class]="ui.etiqueta">Cliente</span>
-          <span class="relative block">
-            <select [ngModel]="filtroInquilino" (ngModelChange)="alCambiarInquilino($event)" [class]="ui.select">
-              <option [ngValue]="null">Todos</option>
-              @for (o of opcionesInquilino; track o.id) {
-                <option [ngValue]="o.id">{{ o.nombre }}</option>
-              }
-            </select>
-            <span [class]="ui.flechaSelect"><lucide-angular name="chevron-down" [size]="12" class="block"></lucide-angular></span>
-          </span>
-        </label>
-        <span class="mb-[13px] flex text-[#5f6c80] dark:text-slate-500"><lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular></span>
-        <label class="flex min-w-[150px] flex-col gap-1">
-          <span [class]="ui.etiqueta">Cartera</span>
-          <span class="relative block">
-            <select [ngModel]="filtroCartera" (ngModelChange)="alCambiarCartera($event)" [disabled]="filtroInquilino == null" [class]="ui.select">
-              <option [ngValue]="null">Todas</option>
-              @for (o of opcionesCartera; track o.id) {
-                <option [ngValue]="o.id">{{ o.nombre }}</option>
-              }
-            </select>
-            <span [class]="ui.flechaSelect"><lucide-angular name="chevron-down" [size]="12" class="block"></lucide-angular></span>
-          </span>
-        </label>
-        <span class="mb-[13px] flex text-[#5f6c80] dark:text-slate-500"><lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular></span>
-        <label class="flex min-w-[150px] flex-col gap-1">
-          <span [class]="ui.etiqueta">Subcartera</span>
-          <span class="relative block">
-            <select [ngModel]="filtroSubcartera" (ngModelChange)="alCambiarSubcartera($event)" [disabled]="filtroCartera == null" [class]="ui.select">
-              <option [ngValue]="null">Todas</option>
-              @for (o of opcionesSubcartera; track o.id) {
-                <option [ngValue]="o.id">{{ o.nombre }}</option>
-              }
-            </select>
-            <span [class]="ui.flechaSelect"><lucide-angular name="chevron-down" [size]="12" class="block"></lucide-angular></span>
-          </span>
-        </label>
-
-        <label class="relative block flex-1 basis-[240px]">
-          <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
-            <lucide-angular name="search" [size]="15" class="block"></lucide-angular>
-          </span>
-          <!-- Un buscador por sección: el de colas filtra aquí, el de llamadas va al servidor. -->
-          @if (vista === 'colas') {
-            <input type="search" [(ngModel)]="busquedaCola" (ngModelChange)="paginaColas = 1"
-                   aria-label="Buscar colas" placeholder="Buscar cola por nombre" [class]="ui.campoBuscar">
-          } @else {
-            <input type="search" [(ngModel)]="busquedaLlamadas" (ngModelChange)="alBuscarLlamadas()"
-                   aria-label="Buscar llamadas" placeholder="Buscar por documento, nombre o teléfono" [class]="ui.campoBuscar">
+    <div role="tablist" aria-label="Secciones del bot" class="-mb-px flex gap-1 overflow-x-auto">
+      @for (p of pestanas; track p.valor) {
+        <button type="button" role="tab" [attr.aria-selected]="vista === p.valor" (click)="irAVista(p.valor)"
+                class="inline-flex h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2563eb]"
+                [ngClass]="vista === p.valor ? 'border-[#0f172a] text-[#0f172a] dark:border-white dark:text-white' : 'border-transparent text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-white'">
+          <lucide-angular [name]="p.icono" [size]="15" class="block"></lucide-angular>
+          {{ p.texto }}
+          @if (p.valor === 'colas' && colas.length) {
+            <span class="rounded-full bg-[#eef2f7] px-1.5 py-px text-[11px] tabular-nums dark:bg-slate-800">{{ colas.length }}</span>
           }
-        </label>
+        </button>
       }
-
-      <div role="tablist" aria-label="Secciones del bot" class="flex h-[38px] max-w-full overflow-x-auto rounded-lg border border-[#8491a3] bg-white p-[3px] dark:border-slate-600 dark:bg-slate-800">
-        @for (p of secciones; track p.valor) {
-          <button type="button" role="tab" [attr.aria-selected]="vista === p.valor" (click)="irAVista(p.valor)"
-                  class="inline-flex shrink-0 items-center gap-2 rounded-[6px] px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
-                  [ngClass]="vista === p.valor ? 'bg-[#0f172a] text-white dark:bg-white dark:text-slate-900' : 'text-[#5f6c80] hover:bg-[#f4f6f9] dark:text-slate-300 dark:hover:bg-slate-700'">
-            {{ p.texto }}
-            @if (p.valor === 'colas' && colas.length) {
-              <span class="rounded-full px-1.5 py-px text-[11px] tabular-nums"
-                    [ngClass]="vista === p.valor ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-[#eef2f7] dark:bg-slate-700'">{{ colasVisibles.length }}</span>
-            }
-          </button>
-        }
-      </div>
     </div>
   </div>
 
@@ -292,30 +225,12 @@
               </div>
             }
 
-            @if (colas.length && !colasVisibles.length) {
-              <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">Ninguna cola coincide con el filtro.</p>
-            }
-            @if (colasVisibles.length) {
+            @if (colas.length) {
               <div class="flex flex-col gap-3">
-                @for (c of colasPagina; track c.id; let i = $index) {
+                @for (c of colas; track c.id; let i = $index) {
                   <ng-container *ngTemplateOutlet="filaCola; context: { $implicit: c, i: i }"></ng-container>
                 }
               </div>
-              @if (totalPaginas(colasVisibles) > 1) {
-                <nav aria-label="Paginación de las colas" class="flex flex-wrap items-center justify-between gap-3">
-                  <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                    Página {{ paginaColas }} de {{ totalPaginas(colasVisibles) }} · {{ colasVisibles.length }} colas
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <button type="button" (click)="irA('colas', paginaColas - 1)" [disabled]="paginaColas === 1" aria-label="Página anterior" [class]="ui.botonIcono">
-                      <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
-                    </button>
-                    <button type="button" (click)="irA('colas', paginaColas + 1)" [disabled]="paginaColas === totalPaginas(colasVisibles)" aria-label="Página siguiente" [class]="ui.botonIcono">
-                      <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
-                    </button>
-                  </span>
-                </nav>
-              }
             }
           </section>
         }
@@ -457,6 +372,14 @@
               </span>
             </label>
 
+            <label class="relative block min-w-[240px] flex-1 basis-[260px] xl:max-w-[340px]">
+              <span class="sr-only">Buscar llamadas</span>
+              <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
+                <lucide-angular name="search" [size]="15" class="block"></lucide-angular>
+              </span>
+              <input type="search" [(ngModel)]="busquedaLlamadas" (ngModelChange)="alBuscarLlamadas()"
+                     placeholder="Buscar por documento, nombre o teléfono" [class]="ui.campoBuscar">
+            </label>
           </div>
 
           @if (resumenLlamadas; as r) {
@@ -583,7 +506,7 @@
                 </div>
                 @if (pillLlamadas) {
                   <p class="!m-0 flex flex-wrap items-center justify-center gap-x-2 text-[13px]">
-                    <span>Viendo solo <strong>{{ etiquetaDelPill(pillLlamadas) }}</strong>: {{ miles(totalSesiones) }} llamada(s).</span>
+                    <span>Viendo solo <strong>{{ etiquetaDelPill(pillLlamadas) }}</strong>: {{ sesionesFiltradas.length }} llamada(s).</span>
                     <button type="button" (click)="alternarPill(pillLlamadas)" [class]="ui.enlace">Ver todas</button>
                   </p>
                 }
@@ -591,7 +514,7 @@
             }
           }
 
-          @if (!sesiones.length && (busquedaLlamadas || pillLlamadas)) {
+          @if (!sesionesFiltradas.length && (busquedaLlamadas || pillLlamadas)) {
             <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">Ninguna llamada coincide con lo que has pedido.</p>
           }
 
@@ -640,20 +563,25 @@
             } @else if (sesiones.length === 0) {
               <p class="!m-0 px-4 py-8 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Aún no hay llamadas registradas.</p>
             }
-            @if (paginasSesiones > 1) {
+            @if (totalPaginas(sesionesFiltradas) > 1 || bloqueSesiones > 0 || hayMasAntiguas) {
               <nav aria-label="Paginación de llamadas" class="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f5] px-4 py-3 dark:border-slate-800">
                 <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                  Página {{ miles(paginaSesiones) }} de {{ miles(paginasSesiones) }} · {{ miles(totalSesiones) }} llamada(s)
+                  Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} · {{ sesionesFiltradas.length }} llamada(s)
+                  @if (bloqueSesiones > 0) { · bloque {{ bloqueSesiones + 1 }} }
                 </span>
                 <span class="flex items-center gap-1">
-                  <button type="button" (click)="irAPaginaSesiones(1)" [disabled]="paginaSesiones === 1" [class]="ui.botonPagina">Primera</button>
-                  <button type="button" (click)="irAPaginaSesiones(paginaSesiones - 1)" [disabled]="paginaSesiones === 1" aria-label="Página anterior" [class]="ui.botonIcono">
+                  <button type="button" (click)="irABloque(bloqueSesiones - 1)" [disabled]="bloqueSesiones === 0"
+                          [class]="ui.botonSecundarioAlto" title="Llamadas más recientes">‹ Recientes</button>
+                  <button type="button" (click)="irABloque(bloqueSesiones + 1)" [disabled]="!hayMasAntiguas"
+                          [class]="ui.botonSecundarioAlto" title="Llamadas más antiguas">Más antiguas ›</button>
+                </span>
+                <span class="flex items-center gap-1">
+                  <button type="button" (click)="irA('sesiones', paginaSesiones - 1)" [disabled]="paginaSesiones === 1" aria-label="Página anterior" [class]="ui.botonIcono">
                     <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
                   </button>
-                  <button type="button" (click)="irAPaginaSesiones(paginaSesiones + 1)" [disabled]="paginaSesiones === paginasSesiones" aria-label="Página siguiente" [class]="ui.botonIcono">
+                  <button type="button" (click)="irA('sesiones', paginaSesiones + 1)" [disabled]="paginaSesiones === totalPaginas(sesionesFiltradas)" aria-label="Página siguiente" [class]="ui.botonIcono">
                     <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
                   </button>
-                  <button type="button" (click)="irAPaginaSesiones(paginasSesiones)" [disabled]="paginaSesiones === paginasSesiones" title="Las más antiguas" [class]="ui.botonPagina">Última</button>
                 </span>
               </nav>
             }

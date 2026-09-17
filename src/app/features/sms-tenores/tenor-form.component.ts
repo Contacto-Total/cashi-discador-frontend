@@ -9,17 +9,7 @@ import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { ToastService } from '../../shared/services/toast.service';
-import {
-  MAX_NOMBRE_ARCHIVO,
-  SmsTenoresService,
-  guardarArchivo,
-  mensajeDeError,
-  miles,
-  nombreArchivoConFecha,
-  problemaNombreArchivo,
-  sugerirNombreArchivo,
-  tokenDe
-} from './sms-tenores.service';
+import { SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoTenor, tokenDe } from './sms-tenores.service';
 import {
   CombinadaTenor,
   ConteoTenor,
@@ -167,44 +157,11 @@ interface ParteMensaje {
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 gap-x-4 gap-y-[13px] md:grid-cols-2">
-                <label class="flex flex-col gap-1">
-                  <span [class]="estilos.etiqueta">Nombre del tenor</span>
-                  <input type="text" [ngModel]="nombre" (ngModelChange)="alCambiarNombre($event)" maxlength="150"
-                         placeholder="Ej.: SMS Castigo — LTD" [class]="estilos.campo" />
-                </label>
-
-                <div class="flex flex-col gap-1">
-                  <label for="nombre-archivo" [class]="estilos.etiqueta">Nombre del archivo</label>
-                  <input id="nombre-archivo" type="text" [ngModel]="nombreArchivo" (ngModelChange)="alCambiarNombreArchivo($event)"
-                         (blur)="archivoTocado = true" [maxlength]="maxNombreArchivo" autocomplete="off" spellcheck="false"
-                         placeholder="Ej.: tenor_castigo_ltd" aria-describedby="nombre-archivo-ayuda nombre-archivo-resultado"
-                         [attr.aria-invalid]="errorArchivoVisible() ? true : null"
-                         [class]="errorArchivoVisible() ? estilos.campo + ' !border-[#b91c1c] dark:!border-red-400' : estilos.campo" />
-                  <span id="nombre-archivo-ayuda" class="text-[12px] leading-snug text-[#5f6c80] dark:text-slate-400">
-                    La fecha de descarga se agrega sola al final, con el mismo separador que uses: guion bajo o guion.
-                  </span>
-                  <span id="nombre-archivo-resultado" aria-live="polite"
-                        class="mt-0.5 flex min-h-[36px] items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[12.5px] leading-snug"
-                        [ngClass]="errorArchivoVisible()
-                          ? 'border-[#f5c2c2] bg-[#fdecec] dark:border-red-900 dark:bg-red-950/40'
-                          : 'border-[#eef1f5] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-950/40'">
-                    @if (errorArchivoVisible()) {
-                      <lucide-angular name="alert-circle" [size]="15" class="block shrink-0 text-[#b91c1c] dark:text-red-400" aria-hidden="true"></lucide-angular>
-                      <span class="font-semibold text-[#b91c1c] dark:text-red-400">{{ problemaArchivo() }}</span>
-                    } @else if (problemaArchivo()) {
-                      <lucide-angular name="file-spreadsheet" [size]="15" class="block shrink-0 text-[#8491a3] dark:text-slate-500" aria-hidden="true"></lucide-angular>
-                      <span class="text-[#5f6c80] dark:text-slate-400">Escribe un nombre para ver cómo se descargará.</span>
-                    } @else {
-                      <lucide-angular name="file-spreadsheet" [size]="15" class="block shrink-0 text-[#15803d] dark:text-green-400" aria-hidden="true"></lucide-angular>
-                      <span class="min-w-0">
-                        <span class="text-[#5f6c80] dark:text-slate-400">Se descargará como </span>
-                        <span class="break-all font-mono font-medium text-[#0f172a] dark:text-slate-100">{{ vistaPreviaArchivo() }}</span>
-                      </span>
-                    }
-                  </span>
-                </div>
-              </div>
+              <label class="flex flex-col gap-1">
+                <span [class]="estilos.etiqueta">Nombre del tenor</span>
+                <input type="text" [ngModel]="nombre" (ngModelChange)="nombre = $event; marcarSinGuardar()" maxlength="150"
+                       placeholder="Ej.: SMS Castigo — LTD" [class]="estilos.campo" />
+              </label>
 
               <label class="flex flex-col gap-1">
                 <span [class]="estilos.etiqueta">Texto del SMS</span>
@@ -674,13 +631,6 @@ export class TenorFormComponent implements OnInit {
   idCartera = 0;
   idSubcartera = 0;
   nombre = '';
-  /** Nombre del Excel sin fecha. En un tenor nuevo sigue al nombre hasta que se escribe a mano. */
-  nombreArchivo = '';
-  /** Se escribió a mano: deja de seguir al nombre del tenor. */
-  private nombreArchivoPropio = false;
-  /** El error del nombre de archivo se muestra después de salir del campo o de intentar guardar. */
-  archivoTocado = false;
-  readonly maxNombreArchivo = MAX_NOMBRE_ARCHIVO;
   plantilla = '';
   rangos: RangoTenor[] = [];
   sinPromesaVigente = true;
@@ -955,33 +905,6 @@ export class TenorFormComponent implements OnInit {
     this.sinGuardar = true;
   }
 
-  alCambiarNombre(valor: string): void {
-    this.nombre = valor;
-    if (!this.nombreArchivoPropio) {
-      this.nombreArchivo = valor.trim() ? sugerirNombreArchivo(valor) : '';
-    }
-    this.marcarSinGuardar();
-  }
-
-  /** Vaciar el campo lo devuelve a seguir el nombre del tenor. */
-  alCambiarNombreArchivo(valor: string): void {
-    this.nombreArchivo = valor;
-    this.nombreArchivoPropio = valor.trim() !== '';
-    this.marcarSinGuardar();
-  }
-
-  problemaArchivo(): string | null {
-    return problemaNombreArchivo(this.nombreArchivo);
-  }
-
-  errorArchivoVisible(): boolean {
-    return this.archivoTocado && this.problemaArchivo() !== null;
-  }
-
-  vistaPreviaArchivo(): string {
-    return nombreArchivoConFecha(this.nombreArchivo);
-  }
-
   /** El textarea crece con el texto: así la copia que pinta las variables queda alineada. */
   ajustarAltura(): void {
     const editor = this.editor?.nativeElement;
@@ -1029,13 +952,6 @@ export class TenorFormComponent implements OnInit {
       this.toast.warning('Ponle un nombre al tenor.');
       return;
     }
-    const problemaArchivo = this.problemaArchivo();
-    if (problemaArchivo) {
-      this.archivoTocado = true;
-      this.toast.warning(`Nombre del archivo: ${problemaArchivo}`);
-      document.getElementById('nombre-archivo')?.focus();
-      return;
-    }
     const id = this.idTenor();
     const peticion = id ? this.api.actualizar(id, this.borrador()) : this.api.crear(this.borrador());
     this.guardando.set(true);
@@ -1072,7 +988,7 @@ export class TenorFormComponent implements OnInit {
         }
         this.api.descargar(id).subscribe({
           next: blob => {
-            guardarArchivo(blob, estado.nombreArchivo ?? nombreArchivoConFecha(this.nombreArchivo));
+            guardarArchivo(blob, nombreArchivoTenor(id));
             this.descargando.set(false);
           },
           error: () => {
@@ -1157,8 +1073,6 @@ export class TenorFormComponent implements OnInit {
     this.api.obtener(id).subscribe({
       next: tenor => {
         this.nombre = tenor.nombre;
-        this.nombreArchivo = tenor.nombreArchivo || sugerirNombreArchivo(tenor.nombre);
-        this.nombreArchivoPropio = true;
         this.plantilla = tenor.plantilla;
         this.rangos = tenor.rangos.map(r => ({ ...r }));
         this.combinadas = (tenor.combinadas ?? []).map(c => ({ ...c, columnas: [...c.columnas] }));
@@ -1249,8 +1163,7 @@ export class TenorFormComponent implements OnInit {
         sinListaNegra: this.sinListaNegra,
         soloNoContenido: this.soloNoContenido
       },
-      incluirContactosControl: this.incluirContactosControl,
-      nombreArchivo: this.nombreArchivo.trim()
+      incluirContactosControl: this.incluirContactosControl
     };
   }
 }

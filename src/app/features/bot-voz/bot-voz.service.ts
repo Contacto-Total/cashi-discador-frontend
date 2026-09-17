@@ -31,20 +31,6 @@ export interface BotConfig {
  * boton. NO es una campaña — una campaña reparte contactos entre asesores y esta
  * marca sola; solo se le parece en como trae a los clientes.
  */
-/** El filtro de la cabecera: cliente › cartera › subcartera. Basta el más concreto. */
-export interface FiltroCartera {
-  idInquilino?: number | null;
-  idCartera?: number | null;
-  idSubcartera?: number | null;
-}
-
-function conCartera(p: HttpParams, f?: FiltroCartera): HttpParams {
-  if (f?.idSubcartera) return p.set('idSubcartera', String(f.idSubcartera));
-  if (f?.idCartera) return p.set('idCartera', String(f.idCartera));
-  if (f?.idInquilino) return p.set('idInquilino', String(f.idInquilino));
-  return p;
-}
-
 export interface BotCola {
   id?: number;
   nombre: string;
@@ -546,22 +532,19 @@ export class BotVozService {
    * Endpoint propio y no deducirlo de `getSesiones`: esa devuelve las 100 últimas y el
    * selector se quedaba solo con las colas presentes en esas 100.
    */
-  getColasDelHistorico(fecha?: string | null, cartera?: FiltroCartera): Observable<{ idCola: number; nombreCola: string | null }[]> {
+  getColasDelHistorico(fecha?: string | null): Observable<{ idCola: number; nombreCola: string | null }[]> {
     // Con dia elegido solo se ofrecen las colas que llamaron ESE dia: si no, se puede
     // elegir una cola que no disco y la pantalla sale en cero sin decir por que.
-    let p = conCartera(new HttpParams(), cartera);
-    if (fecha) p = p.set('fecha', fecha);
+    const q = fecha ? `?fecha=${fecha}` : '';
     return this.http.get<{ idCola: number; nombreCola: string | null }[]>(
-      `${this.apiUrl}/sesiones/colas`, { params: p });
+      `${this.apiUrl}/sesiones/colas${q}`);
   }
 
-  /** Una página de llamadas y cuántas hay en total con esos filtros. La paginación es
-   *  del servidor: el histórico entero no cabe en el navegador. */
   getSesiones(estados?: string[], resultados?: string[],
               idCola?: number | null, fecha?: string | null,
               hablo?: boolean | null, q?: string | null,
-              pagina = 0, tamanio = 5, cartera?: FiltroCartera): Observable<{ filas: BotSesion[]; total: number }> {
-    let p = conCartera(new HttpParams(), cartera);
+              pagina = 0): Observable<BotSesion[]> {
+    let p = new HttpParams();
     (estados ?? []).forEach((e) => (p = p.append('estados', e)));
     (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
     if (idCola) p = p.set('idCola', String(idCola));
@@ -569,11 +552,11 @@ export class BotVozService {
     // distintos. Vacía = hoy, que es lo que decide el backend.
     if (fecha) p = p.set('fecha', fecha);
     if (hablo != null) p = p.set('hablo', String(hablo));
-    // La busqueda va al SERVIDOR: en el navegador solo esta la pagina cargada, y
-    // buscar un documento de hace semanas no daba nada aunque existiera.
+    // La busqueda va al SERVIDOR: en el navegador solo estan las 100 de la pagina
+    // cargada, y buscar un documento de hace semanas no daba nada aunque existiera.
     if (q) p = p.set('q', q);
-    p = p.set('pagina', String(pagina)).set('tamanio', String(tamanio));
-    return this.http.get<{ filas: BotSesion[]; total: number }>(`${this.apiUrl}/sesiones`, { params: p });
+    if (pagina > 0) p = p.set('pagina', String(pagina));
+    return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
   }
 
   /**
@@ -583,9 +566,8 @@ export class BotVozService {
    * para contar—. Las pastillas salen de aquí para que no encojan solas según entran
    * llamadas nuevas.
    */
-  getResumenSesiones(idCola?: number | null, fecha?: string | null, cartera?: FiltroCartera): Observable<ResumenLlamadas> {
-    // El mismo filtro de cartera que la tabla, o las pastillas cuentan otra cosa.
-    let p = conCartera(new HttpParams(), cartera);
+  getResumenSesiones(idCola?: number | null, fecha?: string | null): Observable<ResumenLlamadas> {
+    let p = new HttpParams();
     if (idCola) p = p.set('idCola', String(idCola));
     if (fecha) p = p.set('fecha', fecha);
     return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`, { params: p });

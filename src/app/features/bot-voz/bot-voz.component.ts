@@ -7,7 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
   BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
-  BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas, FiltroCartera,
+  BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas,
 } from './bot-voz.service';
 
 /** Una pastilla de la pantalla de Llamadas, ya con su cuenta. */
@@ -79,11 +79,7 @@ const CLASES = {
   botonPrimarioChico: 'inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] bg-[#0f172a] px-3 text-[12.5px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:!text-slate-900 dark:hover:bg-slate-200',
   botonSecundario: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
   botonSecundarioAlto: 'inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#8491a3] bg-white px-3.5 text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
-  // Encima de `botonSecundarioAlto`, para el boton de la seccion en la que se esta.
-  botonMarcado: '!border-[#0f172a] !bg-[#eef2f7] dark:!border-white dark:!bg-slate-700',
   botonIcono: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
-  // Como `botonIcono` pero con texto: "Primera" y "Última" en el paginador de llamadas.
-  botonPagina: 'flex h-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white px-2.5 text-[12px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
   botonIconoPeligro: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] border border-[#d5dbe3] bg-white !text-[#b91c1c] transition-colors hover:bg-[#fdecec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:!text-red-400 dark:hover:bg-red-950/40',
   botonIniciar: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] bg-[#15803d] px-3 text-[12.5px] font-semibold !text-white transition-colors hover:bg-[#166534] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2',
   botonPausar: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#e9c46a] bg-[#fdf2dc] px-3 text-[12.5px] font-semibold !text-[#92400e] transition-colors hover:bg-[#fbe7bd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-amber-800 dark:bg-amber-950/50 dark:!text-amber-300 dark:hover:bg-amber-950',
@@ -129,12 +125,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Las clases compartidas, para la plantilla. */
   readonly ui = CLASES;
 
-  /** El selector de la cabecera, como Activos/Archivados en Tenores: lo que se mira a
-   *  diario. Voces y tonos y Reglas se configuran de vez en cuando y van como botones
-   *  junto a "Nueva cola". */
-  readonly secciones: ReadonlyArray<{ valor: 'colas' | 'llamadas'; texto: string }> = [
-    { valor: 'colas', texto: 'Colas' },
-    { valor: 'llamadas', texto: 'Llamadas' },
+  /** Las pestañas de la cabecera, en el orden en que se usan. */
+  readonly pestanas: ReadonlyArray<{ valor: 'colas' | 'tonos' | 'reglas' | 'llamadas';
+                                     texto: string; icono: string }> = [
+    { valor: 'colas', texto: 'Colas', icono: 'layers' },
+    { valor: 'llamadas', texto: 'Llamadas', icono: 'phone-call' },
+    { valor: 'tonos', texto: 'Voces y tonos', icono: 'mic' },
+    { valor: 'reglas', texto: 'Reglas', icono: 'clipboard-list' },
   ];
 
   /** Los tres objetivos posibles de una cola, para las opciones del formulario. */
@@ -575,15 +572,12 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
 
   // ----- Paginacion de las tablas -----
-  // La cola, las colas y los descartes se paginan en el navegador: son decenas de filas.
-  // Las llamadas no: son el historico entero y las pagina el servidor.
+  // Del lado del cliente: la cola son decenas de filas y las sesiones vienen
+  // topadas en 100 por el backend, asi que no hace falta paginar en servidor.
   readonly TAM_PAGINA = 5;
   paginaCola = 1;
-  paginaColas = 1;
   paginaSesiones = 1;
   paginaDescartes = 1;
-  /** Cuantas llamadas hay con los filtros puestos, contadas en la base. */
-  totalSesiones = 0;
 
   /** El refresco cada 5 s puede achicar la lista (filas que salen de la cola).
    *  Sin esto te quedarias en una pagina que ya no existe, viendo vacio. */
@@ -596,6 +590,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** Lo escrito en el buscador de llamadas. */
   busquedaLlamadas = '';
+  /** Bloque de 100 que se esta viendo. El backend pagina de 100 en 100. */
+  bloqueSesiones = 0;
   private tempBusqueda?: ReturnType<typeof setTimeout>;
 
   // ----- Las pastillas de la pantalla de llamadas -----
@@ -684,6 +680,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   cambiarColaLlamadas(id: number | null): void {
     this.colaLlamadas = id;
     this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
     this.cargarSesiones();
   }
 
@@ -694,6 +691,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // en vez de dejar seleccionada una cola que ya no sale en la lista.
     this.refrescarColasFiltro();
     this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
     this.cargarSesiones();
   }
 
@@ -729,9 +727,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private refrescarColasFiltro(): void {
     // Con un dia elegido se parte de cero: lo visto en otros dias no vale, o el
     // desplegable acumularia colas que ese dia no llamaron.
-    // Igual con cliente, cartera o subcartera: las colas de otra cartera no se ofrecen.
-    if (this.fechaLlamadas || this.hayFiltroCartera) this.colasVistas.clear();
-    this.svc.getColasDelHistorico(this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
+    if (this.fechaLlamadas) this.colasVistas.clear();
+    this.svc.getColasDelHistorico(this.fechaLlamadas || null).subscribe({
       next: (filas) => {
         for (const f of filas) {
           if (f.idCola == null) continue;
@@ -743,7 +740,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.componerColasFiltro();
         // La cola elegida puede no haber llamado el dia nuevo: se suelta el filtro en
         // vez de dejar un desplegable enseñando algo que ya no esta entre sus opciones.
-        if ((this.fechaLlamadas || this.hayFiltroCartera) && this.colaLlamadas != null
+        if (this.fechaLlamadas && this.colaLlamadas != null
             && !this.colasFiltro.some((c) => c.id === this.colaLlamadas)) {
           this.colaLlamadas = null;
         }
@@ -758,7 +755,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  selector tiene que decir el de ahora, no el del día de la llamada. */
   private componerColasFiltro(): void {
     const m = new Map(this.colasVistas);
-    for (const c of this.colas) if (c.id != null && this.enCartera(c)) m.set(c.id, c.nombre);
+    for (const c of this.colas) if (c.id != null) m.set(c.id, c.nombre);
     this.colasFiltro = [...m].map(([id, nombre]) => ({ id, nombre }))
         .sort((a, b) => a.id - b.id);
   }
@@ -907,7 +904,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** «1.455 llamadas · cola Castigo · 07/09». */
   get subtituloLlamadas(): string {
-    const n = this.resumenLlamadas ? this.resumenLlamadas.total : this.totalSesiones;
+    const n = this.resumenLlamadas ? this.resumenLlamadas.total : this.sesiones.length;
     const cola = this.colasFiltro.find((c) => c.id === this.colaLlamadas);
     const dia = this.fechaLlamadas ? this.fechaLlamadas.split('-').reverse().slice(0, 2).join('/') : 'todos los días';
     return [`${this.miles(n)} llamadas`, cola ? `cola ${cola.nombre}` : 'todas las colas', dia].join(' · ');
@@ -995,12 +992,19 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.cargarSesiones();
   }
 
-  /** Ya es la pagina, filtrada y recortada por el servidor. Filtrarla otra vez aqui
-   *  dejaria dos sitios donde decidir lo mismo. */
-  get sesionesPagina(): BotSesion[] { return this.sesiones; }
+  /**
+   * Las llamadas que coinciden con el buscador.
+   *
+   * La pastilla ya NO se filtra aquí: la lista llega filtrada del backend. Filtrarla
+   * otra vez no cambiaría nada, pero dejaría dos sitios donde decidir lo mismo, que es
+   * como se acaba con dos criterios distintos.
+   */
+  /** Ya viene filtrado del servidor: filtrar otra vez aqui recortaria sobre lo
+   *  recortado y escondería filas que el backend si considero validas. */
+  get sesionesFiltradas(): BotSesion[] { return this.sesiones; }
 
-  get paginasSesiones(): number {
-    return Math.max(1, Math.ceil(this.totalSesiones / this.TAM_PAGINA));
+  get sesionesPagina(): BotSesion[] {
+    return this.pagina(this.sesionesFiltradas, this.paginaSesiones, (n) => (this.paginaSesiones = n));
   }
 
   /** Buscar vuelve a la primera pagina: si no, buscas y caes en una que ya no existe.
@@ -1008,33 +1012,33 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  Los 350 ms evitan una peticion por cada tecla. */
   alBuscarLlamadas(): void {
     this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
     clearTimeout(this.tempBusqueda);
     this.tempBusqueda = setTimeout(() => this.cargarSesiones(), 350);
   }
 
-  /** Cambiar de pagina es pedirla al servidor. Sustituye a "Recientes / Más antiguas",
-   *  que iba por bloques de 100 encima de un paginador de 5 y volvia siempre al primero. */
-  irAPaginaSesiones(n: number): void {
-    const destino = Math.min(Math.max(1, n), this.paginasSesiones);
-    if (destino === this.paginaSesiones) return;
-    this.paginaSesiones = destino;
+  /** Bloques de 100. `hayMasAntiguas` es una suposicion honesta: si vino la pagina
+   *  llena puede haber mas detras; el backend no devuelve el total. */
+  get hayMasAntiguas(): boolean { return this.sesiones.length >= 100; }
+  irABloque(n: number): void {
+    const destino = Math.max(0, n);
+    if (destino === this.bloqueSesiones) return;
+    if (destino > this.bloqueSesiones && !this.hayMasAntiguas) return;
+    this.bloqueSesiones = destino;
+    this.paginaSesiones = 1;
+    this.bloqueSesiones = 0;
     this.cargarSesiones();
   }
   totalPaginas(filas: unknown[]): number {
     return Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
   }
-  irA(cual: 'cola' | 'colas' | 'descartes', n: number): void {
+  irA(cual: 'cola' | 'sesiones' | 'descartes', n: number): void {
     const filas = cual === 'cola' ? this.cola
-      : cual === 'colas' ? this.colasVisibles : this.descartes;
+      : cual === 'sesiones' ? this.sesionesFiltradas : this.descartes;
     const destino = Math.min(Math.max(1, n), this.totalPaginas(filas));
     if (cual === 'cola') this.paginaCola = destino;
-    else if (cual === 'colas') this.paginaColas = destino;
+    else if (cual === 'sesiones') this.paginaSesiones = destino;
     else this.paginaDescartes = destino;
-  }
-
-  /** Las colas de la pagina que se ve, ya filtradas. Vienen de la mas nueva a la mas vieja. */
-  get colasPagina(): BotCola[] {
-    return this.pagina(this.colasVisibles, this.paginaColas, (n) => (this.paginaColas = n));
   }
 
   // ----- Descartes: por que una cuota no entro en la cola -----
@@ -1525,8 +1529,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   cargarColas(): void {
     this.svc.getColas().subscribe({
-      // Llegan ordenadas del backend, la ultima creada arriba.
-      next: (c) => { this.colas = c; this.componerOpcionesCartera(); this.refrescarColasFiltro(); },
+      next: (c) => { this.colas = c; this.refrescarColasFiltro(); },
       error: () => this.flash('No se pudieron cargar las colas', true),
     });
   }
@@ -1554,99 +1557,35 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ---- Filtro de la cabecera: cliente › cartera › subcartera, y buscador ----
+  // ---- Filtrar la lista de colas ----
   //
-  // Como en Gestión de Tenores. Vale para las dos secciones: en Colas filtra el
-  // NAVEGADOR (son un puñado ya cargadas y el orden llega hecho del backend); en
-  // Llamadas va al SERVIDOR, porque el histórico no cabe aquí.
+  // Filtra el NAVEGADOR y ordena el BACKEND. Son un punado de colas ya cargadas, asi
+  // que un viaje al servidor por tecla no compra nada; y reordenar aqui lo que el
+  // backend ya ordeno es como se acaba viendo una lista distinta segun por donde
+  // entres.
 
   busquedaCola: string = '';
-  filtroInquilino: number | null = null;
-  filtroCartera: number | null = null;
-  filtroSubcartera: number | null = null;
-
-  /** Las opciones salen de las colas: solo clientes, carteras y subcarteras que tienen
-   *  alguna. Ofrecer las demás es ofrecer un filtro que solo puede dejar la lista vacía.
-   *  Son CAMPOS y no getters: un array nuevo en cada detección de cambios recrea las
-   *  <option> mientras el desplegable está abierto. */
-  opcionesInquilino: { id: number; nombre: string }[] = [];
-  opcionesCartera: { id: number; nombre: string }[] = [];
-  opcionesSubcartera: { id: number; nombre: string }[] = [];
-
-  get hayFiltroCartera(): boolean {
-    return this.filtroInquilino != null || this.filtroCartera != null || this.filtroSubcartera != null;
-  }
-
-  get filtroCarteraActual(): FiltroCartera {
-    return { idInquilino: this.filtroInquilino, idCartera: this.filtroCartera, idSubcartera: this.filtroSubcartera };
-  }
-
-  private enCartera(c: BotCola): boolean {
-    if (this.filtroInquilino != null && c.idInquilino !== this.filtroInquilino) return false;
-    if (this.filtroCartera != null && c.idCartera !== this.filtroCartera) return false;
-    if (this.filtroSubcartera != null && c.idSubcartera !== this.filtroSubcartera) return false;
-    return true;
-  }
+  subcarteraFiltro: number | null = null;
 
   /** Las colas que se pintan. NO ordena: el orden llega hecho de `GET /colas`. */
   get colasVisibles(): BotCola[] {
     const q = this.busquedaCola.trim().toLowerCase();
     return this.colas.filter((c) => {
-      if (!this.enCartera(c)) return false;
+      if (this.subcarteraFiltro != null && c.idSubcartera !== this.subcarteraFiltro) return false;
       if (!q) return true;
       return (c.nombre || '').toLowerCase().includes(q);
     });
   }
 
-  /** Rehace los tres desplegables. Solo cambia el array si cambió lo que ofrece: las
-   *  colas se recargan cada 5 s y eso no puede cerrar un desplegable abierto. */
-  private componerOpcionesCartera(): void {
-    const unicas = (filas: BotCola[], id: (c: BotCola) => number | undefined,
-                    nombre: (c: BotCola) => string | undefined) => {
-      const m = new Map<number, string>();
-      for (const c of filas) {
-        const i = id(c);
-        if (i != null) m.set(i, nombre(c) || `#${i}`);
-      }
-      return [...m].map(([i, n]) => ({ id: i, nombre: n })).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    };
-    const igual = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-    const inq = unicas(this.colas, (c) => c.idInquilino, (c) => c.nombreInquilino);
-    const car = unicas(this.colas.filter((c) => c.idInquilino === this.filtroInquilino),
-                       (c) => c.idCartera, (c) => c.nombreCartera);
-    const sub = unicas(this.colas.filter((c) => c.idCartera === this.filtroCartera),
-                       (c) => c.idSubcartera, (c) => c.nombreSubcartera);
-    if (!igual(inq, this.opcionesInquilino)) this.opcionesInquilino = inq;
-    if (!igual(car, this.opcionesCartera)) this.opcionesCartera = car;
-    if (!igual(sub, this.opcionesSubcartera)) this.opcionesSubcartera = sub;
-  }
-
-  /** Elegir un nivel suelta los de debajo: una cartera de otro cliente no puede
-   *  quedarse puesta. Como en Tenores, el siguiente se habilita al elegir el anterior. */
-  alCambiarInquilino(id: number | null): void {
-    this.filtroInquilino = id;
-    this.filtroCartera = null;
-    this.filtroSubcartera = null;
-    this.alCambiarFiltroCartera();
-  }
-
-  alCambiarCartera(id: number | null): void {
-    this.filtroCartera = id;
-    this.filtroSubcartera = null;
-    this.alCambiarFiltroCartera();
-  }
-
-  alCambiarSubcartera(id: number | null): void {
-    this.filtroSubcartera = id;
-    this.alCambiarFiltroCartera();
-  }
-
-  private alCambiarFiltroCartera(): void {
-    this.componerOpcionesCartera();
-    this.paginaColas = 1;
-    this.paginaSesiones = 1;
-    this.refrescarColasFiltro();
-    if (this.vista === 'llamadas') this.cargarSesiones();
+  /** Las subcarteras que de verdad tienen cola. Ofrecer las demas es ofrecer un
+   *  filtro que solo puede dejar la lista vacia. */
+  get subcarterasConCola(): { id: number; nombre: string }[] {
+    const m = new Map<number, string>();
+    for (const c of this.colas) {
+      if (c.idSubcartera == null) continue;
+      m.set(c.idSubcartera, c.nombreSubcartera || `#${c.idSubcartera}`);
+    }
+    return [...m].map(([id, nombre]) => ({ id, nombre }));
   }
 
   cargarTonos(): void {
@@ -1863,8 +1802,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
           this.olvidarFiltros();
           this.modalCola = false;
           this.editandoCola = undefined;
-          // La nueva sale la primera: se vuelve a la pagina 1 para que se vea.
-          if (!editaba) this.paginaColas = 1;
           this.cargarColas();
           this.flash(editaba ? 'Cola actualizada' : 'Cola creada');
         };
@@ -2750,18 +2687,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
                          this.fechaLlamadas || null, g?.hablo ?? null,
                          this.busquedaLlamadas.trim() || null,
-                         this.paginaSesiones - 1, this.TAM_PAGINA, this.filtroCarteraActual).subscribe({
-      next: (r) => {
-        this.sesiones = r.filas;
-        this.totalSesiones = r.total;
+                         this.bloqueSesiones).subscribe({
+      next: (s) => {
+        this.sesiones = s;
         this.errorSesiones = false;
-        // Un filtro nuevo o el refresco pueden dejar menos paginas que la que se veia:
-        // se va a la ultima que existe en vez de enseñar una tabla vacia.
-        if (this.paginaSesiones > this.paginasSesiones) {
-          this.paginaSesiones = this.paginasSesiones;
-          this.cargarSesiones();
-          return;
-        }
         // De aqui salen las opciones del filtro de cola: del historico, no de las
         // colas que existen hoy.
         this.componerColasFiltro();
@@ -2771,7 +2700,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // Los contadores van aparte porque cuentan el día ENTERO en la base y la tabla
     // solo trae las 100 últimas de ese mismo día. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
     // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
+    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null).subscribe({
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });

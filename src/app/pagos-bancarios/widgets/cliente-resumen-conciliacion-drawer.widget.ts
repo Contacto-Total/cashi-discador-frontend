@@ -185,16 +185,7 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                     <div class="mt-0.5 space-y-0.5 text-[9px] text-slate-500 dark:text-slate-400">
                                       @for (pago of cuota.pagos; track pago.pagoCuotaId) {
                                         <div class="flex items-center justify-between gap-1">
-                                          <p class="flex min-w-0 items-center gap-1">
-                                            @if ((cuota.adjuntos || []).length > 0) {
-                                              @if (pago.tieneVoucher) {
-                                                <svg class="h-2.5 w-2.5 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" role="img" aria-label="Con voucher"><title>Con voucher</title><path d="M21.4 11.6 12.2 20.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
-                                              } @else {
-                                                <span class="shrink-0 font-bold text-amber-600 dark:text-amber-400" title="Sin voucher" aria-label="Sin voucher">✕</span>
-                                              }
-                                            }
-                                            <span class="truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</span>
-                                          </p>
+                                          <p class="min-w-0 truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</p>
                                           @if (canEliminarPago(promesa, pago)) {
                                             <button type="button" (click)="abrirEliminarPago(pago)" class="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-red-700">
                                               Eliminar pago
@@ -211,9 +202,6 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                       Ver
                                       <span class="rounded-full bg-blue-600 px-1 text-[8px] leading-3 text-white dark:bg-blue-400 dark:text-slate-900">{{ cuota.adjuntos!.length }}</span>
                                     </button>
-                                    @if (getPagosConVoucher(cuota) < cuota.pagos.length) {
-                                      <p class="mt-1 text-[9px] font-semibold leading-tight text-amber-600 dark:text-amber-400">{{ getPagosConVoucher(cuota) }} de {{ cuota.pagos.length }} pagos con voucher</p>
-                                    }
                                   } @else {
                                     <span class="text-slate-400 dark:text-slate-500">—</span>
                                   }
@@ -496,65 +484,68 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
 
       @if (visorVoucherPromesa && visorVoucherCuota) {
         <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4" (click)="cerrarVisorVoucher()">
-          <div role="dialog" aria-modal="true" aria-labelledby="visor-voucher-titulo" class="grid max-h-[92vh] w-full max-w-4xl grid-cols-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-2xl md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="flex min-h-[320px] items-center justify-center bg-slate-100 p-5 dark:bg-slate-800/60">
+          <div role="dialog" aria-modal="true" aria-labelledby="visor-voucher-titulo" class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <div class="min-w-0">
+                <h3 id="visor-voucher-titulo" class="text-sm font-bold text-slate-900 dark:text-white">
+                  Voucher · Cuota {{ visorVoucherCuota.numeroCuota }}
+                </h3>
+                <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                  Gestión {{ visorVoucherPromesa.idGestion }} · {{ visorVoucherPromesa.nombreAgente || 'Sin agente' }}
+                </p>
+              </div>
+              <button type="button" (click)="cerrarVisorVoucher()" class="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
+            </div>
+
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-2 border-b border-slate-200 px-4 py-3 text-xs sm:grid-cols-4 dark:border-slate-700">
+              <div>
+                <dt class="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Estado cuota</dt>
+                <dd class="mt-0.5"><span class="inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold" [class]="getEstadoClass(visorVoucherCuota.estado)">{{ visorVoucherCuota.estado }}</span></dd>
+              </div>
+              <div>
+                <dt class="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Promesa</dt>
+                <dd class="mt-0.5 font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatDate(visorVoucherCuota.fechaPromesa) }} · S/ {{ formatMoney(visorVoucherCuota.montoPromesa) }}</dd>
+              </div>
+              <div>
+                <dt class="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Pago registrado</dt>
+                <dd class="mt-0.5 font-semibold tabular-nums text-slate-900 dark:text-white">
+                  @if (hasValue(getPbpAgentFecha(visorVoucherCuota))) {
+                    {{ formatDate(getPbpAgentFecha(visorVoucherCuota)) }} · S/ {{ formatMoney(getPbpAgentMonto(visorVoucherCuota)) }}
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt class="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Banco</dt>
+                <dd class="mt-0.5 font-semibold text-slate-900 dark:text-white">{{ visorVoucherCuota.pagos.length === 0 ? '—' : (hasPagoVerificado(visorVoucherCuota) ? 'Verificado' : 'No verificado') }}</dd>
+              </div>
+            </dl>
+
+            <div class="flex min-h-[280px] flex-1 items-center justify-center overflow-auto bg-slate-100 p-3 dark:bg-slate-800/60">
               @if (visorVoucherCargando) {
                 <p class="text-sm text-slate-500 dark:text-slate-400">Cargando voucher...</p>
               } @else if (visorVoucherError) {
                 <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ visorVoucherError }}</p>
               } @else if (visorVoucherUrl && esImagen(getVoucherActual()?.tipoArchivo)) {
-                <img [src]="visorVoucherUrl" [alt]="'Voucher de la cuota ' + visorVoucherCuota.numeroCuota" class="max-h-[80vh] max-w-full rounded-md object-contain shadow-lg" />
+                <img [src]="visorVoucherUrl" [alt]="'Voucher de la cuota ' + visorVoucherCuota.numeroCuota" class="max-h-[60vh] max-w-full rounded-md object-contain shadow" />
               } @else if (visorVoucherUrl) {
                 <a [href]="visorVoucherUrl" target="_blank" rel="noopener" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Abrir archivo</a>
               }
             </div>
 
-            <div class="flex flex-col gap-4 p-5">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <h3 id="visor-voucher-titulo" class="text-base font-bold text-slate-900 dark:text-white">
-                    Voucher · Cuota {{ visorVoucherCuota.numeroCuota }}
-                  </h3>
-                  <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-                    Gestión {{ visorVoucherPromesa.idGestion }} · Cliente {{ documento || resumen?.documento }}
-                  </p>
-                </div>
-                <button type="button" (click)="cerrarVisorVoucher()" class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Cerrar</button>
-              </div>
-
-              <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
-                <dt class="text-slate-500 dark:text-slate-400">Subido por</dt>
-                <dd class="font-semibold text-slate-900 dark:text-white">{{ visorVoucherPromesa.nombreAgente || 'Sin agente' }}</dd>
-                <dt class="text-slate-500 dark:text-slate-400">Fecha</dt>
-                <dd class="font-mono font-semibold tabular-nums text-slate-900 dark:text-white">{{ formatDateTime(getVoucherActual()?.fechaCreacion) || '—' }}</dd>
-                <dt class="text-slate-500 dark:text-slate-400">Archivo</dt>
-                <dd class="break-all font-mono font-semibold text-slate-900 dark:text-white">{{ getVoucherActual()?.nombreArchivo }}{{ getVoucherActual()?.tamanoBytes ? ' · ' + formatTamano(getVoucherActual()?.tamanoBytes) : '' }}</dd>
-                <dt class="text-slate-500 dark:text-slate-400">Monto registrado</dt>
-                <dd class="font-mono font-semibold tabular-nums text-slate-900 dark:text-white">
-                  @if (getPbpAgentMonto(visorVoucherCuota) !== null && getPbpAgentMonto(visorVoucherCuota) !== undefined) {
-                    S/ {{ formatMoney(getPbpAgentMonto(visorVoucherCuota)) }}
-                  } @else {
-                    —
-                  }
-                </dd>
-                <dt class="text-slate-500 dark:text-slate-400">Banco</dt>
-                <dd class="font-semibold" [class]="hasPagoVerificado(visorVoucherCuota) ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-900 dark:text-white'">{{ visorVoucherCuota.pagos.length === 0 ? '—' : (hasPagoVerificado(visorVoucherCuota) ? 'Verificado' : 'No verificado') }}</dd>
-              </dl>
-
-              @if (visorVoucherUrl) {
-                <div class="flex flex-wrap gap-2">
-                  <a [href]="visorVoucherUrl" target="_blank" rel="noopener" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Abrir en tamaño completo</a>
-                  <a [href]="visorVoucherUrl" [attr.download]="getVoucherActual()?.nombreArchivo || 'voucher'" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Descargar</a>
-                </div>
-              }
-
-              <div class="mt-auto flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <span class="tabular-nums">{{ visorVoucherIndice + 1 }} de {{ (visorVoucherCuota.adjuntos || []).length }}</span>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-2.5 text-xs dark:border-slate-700">
+              <span class="min-w-0 truncate text-slate-500 dark:text-slate-400">
+                {{ getVoucherActual()?.nombreArchivo }} · {{ formatTamano(getVoucherActual()?.tamanoBytes) }} · subido {{ formatDateTime(getVoucherActual()?.fechaCreacion) }}
+              </span>
+              <div class="flex items-center gap-2">
+                @if (visorVoucherUrl) {
+                  <a [href]="visorVoucherUrl" target="_blank" rel="noopener" class="rounded-lg px-2 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30">Tamaño completo</a>
+                }
                 @if ((visorVoucherCuota.adjuntos || []).length > 1) {
-                  <div class="flex items-center gap-1">
-                    <button type="button" (click)="moverVoucher(-1)" [disabled]="visorVoucherIndice === 0" aria-label="Voucher anterior" class="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">←</button>
-                    <button type="button" (click)="moverVoucher(1)" [disabled]="visorVoucherIndice >= visorVoucherCuota.adjuntos!.length - 1" aria-label="Voucher siguiente" class="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">→</button>
-                  </div>
+                  <button type="button" (click)="moverVoucher(-1)" [disabled]="visorVoucherIndice === 0" class="rounded-lg border border-slate-300 px-2 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Anterior</button>
+                  <span class="tabular-nums text-slate-500 dark:text-slate-400">{{ visorVoucherIndice + 1 }} de {{ visorVoucherCuota.adjuntos!.length }}</span>
+                  <button type="button" (click)="moverVoucher(1)" [disabled]="visorVoucherIndice >= visorVoucherCuota.adjuntos!.length - 1" class="rounded-lg border border-slate-300 px-2 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Siguiente</button>
                 }
               </div>
             </div>
@@ -660,16 +651,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
     }
   }
 
-  @HostListener('document:keydown.arrowleft')
-  onArrowLeft(): void {
-    if (this.visorVoucherCuota) this.moverVoucher(-1);
-  }
-
-  @HostListener('document:keydown.arrowright')
-  onArrowRight(): void {
-    if (this.visorVoucherCuota) this.moverVoucher(1);
-  }
-
   abrirVisorVoucher(promesa: PromesaResumenConciliacion, cuota: CuotaResumenConciliacion): void {
     if (!(cuota.adjuntos || []).length) return;
     this.visorVoucherPromesa = promesa;
@@ -690,10 +671,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
     const siguiente = this.visorVoucherIndice + delta;
     if (siguiente < 0 || siguiente >= total) return;
     this.cargarVoucher(siguiente);
-  }
-
-  getPagosConVoucher(cuota: CuotaResumenConciliacion): number {
-    return (cuota.pagos || []).filter(pago => pago.tieneVoucher).length;
   }
 
   getVoucherActual(): AdjuntoResumenConciliacion | null {

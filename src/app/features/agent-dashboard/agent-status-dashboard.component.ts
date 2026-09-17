@@ -185,16 +185,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  private hasRecoverablePredictiveContext(userId: number): boolean {
-    try {
-      const rawContext = sessionStorage.getItem('predictive_call_data');
-      const context = rawContext ? JSON.parse(rawContext) : null;
-      return !!context?.callUuid && context.agentId === userId;
-    } catch {
-      return false;
-    }
-  }
-
   loadAgentStatus(userId: number): void {
     this.loading = true;
     this.error = null;
@@ -215,7 +205,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
         const releaseKey = `tipification-release-pending-${userId}`;
         if (response.estadoActual !== AgentState.TIPIFICANDO) {
           sessionStorage.removeItem(releaseKey);
-        } else if (sessionStorage.getItem(releaseKey) && !this.hasRecoverablePredictiveContext(userId)) {
+        } else if (sessionStorage.getItem(releaseKey)) {
           this.agentStatusService.finalizarTipificacion(userId).subscribe({
             next: () => sessionStorage.removeItem(releaseKey),
             error: (err: any) => console.error('[AgentDashboard] Error liberando tipificación pendiente:', err)
