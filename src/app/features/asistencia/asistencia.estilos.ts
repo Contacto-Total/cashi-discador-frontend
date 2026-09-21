@@ -31,7 +31,24 @@ export const ESTILOS = {
   icono: 'flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f1f3f6] text-[#0f172a] dark:bg-slate-800 dark:text-slate-100',
   titulo: 'mb-2.5 text-[13.5px] font-extrabold tracking-[-0.01em]',
   panel: 'overflow-x-auto rounded-xl border border-[#e6e9ee] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900',
-  vacio: 'rounded-xl border border-[#e6e9ee] bg-white py-14 text-center dark:border-slate-800 dark:bg-slate-900'
+  vacio: 'rounded-xl border border-[#e6e9ee] bg-white py-14 text-center dark:border-slate-800 dark:bg-slate-900',
+
+  // La cápsula de pestañas: el activo es una píldora oscura dentro de un marco
+  // redondeado. Es la forma que tiene el resto del módulo, no un subrayado.
+  segmentos: 'inline-flex gap-0.5 rounded-full border border-[#e6e9ee] bg-white p-[3px] dark:border-slate-700 dark:bg-slate-900',
+  tab: 'inline-flex h-[30px] items-center gap-[7px] whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors',
+  tabApagada: '!text-[#5f6c80] hover:!text-[#0f172a] dark:!text-slate-400 dark:hover:!text-slate-100',
+  tabActiva: 'bg-[#0f172a] !text-white dark:bg-white dark:!text-[#0f172a]',
+  cuenta: 'inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums',
+  cuentaApagada: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400',
+  cuentaActiva: 'bg-white/20 text-white dark:bg-[#0f172a]/20 dark:text-[#0f172a]',
+
+  /** El separador entre los tres niveles del ámbito, alineado con los campos. */
+  flechaAmbito: 'flex h-[38px] items-center self-end text-[15px] text-[#8491a3] dark:text-slate-500',
+
+  /** La etiqueta de rol junto al nombre. */
+  rolSupervisor: 'inline-block rounded-full border border-[#c7d5fb] bg-[#eef2ff] px-2 py-[1px] text-[11px] font-bold text-[#1e40af] dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300',
+  rolAsesor: 'inline-block rounded-full border border-[#d5dbe3] bg-[#eef2f7] px-2 py-[1px] text-[11px] font-bold text-[#334155] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
 } as const;
 
 /** Los mismos nombres de la leyenda que RR.HH. ya usa en su hoja. */

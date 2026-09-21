@@ -96,6 +96,8 @@ export interface ResumenAgente {
   nombreAgente: string;
   username: string;
   subcartera: string | null;
+  /** «Supervisor» o «Asesor»: se enseña junto al nombre. */
+  rol: string | null;
   diasEsperados: number;
   diasTrabajados: number;
   diasPuntual: number;

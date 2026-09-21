@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -306,6 +306,9 @@ export class AsistenciaJustificacionesComponent {
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
 
+  /** Lo que espera a alguien, para el número de la pestaña. */
+  readonly sinResolverCambia = output<number>();
+
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly todas = signal<Justificacion[]>([]);
   readonly cargando = signal(false);
@@ -346,6 +349,7 @@ export class AsistenciaJustificacionesComponent {
       next: lista => {
         this.todas.set(lista);
         this.aplicarFiltro();
+        this.sinResolverCambia.emit(this.pendientes() + this.revisadas());
         this.cargando.set(false);
       },
       error: () => {

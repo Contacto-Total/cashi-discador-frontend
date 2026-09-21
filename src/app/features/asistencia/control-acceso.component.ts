@@ -55,10 +55,6 @@ const ESTILOS = {
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cargar()" [disabled]="cargando()">
-              <lucide-angular name="refresh-cw" [size]="15" class="block"></lucide-angular>
-              Actualizar
-            </button>
             <button type="button" [class]="estilos.botonPrimario" (click)="abrirAlta()">
               <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
               Registrar equipo
