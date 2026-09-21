@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, NavigationStart } from '@angular/router';
-import { Subscription, filter, interval } from 'rxjs';
+import { Router } from '@angular/router';
+import { Subscription, interval } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -40,15 +40,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   private statusSubscription?: Subscription;
   private currentStatusSubscription?: Subscription;
   private wsStatusSubscription?: Subscription;
-  private routerSubscription?: Subscription;
   private campaignStatusSubscription?: Subscription;
   private recordatoriosSubscription?: Subscription;
   private userId: number | null = null;
   private subPortfolioId: number | null = null;
   private previousState: AgentState | null = null;
-  private isPageRefreshing = false;
   private boundBeforeUnload = () => {
-    this.isPageRefreshing = true;
     // Notificar al backend que la página se está cerrando (beacon disconnect)
     // El backend espera 5s y verifica si el usuario reconectó (refresh = reconecta, cierre = no)
     if (this.userId) {
@@ -121,31 +118,17 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       this.checkRecordatoriosDisponibles();
     });
 
-    // Detectar refresh de página para NO marcar como DESCONECTADO
+    // Cierre de ventana: beacon para que el backend marque DESCONECTADO si no reconecta.
     window.addEventListener('beforeunload', this.boundBeforeUnload);
 
-    // Escuchar navegación para desconectar al salir de esta pantalla
-    this.routerSubscription = this.router.events.pipe(
-      filter(event => event instanceof NavigationStart)
-    ).subscribe((event: any) => {
-      // Si es un refresh del navegador, no desconectar
-      if (this.isPageRefreshing) return;
-
-      const targetUrl = event.url;
-      // Si NO va a gestión, seguimiento, modo manual ni WhatsApp, desconectar.
-      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/seguimiento') && !targetUrl.startsWith('/manual-management') && !targetUrl.startsWith('/whatsapp')) {
-        this.setDesconectado();
-      }
-    });
+    // Salir de esta pantalla NO cambia el estado: BREAK, Comida, Reunion, etc. se mantienen.
+    // La unica excepcion es DISPONIBLE -> EN_LINEA, y la resuelve AgentPresenceService.
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.boundBeforeUnload);
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
-    }
-    if (this.routerSubscription) {
-      this.routerSubscription.unsubscribe();
     }
     if (this.currentStatusSubscription) {
       this.currentStatusSubscription.unsubscribe();
@@ -158,30 +141,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.campaignStatusSubscription) {
       this.campaignStatusSubscription.unsubscribe();
-    }
-  }
-
-  /**
-   * Marca al agente como DESCONECTADO cuando sale de esta pantalla
-   * (excepto si va a tipificación)
-   */
-  private setDesconectado(): void {
-    if (!this.userId) return;
-
-    // Solo desconectar si está en un estado que permite recibir llamadas
-    const currentState = this.currentStatus?.estadoActual;
-    if (currentState === AgentState.DISPONIBLE ||
-        currentState === AgentState.EN_REUNION ||
-        currentState === AgentState.REFRIGERIO ||
-        currentState === AgentState.SSHH ||
-        currentState === AgentState.GESTION_MANUAL) {
-      console.log('[AgentDashboard] Saliendo de pantalla de agente - marcando como DESCONECTADO');
-      this.agentStatusService.changeStatus(this.userId, {
-        estado: AgentState.DESCONECTADO,
-        notas: 'Salió de la pantalla de agente'
-      }).subscribe({
-        error: (err) => console.error('Error al desconectar agente:', err)
-      });
     }
   }
 
