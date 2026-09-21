@@ -9,7 +9,7 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte } from './asistencia.models';
-import { ESTILOS, finDeSemanaDe, lunesDe, sumarDias } from './asistencia.estilos';
+import { ESTILOS, semanaPorDefecto, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
 import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
@@ -198,7 +198,8 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           }
           @case ('edicion') {
             <app-asistencia-edicion
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
+              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
+              (volver)="pantalla.set('asistencia')" />
           }
         }
       </div>
@@ -226,8 +227,8 @@ export class ControlAsistenciaComponent implements OnInit {
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
-  readonly desde = signal(lunesDe(new Date()));
-  readonly hasta = signal(finDeSemanaDe(new Date()));
+  readonly desde = signal(semanaPorDefecto().desde);
+  readonly hasta = signal(semanaPorDefecto().hasta);
   readonly agente = signal('');
 
   readonly clientes = signal<Tenant[]>([]);
