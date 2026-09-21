@@ -289,6 +289,54 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
           </div>
         </div>
 
+        <div class="grid gap-4 lg:grid-cols-2">
+
+        <!-- Lo que bloquea el cierre de la semana -->
+        <div [class]="estilos.tarjeta">
+          <h2 [class]="estilos.titulo + ' !mb-0'">Pendientes de RR.HH.</h2>
+          <p class="!mb-3 !mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            Lo que bloquea el cierre de la semana. Cada línea abre la pantalla donde se resuelve.
+          </p>
+
+          <!-- Los tres pasos. El aviso es un icono, no un número: un «1» dentro
+               de un círculo no se lee como algo que resolver. -->
+          <div class="mb-3.5 flex items-center gap-1.5">
+            @for (p of pasos(); track p.etiqueta; let ultimo = $last) {
+              <div class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold"
+                   [class]="CLASE_PASO[p.estado]"
+                   [title]="p.etiqueta + (p.cuantos ? ': ' + p.cuantos + ' por resolver' : '')">
+                <lucide-angular [name]="ICONO_PASO[p.estado]" [size]="13" class="block"></lucide-angular>
+                {{ p.etiqueta }}
+              </div>
+              @if (!ultimo) {
+                <span class="h-[1px] w-4 bg-[#e6e9ee] dark:bg-slate-700"></span>
+              }
+            }
+          </div>
+
+          <ul class="!m-0 list-none !p-0">
+            @for (f of pendientes(); track f.ir) {
+              <li class="flex items-center gap-3 border-t border-[#f1f3f6] py-2.5 first:border-0 dark:border-slate-800">
+                <span [class]="estilos.icono">
+                  <lucide-angular [name]="f.icono" [size]="15" class="block"></lucide-angular>
+                </span>
+                <button type="button" class="min-w-0 flex-1 text-left" (click)="irA.emit(f.ir)">
+                  <strong class="block text-[12.5px]">{{ f.titulo }}</strong>
+                  <span class="block truncate text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.pie }}</span>
+                </button>
+                <span class="shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-bold"
+                      [class]="f.tono === 'falta'
+                        ? 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300'
+                        : f.tono === 'ok'
+                          ? 'bg-[#e8f5ec] text-[#166534] dark:bg-green-950/50 dark:text-green-300'
+                          : 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400'">
+                  {{ f.estadoTexto }}
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+
         <!-- Avisos de pausas -->
         <div [class]="estilos.tarjeta">
           <h2 [class]="estilos.titulo + ' !mb-0'">Avisos a la supervisora</h2>
@@ -319,6 +367,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             }
           </div>
         </div>
+        </div>
       </div>
     }
   </div>
@@ -334,6 +383,17 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
   protected readonly unidadDe = unidadDe;
   protected readonly enDuracion = enDuracion;
 
+  /** El estado de cada paso, dicho con un icono y no con un número. */
+  protected readonly ICONO_PASO: Record<string, string> = {
+    hecho: 'check', falta: 'alert-triangle', espera: 'lock', listo: 'arrow-right'
+  };
+  protected readonly CLASE_PASO: Record<string, string> = {
+    hecho: 'border-[#bfe3c8] bg-[#e8f5ec] text-[#166534] dark:border-green-900 dark:bg-green-950/40 dark:text-green-300',
+    falta: 'border-[#f5c2c2] bg-[#fdecec] text-[#b91c1c] dark:border-red-900 dark:bg-red-950/40 dark:text-red-300',
+    espera: 'border-[#e6e9ee] bg-[#f6f7f9] text-[#5f6c80] dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400',
+    listo: 'border-[#0f172a] bg-[#0f172a] text-white dark:border-white dark:bg-white dark:text-[#0f172a]'
+  };
+
   protected readonly leyendaMapa = [
     { texto: 'Puntual', color: COLOR['PUNTUAL'] },
     { texto: 'Tarde', color: COLOR['TARDE'] },
@@ -347,6 +407,10 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
 
   /** El botón de la cabecera lo resuelve el módulo: el rango vive allí. */
   readonly semanaAnterior = output<void>();
+  /** Cada pendiente abre la pantalla donde se resuelve. */
+  readonly irA = output<string>();
+  /** Lo que espera a alguien, para saber si el cierre está desbloqueado. */
+  readonly justificacionesPendientes = input<number>(0);
 
   readonly datos = signal<DashboardAsistencia | null>(null);
   readonly cargando = signal(false);
@@ -407,6 +471,43 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     }
     return d.porDia.map(p => ({ dia: p.nombreDia.slice(0, 3), pendientes: p.incompletos }))
       .slice(0, DIAS.length);
+  });
+
+  /** Los tres pasos del cierre, en orden. */
+  readonly pasos = computed(() => {
+    const incompletos = this.datos()?.diasIncompletos ?? 0;
+    const justificaciones = this.justificacionesPendientes();
+    const listo = !incompletos && !justificaciones;
+    return [
+      { etiqueta: 'Marcaciones', estado: incompletos ? 'falta' : 'hecho', cuantos: incompletos },
+      { etiqueta: 'Justificaciones', estado: justificaciones ? 'falta' : 'hecho', cuantos: justificaciones },
+      { etiqueta: 'Cierre', estado: listo ? 'listo' : 'espera', cuantos: 0 }
+    ];
+  });
+
+  readonly pendientes = computed(() => {
+    const incompletos = this.datos()?.diasIncompletos ?? 0;
+    const justificaciones = this.justificacionesPendientes();
+    return [
+      {
+        ir: 'asistencia', icono: 'pencil', tono: incompletos ? 'falta' : 'ok',
+        titulo: 'Días sin marcación por completar',
+        pie: incompletos ? 'Se corrigen desde el reporte' : 'Nada pendiente',
+        estadoTexto: incompletos ? `${incompletos} por completar` : 'Al día'
+      },
+      {
+        ir: 'justificaciones', icono: 'file-text', tono: justificaciones ? 'falta' : 'ok',
+        titulo: 'Justificaciones por resolver',
+        pie: justificaciones ? 'Esperando a la supervisora o a RR.HH.' : 'Nada pendiente',
+        estadoTexto: justificaciones ? `${justificaciones} por resolver` : 'Al día'
+      },
+      {
+        ir: 'cierre', icono: 'lock', tono: 'neutro',
+        titulo: 'Cerrar la semana',
+        pie: 'Viernes a mediodía',
+        estadoTexto: 'Abierta'
+      }
+    ];
   });
 
   readonly jornadaTexto = computed(() => {

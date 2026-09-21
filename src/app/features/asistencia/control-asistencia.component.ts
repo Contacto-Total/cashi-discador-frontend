@@ -178,7 +178,9 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           @case ('dashboard') {
             <app-asistencia-dashboard
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              (semanaAnterior)="retrocederSemana()" />
+              [justificacionesPendientes]="sinResolver()"
+              (semanaAnterior)="retrocederSemana()"
+              (irA)="pantalla.set($event)" />
           }
           @case ('justificaciones') {
             <app-asistencia-justificaciones
@@ -193,7 +195,8 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
             <app-asistencia-auditoria [desde]="desde()" [hasta]="hasta()" />
           }
           @case ('configuracion') {
-            <app-asistencia-configuracion [idSubcartera]="idSubcartera()" />
+            <app-asistencia-configuracion [idSubcartera]="idSubcartera()"
+              (volver)="pantalla.set('asistencia')" />
           }
           @case ('edicion') {
             <app-asistencia-edicion
