@@ -108,7 +108,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
                       [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
                 <option [ngValue]="null">Todos</option>
                 @for (c of clientes(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.tenantName }}</option>
+                  <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option>
                 }
               </select>
             </div>
@@ -285,13 +285,18 @@ export class ControlAsistenciaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Sin filtrar por `isActive`: en QAS el cliente que se usa —Financiera Oh—
+    // y tres de sus cuatro carteras están marcados como inactivos, así que
+    // filtrar deja la pantalla vacía justo para el caso real. La bandera dice
+    // si se siguen cargando datos, no si se puede consultar su asistencia.
     this.clientesServicio.getAllTenants().subscribe({
       next: c => {
-        const activos = c.filter(t => t.isActive);
-        this.clientes.set(activos);
+        const ordenados = [...c].sort((a, b) =>
+          (a.businessName || a.tenantName).localeCompare(b.businessName || b.tenantName));
+        this.clientes.set(ordenados);
         // Con un solo cliente, elegirlo a mano es un paso de más.
-        if (activos.length === 1) {
-          this.elegirCliente(activos[0].id);
+        if (ordenados.length === 1) {
+          this.elegirCliente(ordenados[0].id);
         }
       },
       error: () => this.toast.error('No se pudieron cargar los clientes')
@@ -312,10 +317,10 @@ export class ControlAsistenciaComponent implements OnInit {
     }
     this.carterasServicio.getPortfoliosByTenant(id).subscribe({
       next: c => {
-        const activas = c.filter(p => p.isActive);
-        this.carteras.set(activas);
-        if (activas.length === 1) {
-          this.elegirCartera(activas[0].id);
+        const ordenadas = [...c].sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
+        this.carteras.set(ordenadas);
+        if (ordenadas.length === 1) {
+          this.elegirCartera(ordenadas[0].id);
         }
       },
       error: () => this.toast.error('No se pudieron cargar las carteras')
@@ -330,11 +335,13 @@ export class ControlAsistenciaComponent implements OnInit {
     if (!id) {
       return;
     }
-    this.carterasServicio.getActiveSubPortfoliosByPortfolio(id).subscribe({
+    this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
       next: s => {
-        this.subcarteras.set(s);
-        if (s.length === 1) {
-          this.elegirSubcartera(s[0].id);
+        const ordenadas = [...s].sort((a, b) =>
+          a.subPortfolioName.localeCompare(b.subPortfolioName));
+        this.subcarteras.set(ordenadas);
+        if (ordenadas.length === 1) {
+          this.elegirSubcartera(ordenadas[0].id);
         }
       },
       error: () => this.toast.error('No se pudieron cargar las subcarteras')
