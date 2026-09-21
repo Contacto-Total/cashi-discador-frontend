@@ -27,6 +27,12 @@
       </h1>
 
       <div class="flex gap-3">
+        <a
+          routerLink="/cartas/no-adeudo/email"
+          class="btn-primary">
+          <lucide-angular name="mail" [size]="18"></lucide-angular>
+          Emisión por correo
+        </a>
         <button
           *ngIf="mostrarDocumento"
           type="button"
@@ -45,18 +51,6 @@
           {{ isLoading ? 'Generando...' : 'Generar PDF' }}
         </button>
       </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs-container">
-      <button class="tab-btn" [class.active]="activeTab === 'nuevo'" (click)="switchTab('nuevo')">
-        <lucide-angular name="database" [size]="16"></lucide-angular>
-        Nuevo Sistema
-      </button>
-      <button class="tab-btn" [class.active]="activeTab === 'antiguo'" (click)="switchTab('antiguo')">
-        <lucide-angular name="archive" [size]="16"></lucide-angular>
-        Sistema Antiguo
-      </button>
     </div>
 
     <!-- Búsqueda -->
