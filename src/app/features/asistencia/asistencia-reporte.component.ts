@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -78,12 +78,21 @@ const COLOR_DIA: Record<string, string> = {
     }
   `],
   template: `
-        @if (cargando()) {
+        @if (!idSubcartera()) {
+          <div [class]="estilos.vacio">
+            <strong class="block text-[13.5px]">Elige un cliente, una cartera o una subcartera</strong>
+            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+              El reporte se consulta por ámbito. Así no se trae a toda la empresa de golpe.
+            </span>
+          </div>
+        } @else if (cargando()) {
           <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando asistencia…</p>
         } @else if (roster().length === 0) {
-          <div class="rounded-xl border border-[#e6e9ee] bg-white py-14 text-center dark:border-slate-800 dark:bg-slate-900">
-            <strong class="block text-[13.5px]">Sin datos en ese rango</strong>
-            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Prueba con otras fechas.</span>
+          <div [class]="estilos.vacio">
+            <strong class="block text-[13.5px]">Nadie en ese ámbito</strong>
+            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+              Prueba con otra cartera o subcartera.
+            </span>
           </div>
         } @else if (persona(); as p) {
           <div class="aparecer">
@@ -91,10 +100,15 @@ const COLOR_DIA: Record<string, string> = {
             <!-- Quién se está viendo y por dónde va del roster -->
             <div class="mb-3 flex flex-wrap items-center justify-between gap-3 px-0.5">
               <div>
-                <h2 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">{{ p.nombreAgente }}</h2>
-                <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                  {{ p.subcartera }}{{ rangoTexto() ? ' · ' + rangoTexto() : '' }}
-                </p>
+                <h2 class="!m-0 flex flex-wrap items-center gap-[9px] text-xl font-extrabold tracking-[-0.01em]">
+                  {{ p.nombreAgente }}
+                  @if (p.rol) {
+                    <span [class]="p.rol === 'Supervisor' ? estilos.rolSupervisor : estilos.rolAsesor">
+                      {{ p.rol }}
+                    </span>
+                  }
+                </h2>
+                <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ rangoTexto() }}</p>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
@@ -376,15 +390,22 @@ export class AsistenciaReporteComponent {
    */
   readonly TOPE_SEMANA_MIN = computed(() => this.reporte()?.toleranciaSemanaMin ?? 30);
 
-  /** El ámbito y el rango los pone el contenedor: son comunes a todas las pestañas. */
+  /** El ámbito, el rango y el agente los pone la cabecera del módulo: son
+   *  comunes a todas las pestañas y, repetidos, se desincronizan. */
   readonly idSubcartera = input<number | null>(null);
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
+  readonly agente = input<string>('');
+
+  /** El roster, para que la cabecera pueda ofrecerlo en su desplegable. */
+  readonly rosterCambia = output<string[]>();
+  readonly reporteCargado = output<AsistenciaReporte | null>();
 
   readonly reporte = signal<AsistenciaReporte | null>(null);
+  /** Lo que eligieron las flechas; manda sobre lo escrito en la cabecera. */
+  readonly agenteElegido = signal('');
   readonly cargando = signal(false);
   readonly guardando = signal(false);
-  readonly busqueda = signal('');
 
   readonly panel = signal<AsistenciaDia | null>(null);
   readonly edicion = signal<Partial<Record<TipoMarcacion, string>>>({});
@@ -401,7 +422,7 @@ export class AsistenciaReporteComponent {
    */
   readonly indice = computed(() => {
     const gente = this.roster();
-    const texto = this.busqueda().toLowerCase().trim();
+    const texto = (this.agenteElegido() || this.agente()).toLowerCase().trim();
     if (!texto) {
       return 0;
     }
@@ -479,7 +500,6 @@ export class AsistenciaReporteComponent {
       const ambito = this.idSubcartera();
       const desde = this.desde();
       const hasta = this.hasta();
-      this.busqueda.set('');
       if (!ambito) {
         this.reporte.set(null);
         return;
@@ -500,6 +520,9 @@ export class AsistenciaReporteComponent {
     this.servicio.reporte(desde, hasta, idSubcartera).subscribe({
       next: r => {
         this.reporte.set(r);
+        this.agenteElegido.set('');
+        this.rosterCambia.emit(r.agentes.map(a => a.nombreAgente));
+        this.reporteCargado.emit(r);
         this.cargando.set(false);
       },
       error: () => {
@@ -509,31 +532,13 @@ export class AsistenciaReporteComponent {
     });
   }
 
-  /** Las flechas caminan el roster y dejan el nombre en el campo. */
+  /** Las flechas caminan el roster; el nombre lo escribe la cabecera. */
   mover(paso: number): void {
     const gente = this.roster();
     const siguiente = Math.min(gente.length - 1, Math.max(0, this.indice() + paso));
-    this.busqueda.set(gente[siguiente]?.nombreAgente ?? '');
+    this.agenteElegido.set(gente[siguiente]?.nombreAgente ?? '');
   }
 
-  /**
-   * Descarga el Excel. Lo arma el backend y no el navegador: el formato tiene
-   * que coincidir con el de la hoja que RR.HH. ya lee, colores incluidos, y eso
-   * se mantiene en un solo sitio.
-   */
-  exportar(): void {
-    this.servicio.excel(this.desde(), this.hasta(), this.idSubcartera()).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = `Asistencia_${this.desde()}_${this.hasta()}.xlsx`;
-        enlace.click();
-        URL.revokeObjectURL(url);
-      },
-      error: () => this.toast.error('No se pudo generar el Excel')
-    });
-  }
 
   // ==================== CORRECCIÓN ====================
 

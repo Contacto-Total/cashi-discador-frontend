@@ -119,10 +119,7 @@ const ESTILOS = {
                     (click)="irAEstaSemana()">Esta semana</button>
           }
         </div>
-        <button type="button" [class]="estilos.botonSecundario" (click)="cargar()" [disabled]="cargando()">
-          <lucide-angular name="refresh-cw" [size]="15" class="block"></lucide-angular>
-          Actualizar
-        </button>
+        <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ actualizado() }}</p>
       </div>
 
       <div class="px-7 py-5">
@@ -426,6 +423,8 @@ export class MiAsistenciaComponent implements OnInit {
 
   readonly cargando = signal(false);
   readonly reporte = signal<AsistenciaReporte | null>(null);
+  /** Cuándo se trajeron estas horas: sin esto no se sabe si están al día. */
+  readonly cargadoEn = signal<Date | null>(null);
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly recuperaciones = signal<Recuperacion[]>([]);
   readonly tipos = signal<TipoDia[]>([]);
@@ -494,6 +493,13 @@ export class MiAsistenciaComponent implements OnInit {
 
   readonly esSemanaActual = computed(() => this.lunes() === this.lunesDe(new Date()));
 
+  readonly actualizado = computed(() => {
+    const cuando = this.cargadoEn();
+    return cuando
+      ? `Actualizado a las ${cuando.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
+      : '';
+  });
+
   /** El horario del primer día laborable: es el que la persona reconoce como «el suyo». */
   readonly horarioTexto = computed(() => {
     const dia = this.dias().find(d => d.horaEntradaHorario && d.horaSalidaHorario);
@@ -539,6 +545,7 @@ export class MiAsistenciaComponent implements OnInit {
     this.servicio.reporteMio(this.lunes(), fin).subscribe({
       next: r => {
         this.reporte.set(r);
+        this.cargadoEn.set(new Date());
         this.cargando.set(false);
       },
       error: () => {

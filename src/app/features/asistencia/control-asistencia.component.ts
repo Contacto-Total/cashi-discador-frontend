@@ -1,10 +1,14 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
+import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
-import { SubPortfolio } from '../../maintenance/models/portfolio.model';
+import { Tenant } from '../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
+import { AsistenciaService } from './asistencia.service';
+import { AsistenciaReporte } from './asistencia.models';
 import { ESTILOS, hoy, lunesDe } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
@@ -12,17 +16,24 @@ import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones
 import { AsistenciaCierreComponent } from './asistencia-cierre.component';
 import { AsistenciaAuditoriaComponent } from './asistencia-auditoria.component';
 import { AsistenciaConfiguracionComponent } from './asistencia-configuracion.component';
+import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
 
 /**
  * Control de Asistencia: el módulo de RR.HH. y las supervisoras.
  *
- * El ámbito y el rango viven aquí y no en cada pestaña: son los mismos para
- * todas y, repetidos, se desincronizan en cuanto alguien cambia de tab. Cada
- * pestaña los recibe como entrada y vuelve a pedir sus datos sola.
+ * El ámbito, el rango y el agente viven aquí y no en cada pestaña: son los
+ * mismos para todas y, repetidos, se desincronizan en cuanto alguien cambia de
+ * tab. Cada pestaña los recibe como entrada y vuelve a pedir sus datos sola.
  *
- * Sin subcartera elegida no se consulta nada. Traer a toda la empresa de golpe
- * hace lenta la pantalla que más se abre, y además nadie revisa la asistencia
- * de una empresa entera a la vez: se revisa por cartera.
+ * El ámbito es una cascada de tres —cliente › cartera › subcartera— porque así
+ * es como está montada la operación y como se busca una cartera. Sin
+ * subcartera elegida no se consulta nada: traer a toda la empresa de golpe
+ * hace lenta la pantalla que más se abre, y nadie revisa la asistencia de una
+ * empresa entera a la vez.
+ *
+ * Configuración y Editar horas son BOTONES y no pestañas: no son otra vista de
+ * los mismos datos, son otra tarea. Al entrar en ellas desaparecen los filtros
+ * y las pestañas, porque ahí no se usan.
  */
 @Component({
   selector: 'app-control-asistencia',
@@ -36,7 +47,8 @@ import { AsistenciaConfiguracionComponent } from './asistencia-configuracion.com
     AsistenciaJustificacionesComponent,
     AsistenciaCierreComponent,
     AsistenciaAuditoriaComponent,
-    AsistenciaConfiguracionComponent
+    AsistenciaConfiguracionComponent,
+    AsistenciaEdicionComponent
   ],
   styles: [`
     :host { display: block; }
@@ -44,78 +56,152 @@ import { AsistenciaConfiguracionComponent } from './asistencia-configuracion.com
   template: `
     <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-      <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 pt-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-col gap-[3px]">
-            <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
-            <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subtitulo() }}</p>
+      @if (esPantallaAparte()) {
+        <!-- Configuración y Editar horas: cabecera propia, sin filtros ni tabs -->
+        <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">
+                {{ pantalla() === 'configuracion' ? 'Configuración' : 'Editar horas' }}
+              </h1>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                {{ pantalla() === 'configuracion'
+                    ? 'Horario, tolerancias y calendario del ámbito'
+                    : 'Se corrige a una persona a la vez' }}
+              </p>
+            </div>
+            <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('asistencia')">
+              <lucide-angular name="arrow-left" [size]="15" class="block"></lucide-angular>
+              Volver al reporte
+            </button>
           </div>
         </div>
-
-        <!-- El ámbito y el rango mandan sobre todas las pestañas -->
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="ambito">Ámbito</label>
-            <select id="ambito" [class]="estilos.campo + ' w-[240px]'"
-                    [ngModel]="idSubcartera()" (ngModelChange)="idSubcartera.set($event)">
-              <option [ngValue]="null">Elige una subcartera</option>
-              @for (cartera of carteras(); track cartera.nombre) {
-                <optgroup [label]="cartera.nombre">
-                  @for (sub of cartera.subcarteras; track sub.id) {
-                    <option [ngValue]="sub.id">{{ sub.subPortfolioName }}</option>
-                  }
-                </optgroup>
-              }
-            </select>
+      } @else {
+        <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('configuracion')">
+                <lucide-angular name="settings" [size]="15" class="block"></lucide-angular>
+                Configuración
+              </button>
+              <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('edicion')">
+                <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
+                Editar horas
+              </button>
+              <button type="button" [class]="estilos.botonPrimario" (click)="exportar()"
+                      [disabled]="!idSubcartera()">
+                <lucide-angular name="download" [size]="15" class="block"></lucide-angular>
+                Descargar Excel
+              </button>
+            </div>
           </div>
 
-          @if (tabUsaRango()) {
+          <!-- El ámbito, en los tres niveles con los que está montada la operación -->
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="cliente">Cliente</label>
+              <select id="cliente" [class]="estilos.campo + ' w-[178px]'"
+                      [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
+                <option [ngValue]="null">Todos</option>
+                @for (c of clientes(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.tenantName }}</option>
+                }
+              </select>
+            </div>
+            <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
+
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="cartera">Cartera</label>
+              <select id="cartera" [class]="estilos.campo + ' w-[178px]'"
+                      [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
+                      [disabled]="!idCliente()">
+                <option [ngValue]="null">Todas</option>
+                @for (c of carteras(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.portfolioName }}</option>
+                }
+              </select>
+            </div>
+            <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
+
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="subcartera">Subcartera</label>
+              <select id="subcartera" [class]="estilos.campo + ' w-[178px]'"
+                      [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)"
+                      [disabled]="!idCartera()">
+                <option [ngValue]="null">Elige una</option>
+                @for (s of subcarteras(); track s.id) {
+                  <option [ngValue]="s.id">{{ s.subPortfolioName }}</option>
+                }
+              </select>
+            </div>
+
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="desde">Desde</label>
-              <input id="desde" type="date" [class]="estilos.campo + ' w-[150px]'"
+              <input id="desde" type="date" [class]="estilos.campo + ' w-[148px]'"
                      [ngModel]="desde()" (ngModelChange)="desde.set($event)">
             </div>
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="hasta">Hasta</label>
-              <input id="hasta" type="date" [class]="estilos.campo + ' w-[150px]'"
+              <input id="hasta" type="date" [class]="estilos.campo + ' w-[148px]'"
                      [ngModel]="hasta()" (ngModelChange)="hasta.set($event)">
             </div>
-            <button type="button" [class]="estilos.botonSecundario" (click)="estaSemana()">
-              <lucide-angular name="calendar-days" [size]="15" class="block"></lucide-angular>
-              Esta semana
-            </button>
-          }
+
+            <!-- Un solo campo para buscar y elegir: escribir filtra, el desplegable lista el roster. -->
+            <div class="flex min-w-[200px] flex-1 flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="buscar">Agente</label>
+              <input id="buscar" type="text" list="roster-asistencia" autocomplete="off"
+                     placeholder="Escribe o elige de la lista" [class]="estilos.campo"
+                     [ngModel]="agente()" (ngModelChange)="agente.set($event)">
+              <datalist id="roster-asistencia">
+                @for (a of roster(); track a) { <option [value]="a"></option> }
+              </datalist>
+            </div>
+          </div>
         </div>
 
-        <!-- Las pestañas -->
-        <nav class="-mb-px flex flex-wrap gap-0.5" aria-label="Secciones de asistencia">
-          @for (t of TABS; track t.clave) {
-            <button type="button"
-                    class="inline-flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors"
-                    [class]="tab() === t.clave
-                      ? 'border-[#0f172a] !text-[#0f172a] dark:border-white dark:!text-white'
-                      : 'border-transparent !text-[#5f6c80] hover:!text-[#334155] dark:!text-slate-400 dark:hover:!text-slate-200'"
-                    [attr.aria-current]="tab() === t.clave ? 'page' : null"
-                    (click)="tab.set(t.clave)">
-              <lucide-angular [name]="t.icono" [size]="15" class="block"></lucide-angular>
-              {{ t.texto }}
-            </button>
-          }
-        </nav>
-      </div>
+        <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
+          <nav [class]="estilos.segmentos" aria-label="Pantallas del módulo">
+            @for (t of TABS; track t.clave) {
+              <button type="button"
+                      [class]="estilos.tab + ' ' + (pantalla() === t.clave ? estilos.tabActiva : estilos.tabApagada)"
+                      [attr.aria-current]="pantalla() === t.clave ? 'page' : null"
+                      [attr.aria-label]="t.clave === 'justificaciones' && sinResolver()
+                        ? 'Justificaciones, ' + sinResolver() + ' sin resolver' : null"
+                      (click)="pantalla.set(t.clave)">
+                {{ t.texto }}
+                @if (t.clave === 'justificaciones' && sinResolver()) {
+                  <span aria-hidden="true"
+                        [class]="estilos.cuenta + ' ' + (pantalla() === t.clave ? estilos.cuentaActiva : estilos.cuentaApagada)">
+                    {{ sinResolver() }}
+                  </span>
+                }
+              </button>
+            }
+          </nav>
+        </div>
+      }
 
       <div class="px-7 py-5">
-        @switch (tab()) {
-          @case ('reporte') {
+        @switch (pantalla()) {
+          @case ('asistencia') {
             <app-asistencia-reporte
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
+              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
+              [agente]="agente()"
+              (rosterCambia)="roster.set($event)"
+              (reporteCargado)="reporte.set($event)" />
           }
           @case ('dashboard') {
             <app-asistencia-dashboard
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
           }
           @case ('justificaciones') {
-            <app-asistencia-justificaciones [desde]="desde()" [hasta]="hasta()" />
+            <app-asistencia-justificaciones
+              [desde]="desde()" [hasta]="hasta()"
+              (sinResolverCambia)="sinResolver.set($event)" />
           }
           @case ('cierre') {
             <app-asistencia-cierre [idSubcartera]="idSubcartera()" />
@@ -126,80 +212,159 @@ import { AsistenciaConfiguracionComponent } from './asistencia-configuracion.com
           @case ('configuracion') {
             <app-asistencia-configuracion [idSubcartera]="idSubcartera()" />
           }
+          @case ('edicion') {
+            <app-asistencia-edicion
+              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
+          }
         }
       </div>
     </div>
   `
 })
 export class ControlAsistenciaComponent implements OnInit {
+  private readonly clientesServicio = inject(TenantService);
   private readonly carterasServicio = inject(PortfolioService);
+  private readonly servicio = inject(AsistenciaService);
   private readonly toast = inject(ToastService);
 
   protected readonly estilos = ESTILOS;
 
   protected readonly TABS = [
-    { clave: 'reporte', texto: 'Reporte', icono: 'calendar-days' },
-    { clave: 'dashboard', texto: 'Dashboard', icono: 'bar-chart-3' },
-    { clave: 'justificaciones', texto: 'Justificaciones', icono: 'file-text' },
-    { clave: 'cierre', texto: 'Cierre semanal', icono: 'lock' },
-    { clave: 'auditoria', texto: 'Auditoría', icono: 'history' },
-    { clave: 'configuracion', texto: 'Configuración', icono: 'settings' }
+    { clave: 'asistencia', texto: 'Reporte' },
+    { clave: 'dashboard', texto: 'Dashboard' },
+    { clave: 'justificaciones', texto: 'Justificaciones' },
+    { clave: 'cierre', texto: 'Cierre semanal' },
+    { clave: 'auditoria', texto: 'Auditoría' }
   ] as const;
 
-  readonly tab = signal<string>('reporte');
+  readonly pantalla = signal<string>('asistencia');
+
+  readonly idCliente = signal<number | null>(null);
+  readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
   readonly desde = signal(lunesDe(new Date()));
   readonly hasta = signal(hoy());
+  readonly agente = signal('');
+
+  readonly clientes = signal<Tenant[]>([]);
+  readonly carteras = signal<Portfolio[]>([]);
   readonly subcarteras = signal<SubPortfolio[]>([]);
 
-  /**
-   * Las subcarteras agrupadas por su cartera. La cascada cliente → cartera →
-   * subcartera cabe en un solo control porque el backend solo acota por
-   * subcartera; la cartera está para encontrarla, no para filtrar.
-   */
-  readonly carteras = computed(() => {
-    const grupos = new Map<string, SubPortfolio[]>();
-    for (const sub of this.subcarteras()) {
-      const clave = sub.portfolioName ?? 'Sin cartera';
-      const subs = grupos.get(clave);
-      if (subs) {
-        subs.push(sub);
-      } else {
-        grupos.set(clave, [sub]);
-      }
+  /** Los nombres del roster, para el desplegable del campo de agente. */
+  readonly roster = signal<string[]>([]);
+  readonly reporte = signal<AsistenciaReporte | null>(null);
+  readonly sinResolver = signal(0);
+
+  /** Configuración y Editar horas no comparten filtros con el resto. */
+  readonly esPantallaAparte = computed(() =>
+    this.pantalla() === 'configuracion' || this.pantalla() === 'edicion');
+
+  /** Lo que hay que saber del ámbito antes de mirar a nadie en concreto. */
+  readonly resumen = computed(() => {
+    const r = this.reporte();
+    if (!this.idSubcartera() || !r) {
+      return 'Ingreso y salida según el inicio y cierre de sesión en Cashi';
     }
-    return [...grupos.entries()]
-      .map(([nombre, subs]) => ({
-        nombre,
-        subcarteras: subs.sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName))
-      }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const faltas = r.dias.filter(d => d.estado === 'FALTA').length;
+    const incompletos = r.dias.filter(d => d.estado === 'INCOMPLETO').length;
+    return `${r.agentes.length} personas en el ámbito · ${faltas} faltas · `
+      + `${incompletos} días sin marcación completa`;
   });
 
-  /**
-   * El cierre y la configuración no miran un rango de días: uno trabaja por
-   * semanas cerradas y la otra sobre lo vigente. Enseñarles las fechas haría
-   * creer que las filtran.
-   */
-  readonly tabUsaRango = computed(() =>
-    this.tab() !== 'cierre' && this.tab() !== 'configuracion');
-
-  readonly subtitulo = computed(() => {
-    const elegida = this.subcarteras().find(s => s.id === this.idSubcartera());
-    return elegida
-      ? `${elegida.portfolioName} · ${elegida.subPortfolioName}`
-      : 'Ingreso y salida según el inicio y cierre de sesión en Cashi';
-  });
+  constructor() {
+    // El número de la pestaña de justificaciones tiene que estar aunque no se
+    // haya abierto: es lo que avisa de que hay algo esperando.
+    effect(() => {
+      const desde = this.desde();
+      const hasta = this.hasta();
+      this.servicio.justificaciones(desde, hasta, ['PENDIENTE', 'REVISADA']).subscribe({
+        next: j => this.sinResolver.set(j.length),
+        error: () => this.sinResolver.set(0)
+      });
+    });
+  }
 
   ngOnInit(): void {
-    this.carterasServicio.getAllSubPortfolios().subscribe({
-      next: subs => this.subcarteras.set(subs.filter(s => s.isActive)),
+    this.clientesServicio.getAllTenants().subscribe({
+      next: c => {
+        const activos = c.filter(t => t.isActive);
+        this.clientes.set(activos);
+        // Con un solo cliente, elegirlo a mano es un paso de más.
+        if (activos.length === 1) {
+          this.elegirCliente(activos[0].id);
+        }
+      },
+      error: () => this.toast.error('No se pudieron cargar los clientes')
+    });
+  }
+
+  // ==================== ÁMBITO ====================
+
+  elegirCliente(id: number | null): void {
+    this.idCliente.set(id);
+    this.idCartera.set(null);
+    this.idSubcartera.set(null);
+    this.carteras.set([]);
+    this.subcarteras.set([]);
+    this.agente.set('');
+    if (!id) {
+      return;
+    }
+    this.carterasServicio.getPortfoliosByTenant(id).subscribe({
+      next: c => {
+        const activas = c.filter(p => p.isActive);
+        this.carteras.set(activas);
+        if (activas.length === 1) {
+          this.elegirCartera(activas[0].id);
+        }
+      },
+      error: () => this.toast.error('No se pudieron cargar las carteras')
+    });
+  }
+
+  elegirCartera(id: number | null): void {
+    this.idCartera.set(id);
+    this.idSubcartera.set(null);
+    this.subcarteras.set([]);
+    this.agente.set('');
+    if (!id) {
+      return;
+    }
+    this.carterasServicio.getActiveSubPortfoliosByPortfolio(id).subscribe({
+      next: s => {
+        this.subcarteras.set(s);
+        if (s.length === 1) {
+          this.elegirSubcartera(s[0].id);
+        }
+      },
       error: () => this.toast.error('No se pudieron cargar las subcarteras')
     });
   }
 
-  estaSemana(): void {
-    this.desde.set(lunesDe(new Date()));
-    this.hasta.set(hoy());
+  /** Cambiar de subcartera vacía la persona elegida: el roster es otro. */
+  elegirSubcartera(id: number | null): void {
+    this.idSubcartera.set(id);
+    this.agente.set('');
+    this.reporte.set(null);
+    this.roster.set([]);
+  }
+
+  /**
+   * Descarga el Excel. Lo arma el backend y no el navegador: el formato tiene
+   * que coincidir con el de la hoja que RR.HH. ya lee, colores incluidos, y eso
+   * se mantiene en un solo sitio.
+   */
+  exportar(): void {
+    this.servicio.excel(this.desde(), this.hasta(), this.idSubcartera()).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `Asistencia_${this.desde()}_${this.hasta()}.xlsx`;
+        enlace.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.error('No se pudo generar el Excel')
+    });
   }
 }
