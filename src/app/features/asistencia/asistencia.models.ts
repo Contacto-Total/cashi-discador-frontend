@@ -235,28 +235,62 @@ export interface PuntoDia {
   puntuales: number;
   tarde: number;
   faltas: number;
+  incompletos: number;
   minutosTardanza: number;
 }
 
-export interface FilaRanking {
+/** Un cuadro del mapa de la semana: un día de una persona. */
+export interface CuadroDia {
+  fecha: string;
+  nombreDia: string;
+  estado: EstadoAsistencia;
+}
+
+export interface FilaAgenteDashboard {
   idUsuario: number;
   nombreAgente: string;
+  /** «Karol R.»: en el mapa y las barras no cabe el nombre entero. */
+  nombreCorto: string;
   subcartera: string | null;
   minutosTardanza: number;
   tardanza: string;
   porcentajePuntualidad: number;
   pierdeBono: boolean;
+  minutosTrabajados: number;
+  horasTrabajadas: string;
+  minutosJornada: number;
+  jornada: string | null;
+  semana: CuadroDia[];
+}
+
+export interface AvisoPausa {
+  idUsuario: number;
+  nombreAgente: string;
+  nombreCorto: string;
+  excesoAlmuerzoMin: number;
+  excesoBreakMin: number;
+  totalMin: number;
 }
 
 export interface DashboardAsistencia {
   personas: number;
   porcentajePuntualidad: number;
+  diasPuntuales: number;
+  diasTrabajados: number;
   minutosTardanzaTotal: number;
-  tardanzaTotal: string;
+  /** El tope del ámbito: el de una persona por cuantas son. */
+  minutosTopeEquipo: number;
+  pierdenBono: number;
   diasIncompletos: number;
-  sinBono: number;
+  totalPuntual: number;
+  totalTarde: number;
+  totalFalta: number;
+  totalIncompleto: number;
   porDia: PuntoDia[];
-  ranking: FilaRanking[];
+  agentes: FilaAgenteDashboard[];
+  minutosExcesoAlmuerzo: number;
+  minutosExcesoBreak: number;
+  avisos: AvisoPausa[];
 }
 
 // ==================== POLÍTICA ====================
