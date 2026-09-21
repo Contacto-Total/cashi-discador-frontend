@@ -597,7 +597,9 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
             borderWidth: 2,
             fill: true,
             tension: 0.4,
-            pointRadius: 0,
+            // Con uno o dos días no hay curva que dibujar: sin el punto, la
+            // tarjeta se ve vacía aunque tenga datos.
+            pointRadius: d.porDia.length > 2 ? 0 : 4,
             pointHoverRadius: 4
           }]
         },

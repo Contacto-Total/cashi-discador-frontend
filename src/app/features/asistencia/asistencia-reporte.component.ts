@@ -148,8 +148,9 @@ const COLOR_DIA: Record<string, string> = {
                   </div>
                 </div>
                 <p [class]="estilos.pie">
-                  {{ semana()?.diasPuntual ?? 0 }} de {{ diasLaborables() }} días ·
-                  {{ semana()?.diasFalta ?? 0 }} faltas
+                  {{ semana()?.diasPuntual ?? 0 }} de {{ diasLaborables() }}
+                  {{ diasLaborables() === 1 ? 'día' : 'días' }} ·
+                  {{ semana()?.diasFalta ?? 0 }} {{ (semana()?.diasFalta ?? 0) === 1 ? 'falta' : 'faltas' }}
                 </p>
               </div>
 
@@ -286,7 +287,8 @@ const COLOR_DIA: Record<string, string> = {
                       <td [class]="estilos.td" colspan="5">
                         Semana {{ rangoTexto() }}
                         <span class="ml-2 text-[11.5px] font-normal text-[#5f6c80] dark:text-slate-400">
-                          {{ s.diasTrabajados }} días trabajados · {{ s.diasFalta }} faltas
+                          {{ s.diasTrabajados }} {{ s.diasTrabajados === 1 ? 'día trabajado' : 'días trabajados' }}
+                          · {{ s.diasFalta }} {{ s.diasFalta === 1 ? 'falta' : 'faltas' }}
                         </span>
                       </td>
                       <td [class]="estilos.td + (s.minutosTardanza > 0 ? ' text-[#b91c1c] dark:text-red-300' : '')">{{ s.tardanza }}</td>
@@ -350,7 +352,7 @@ const COLOR_DIA: Record<string, string> = {
               }
 
               <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="motivo-correccion">Motivo</label>
+                <label [class]="estilos.etiqueta" for="motivo-correccion">Qué pasó</label>
                 <textarea id="motivo-correccion" rows="2"
                           class="w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] py-2 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100"
                           placeholder="Ej.: olvidó marcar el regreso del almuerzo"
@@ -366,7 +368,7 @@ const COLOR_DIA: Record<string, string> = {
               <button type="button" [class]="estilos.botonPrimario" (click)="guardar()"
                       [disabled]="guardando() || !hayCambios()">
                 <lucide-angular name="save" [size]="15" class="block"></lucide-angular>
-                {{ guardando() ? 'Guardando…' : 'Guardar' }}
+                {{ guardando() ? 'Guardando…' : 'Aceptar' }}
               </button>
             </footer>
           </div>

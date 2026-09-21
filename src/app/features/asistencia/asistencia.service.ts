@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AsistenciaReporte,
+  AvisoAsistencia,
   CierreSemana,
   ControlAcceso,
   CorreccionMarcacion,
@@ -92,6 +93,14 @@ export class AsistenciaService {
     return this.http.post<Horario>(`${this.url}/horarios`, horario);
   }
 
+  /**
+   * Lo que hay que decirle ahora sobre su jornada. Se consulta y no se empuja:
+   * montar un canal solo para esto sería una pieza más que mantener.
+   */
+  misAvisos(): Observable<AvisoAsistencia[]> {
+    return this.http.get<AvisoAsistencia[]>(`${this.url}/marcaciones/avisos`);
+  }
+
   /** El suyo: mismo cálculo que el de RR.HH., acotado a quien pregunta. */
   reporteMio(desde: string, hasta: string): Observable<AsistenciaReporte> {
     const params = new HttpParams().set('desde', desde).set('hasta', hasta);
@@ -150,6 +159,12 @@ export class AsistenciaService {
 
   marcarDia(dia: DiaCalendario): Observable<{ id: number }> {
     return this.http.post<{ id: number }>(`${this.url}/calendario`, dia);
+  }
+
+  /** Los feriados nacionales de un año, de una vez. */
+  importarFeriados(anio: number): Observable<{ importados: number }> {
+    const params = new HttpParams().set('anio', anio);
+    return this.http.post<{ importados: number }>(`${this.url}/calendario/feriados`, null, { params });
   }
 
   quitarDia(id: number, idSubcartera?: number | null): Observable<void> {
