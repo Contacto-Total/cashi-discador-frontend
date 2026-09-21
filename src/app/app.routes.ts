@@ -197,6 +197,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'cartas/no-adeudo/email',
+    loadComponent: () => import('./features/gestor-cartas/presentation/pages/carta-no-adeudo-email-page/carta-no-adeudo-email-page.component').then(m => m.CartaNoAdeudoEmailPageComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'cartas/no-adeudo',
     loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-page/no-debt-letter-page.component').then(m => m.NoDebtLetterPageComponent),
     canActivate: [authGuard]
