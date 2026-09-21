@@ -1,6 +1,6 @@
 import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect,
-  inject, input, output, signal, viewChild
+  inject, input, output, signal, untracked, viewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
@@ -8,7 +8,7 @@ import { Chart, registerables } from 'chart.js';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { DashboardAsistencia, EstadoAsistencia, Justificacion } from './asistencia.models';
-import { ESTADOS, ESTILOS, duracionCorta, enDuracion, unidadDe } from './asistencia.estilos';
+import { ESTADOS, ESTILOS, duracionCorta, enDuracion, semanaPorDefecto, unidadDe } from './asistencia.estilos';
 
 Chart.register(...registerables);
 
@@ -183,10 +183,20 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Dashboard de Asistencia</h1>
         <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subtitulo() }}</p>
       </div>
-      <button type="button" [class]="estilos.botonSecundario" (click)="semanaAnterior.emit()">
-        <lucide-angular name="arrow-left" [size]="15" class="block"></lucide-angular>
-        Semana anterior
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" [class]="estilos.botonSecundario" (click)="semanaAnterior.emit()">
+          <lucide-angular name="arrow-left" [size]="15" class="block"></lucide-angular>
+          Semana anterior
+        </button>
+        <!-- Solo cuando se ha ido hacia atrás: en la semana por defecto no hay
+             adónde volver y el botón sería ruido. -->
+        @if (!esSemanaPorDefecto()) {
+          <button type="button" [class]="estilos.botonSecundario" (click)="volverASemana.emit()">
+            Volver a esta semana
+            <lucide-angular name="arrow-right" [size]="15" class="block"></lucide-angular>
+          </button>
+        }
+      </div>
     </div>
   </div>
 
@@ -501,6 +511,11 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
 
   /** El botón de la cabecera lo resuelve el módulo: el rango vive allí. */
   readonly semanaAnterior = output<void>();
+  readonly volverASemana = output<void>();
+
+  /** Si se está mirando la semana con la que abre la pantalla. */
+  readonly esSemanaPorDefecto = computed(() =>
+    this.desde() === semanaPorDefecto().desde && this.hasta() === semanaPorDefecto().hasta);
   /** Cada pendiente abre la pantalla donde se resuelve. */
   readonly irA = output<string>();
 
@@ -679,12 +694,23 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.listo = true;
-    this.dibujar();
   }
 
   ngOnDestroy(): void {
     this.destruir();
   }
+
+  private readonly pintar = effect(() => {
+    const d = this.datos();
+    const linea = this.lienzoLinea();
+    const dona = this.lienzoDona();
+    const horas = this.lienzoHoras();
+    if (!d || !linea || !dona || !horas) {
+      return;
+    }
+    // Fuera del seguimiento: dibujar no debe volver a disparar el efecto.
+    untracked(() => this.dibujar());
+  });
 
   private cargar(desde: string, hasta: string, idSubcartera: number): void {
     this.cargando.set(true);
@@ -692,8 +718,6 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
       next: d => {
         this.datos.set(d);
         this.cargando.set(false);
-        // Los lienzos se crean con el @if, así que hay que esperar al pintado.
-        setTimeout(() => this.dibujar());
       },
       error: () => {
         this.toast.error('No se pudo cargar el dashboard');
@@ -728,7 +752,7 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
 
   private dibujar(): void {
     const d = this.datos();
-    if (!this.listo || !d) {
+    if (!d) {
       return;
     }
     this.destruir();

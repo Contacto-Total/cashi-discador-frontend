@@ -840,18 +840,18 @@ function enHoras(minutos: number): string {
               @if (r.tipo === 'invalido') {
                 <p class="!m-0 text-[13px]">—</p>
               } @else {
-                <div class="rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                <div class="rounded-lg border border-[#e6e9ee] bg-[#f6f7f9] px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
                   @if (r.tipo === 'no') {
-                    <div class="text-[19px] font-extrabold tracking-[-0.02em]">No se recupera</div>
-                    <p class="!m-0 mt-0.5 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
-                      El día se paga y nadie devuelve horas
+                    <p class="!m-0 text-[12.5px] leading-normal">
+                      <strong class="font-semibold">No se recupera.</strong>
+                      <span class="text-[#5f6c80] dark:text-slate-400">El día se paga y nadie devuelve horas.</span>
                     </p>
                   } @else if (r.tipo === 'nada') {
                     <p class="!m-0 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
                       Ese rango no tiene días laborables {{ r.enAlcance }}: no hay nada que recuperar.
                     </p>
                   } @else {
-                    <div class="text-[19px] font-extrabold tracking-[-0.02em] tabular-nums">
+                    <div class="text-[15px] font-bold tabular-nums">
                       {{ enDuracion(r.minutos) }}<small [class]="estilos.unidad">por recuperar</small>
                     </div>
                     <p class="!m-0 mt-0.5 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
