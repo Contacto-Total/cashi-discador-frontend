@@ -285,6 +285,9 @@ export interface AvisoPausa {
   excesoAlmuerzoMin: number;
   excesoBreakMin: number;
   totalMin: number;
+  /** Los días en que se pasó de cada pausa: los «casos» del aviso. */
+  casosAlmuerzo?: number;
+  casosBreak?: number;
 }
 
 export interface DashboardAsistencia {
@@ -409,6 +412,10 @@ export interface Horario {
   motivo: string;
   nombreDia?: string;
   minutosVentana?: number;
+  /** El alcance y el autor con nombres; solo los trae el historial. */
+  subcartera?: string | null;
+  persona?: string | null;
+  registradoPor?: string | null;
 }
 
 /** Lo que se manda al completar una marca a mano. El motivo es obligatorio. */

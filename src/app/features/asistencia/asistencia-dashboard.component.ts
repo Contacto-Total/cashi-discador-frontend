@@ -7,8 +7,8 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Chart, registerables } from 'chart.js';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { DashboardAsistencia, EstadoAsistencia } from './asistencia.models';
-import { ESTILOS, duracionCorta, enDuracion, unidadDe } from './asistencia.estilos';
+import { DashboardAsistencia, EstadoAsistencia, Justificacion } from './asistencia.models';
+import { ESTADOS, ESTILOS, duracionCorta, enDuracion, unidadDe } from './asistencia.estilos';
 
 Chart.register(...registerables);
 
@@ -21,6 +21,15 @@ const COLOR: Record<string, string> = {
   JUSTIFICADO: '#6366f1',
   NO_LABORABLE: '#e6e9ee'
 };
+
+/**
+ * La tardanza por día va en celeste y no en el ámbar de «Tarde»: el ámbar ya
+ * está en la dona, el mapa y las barras, y aquí es una sola serie. Es el tono
+ * de sky que pasa las comprobaciones de la skill de gráficos sobre la
+ * superficie clara y la oscura; el celeste más claro se queda corto de
+ * contraste sobre blanco.
+ */
+const CELESTE = '#0284c7';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -44,10 +53,96 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
 
     /* Los lienzos llevan alto fijo: sin él, Chart.js crece sin parar. */
-    .lienzo { position: relative; height: 210px }
-    .lienzo-dona { height: 190px; flex: none; width: 190px }
+    .lienzo { position: relative; height: 190px }
+    .lienzo-dona { height: 170px; flex: none; width: 170px }
     .lienzo-alto { height: 260px }
-    .dona-con-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 18px }
+
+    /* La dona con su leyenda al lado, centradas en el hueco de la tarjeta. */
+    .dona-con-leyenda { flex: 1; display: flex; align-items: center; justify-content: center; gap: 22px }
+    @media (max-width: 560px) { .dona-con-leyenda { flex-direction: column } }
+    .leyenda-lado {
+      list-style: none; margin: 0; padding: 0; flex: none; min-width: 132px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .leyenda-lado li { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5f6c80 }
+    .leyenda-lado .cuadro { width: 10px; height: 10px; border-radius: 3px; flex: none }
+    .leyenda-lado strong { margin-left: auto; color: #0f172a; font-variant-numeric: tabular-nums }
+    :host-context(.dark) .leyenda-lado li { color: #94a3b8 }
+    :host-context(.dark) .leyenda-lado strong { color: #f1f5f9 }
+
+    /* Los tres pasos del cierre: un círculo con su icono y una línea entre pasos. */
+    .avance { display: flex; align-items: center; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid #f1f3f6 }
+    .avance .union { flex: 1; min-width: 8px; height: 1px; background: #e6e9ee }
+    .paso-cierre { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #5f6c80 }
+    .paso-cierre .marca-paso {
+      display: inline-flex; align-items: center; justify-content: center; flex: none;
+      width: 24px; height: 24px; border-radius: 999px; background: #f1f3f6; color: #5f6c80;
+    }
+    .paso-cierre.hecho, .paso-cierre.falta { color: #0f172a }
+    .paso-cierre.hecho .marca-paso { background: #e8f5ec; color: #166534 }
+    .paso-cierre.falta .marca-paso { background: #fef6e0; color: #92400e }
+    .paso-cierre.listo .marca-paso { background: #0f172a; color: #fff }
+    :host-context(.dark) .avance { border-color: #1e293b }
+    :host-context(.dark) .avance .union { background: #1e293b }
+    :host-context(.dark) .paso-cierre { color: #94a3b8 }
+    :host-context(.dark) .paso-cierre .marca-paso { background: #1e293b; color: #94a3b8 }
+    :host-context(.dark) .paso-cierre.hecho, :host-context(.dark) .paso-cierre.falta { color: #f1f5f9 }
+    :host-context(.dark) .paso-cierre.hecho .marca-paso { background: #052e16; color: #86efac }
+    :host-context(.dark) .paso-cierre.falta .marca-paso { background: #451a03; color: #fcd34d }
+    :host-context(.dark) .paso-cierre.listo .marca-paso { background: #fff; color: #0f172a }
+
+    /* Cada pendiente, una banda del color de su caso. */
+    .lista-pendientes {
+      flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 8px;
+      list-style: none; margin: 12px 0 0; padding: 0;
+    }
+    .lista-pendientes li {
+      display: flex; align-items: center; justify-content: space-between; gap: 11px;
+      padding: 11px 13px; border-radius: 10px; background: var(--fila-fondo); color: var(--fila-texto);
+    }
+    .lista-pendientes .ir {
+      flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 0;
+      color: inherit; font: inherit; font-size: 13px; border-radius: 6px;
+    }
+    .lista-pendientes .ir:hover { text-decoration: underline }
+    .lista-pendientes .ir:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px }
+    .lista-pendientes .pie-fila {
+      display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 11.5px; opacity: .78;
+    }
+    .lista-pendientes .estado-fila { font-size: 11.5px; font-weight: 700; white-space: nowrap }
+    .fila-falta { --fila-fondo: #fef6e0; --fila-texto: #92400e }
+    .fila-ok { --fila-fondo: #e8f5ec; --fila-texto: #166534 }
+    .fila-neutro { --fila-fondo: #f1f3f6; --fila-texto: #5f6c80 }
+    :host-context(.dark) .fila-falta { --fila-fondo: #451a03; --fila-texto: #fcd34d }
+    :host-context(.dark) .fila-ok { --fila-fondo: #052e16; --fila-texto: #86efac }
+    :host-context(.dark) .fila-neutro { --fila-fondo: #1e293b; --fila-texto: #94a3b8 }
+
+    /* Avisos: el total arriba, un bloque por pausa y un chip por persona. Las
+       tres franjas se reparten el alto de la tarjeta. */
+    .total-avisos {
+      flex: 1; display: flex; flex-direction: column; justify-content: center;
+      padding-bottom: 10px; border-bottom: 1px solid #f1f3f6;
+    }
+    .por-pausa { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px }
+    .bloque-pausa {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      border: 1px solid #e6e9ee; border-radius: 10px;
+    }
+    .chips-exceso { flex: 1; display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 8px; margin-top: 12px }
+    .chip-exceso {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px;
+      border: 1px solid #e6e9ee; background: #fff; font-size: 12px; color: #334155;
+    }
+    .chip-exceso strong { color: #0f172a; font-variant-numeric: tabular-nums }
+    .chip-exceso.fuerte { border-color: #f59e0b; background: #fef6e0; color: #92400e }
+    .chip-exceso.fuerte strong { color: #92400e }
+    :host-context(.dark) .total-avisos { border-color: #1e293b }
+    :host-context(.dark) .bloque-pausa { border-color: #1e293b }
+    :host-context(.dark) .chip-exceso { border-color: #1e293b; background: #0f172a; color: #e2e8f0 }
+    :host-context(.dark) .chip-exceso strong { color: #f1f5f9 }
+    :host-context(.dark) .chip-exceso.fuerte { border-color: #f59e0b; background: #451a03; color: #fcd34d }
+    :host-context(.dark) .chip-exceso.fuerte strong { color: #fcd34d }
 
     /* La tira de la puntualidad: diez segmentos, uno por cada 10 %. */
     .tira { display: flex; gap: 3px; width: 100% }
@@ -219,12 +314,11 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             </p>
             <div class="dona-con-leyenda">
               <div class="lienzo lienzo-dona"><canvas #dona></canvas></div>
-              <ul class="!m-0 flex list-none flex-col gap-2 !p-0">
-                @for (l of leyendaDona(); track l.texto) {
-                  <li class="flex items-center gap-2.5 text-[12.5px]">
-                    <span class="h-2.5 w-2.5 rounded-[3px]" [style.background]="l.color"></span>
-                    <span class="min-w-[74px]">{{ l.texto }}</span>
-                    <strong class="tabular-nums">{{ l.valor }}</strong>
+              <ul class="leyenda-lado">
+                @for (l of repartoDias(); track l.texto) {
+                  <li>
+                    <span class="cuadro" [style.background]="l.color"></span>{{ l.texto }}
+                    <strong>{{ l.valor }}</strong>
                   </li>
                 }
               </ul>
@@ -252,7 +346,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
                   <span class="nombre" [title]="a.nombreAgente">{{ a.nombreCorto }}</span>
                   @for (c of a.semana; track c.fecha) {
                     <span class="cuadro-dia" [style.background]="COLOR[c.estado]"
-                          [title]="a.nombreAgente + ' · ' + c.nombreDia + ': ' + c.estado.toLowerCase()"></span>
+                          [title]="a.nombreAgente + ' · ' + c.nombreDia + ': ' + ESTADOS[c.estado].texto.toLowerCase()"></span>
                   }
                   <strong class="text-right text-[12px] tabular-nums">{{ a.porcentajePuntualidad }}%</strong>
                 }
@@ -260,7 +354,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             </div>
 
             <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[#f1f3f6] pt-2.5 text-[11.5px] text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">
-              @for (l of leyendaMapa; track l.texto) {
+              @for (l of leyendaMapa(); track l.texto) {
                 <span class="inline-flex items-center gap-1.5">
                   <span class="h-2.5 w-2.5 rounded-[3px]" [style.background]="l.color"></span>{{ l.texto }}
                 </span>
@@ -300,38 +394,30 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
           <!-- Los tres pasos. El aviso es un icono, no un número: un «1» dentro
                de un círculo no se lee como algo que resolver. -->
-          <div class="mb-3.5 flex items-center gap-1.5">
+          <div class="avance">
             @for (p of pasos(); track p.etiqueta; let ultimo = $last) {
-              <div class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold"
-                   [class]="CLASE_PASO[p.estado]"
+              <div [class]="'paso-cierre ' + p.estado"
                    [title]="p.etiqueta + (p.cuantos ? ': ' + p.cuantos + ' por resolver' : '')">
-                <lucide-angular [name]="ICONO_PASO[p.estado]" [size]="13" class="block"></lucide-angular>
-                {{ p.etiqueta }}
+                <span class="marca-paso">
+                  <lucide-angular [name]="ICONO_PASO[p.estado]" [size]="13" class="block"></lucide-angular>
+                </span>
+                <span>{{ p.etiqueta }}</span>
               </div>
               @if (!ultimo) {
-                <span class="h-[1px] w-4 bg-[#e6e9ee] dark:bg-slate-700"></span>
+                <span class="union"></span>
               }
             }
           </div>
 
-          <ul class="!m-0 list-none !p-0">
+          <ul class="lista-pendientes">
             @for (f of pendientes(); track f.ir) {
-              <li class="flex items-center gap-3 border-t border-[#f1f3f6] py-2.5 first:border-0 dark:border-slate-800">
-                <span [class]="estilos.icono">
-                  <lucide-angular [name]="f.icono" [size]="15" class="block"></lucide-angular>
-                </span>
-                <button type="button" class="min-w-0 flex-1 text-left" (click)="irA.emit(f.ir)">
-                  <strong class="block text-[12.5px]">{{ f.titulo }}</strong>
-                  <span class="block truncate text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.pie }}</span>
+              <li [class]="'fila-' + f.tono">
+                <lucide-angular [name]="f.icono" [size]="16" class="block shrink-0"></lucide-angular>
+                <button type="button" class="ir" (click)="irA.emit(f.ir)" [title]="f.pie">
+                  {{ f.titulo }}
+                  <span class="pie-fila">{{ f.pie }}</span>
                 </button>
-                <span class="shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-bold"
-                      [class]="f.tono === 'falta'
-                        ? 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300'
-                        : f.tono === 'ok'
-                          ? 'bg-[#e8f5ec] text-[#166534] dark:bg-green-950/50 dark:text-green-300'
-                          : 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400'">
-                  {{ f.estadoTexto }}
-                </span>
+                <span class="estado-fila">{{ f.estadoTexto }}</span>
               </li>
             }
           </ul>
@@ -344,21 +430,42 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             Exceso de break y de almuerzo. No afectan al bono: se gestionan como llamada de atención.
           </p>
 
-          <div class="mb-2.5 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-            <span class="text-2xl font-extrabold tabular-nums">
-              +{{ d.minutosExcesoAlmuerzo + d.minutosExcesoBreak }}<small [class]="estilos.unidad">min en total</small>
-            </span>
-            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-              Almuerzo <strong class="tabular-nums text-[#0f172a] dark:text-slate-100">+{{ d.minutosExcesoAlmuerzo }}</strong>
-              · Break <strong class="tabular-nums text-[#0f172a] dark:text-slate-100">+{{ d.minutosExcesoBreak }}</strong>
-            </span>
+          <div class="total-avisos">
+            <div [class]="estilos.cifra + ' !text-[22px]'">
+              +{{ d.minutosExcesoAlmuerzo + d.minutosExcesoBreak }}<small [class]="estilos.unidad">min {{ enElRango() }}</small>
+            </div>
+            <div class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+              {{ plural(d.avisos.length, 'persona', 'personas') }} · {{ plural(casosAlmuerzo() + casosBreak(), 'aviso', 'avisos') }}
+            </div>
           </div>
 
-          <div class="flex flex-wrap gap-2">
+          <div class="por-pausa">
+            <div class="bloque-pausa">
+              <span [class]="estilos.icono + ' shrink-0'">
+                <lucide-angular name="utensils" [size]="15" class="block"></lucide-angular>
+              </span>
+              <div>
+                <div [class]="estilos.cifra + ' !text-[19px]'">+{{ d.minutosExcesoAlmuerzo }}<small [class]="estilos.unidad">min</small></div>
+                <div class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">Almuerzo · {{ plural(casosAlmuerzo(), 'caso', 'casos') }}</div>
+              </div>
+            </div>
+            <div class="bloque-pausa">
+              <span [class]="estilos.icono + ' shrink-0'">
+                <lucide-angular name="coffee" [size]="15" class="block"></lucide-angular>
+              </span>
+              <div>
+                <div [class]="estilos.cifra + ' !text-[19px]'">+{{ d.minutosExcesoBreak }}<small [class]="estilos.unidad">min</small></div>
+                <div class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">Break · {{ plural(casosBreak(), 'caso', 'casos') }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Un chip por persona; el de quien más se pasa, en tono fuerte. -->
+          <div class="chips-exceso">
             @for (a of d.avisos; track a.idUsuario) {
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-[#f3d9a4] bg-[#fef6e0] px-2.5 py-1 text-[11.5px] font-semibold text-[#92400e] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+              <span class="chip-exceso" [class.fuerte]="a.totalMin >= topeAvisos() * 0.6"
                     [title]="a.nombreAgente + ': almuerzo +' + a.excesoAlmuerzoMin + ', break +' + a.excesoBreakMin">
-                {{ a.nombreCorto }} <strong class="tabular-nums">+{{ a.totalMin }}</strong>
+                {{ a.nombreAgente }} <strong>+{{ a.totalMin }}</strong>
               </span>
             } @empty {
               <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
@@ -379,6 +486,7 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
 
   protected readonly estilos = ESTILOS;
   protected readonly COLOR = COLOR;
+  protected readonly ESTADOS = ESTADOS;
   protected readonly duracionCorta = duracionCorta;
   protected readonly unidadDe = unidadDe;
   protected readonly enDuracion = enDuracion;
@@ -387,20 +495,6 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
   protected readonly ICONO_PASO: Record<string, string> = {
     hecho: 'check', falta: 'alert-triangle', espera: 'lock', listo: 'arrow-right'
   };
-  protected readonly CLASE_PASO: Record<string, string> = {
-    hecho: 'border-[#bfe3c8] bg-[#e8f5ec] text-[#166534] dark:border-green-900 dark:bg-green-950/40 dark:text-green-300',
-    falta: 'border-[#f5c2c2] bg-[#fdecec] text-[#b91c1c] dark:border-red-900 dark:bg-red-950/40 dark:text-red-300',
-    espera: 'border-[#e6e9ee] bg-[#f6f7f9] text-[#5f6c80] dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400',
-    listo: 'border-[#0f172a] bg-[#0f172a] text-white dark:border-white dark:bg-white dark:text-[#0f172a]'
-  };
-
-  protected readonly leyendaMapa = [
-    { texto: 'Puntual', color: COLOR['PUNTUAL'] },
-    { texto: 'Tarde', color: COLOR['TARDE'] },
-    { texto: 'Falta', color: COLOR['FALTA'] },
-    { texto: 'Incompleto', color: COLOR['INCOMPLETO'] }
-  ];
-
   readonly idSubcartera = input<number | null>(null);
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
@@ -409,11 +503,11 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
   readonly semanaAnterior = output<void>();
   /** Cada pendiente abre la pantalla donde se resuelve. */
   readonly irA = output<string>();
-  /** Lo que espera a alguien, para saber si el cierre está desbloqueado. */
-  readonly justificacionesPendientes = input<number>(0);
 
   readonly datos = signal<DashboardAsistencia | null>(null);
   readonly cargando = signal(false);
+  /** Las justificaciones que esperan a alguien, de todo el rango. */
+  private readonly sinResolver = signal<Justificacion[]>([]);
 
   readonly subtitulo = computed(() => {
     const d = this.datos();
@@ -446,14 +540,27 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     return Math.min(100, (d.minutosTardanzaTotal / (d.minutosTopeEquipo * 2)) * 100);
   });
 
-  readonly leyendaDona = computed(() => {
+  /** Lo que sale en la dona y en su leyenda: solo lo que tiene días. */
+  readonly repartoDias = computed(() => {
     const d = this.datos();
     return [
       { texto: 'Puntual', valor: d?.totalPuntual ?? 0, color: COLOR['PUNTUAL'] },
       { texto: 'Tarde', valor: d?.totalTarde ?? 0, color: COLOR['TARDE'] },
       { texto: 'Falta', valor: d?.totalFalta ?? 0, color: COLOR['FALTA'] },
       { texto: 'Incompleto', valor: d?.totalIncompleto ?? 0, color: COLOR['INCOMPLETO'] }
-    ];
+    ].filter(r => r.valor > 0);
+  });
+
+  /**
+   * Los cuatro de siempre y, detrás, los que aparezcan en el mapa: un cuadro
+   * de un color que no está en la leyenda no se puede leer.
+   */
+  readonly leyendaMapa = computed(() => {
+    const presentes = new Set((this.datos()?.agentes ?? []).flatMap(a => a.semana.map(c => c.estado)));
+    const orden: EstadoAsistencia[] = ['PUNTUAL', 'TARDE', 'FALTA', 'INCOMPLETO', 'JUSTIFICADO', 'NO_LABORABLE'];
+    return orden
+      .filter((e, i) => i < 4 || presentes.has(e))
+      .map(e => ({ texto: ESTADOS[e].texto, color: COLOR[e] }));
   });
 
   /** Los días que de verdad tiene el rango, no los siete de siempre. */
@@ -473,41 +580,82 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
       .slice(0, DIAS.length);
   });
 
+  /** Los días sin marcación completa, como «Karol 18/09». */
+  private readonly diasIncompletos = computed(() =>
+    (this.datos()?.agentes ?? []).flatMap(a => a.semana
+      .filter(c => c.estado === 'INCOMPLETO')
+      .map(c => `${this.primerNombre(a.nombreAgente)} ${this.corta(c.fecha)}`)));
+
+  /** Las justificaciones de la gente del ámbito, separadas por quién las tiene. */
+  private readonly justificacionesDelAmbito = computed(() => {
+    const gente = new Set((this.datos()?.agentes ?? []).map(a => a.idUsuario));
+    const suyas = this.sinResolver().filter(j => gente.has(j.idUsuario));
+    return {
+      // Lo que bloquea a RR.HH. es lo revisado: lo que aún no pasó por la
+      // supervisora no le toca todavía.
+      porAprobar: suyas.filter(j => j.estado === 'REVISADA'),
+      porRevisar: suyas.filter(j => j.estado === 'PENDIENTE')
+    };
+  });
+
   /** Los tres pasos del cierre, en orden. */
   readonly pasos = computed(() => {
     const incompletos = this.datos()?.diasIncompletos ?? 0;
-    const justificaciones = this.justificacionesPendientes();
-    const listo = !incompletos && !justificaciones;
+    const porAprobar = this.justificacionesDelAmbito().porAprobar.length;
+    const listo = !incompletos && !porAprobar;
     return [
       { etiqueta: 'Marcaciones', estado: incompletos ? 'falta' : 'hecho', cuantos: incompletos },
-      { etiqueta: 'Justificaciones', estado: justificaciones ? 'falta' : 'hecho', cuantos: justificaciones },
+      { etiqueta: 'Justificaciones', estado: porAprobar ? 'falta' : 'hecho', cuantos: porAprobar },
       { etiqueta: 'Cierre', estado: listo ? 'listo' : 'espera', cuantos: 0 }
     ];
   });
 
+  /** La fila entera se tiñe según el caso; el aviso va en palabras al final. */
   readonly pendientes = computed(() => {
+    // El número es el mismo de la tarjeta «Días por completar».
     const incompletos = this.datos()?.diasIncompletos ?? 0;
-    const justificaciones = this.justificacionesPendientes();
+    const { porAprobar, porRevisar } = this.justificacionesDelAmbito();
     return [
       {
         ir: 'asistencia', icono: 'pencil', tono: incompletos ? 'falta' : 'ok',
         titulo: 'Días sin marcación por completar',
-        pie: incompletos ? 'Se corrigen desde el reporte' : 'Nada pendiente',
+        pie: incompletos ? [...new Set(this.diasIncompletos())].join(', ') : 'Nada pendiente',
         estadoTexto: incompletos ? `${incompletos} por completar` : 'Al día'
       },
       {
-        ir: 'justificaciones', icono: 'file-text', tono: justificaciones ? 'falta' : 'ok',
-        titulo: 'Justificaciones por resolver',
-        pie: justificaciones ? 'Esperando a la supervisora o a RR.HH.' : 'Nada pendiente',
-        estadoTexto: justificaciones ? `${justificaciones} por resolver` : 'Al día'
+        ir: 'justificaciones', icono: 'file-text', tono: porAprobar.length ? 'falta' : 'ok',
+        titulo: 'Justificaciones por aprobar',
+        pie: porAprobar.length
+          ? porAprobar.map(j => `${(j.tipo ?? 'justificación').toLowerCase()} de ${this.primerNombre(j.nombreAgente)}`).join(', ')
+          : porRevisar.length ? `${porRevisar.length} esperando a la supervisora` : 'Nada pendiente',
+        estadoTexto: porAprobar.length ? `${porAprobar.length} por aprobar` : 'Al día'
       },
       {
-        ir: 'cierre', icono: 'lock', tono: 'neutro',
+        ir: 'cierre', icono: 'calendar', tono: 'neutro',
         titulo: 'Cerrar la semana',
         pie: 'Viernes a mediodía',
         estadoTexto: 'Abierta'
       }
     ];
+  });
+
+  /**
+   * Los casos son días con exceso. Si el backend aún no los manda, cada
+   * persona con minutos de más cuenta como un caso.
+   */
+  readonly casosAlmuerzo = computed(() => (this.datos()?.avisos ?? [])
+    .reduce((t, a) => t + (a.casosAlmuerzo ?? (a.excesoAlmuerzoMin > 0 ? 1 : 0)), 0));
+  readonly casosBreak = computed(() => (this.datos()?.avisos ?? [])
+    .reduce((t, a) => t + (a.casosBreak ?? (a.excesoBreakMin > 0 ? 1 : 0)), 0));
+
+  /** El chip de quien más se pasa va en tono fuerte. */
+  readonly topeAvisos = computed(() =>
+    Math.max(1, ...(this.datos()?.avisos ?? []).map(a => a.totalMin)));
+
+  /** «en la semana» si el rango es una semana; si no, «en el rango». */
+  readonly enElRango = computed(() => {
+    const dias = (Date.parse(this.hasta()) - Date.parse(this.desde())) / 86_400_000 + 1;
+    return dias <= 7 ? 'en la semana' : 'en el rango';
   });
 
   readonly jornadaTexto = computed(() => {
@@ -552,6 +700,20 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
         this.cargando.set(false);
       }
     });
+    // Lo que espera a la supervisora o a RR.HH.; se filtra luego por la gente
+    // del ámbito, que es la que trae el dashboard.
+    this.servicio.justificaciones(desde, hasta, ['PENDIENTE', 'REVISADA']).subscribe({
+      next: j => this.sinResolver.set(j),
+      error: () => this.sinResolver.set([])
+    });
+  }
+
+  protected plural(n: number, uno: string, varios: string): string {
+    return `${n} ${n === 1 ? uno : varios}`;
+  }
+
+  private primerNombre(nombre: string | null): string {
+    return (nombre ?? '').trim().split(/\s+/)[0] ?? '';
   }
 
   private destruir(): void {
@@ -574,6 +736,19 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     const tinta = '#5f6c80';
     const rejilla = 'rgba(100,116,139,.18)';
 
+    // La curva y la dona siguen al artifact: rejilla discontinua sin eje, la
+    // letra del módulo y el tooltip con la superficie del tema, no el negro.
+    const oscuro = document.documentElement.classList.contains('dark');
+    const superficie = oscuro ? '#0f172a' : '#ffffff';
+    const texto = oscuro ? '#f1f5f9' : '#0f172a';
+    const rejillaSuave = oscuro ? '#1e293b' : '#e6e9ee';
+    const fuente = { family: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif", size: 11 };
+    const tooltip = {
+      backgroundColor: superficie, titleColor: texto, bodyColor: texto,
+      borderColor: rejillaSuave, borderWidth: 1, padding: 10, cornerRadius: 8,
+      displayColors: false, titleFont: fuente, bodyFont: fuente
+    };
+
     // ---- Tardanza por día: área suave, que es una tendencia, no una suma ----
     const linea = this.lienzoLinea()?.nativeElement;
     if (linea) {
@@ -583,15 +758,15 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
           labels: d.porDia.map(p => p.nombreDia.slice(0, 3)),
           datasets: [{
             data: d.porDia.map(p => p.minutosTardanza),
-            borderColor: COLOR['TARDE'],
+            borderColor: CELESTE,
             backgroundColor: (ctx) => {
               const { ctx: c, chartArea: a } = ctx.chart;
               if (!a) {
                 return 'transparent';
               }
               const grad = c.createLinearGradient(0, a.top, 0, a.bottom);
-              grad.addColorStop(0, 'rgba(245,158,11,.35)');
-              grad.addColorStop(1, 'rgba(245,158,11,0)');
+              grad.addColorStop(0, 'rgba(2,132,199,.45)');
+              grad.addColorStop(1, 'rgba(2,132,199,.02)');
               return grad;
             },
             borderWidth: 2,
@@ -600,19 +775,27 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
             // Con uno o dos días no hay curva que dibujar: sin el punto, la
             // tarjeta se ve vacía aunque tenga datos.
             pointRadius: d.porDia.length > 2 ? 0 : 4,
-            pointHoverRadius: 4
+            pointHoverRadius: 5,
+            pointBackgroundColor: CELESTE,
+            pointHoverBackgroundColor: CELESTE
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
-            tooltip: { callbacks: { label: c => `${c.parsed.y} min de retraso` } }
+            tooltip: { ...tooltip, callbacks: { label: c => `${c.parsed.y} minutos de tardanza` } }
           },
           scales: {
-            x: { grid: { display: false }, ticks: { color: tinta } },
-            y: { beginAtZero: true, grid: { color: rejilla }, ticks: { color: tinta, precision: 0 } }
+            x: { grid: { display: false }, border: { display: false }, ticks: { color: tinta, font: fuente } },
+            y: {
+              beginAtZero: true,
+              grid: { color: rejillaSuave },
+              border: { display: false },
+              ticks: { color: tinta, font: fuente, precision: 0, maxTicksLimit: 4, padding: 6 }
+            }
           }
         }
       }));
@@ -621,22 +804,32 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     // ---- Reparto de los días: dona con el total al centro ----
     const dona = this.lienzoDona()?.nativeElement;
     if (dona) {
-      const total = d.totalPuntual + d.totalTarde + d.totalFalta + d.totalIncompleto;
+      const reparto = this.repartoDias();
+      const total = reparto.reduce((t, r) => t + r.valor, 0);
       this.graficos.push(new Chart(dona, {
         type: 'doughnut',
         data: {
-          labels: ['Puntual', 'Tarde', 'Falta', 'Incompleto'],
+          labels: reparto.map(r => r.texto),
           datasets: [{
-            data: [d.totalPuntual, d.totalTarde, d.totalFalta, d.totalIncompleto],
-            backgroundColor: [COLOR['PUNTUAL'], COLOR['TARDE'], COLOR['FALTA'], COLOR['INCOMPLETO']],
-            borderWidth: 0
+            data: reparto.map(r => r.valor),
+            backgroundColor: reparto.map(r => r.color),
+            // El anillo de la superficie separa los tramos.
+            borderColor: superficie,
+            borderWidth: 3,
+            hoverOffset: 6
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          cutout: '68%',
-          plugins: { legend: { display: false } }
+          cutout: '72%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              ...tooltip, displayColors: true,
+              callbacks: { label: c => ` ${c.parsed} días · ${Math.round(c.parsed / (total || 1) * 100)}%` }
+            }
+          }
         },
         plugins: [{
           // El total al centro: es la cifra que se busca al mirar una dona.
@@ -650,12 +843,13 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
             const y = (chartArea.top + chartArea.bottom) / 2;
             ctx.save();
             ctx.textAlign = 'center';
-            ctx.fillStyle = getComputedStyle(chart.canvas).color || '#0f172a';
-            ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
-            ctx.fillText(String(total), x, y);
-            ctx.font = '600 11px "Plus Jakarta Sans", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = texto;
+            ctx.font = "800 22px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillText(String(total), x, y - 6);
+            ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif";
             ctx.fillStyle = tinta;
-            ctx.fillText('días', x, y + 16);
+            ctx.fillText('días', x, y + 13);
             ctx.restore();
           }
         }]

@@ -161,6 +161,12 @@ export class AsistenciaService {
     return this.http.post<{ id: number }>(`${this.url}/calendario`, dia);
   }
 
+  /** Los feriados nacionales de un año, para sugerirlos al escribir el nombre. */
+  feriados(anio: number): Observable<{ fecha: string; nombre: string }[]> {
+    const params = new HttpParams().set('anio', anio);
+    return this.http.get<{ fecha: string; nombre: string }[]>(`${this.url}/calendario/feriados`, { params });
+  }
+
   /** Los feriados nacionales de un año, de una vez. */
   importarFeriados(anio: number): Observable<{ importados: number }> {
     const params = new HttpParams().set('anio', anio);

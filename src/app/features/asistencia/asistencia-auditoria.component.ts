@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -6,6 +6,9 @@ import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { CorreccionMarcacion } from './asistencia.models';
 import { ESTILOS } from './asistencia.estilos';
+
+/** Filas por página: las que caben sin tener que bajar. */
+const POR_PAGINA = 10;
 
 /**
  * Auditoría: las marcas escritas a mano, con su motivo y quién las escribió.
@@ -41,22 +44,23 @@ import { ESTILOS } from './asistencia.estilos';
 
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="aud-desde">Desde</label>
+          <input id="aud-desde" type="date" [class]="estilos.campo + ' w-[148px]'"
+                 [ngModel]="desdeAud()" (ngModelChange)="cambiarRango($event, hastaAud())">
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="aud-hasta">Hasta</label>
+          <input id="aud-hasta" type="date" [class]="estilos.campo + ' w-[148px]'"
+                 [ngModel]="hastaAud()" (ngModelChange)="cambiarRango(desdeAud(), $event)">
+        </div>
+        <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="aud-quien">Quién corrigió</label>
           <select id="aud-quien" [class]="estilos.campo + ' w-[210px]'"
-                  [ngModel]="quien()" (ngModelChange)="quien.set($event)">
+                  [ngModel]="quien()" (ngModelChange)="quien.set($event); pagina.set(1)">
             <option value="">Todos</option>
             @for (q of quienes(); track q) { <option [value]="q">{{ q }}</option> }
           </select>
         </div>
-        <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="aud-buscar">Buscar</label>
-          <input id="aud-buscar" type="search" placeholder="Persona o motivo"
-                 [class]="estilos.campo + ' w-[220px]'"
-                 [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)">
-        </div>
-        <span class="pb-[11px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-          {{ filtradas().length }} {{ filtradas().length === 1 ? 'corrección' : 'correcciones' }}
-        </span>
       </div>
     </div>
 
@@ -68,7 +72,7 @@ import { ESTILOS } from './asistencia.estilos';
       } @else {
         <div [class]="estilos.panel">
           <table class="w-full border-collapse">
-            <caption class="sr-only">Correcciones de marcación</caption>
+            <caption class="sr-only">Correcciones manuales</caption>
             <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
               <tr>
                 <th scope="col" [class]="estilos.th">Cuándo</th>
@@ -82,18 +86,30 @@ import { ESTILOS } from './asistencia.estilos';
               </tr>
             </thead>
             <tbody>
-              @for (c of filtradas(); track c.id) {
-                <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#fafbfc] dark:border-slate-800 dark:hover:bg-slate-800/40">
-                  <td [class]="estilos.td">{{ c.cuando | date: 'dd/MM HH:mm' }}</td>
-                  <td [class]="estilos.td + ' font-semibold'">{{ c.nombreAgente }}</td>
-                  <td [class]="estilos.td">{{ c.fecha | date: 'dd/MM/yyyy' }}</td>
+              @for (c of visibles(); track c.id) {
+                <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#f4f6f9] dark:border-slate-800 dark:hover:bg-slate-800/40">
+                  <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ c.cuando | date: 'dd/MM HH:mm' }}</td>
+                  <td [class]="estilos.td + ' max-w-[180px] truncate font-semibold'">{{ c.nombreAgente }}</td>
+                  <td [class]="estilos.td">{{ c.fecha | date: 'dd/MM' }}</td>
                   <td [class]="estilos.td">{{ c.marca }}</td>
-                  <td [class]="estilos.td + ' text-[#8491a3] dark:text-slate-500'">
-                    {{ c.antes ?? 'sin marca' }}
+                  <td [class]="estilos.td">
+                    @if (c.antes) {
+                      {{ c.antes }}
+                    } @else {
+                      <span class="inline-flex items-center rounded-full bg-[#fdecec] px-[9px] py-0.5 text-[11.5px] font-bold text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300">
+                        Sin marcación
+                      </span>
+                    }
                   </td>
-                  <td [class]="estilos.td + ' font-bold'">{{ c.despues ?? '—' }}</td>
-                  <td [class]="estilos.td + ' !whitespace-normal'">{{ c.motivo ?? '—' }}</td>
-                  <td [class]="estilos.td">{{ c.corrigio ?? '—' }}</td>
+                  <!-- El punto ámbar es la marca escrita a mano, como en el reporte. -->
+                  <td [class]="estilos.td + ' font-bold'">
+                    <span class="inline-flex items-center gap-[7px]">
+                      {{ c.despues ?? '—' }}
+                      <span class="h-1.5 w-1.5 rounded-full bg-[#d97706] dark:bg-amber-400" aria-hidden="true"></span>
+                    </span>
+                  </td>
+                  <td [class]="estilos.td + ' max-w-[240px] !whitespace-normal'">{{ c.motivo ?? '—' }}</td>
+                  <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ c.corrigio ?? '—' }}</td>
                 </tr>
               } @empty {
                 <tr>
@@ -107,12 +123,25 @@ import { ESTILOS } from './asistencia.estilos';
               }
             </tbody>
           </table>
-        </div>
 
-        <p class="mt-2.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-          No se guarda la hora anterior: la marca corregida se sustituye. Lo que queda es
-          que fue manual, con su motivo y su autor.
-        </p>
+          @if (filtradas().length) {
+            <div class="flex items-center justify-between gap-3 border-t border-[#f1f3f6] px-3 py-2.5 dark:border-slate-800">
+              <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                {{ primera() }}–{{ primera() + visibles().length - 1 }} de {{ filtradas().length }}
+              </span>
+              <div class="flex gap-1.5">
+                <button type="button" [class]="estilos.botonIcono" (click)="pagina.set(pagina() - 1)"
+                        [disabled]="pagina() === 1" aria-label="Página anterior">
+                  <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
+                </button>
+                <button type="button" [class]="estilos.botonIcono" (click)="pagina.set(pagina() + 1)"
+                        [disabled]="pagina() === paginas()" aria-label="Página siguiente">
+                  <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
       }
     </div>
     </div>
@@ -124,40 +153,50 @@ export class AsistenciaAuditoriaComponent {
 
   protected readonly estilos = ESTILOS;
 
+  /** El rango del módulo: la auditoría abre en el mes de ese rango. */
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
 
+  /** El rango propio de la pantalla, que se puede mover sin tocar el del módulo. */
+  readonly desdeAud = signal('');
+  readonly hastaAud = signal('');
+
   readonly correcciones = signal<CorreccionMarcacion[]>([]);
   readonly cargando = signal(false);
-  readonly busqueda = signal('');
   readonly quien = signal('');
+  readonly pagina = signal(1);
 
   /** Quién ha corregido algo en el rango: no un catálogo, los reales. */
   readonly quienes = computed(() =>
     [...new Set(this.correcciones().map(c => c.corrigio).filter((q): q is string => !!q))].sort());
 
   readonly filtradas = computed(() => {
-    const texto = this.busqueda().toLowerCase().trim();
     const q = this.quien();
-    return this.correcciones().filter(c => {
-      if (q && c.corrigio !== q) {
-        return false;
-      }
-      if (!texto) {
-        return true;
-      }
-      return (c.nombreAgente ?? '').toLowerCase().includes(texto)
-        || (c.motivo ?? '').toLowerCase().includes(texto)
-        || (c.corrigio ?? '').toLowerCase().includes(texto);
-    });
+    return this.correcciones().filter(c => !q || c.corrigio === q);
   });
 
+  readonly paginas = computed(() => Math.max(1, Math.ceil(this.filtradas().length / POR_PAGINA)));
+  readonly primera = computed(() => (Math.min(this.pagina(), this.paginas()) - 1) * POR_PAGINA + 1);
+  readonly visibles = computed(() =>
+    this.filtradas().slice(this.primera() - 1, this.primera() - 1 + POR_PAGINA));
+
   constructor() {
+    // Al cambiar el rango del módulo, la auditoría se va a su mes entero.
     effect(() => {
-      const desde = this.desde();
-      const hasta = this.hasta();
-      this.cargar(desde, hasta);
+      const [anio, mes] = this.desde().split('-').map(Number);
+      const ultimo = new Date(anio, mes, 0).getDate();
+      const mm = String(mes).padStart(2, '0');
+      untracked(() => this.cambiarRango(`${anio}-${mm}-01`, `${anio}-${mm}-${ultimo}`));
     });
+  }
+
+  cambiarRango(desde: string, hasta: string): void {
+    this.desdeAud.set(desde);
+    this.hastaAud.set(hasta);
+    this.pagina.set(1);
+    if (desde && hasta && desde <= hasta) {
+      this.cargar(desde, hasta);
+    }
   }
 
   /**
@@ -178,7 +217,7 @@ export class AsistenciaAuditoriaComponent {
     const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
     const enlace = document.createElement('a');
     enlace.href = url;
-    enlace.download = `Auditoria_${this.desde()}_${this.hasta()}.csv`;
+    enlace.download = `Auditoria_${this.desdeAud()}_${this.hastaAud()}.csv`;
     enlace.click();
     URL.revokeObjectURL(url);
   }
