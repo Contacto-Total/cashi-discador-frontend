@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { EquipoService } from '../../asistencia/equipo.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { MenuPermissionService } from '../../../core/services/menu-permission.service';
 // import * as THREE from 'three'; // DESHABILITADO: efecto navideño 3D (descomentar en diciembre + reactivar bloques THREE.JS abajo)
@@ -92,6 +93,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     private fb: FormBuilder,
     private authService: AuthService,
     private menuPermissionService: MenuPermissionService,
+    private equipoService: EquipoService,
     private router: Router,
     private route: ActivatedRoute,
     private elementRef: ElementRef,
@@ -839,50 +841,72 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.authService.login(username, password).subscribe({
       next: (response) => {
-        // After successful login, load the dynamic menu and navigate to first item
-        this.menuPermissionService.loadVisibleMenu().subscribe({
-          next: (menuItems) => {
-            this.loading = false;
-
-            // Find the first navigable route
-            let firstRoute: string | null = null;
-
-            for (const item of menuItems) {
-              if (item.tipo === 'LINK' && item.ruta) {
-                firstRoute = item.ruta;
-                break;
-              } else if (item.tipo === 'DROPDOWN' && item.children?.length > 0) {
-                // Get first child with a route
-                const firstChild = item.children.find(child => child.ruta);
-                if (firstChild?.ruta) {
-                  firstRoute = firstChild.ruta;
-                  break;
-                }
-              }
+        // El equipo se comprueba DESPUES de entrar y no antes: la validacion
+        // necesita el token para saber quien lo intenta, y el rechazo tiene que
+        // quedar registrado con nombre y apellido. Si no esta autorizado, se
+        // cierra la sesion recien abierta.
+        this.equipoService.validar().subscribe({
+          next: (acceso) => {
+            if (!acceso.permitido) {
+              this.loading = false;
+              this.errorMessage = acceso.mensaje ?? 'Esta computadora no está autorizada';
+              this.authService.logout();
+              return;
             }
-
-            // Navigate to first route or fallback
-            if (firstRoute) {
-              console.log('📍 Navegando a primera opción del menú:', firstRoute);
-              this.router.navigate([firstRoute]);
-            } else {
-              // Fallback if no menu items found
-              console.warn('⚠️ No se encontraron items de menú, usando fallback');
-              this.router.navigate(['/dashboard']);
-            }
+            this.entrar();
           },
-          error: (menuError) => {
-            this.loading = false;
-            console.error('Error loading menu:', menuError);
-            // Fallback navigation
-            this.router.navigate(['/dashboard']);
-          }
+          // Si la comprobacion falla (backend viejo, red), se entra igual: dejar
+          // a la operacion fuera por un error de red es peor que el riesgo que
+          // cubre esta pantalla.
+          error: () => this.entrar()
         });
       },
       error: (error) => {
         this.loading = false;
         this.errorMessage = error.error?.message || 'Invalid username or password';
         console.error('Login error:', error);
+      }
+    });
+  }
+
+  /** Carga el menú y entra por su primera opción. */
+  private entrar(): void {
+    this.menuPermissionService.loadVisibleMenu().subscribe({
+      next: (menuItems) => {
+        this.loading = false;
+
+        // Find the first navigable route
+        let firstRoute: string | null = null;
+
+        for (const item of menuItems) {
+          if (item.tipo === 'LINK' && item.ruta) {
+            firstRoute = item.ruta;
+            break;
+          } else if (item.tipo === 'DROPDOWN' && item.children?.length > 0) {
+            // Get first child with a route
+            const firstChild = item.children.find(child => child.ruta);
+            if (firstChild?.ruta) {
+              firstRoute = firstChild.ruta;
+              break;
+            }
+          }
+        }
+
+        // Navigate to first route or fallback
+        if (firstRoute) {
+          console.log('📍 Navegando a primera opción del menú:', firstRoute);
+          this.router.navigate([firstRoute]);
+        } else {
+          // Fallback if no menu items found
+          console.warn('⚠️ No se encontraron items de menú, usando fallback');
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: (menuError) => {
+        this.loading = false;
+        console.error('Error loading menu:', menuError);
+        // Fallback navigation
+        this.router.navigate(['/dashboard']);
       }
     });
   }

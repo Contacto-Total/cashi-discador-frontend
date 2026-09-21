@@ -501,6 +501,30 @@ export const routes: Routes = [
   },
 
   {
+    path: 'mi-asistencia',
+    loadComponent: () => import('./features/asistencia/mi-asistencia.component').then(m => m.MiAsistenciaComponent),
+    // Sin adminGuard ni nada: son las horas de quien entra. El backend resuelve
+    // de quién son por el token, no por un parámetro.
+    canActivate: [authGuard]
+  },
+
+  {
+    path: 'control-acceso',
+    loadComponent: () => import('./features/asistencia/control-acceso.component').then(m => m.ControlAccesoComponent),
+    // Decidir qué máquina entra es de administración; el controlador corta con
+    // ADMIN y OPERACIONES.
+    canActivate: [authGuard]
+  },
+
+  {
+    path: 'asistencia',
+    loadComponent: () => import('./features/asistencia/control-asistencia.component').then(m => m.ControlAsistenciaComponent),
+    // sin adminGuard: la supervisora revisa la asistencia de su cartera.
+    // AsistenciaController admite ADMIN y SUPERVISOR y acota por subcartera.
+    canActivate: [authGuard]
+  },
+
+  {
     path: '',
     redirectTo: '/login',
     pathMatch: 'full'
