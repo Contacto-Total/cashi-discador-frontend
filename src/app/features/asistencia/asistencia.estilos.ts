@@ -114,6 +114,17 @@ export function lunesDe(fecha: Date): string {
   return copia.toISOString().slice(0, 10);
 }
 
+/**
+ * El sábado de la semana de una fecha: el final del rango que se mira.
+ *
+ * Va hasta el sábado y no hasta hoy porque la semana se revisa entera —el mapa
+ * y la curva necesitan sus seis columnas—, y porque CASTIGO trabaja los
+ * sábados. Los días que aún no han llegado salen sin marcas, que es la verdad.
+ */
+export function finDeSemanaDe(fecha: Date): string {
+  return sumarDias(lunesDe(fecha), 5);
+}
+
 export function sumarDias(fecha: string, dias: number): string {
   const copia = new Date(fecha + 'T00:00:00');
   copia.setDate(copia.getDate() + dias);

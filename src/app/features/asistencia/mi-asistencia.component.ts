@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AsistenciaService } from './asistencia.service';
 import {
   AsistenciaDia,
+  AvisoAsistencia,
   AsistenciaReporte,
   EstadoAsistencia,
   Justificacion,
@@ -328,6 +329,29 @@ const ESTILOS = {
         }
       </div>
 
+      <!-- Los avisos de la jornada. Salen aquí y no como un recuadro dentro de
+           la página: el del almuerzo tiene que interrumpir. -->
+      <div class="pointer-events-none fixed right-4 top-4 z-[60] flex w-[min(100%,360px)] flex-col gap-2">
+        @for (a of avisos(); track a.titulo) {
+          <div class="pointer-events-auto flex items-start gap-2.5 rounded-xl border px-3.5 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.18)]"
+               [class]="a.tipo === 'aviso'
+                 ? 'border-[#f3d9a4] bg-[#fef6e0] text-[#92400e] dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                 : 'border-[#bfe3c8] bg-[#e8f5ec] text-[#166534] dark:border-green-900 dark:bg-green-950 dark:text-green-200'"
+               role="status">
+            <lucide-angular [name]="a.tipo === 'aviso' ? 'alert-triangle' : 'check-circle'"
+                            [size]="16" class="mt-[1px] block shrink-0"></lucide-angular>
+            <div class="min-w-0 flex-1">
+              <strong class="block text-[12.5px] font-bold">{{ a.titulo }}</strong>
+              <span class="block text-[11.5px]">{{ a.texto }}</span>
+            </div>
+            <button type="button" class="shrink-0 opacity-60 hover:opacity-100"
+                    (click)="descartar(a)" aria-label="Cerrar aviso">
+              <lucide-angular name="x" [size]="14" class="block"></lucide-angular>
+            </button>
+          </div>
+        }
+      </div>
+
       <!-- Solicitar justificación -->
       @if (formulario()) {
         <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarSolicitud()"></div>
@@ -402,7 +426,7 @@ const ESTILOS = {
               <button type="button" [class]="estilos.botonSecundario" (click)="cerrarSolicitud()">Cancelar</button>
               <button type="button" [class]="estilos.botonPrimario" (click)="enviar()" [disabled]="enviando()">
                 <lucide-angular name="send" [size]="15" class="block"></lucide-angular>
-                {{ enviando() ? 'Enviando…' : 'Enviar' }}
+                {{ enviando() ? 'Enviando…' : 'Enviar a revisión' }}
               </button>
             </footer>
           </div>
@@ -411,7 +435,7 @@ const ESTILOS = {
     </div>
   `
 })
-export class MiAsistenciaComponent implements OnInit {
+export class MiAsistenciaComponent implements OnInit, OnDestroy {
   private readonly servicio = inject(AsistenciaService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
@@ -427,6 +451,10 @@ export class MiAsistenciaComponent implements OnInit {
   readonly cargadoEn = signal<Date | null>(null);
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly recuperaciones = signal<Recuperacion[]>([]);
+  readonly avisos = signal<AvisoAsistencia[]>([]);
+  /** Los que ya cerró: no vuelven a salir en el siguiente sondeo. */
+  private readonly descartados = new Set<string>();
+  private reloj?: ReturnType<typeof setInterval>;
   readonly tipos = signal<TipoDia[]>([]);
   readonly pagina = signal(0);
 
@@ -529,6 +557,28 @@ export class MiAsistenciaComponent implements OnInit {
     this.cargar();
     this.cargarSolicitudes();
     this.cargarRecuperaciones();
+
+    // Cada minuto: es la resolución del aviso («empieza en 5 minutos») y no
+    // hace falta más. Con un canal abierto habría una pieza más que mantener.
+    this.cargarAvisos();
+    this.reloj = setInterval(() => this.cargarAvisos(), 60_000);
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.reloj);
+  }
+
+  private cargarAvisos(): void {
+    this.servicio.misAvisos().subscribe({
+      next: a => this.avisos.set(a.filter(x => !this.descartados.has(x.titulo))),
+      error: () => { /* un aviso que no llega no rompe la pantalla */ }
+    });
+  }
+
+  /** Cerrar un aviso lo silencia hasta que cambie: no vuelve cada minuto. */
+  descartar(aviso: AvisoAsistencia): void {
+    this.descartados.add(aviso.titulo);
+    this.avisos.update(lista => lista.filter(a => a !== aviso));
   }
 
   /** Lo que se debe por días recuperables. Se abre solo al aprobar la justificación. */

@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { Justificacion } from './asistencia.models';
-import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos';
+import { Justificacion, ResumenAgente, TipoDia } from './asistencia.models';
+import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.estilos';
 
 /**
  * Bandeja de justificaciones.
@@ -38,7 +38,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
             La registra la supervisora y la aprueba RR.HH.
           </p>
         </div>
-        <button type="button" [class]="estilos.botonPrimario" (click)="registrar.emit()">
+        <button type="button" [class]="estilos.botonPrimario" (click)="abrirAlta()">
           <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
           Registrar justificación
         </button>
@@ -78,6 +78,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
               <tr>
                 <th scope="col" [class]="estilos.th">Solicitado</th>
                 <th scope="col" [class]="estilos.th">Persona</th>
+                <th scope="col" [class]="estilos.th">Rol</th>
                 <th scope="col" [class]="estilos.th">Tipo</th>
                 <th scope="col" [class]="estilos.th">Días</th>
                 <th scope="col" [class]="estilos.th">Certificado</th>
@@ -95,6 +96,13 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
                   <td [class]="estilos.td">
                     <span class="font-semibold">{{ j.nombreAgente }}</span>
                     <span class="ml-1.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ j.subcartera }}</span>
+                  </td>
+                  <td [class]="estilos.td">
+                    @if (j.rol) {
+                      <span [class]="j.rol === 'Supervisor' ? estilos.rolSupervisor : estilos.rolAsesor">
+                        {{ j.rol }}
+                      </span>
+                    }
                   </td>
                   <td [class]="estilos.td">
                     {{ j.tipo }}
@@ -155,7 +163,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="8" class="px-3 py-14 text-center">
+                  <td colspan="9" class="px-3 py-14 text-center">
                     <strong class="block text-[13.5px]">Nada por aquí</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       No hay solicitudes con ese filtro en el rango elegido.
@@ -169,6 +177,98 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
       }
     </div>
     </div>
+
+    <!-- Registrar una justificación por otra persona. Lo hace la supervisora
+         cuando el asesor está de baja y no puede entrar a pedirla. -->
+    @if (alta()) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarAlta()"></div>
+      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,520px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-alta-just">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 id="titulo-alta-just" class="!m-0 text-[15px] font-extrabold">Registrar justificación</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                La registra la supervisora; RR.HH. la recibe para aprobar
+              </p>
+            </div>
+            <button type="button" [class]="estilos.botonIcono" (click)="cerrarAlta()" aria-label="Cerrar">
+              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+            </button>
+          </header>
+
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="f-persona">Para quién</label>
+              <select id="f-persona" [class]="estilos.campo" [(ngModel)]="nueva.idUsuario">
+                <option [ngValue]="null">Elige a la persona</option>
+                @for (p of personas(); track p.idUsuario) {
+                  <option [ngValue]="p.idUsuario">{{ p.nombreAgente }}</option>
+                }
+              </select>
+              <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                Solo aparecen las personas de tu equipo. Queda anotado que la registraste tú.
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="f-tipo">Tipo</label>
+              <select id="f-tipo" [class]="estilos.campo" [(ngModel)]="nueva.idTipoDia">
+                @for (t of catalogo(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.nombre }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="flex gap-3">
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="f-desde">Desde</label>
+                <input id="f-desde" type="date" [class]="estilos.campo" [(ngModel)]="nueva.fechaDesde">
+              </div>
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="f-hasta">Hasta</label>
+                <input id="f-hasta" type="date" [class]="estilos.campo" [(ngModel)]="nueva.fechaHasta">
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <span [class]="estilos.etiqueta">Certificado</span>
+              <label class="flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border border-dashed border-[#8491a3] p-[18px] text-center hover:bg-[#f4f6f9] dark:border-slate-600 dark:hover:bg-slate-800"
+                     for="f-archivo">
+                <lucide-angular name="upload" [size]="18" class="block text-[#8491a3]"></lucide-angular>
+                <strong class="text-[12.5px]">{{ archivo()?.name ?? 'Elige una foto o un PDF' }}</strong>
+                <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                  {{ tipoElegido()?.exigeCertificado ? 'Obligatorio para este tipo' : 'Opcional' }} · hasta 10 MB
+                </span>
+              </label>
+              <input id="f-archivo" type="file" class="sr-only"
+                     accept="image/jpeg,image/png,image/webp,application/pdf"
+                     (change)="elegirArchivo($event)">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="f-comentario">Comentario</label>
+              <textarea id="f-comentario" rows="2" [class]="estilos.area"
+                        placeholder="Lo que quieras añadir para quien la apruebe"
+                        [(ngModel)]="nueva.comentario"></textarea>
+            </div>
+
+            @if (error()) {
+              <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
+            }
+          </div>
+
+          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarAlta()">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="enviarAlta()"
+                    [disabled]="guardando()">
+              <lucide-angular name="send" [size]="15" class="block"></lucide-angular>
+              {{ guardando() ? 'Enviando…' : 'Enviar a revisión' }}
+            </button>
+          </footer>
+        </div>
+      </div>
+    }
 
     <!-- Detalle y decisión -->
     @if (abierta(); as j) {
@@ -275,6 +375,9 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
             <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cerrar</button>
 
             @if (j.estado === 'PENDIENTE') {
+              <span class="mr-auto text-[12px] font-semibold text-[#5f6c80] dark:text-slate-400">
+                Le toca a la supervisora
+              </span>
               <button type="button" [class]="estilos.botonSecundario" (click)="decidir(j, false)"
                       [disabled]="guardando()">
                 <lucide-angular name="x-circle" [size]="15" class="block"></lucide-angular>
@@ -283,9 +386,12 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
               <button type="button" [class]="estilos.botonPrimario" (click)="decidir(j, true)"
                       [disabled]="guardando()">
                 <lucide-angular name="check" [size]="15" class="block"></lucide-angular>
-                Confirmar que ocurrió
+                Revisar y enviar a RR.HH.
               </button>
             } @else if (j.estado === 'REVISADA') {
+              <span class="mr-auto text-[12px] font-semibold text-[#5f6c80] dark:text-slate-400">
+                Le toca a RR.HH.
+              </span>
               <button type="button" [class]="estilos.botonSecundario" (click)="decidir(j, false)"
                       [disabled]="guardando()">
                 <lucide-angular name="x-circle" [size]="15" class="block"></lucide-angular>
@@ -325,8 +431,8 @@ export class AsistenciaJustificacionesComponent {
 
   /** Lo que espera a alguien, para el número de la pestaña. */
   readonly sinResolverCambia = output<number>();
-  /** Registrar se hace desde Mi Asistencia: el formulario es el mismo. */
-  readonly registrar = output<void>();
+  /** El ámbito, para saber a quién puede registrarle una justificación. */
+  readonly idSubcartera = input<number | null>(null);
 
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly todas = signal<Justificacion[]>([]);
@@ -339,6 +445,21 @@ export class AsistenciaJustificacionesComponent {
   /** Los tipos que de verdad aparecen en la bandeja, no el catálogo entero. */
   readonly tipos = computed(() =>
     [...new Set(this.todas().map(j => j.tipo).filter((t): t is string => !!t))].sort());
+
+  readonly alta = signal(false);
+  readonly personas = signal<ResumenAgente[]>([]);
+  readonly catalogo = signal<TipoDia[]>([]);
+  readonly archivo = signal<File | null>(null);
+  nueva = {
+    idUsuario: null as number | null,
+    idTipoDia: null as number | null,
+    fechaDesde: hoy(),
+    fechaHasta: hoy(),
+    comentario: ''
+  };
+
+  readonly tipoElegido = computed(() =>
+    this.catalogo().find(t => t.id === this.nueva.idTipoDia) ?? null);
 
   readonly abierta = signal<Justificacion | null>(null);
   readonly vistaPrevia = signal<string | null>(null);
@@ -354,6 +475,92 @@ export class AsistenciaJustificacionesComponent {
       const desde = this.desde();
       const hasta = this.hasta();
       this.cargarRango(desde, hasta);
+    });
+
+    // El selector de «Para quién» solo lista a quien está en el ámbito.
+    effect(() => {
+      const ambito = this.idSubcartera();
+      if (!ambito) {
+        this.personas.set([]);
+        return;
+      }
+      this.servicio.reporte(this.desde(), this.hasta(), ambito).subscribe({
+        next: r => this.personas.set(r.agentes),
+        error: () => this.personas.set([])
+      });
+    });
+
+    this.servicio.tiposDeDia().subscribe({
+      next: t => {
+        this.catalogo.set(t);
+        this.nueva.idTipoDia = t[0]?.id ?? null;
+      },
+      error: () => this.catalogo.set([])
+    });
+  }
+
+  // ==================== REGISTRAR POR OTRA PERSONA ====================
+
+  abrirAlta(): void {
+    this.alta.set(true);
+    this.error.set('');
+    this.archivo.set(null);
+    this.nueva = {
+      idUsuario: null,
+      idTipoDia: this.catalogo()[0]?.id ?? null,
+      fechaDesde: hoy(),
+      fechaHasta: hoy(),
+      comentario: ''
+    };
+  }
+
+  cerrarAlta(): void {
+    this.alta.set(false);
+  }
+
+  elegirArchivo(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    this.archivo.set(entrada.files?.[0] ?? null);
+    this.error.set('');
+  }
+
+  enviarAlta(): void {
+    if (!this.nueva.idUsuario) {
+      this.error.set('Elige para quién es');
+      return;
+    }
+    if (!this.nueva.idTipoDia) {
+      this.error.set('Elige el tipo');
+      return;
+    }
+    if (this.nueva.fechaHasta < this.nueva.fechaDesde) {
+      this.error.set('La fecha final no puede ser anterior a la inicial');
+      return;
+    }
+    if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {
+      this.error.set(`${this.tipoElegido()!.nombre} necesita certificado adjunto`);
+      return;
+    }
+
+    this.guardando.set(true);
+    this.servicio.crearJustificacion({
+      idTipoDia: this.nueva.idTipoDia,
+      fechaDesde: this.nueva.fechaDesde,
+      fechaHasta: this.nueva.fechaHasta,
+      comentario: this.nueva.comentario,
+      idUsuario: this.nueva.idUsuario,
+      archivo: this.archivo()
+    }).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.cerrarAlta();
+        this.toast.success('Justificación registrada');
+        this.cargarRango(this.desde(), this.hasta());
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.error.set(respuesta?.error?.error ?? 'No se pudo registrar');
+      }
     });
   }
 

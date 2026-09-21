@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { CierreSemana, Recuperacion } from './asistencia.models';
-import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asistencia.estilos';
+import { ESTILOS, duracionCorta, finDeSemanaDe, lunesDe, sumarDias, unidadDe } from './asistencia.estilos';
 
 /**
  * Cierre semanal: congelar las cifras con las que se paga.
@@ -372,7 +372,10 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                 <lucide-angular name="unlock" [size]="15" class="block"></lucide-angular>
                 Reabrir
               </button>
-              <button type="button" [class]="estilos.botonPrimario" (click)="cerrarDetalle()">Listo</button>
+              <button type="button" [class]="estilos.botonPrimario" (click)="descargarSemana(c)">
+                <lucide-angular name="download" [size]="15" class="block"></lucide-angular>
+                Descargar el Excel de esa semana
+              </button>
             </div>
           </footer>
         </div>
@@ -427,7 +430,7 @@ export class AsistenciaCierreComponent {
         return;
       }
       const lunes = lunesDe(new Date());
-      this.servicio.dashboard(lunes, hoy(), ambito).subscribe({
+      this.servicio.dashboard(lunes, finDeSemanaDe(new Date()), ambito).subscribe({
         next: d => {
           this.incompletos.set(d.diasIncompletos);
           this.pierdenBono.set(d.pierdenBono);
@@ -435,7 +438,7 @@ export class AsistenciaCierreComponent {
         },
         error: () => { /* las tarjetas quedan en cero; la lista sigue sirviendo */ }
       });
-      this.servicio.justificaciones(lunes, hoy(), ['PENDIENTE', 'REVISADA']).subscribe({
+      this.servicio.justificaciones(lunes, finDeSemanaDe(new Date()), ['PENDIENTE', 'REVISADA']).subscribe({
         next: j => this.sinResolver.set(j.length),
         error: () => this.sinResolver.set(0)
       });
@@ -543,6 +546,24 @@ export class AsistenciaCierreComponent {
         this.guardando.set(false);
         this.toast.error(respuesta?.error?.error ?? 'No se pudo reabrir');
       }
+    });
+  }
+
+  /**
+   * El Excel de una semana cerrada. Lo arma el backend con el mismo formato de
+   * la hoja que RR.HH. ya lee; aquí solo se pide con las fechas del cierre.
+   */
+  descargarSemana(c: CierreSemana): void {
+    this.servicio.excel(c.lunes, c.ultimoDia, c.idSubcartera).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `Asistencia_${c.lunes}_${c.ultimoDia}.xlsx`;
+        enlace.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.error('No se pudo generar el Excel')
     });
   }
 

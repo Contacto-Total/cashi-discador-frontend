@@ -122,6 +122,19 @@ export interface AsistenciaReporte {
   toleranciaSemanaMin: number | null;
 }
 
+/**
+ * Un aviso para el asesor sobre su propia jornada.
+ *
+ * Sale como toast y no como panel: el del almuerzo tiene que interrumpir, y un
+ * recuadro en una pantalla que quizá no está mirando no interrumpe nada.
+ */
+export interface AvisoAsistencia {
+  /** `aviso` es algo que hay que hacer; `ok`, algo que ya quedó registrado. */
+  tipo: 'aviso' | 'ok';
+  titulo: string;
+  texto: string;
+}
+
 // ==================== JUSTIFICACIONES ====================
 
 export type EstadoJustificacion = 'PENDIENTE' | 'REVISADA' | 'APROBADA' | 'RECHAZADA';
@@ -141,6 +154,8 @@ export interface Justificacion {
   nombreAgente: string | null;
   username: string | null;
   subcartera: string | null;
+  /** «Supervisor» o «Asesor»: quien revisa mira distinto uno que otro. */
+  rol: string | null;
   idTipoDia: number;
   tipo: string | null;
   pagado: boolean | null;

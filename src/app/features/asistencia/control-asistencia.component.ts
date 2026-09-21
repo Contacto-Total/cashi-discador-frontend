@@ -1,7 +1,6 @@
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
@@ -10,7 +9,7 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte } from './asistencia.models';
-import { ESTILOS, hoy, lunesDe, sumarDias } from './asistencia.estilos';
+import { ESTILOS, finDeSemanaDe, lunesDe, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
 import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
@@ -184,9 +183,8 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           }
           @case ('justificaciones') {
             <app-asistencia-justificaciones
-              [desde]="desde()" [hasta]="hasta()"
-              (sinResolverCambia)="sinResolver.set($event)"
-              (registrar)="irAMiAsistencia()" />
+              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
+              (sinResolverCambia)="sinResolver.set($event)" />
           }
           @case ('cierre') {
             <app-asistencia-cierre [idSubcartera]="idSubcartera()" />
@@ -212,7 +210,6 @@ export class ControlAsistenciaComponent implements OnInit {
   private readonly carterasServicio = inject(PortfolioService);
   private readonly servicio = inject(AsistenciaService);
   private readonly toast = inject(ToastService);
-  private readonly router = inject(Router);
 
   protected readonly estilos = ESTILOS;
 
@@ -230,7 +227,7 @@ export class ControlAsistenciaComponent implements OnInit {
   readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
   readonly desde = signal(lunesDe(new Date()));
-  readonly hasta = signal(hoy());
+  readonly hasta = signal(finDeSemanaDe(new Date()));
   readonly agente = signal('');
 
   readonly clientes = signal<Tenant[]>([]);
@@ -254,8 +251,10 @@ export class ControlAsistenciaComponent implements OnInit {
     }
     const faltas = r.dias.filter(d => d.estado === 'FALTA').length;
     const incompletos = r.dias.filter(d => d.estado === 'INCOMPLETO').length;
-    return `${r.agentes.length} personas en el ámbito · ${faltas} faltas · `
-      + `${incompletos} días sin marcación completa`;
+    const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+    return `${plural(r.agentes.length, 'persona', 'personas')} en el ámbito · `
+      + `${plural(faltas, 'falta', 'faltas')} · `
+      + `${plural(incompletos, 'día', 'días')} sin marcación completa`;
   });
 
   constructor() {
@@ -368,12 +367,4 @@ export class ControlAsistenciaComponent implements OnInit {
     this.hasta.set(sumarDias(this.hasta(), -7));
   }
 
-  /**
-   * Registrar una justificación se hace desde Mi Asistencia, también cuando la
-   * escribe la supervisora por alguien: el formulario es el mismo y tenerlo en
-   * dos sitios los haría divergir.
-   */
-  irAMiAsistencia(): void {
-    this.router.navigate(['/mi-asistencia']);
-  }
 }
