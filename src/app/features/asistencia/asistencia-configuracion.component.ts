@@ -5,8 +5,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { forkJoin, of, switchMap } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { DiaCalendario, Horario, PoliticaAsistencia, ResumenAgente, TipoDia } from './asistencia.models';
-import { ESTILOS, aMinutos, enDuracion, finDeSemanaDe, hoy, lunesDe, sumarDias } from './asistencia.estilos';
+import {
+  DiaCalendario, Horario, ImportacionFeriados, PoliticaAsistencia, ResumenAgente, TipoDia
+} from './asistencia.models';
+import {
+  ESTILOS, TIPOS_DE_CALENDARIO, aMinutos, enDuracion, finDeSemanaDe, hoy, lunesDe, sumarDias
+} from './asistencia.estilos';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -507,10 +511,9 @@ function enHoras(minutos: number): string {
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <button type="button" [class]="estilos.botonSecundario" (click)="importarFeriados()"
-                  [disabled]="guardando()">
+          <button type="button" [class]="estilos.botonSecundario" (click)="abrirImportar()">
             <lucide-angular name="upload" [size]="15" class="block"></lucide-angular>
-            Importar feriados del año
+            Importar feriados
           </button>
           <button type="button" [class]="estilos.botonPrimario" (click)="abrirDia(hoyISO(), null)">
             <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
@@ -539,7 +542,7 @@ function enHoras(minutos: number): string {
                         [class.fuera]="!d.delMes" [class.finde]="d.finde" [class.hoy]="d.esHoy"
                         [disabled]="!d.delMes"
                         (click)="abrirDia(d.fecha, d.marca)"
-                        [attr.aria-label]="'Marcar el ' + d.dia + ' como no laborable'">
+                        [attr.aria-label]="'Marcar el ' + d.dia">
                   <span class="num">{{ d.dia }}</span>
                   <!-- El fin de semana no se espera a nadie: un feriado en sábado
                        no cambia nada y marcarlo solo ensucia el mes. -->
@@ -785,7 +788,7 @@ function enHoras(minutos: number): string {
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
               <h2 id="titulo-dia" class="!m-0 text-[15px] font-extrabold">
-                {{ diaEditado() ? 'Editar día no laborable' : 'Marcar día no laborable' }}
+                {{ diaEditado() ? 'Editar día' : 'Marcar día' }}
               </h2>
               <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                 @if (diaEditado(); as d) {
@@ -909,6 +912,98 @@ function enHoras(minutos: number): string {
         </div>
       </div>
     }
+    <!-- Importar feriados: el archivo de RR.HH., con vista previa antes de guardar -->
+    @if (formImportar()) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarImportar()"></div>
+      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,620px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-importar">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 id="titulo-importar" class="!m-0 text-[15px] font-extrabold">Importar feriados</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                Excel o CSV con dos columnas: Fecha y Nombre
+              </p>
+            </div>
+            <button type="button" [class]="estilos.botonIcono" (click)="cerrarImportar()" aria-label="Cerrar">
+              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+            </button>
+          </header>
+
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <input id="archivo-feriados" type="file" accept=".xlsx,.xls,.csv" class="sr-only"
+                     (change)="elegirArchivo($event)">
+              <label for="archivo-feriados" [class]="estilos.botonSecundario + ' cursor-pointer'">
+                <lucide-angular name="upload" [size]="15" class="block"></lucide-angular>
+                {{ archivoFeriados() ? 'Elegir otro archivo' : 'Elegir archivo' }}
+              </label>
+              @if (archivoFeriados(); as a) {
+                <span class="min-w-0 truncate text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ a.name }}</span>
+              }
+              <button type="button" [class]="estilos.botonChico + ' ml-auto'" (click)="descargarPlantilla()">
+                <lucide-angular name="download" [size]="13" class="block"></lucide-angular>
+                Descargar plantilla
+              </button>
+            </div>
+
+            @if (leyendo()) {
+              <p class="!m-0 py-6 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">Leyendo el archivo…</p>
+            }
+
+            @if (vistaImportacion(); as v) {
+              <div class="flex flex-wrap gap-2">
+                <span [class]="PASTILLA.ok">{{ v.nuevos }} {{ v.nuevos === 1 ? 'nuevo' : 'nuevos' }}</span>
+                <span [class]="PASTILLA.neutro">{{ v.existentes }} ya {{ v.existentes === 1 ? 'estaba' : 'estaban' }}</span>
+                @if (v.errores) {
+                  <span [class]="PASTILLA.falta">{{ v.errores }} con error</span>
+                }
+              </div>
+              <div [class]="estilos.panel + ' max-h-[320px] overflow-y-auto'">
+                <table class="w-full border-collapse">
+                  <caption class="sr-only">Filas del archivo y qué pasa con cada una</caption>
+                  <thead class="sticky top-0">
+                    <tr>
+                      <th scope="col" [class]="estilos.th">Fila</th>
+                      <th scope="col" [class]="estilos.th">Fecha</th>
+                      <th scope="col" [class]="estilos.th">Nombre</th>
+                      <th scope="col" [class]="estilos.th">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (f of v.filas; track f.fila) {
+                      <tr>
+                        <td [class]="estilos.td + ' secundario'">{{ f.fila }}</td>
+                        <td [class]="estilos.td">{{ f.fecha ? (f.fecha | date: 'dd/MM/yyyy') : '—' }}</td>
+                        <td [class]="estilos.td + ' max-w-[200px] truncate'" [title]="f.nombre ?? ''">{{ f.nombre || '—' }}</td>
+                        <td [class]="estilos.td">
+                          <span [class]="PASTILLA_FILA[f.estado].clase">{{ PASTILLA_FILA[f.estado].texto }}</span>
+                          @if (f.detalle) {
+                            <span class="secundario ml-2">{{ f.detalle }}</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (errorImportar()) {
+              <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">{{ errorImportar() }}</p>
+            }
+          </div>
+
+          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarImportar()">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="confirmarImportacion()"
+                    [disabled]="guardando() || !vistaImportacion()?.nuevos">
+              {{ guardando() ? 'Importando…' : textoImportar() }}
+            </button>
+          </footer>
+        </div>
+      </div>
+    }
   `
 })
 export class AsistenciaConfiguracionComponent {
@@ -924,7 +1019,15 @@ export class AsistenciaConfiguracionComponent {
     ok: 'inline-flex items-center rounded-full bg-[#e8f5ec] px-[9px] py-[2px] text-[11.5px] font-bold text-[#166534] dark:bg-green-950/50 dark:text-green-300',
     neutro: 'inline-flex items-center rounded-full bg-[#f1f3f6] px-[9px] py-[2px] text-[11.5px] font-bold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400',
     incomp: 'inline-flex items-center rounded-full bg-[#fdeee0] px-[9px] py-[2px] text-[11.5px] font-bold text-[#c2410c] dark:bg-orange-950/50 dark:text-orange-300',
-    tarde: 'inline-flex items-center rounded-full bg-[#fef6e0] px-[9px] py-[2px] text-[11.5px] font-bold text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300'
+    tarde: 'inline-flex items-center rounded-full bg-[#fef6e0] px-[9px] py-[2px] text-[11.5px] font-bold text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300',
+    falta: 'inline-flex items-center rounded-full bg-[#fdecec] px-[9px] py-[2px] text-[11.5px] font-bold text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300'
+  };
+
+  /** Qué pasa con cada fila del archivo de feriados. */
+  protected readonly PASTILLA_FILA = {
+    NUEVO: { texto: 'Nuevo', clase: this.PASTILLA.ok },
+    YA_EXISTE: { texto: 'Ya estaba', clase: this.PASTILLA.neutro },
+    ERROR: { texto: 'Error', clase: this.PASTILLA.falta }
   };
 
   /** Los tres colores del reloj, con su nombre. */
@@ -1255,7 +1358,7 @@ export class AsistenciaConfiguracionComponent {
 
   /** Solo los tipos que tienen sentido en un calendario, no los de ausencia. */
   readonly tiposDeCalendario = computed(() =>
-    this.tipos().filter(t => ['FERIADO', 'NO_LABORABLE', 'SIN_ASIGNACION'].includes(t.codigo)));
+    this.tipos().filter(t => TIPOS_DE_CALENDARIO.includes(t.codigo)));
 
   readonly esFeriado = computed(() =>
     this.tipos().find(t => t.id === this.diaTipo())?.codigo === 'FERIADO');
@@ -1529,25 +1632,87 @@ export class AsistenciaConfiguracionComponent {
     return `${fecha.getFullYear()}-${mes}-${dia}`;
   }
 
-  /**
-   * Trae los feriados nacionales del año que se está viendo. Se pulsa una vez
-   * al empezar el año: escribirlos a mano son veinte formularios.
-   */
-  importarFeriados(): void {
-    const anio = this.mes().getFullYear();
+  // ==================== IMPORTAR FERIADOS ====================
+
+  readonly formImportar = signal(false);
+  readonly archivoFeriados = signal<File | null>(null);
+  readonly vistaImportacion = signal<ImportacionFeriados | null>(null);
+  readonly leyendo = signal(false);
+  readonly errorImportar = signal('');
+
+  readonly textoImportar = computed(() => {
+    const n = this.vistaImportacion()?.nuevos ?? 0;
+    return n === 1 ? 'Importar 1 feriado' : `Importar ${n} feriados`;
+  });
+
+  abrirImportar(): void {
+    this.archivoFeriados.set(null);
+    this.vistaImportacion.set(null);
+    this.errorImportar.set('');
+    this.formImportar.set(true);
+  }
+
+  cerrarImportar(): void {
+    this.formImportar.set(false);
+  }
+
+  /** Al elegir el archivo se lee sin guardar: primero se ve qué entra y qué no. */
+  elegirArchivo(evento: Event): void {
+    const campo = evento.target as HTMLInputElement;
+    const archivo = campo.files?.[0] ?? null;
+    // Vaciarlo deja volver a elegir el mismo archivo después de corregirlo.
+    campo.value = '';
+    if (!archivo) {
+      return;
+    }
+    this.archivoFeriados.set(archivo);
+    this.vistaImportacion.set(null);
+    this.errorImportar.set('');
+    this.leyendo.set(true);
+    this.servicio.importarArchivoFeriados(archivo, false).subscribe({
+      next: vista => {
+        this.leyendo.set(false);
+        this.vistaImportacion.set(vista);
+      },
+      error: respuesta => {
+        this.leyendo.set(false);
+        this.errorImportar.set(respuesta?.error?.error ?? 'No se pudo leer el archivo');
+      }
+    });
+  }
+
+  /** Guarda las filas nuevas; las que ya estaban y las que tienen error no se tocan. */
+  confirmarImportacion(): void {
+    const archivo = this.archivoFeriados();
+    if (!archivo) {
+      return;
+    }
     this.guardando.set(true);
-    this.servicio.importarFeriados(anio).subscribe({
+    this.servicio.importarArchivoFeriados(archivo, true).subscribe({
       next: r => {
         this.guardando.set(false);
-        this.toast.success(r.importados
-          ? `${r.importados} feriados de ${anio} añadidos`
-          : `Los feriados de ${anio} ya estaban`);
+        this.formImportar.set(false);
+        this.toast.success(r.nuevos === 1 ? '1 feriado añadido' : `${r.nuevos} feriados añadidos`);
         this.recargarCalendario();
       },
       error: respuesta => {
         this.guardando.set(false);
-        this.toast.error(respuesta?.error?.error ?? 'No se pudieron importar los feriados');
+        this.errorImportar.set(respuesta?.error?.error ?? 'No se pudieron importar los feriados');
       }
+    });
+  }
+
+  descargarPlantilla(): void {
+    this.servicio.plantillaFeriados().subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = 'Plantilla_feriados.xlsx';
+        enlace.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.error('No se pudo descargar la plantilla')
     });
   }
 

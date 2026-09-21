@@ -142,7 +142,7 @@ const COLOR_DIA: Record<string, string> = {
                     @for (d of dias(); track d.fecha) {
                       <span class="flex h-[26px] flex-1 items-center justify-center rounded-md text-[11px] font-bold text-white"
                             [class]="COLOR_DIA[d.estado]"
-                            [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + ESTADOS[d.estado].texto">
+                            [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[d.estado].texto)">
                         {{ d.nombreDia.slice(0, 2) }}
                       </span>
                     }

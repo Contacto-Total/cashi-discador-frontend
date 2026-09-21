@@ -5,7 +5,9 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { Justificacion, ResumenAgente, TipoDia } from './asistencia.models';
-import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.estilos';
+import {
+  ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, TIPOS_DE_CALENDARIO, avisoAnticipacion, hoy, primerDiaPermitido
+} from './asistencia.estilos';
 
 /**
  * Bandeja de justificaciones.
@@ -214,7 +216,8 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
             <div class="flex gap-3">
               <div class="flex flex-1 flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="f-desde">Desde</label>
-                <input id="f-desde" type="date" [class]="estilos.campo" [(ngModel)]="nueva.fechaDesde">
+                <input id="f-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
+                       [(ngModel)]="nueva.fechaDesde">
               </div>
               <div class="flex flex-1 flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="f-hasta">Hasta</label>
@@ -452,8 +455,14 @@ export class AsistenciaJustificacionesComponent {
     comentario: ''
   };
 
-  readonly tipoElegido = computed(() =>
-    this.catalogo().find(t => t.id === this.nueva.idTipoDia) ?? null);
+  /** Método y no computed: `nueva` es un objeto del formulario, no una signal, y el computed no se enteraba del cambio. */
+  tipoElegido(): TipoDia | null {
+    return this.catalogo().find(t => t.id === this.nueva.idTipoDia) ?? null;
+  }
+
+  primerDia(): string | null {
+    return primerDiaPermitido(this.tipoElegido());
+  }
 
   readonly abierta = signal<Justificacion | null>(null);
   readonly vistaPrevia = signal<string | null>(null);
@@ -486,8 +495,9 @@ export class AsistenciaJustificacionesComponent {
 
     this.servicio.tiposDeDia().subscribe({
       next: t => {
-        this.catalogo.set(t);
-        this.nueva.idTipoDia = t[0]?.id ?? null;
+        const deAusencia = t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo));
+        this.catalogo.set(deAusencia);
+        this.nueva.idTipoDia = deAusencia[0]?.id ?? null;
       },
       error: () => this.catalogo.set([])
     });
@@ -529,6 +539,11 @@ export class AsistenciaJustificacionesComponent {
     }
     if (this.nueva.fechaHasta < this.nueva.fechaDesde) {
       this.error.set('La fecha final no puede ser anterior a la inicial');
+      return;
+    }
+    const primerDia = this.primerDia();
+    if (primerDia && this.nueva.fechaDesde < primerDia) {
+      this.error.set(avisoAnticipacion(this.tipoElegido()!));
       return;
     }
     if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {

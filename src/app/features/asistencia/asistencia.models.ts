@@ -51,6 +51,7 @@ export interface AsistenciaDia {
   estado: EstadoAsistencia;
   /** Qué tipo de día es cuando no se trabajó: «Descanso médico», «Feriado». */
   tipoDia: string | null;
+  codigoTipoDia: string | null;
   minutosTardanza: number | null;
   tardanza: string | null;
   minutosExceso: number | null;
@@ -146,6 +147,8 @@ export interface TipoDia {
   pagado: boolean;
   recuperable: boolean;
   exigeCertificado: boolean;
+  /** null = se puede registrar después; N = se pide con N días de anticipación. */
+  diasAnticipacion: number | null;
 }
 
 export interface Justificacion {
@@ -177,6 +180,21 @@ export interface Justificacion {
 }
 
 // ==================== CALENDARIO ====================
+
+/** Lo que sale de leer el archivo de feriados, fila por fila. */
+export interface ImportacionFeriados {
+  guardado: boolean;
+  nuevos: number;
+  existentes: number;
+  errores: number;
+  filas: {
+    fila: number;
+    fecha: string | null;
+    nombre: string | null;
+    estado: 'NUEVO' | 'YA_EXISTE' | 'ERROR';
+    detalle: string | null;
+  }[];
+}
 
 export interface DiaCalendario {
   id?: number;
@@ -259,6 +277,9 @@ export interface CuadroDia {
   fecha: string;
   nombreDia: string;
   estado: EstadoAsistencia;
+  /** «Sin asignación», «Feriado», «Cita médica»: el nombre del día cuando no es uno normal. */
+  tipoDia: string | null;
+  codigoTipoDia: string | null;
 }
 
 export interface FilaAgenteDashboard {

@@ -106,6 +106,26 @@ export function aMinutos(hhmm: string | null | undefined): number {
   return h * 60 + m;
 }
 
+/**
+ * Los tipos que se marcan en el calendario para todo un ámbito. No son de una
+ * persona, así que no salen al registrar una justificación.
+ */
+export const TIPOS_DE_CALENDARIO = ['FERIADO', 'NO_LABORABLE', 'SIN_ASIGNACION'];
+
+/**
+ * El primer día que se puede pedir un tipo: hoy más su anticipación. Sin
+ * anticipación —un descanso médico, que llega sin aviso— vale cualquier fecha.
+ */
+export function primerDiaPermitido(tipo: { diasAnticipacion: number | null } | null): string | null {
+  return tipo?.diasAnticipacion != null ? sumarDias(hoy(), tipo.diasAnticipacion) : null;
+}
+
+/** El aviso cuando la fecha llega tarde para ese tipo; el mismo texto que el backend. */
+export function avisoAnticipacion(tipo: { nombre: string; diasAnticipacion: number | null }): string {
+  const dias = tipo.diasAnticipacion ?? 0;
+  return `${tipo.nombre} se registra con ${dias === 1 ? 'un día' : dias + ' días'} de anticipación`;
+}
+
 export function hoy(): string {
   return fechaTexto(new Date());
 }
