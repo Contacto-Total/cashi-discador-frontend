@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   CartaNoAdeudoDocumento,
+  CartaNoAdeudoClienteCorreo,
   CartaNoAdeudoHistorial,
   CartaNoAdeudoPage,
   CartaNoAdeudoSolicitud,
@@ -18,6 +19,16 @@ export class CartaNoAdeudoService {
 
   crearSolicitud(request: CrearCartaNoAdeudoSolicitudRequest): Observable<CartaNoAdeudoSolicitud> {
     return this.http.post<CartaNoAdeudoSolicitud>(`${this.baseUrl}/solicitudes`, request);
+  }
+
+  listarCandidatos(documento?: string, page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoClienteCorreo>> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    if (documento?.trim()) {
+      params = params.set('documento', documento.trim());
+    }
+    return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoClienteCorreo>>(`${this.baseUrl}/candidatos`, { params });
   }
 
   listarSolicitudes(filters: CartaNoAdeudoSolicitudFilters): Observable<CartaNoAdeudoPage<CartaNoAdeudoSolicitud>> {

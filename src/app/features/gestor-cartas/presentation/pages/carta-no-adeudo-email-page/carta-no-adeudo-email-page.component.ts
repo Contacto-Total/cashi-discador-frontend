@@ -1,5 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.model';
+import { CartaNoAdeudoService } from '../../../services/carta-no-adeudo.service';
 import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo-lista-widget/carta-no-adeudo-lista-widget.component';
 
 @Component({
@@ -51,12 +53,29 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
         </nav>
 
         @if (activeTab() === 'correo') {
-          <app-carta-no-adeudo-lista-widget></app-carta-no-adeudo-lista-widget>
+          <app-carta-no-adeudo-lista-widget
+            [clientes]="clientes()"
+            (buscar)="cargarCandidatos($event)">
+          </app-carta-no-adeudo-lista-widget>
         }
       </div>
     </div>
   `
 })
-export class CartaNoAdeudoEmailPageComponent {
+export class CartaNoAdeudoEmailPageComponent implements OnInit {
+  private readonly cartaNoAdeudoService = inject(CartaNoAdeudoService);
+
   readonly activeTab = signal<'correo' | 'pagos' | 'historial'>('correo');
+  readonly clientes = signal<CartaNoAdeudoClienteCorreo[]>([]);
+
+  ngOnInit(): void {
+    this.cargarCandidatos();
+  }
+
+  cargarCandidatos(documento?: string): void {
+    this.cartaNoAdeudoService.listarCandidatos(documento).subscribe({
+      next: response => this.clientes.set(response.content),
+      error: error => console.error('No se pudieron cargar candidatos para carta de no adeudo', error)
+    });
+  }
 }
