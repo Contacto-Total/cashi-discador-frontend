@@ -185,6 +185,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
             <app-asistencia-dashboard
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
               (semanaAnterior)="retrocederSemana()"
+              (volverASemana)="volverASemanaPorDefecto()"
               (irA)="pantalla.set($event)" />
           }
           @case ('justificaciones') {
@@ -369,6 +370,11 @@ export class ControlAsistenciaComponent implements OnInit {
   }
 
   /** El botón «Semana anterior» del dashboard mueve el rango, que vive aquí. */
+  volverASemanaPorDefecto(): void {
+    this.desde.set(semanaPorDefecto().desde);
+    this.hasta.set(semanaPorDefecto().hasta);
+  }
+
   retrocederSemana(): void {
     this.desde.set(sumarDias(this.desde(), -7));
     this.hasta.set(sumarDias(this.hasta(), -7));
