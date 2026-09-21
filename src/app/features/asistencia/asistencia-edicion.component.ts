@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -45,7 +45,9 @@ interface Cambio {
     @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
     /* La celda de hora: se nota cuando está tocada, y se nota si está vacía. */
     .hora {
-      width: 86px; height: 32px; border-radius: 7px; padding: 0 8px;
+      /* 118px y no 86: con el reloj en 12 horas el AM/PM no entraba y «13:01»
+         se leía como «01:01», que es otra hora. */
+      width: 118px; height: 32px; border-radius: 7px; padding: 0 8px;
       border: 1px solid #e6e9ee; background: #fff; color: #0f172a;
       font: inherit; font-size: 12.5px; font-variant-numeric: tabular-nums;
     }
@@ -56,6 +58,34 @@ interface Cambio {
     :host-context(.dark) .hora.tocada { border-color: #b45309; background: rgba(120,53,15,.35) }
   `],
   template: `
+    <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Editar horas</h1>
+          <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            Se corrige a una persona a la vez
+          </p>
+        </div>
+        <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
+          <lucide-angular name="arrow-left" [size]="15" class="block"></lucide-angular>
+          Volver al reporte
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="agente-edicion">Agente</label>
+          <select id="agente-edicion" [class]="estilos.campo + ' w-[260px]'"
+                  [ngModel]="idElegido()" (ngModelChange)="elegir($event)">
+            @for (a of roster(); track a.idUsuario) {
+              <option [ngValue]="a.idUsuario">{{ a.nombreAgente }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-7 py-5">
     @if (!idSubcartera()) {
       <div [class]="estilos.vacio">
         <strong class="block text-[13.5px]">Elige una subcartera</strong>
@@ -66,16 +96,10 @@ interface Cambio {
     } @else {
       <div class="aparecer">
 
-        <div class="mb-3.5 flex flex-wrap items-end justify-between gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="persona-edicion">Persona</label>
-            <select id="persona-edicion" [class]="estilos.campo + ' w-[260px]'"
-                    [ngModel]="idElegido()" (ngModelChange)="elegir($event)">
-              @for (a of roster(); track a.idUsuario) {
-                <option [ngValue]="a.idUsuario">{{ a.nombreAgente }}</option>
-              }
-            </select>
-          </div>
+        <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+          <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            {{ nombreElegido() }} · {{ dias().length }} {{ dias().length === 1 ? 'día' : 'días' }} en el rango
+          </p>
 
           <div class="flex items-center gap-2.5">
             @if (cambios().length) {
@@ -183,6 +207,7 @@ interface Cambio {
         }
       </div>
     }
+    </div>
   `
 })
 export class AsistenciaEdicionComponent {
@@ -196,6 +221,9 @@ export class AsistenciaEdicionComponent {
   readonly idSubcartera = input<number | null>(null);
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
+
+  /** Vuelve al reporte; la pantalla la manda el módulo. */
+  readonly volver = output<void>();
 
   readonly reporte = signal<AsistenciaReporte | null>(null);
   readonly cargando = signal(false);

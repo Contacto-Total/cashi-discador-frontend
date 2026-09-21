@@ -105,13 +105,13 @@ export function aMinutos(hhmm: string | null | undefined): number {
 }
 
 export function hoy(): string {
-  return new Date().toISOString().slice(0, 10);
+  return fechaTexto(new Date());
 }
 
 export function lunesDe(fecha: Date): string {
   const copia = new Date(fecha);
   copia.setDate(copia.getDate() - ((copia.getDay() + 6) % 7));
-  return copia.toISOString().slice(0, 10);
+  return fechaTexto(copia);
 }
 
 /**
@@ -125,8 +125,31 @@ export function finDeSemanaDe(fecha: Date): string {
   return sumarDias(lunesDe(fecha), 5);
 }
 
+/**
+ * La semana que se abre por defecto: la última COMPLETA.
+ *
+ * No la que está en curso. RR.HH. revisa y cierra sobre semanas terminadas, y
+ * abrir en la actual significa que un lunes por la mañana la pantalla enseña un
+ * solo día: sin curva, sin mapa y sin nada que decidir. La actual está a un
+ * clic en las fechas.
+ */
+export function semanaPorDefecto(hoyDate = new Date()): { desde: string; hasta: string } {
+  const lunesActual = lunesDe(hoyDate);
+  const sabadoActual = sumarDias(lunesActual, 5);
+  const terminada = fechaTexto(hoyDate) > sabadoActual;
+  const lunes = terminada ? lunesActual : sumarDias(lunesActual, -7);
+  return { desde: lunes, hasta: sumarDias(lunes, 5) };
+}
+
+/** La fecha local como texto. `toISOString()` pasa por UTC y en Lima se adelanta. */
+export function fechaTexto(fecha: Date): string {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
+
 export function sumarDias(fecha: string, dias: number): string {
   const copia = new Date(fecha + 'T00:00:00');
   copia.setDate(copia.getDate() + dias);
-  return copia.toISOString().slice(0, 10);
+  return fechaTexto(copia);
 }
