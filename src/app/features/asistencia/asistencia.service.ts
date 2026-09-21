@@ -10,6 +10,7 @@ import {
   CorreccionMarcacion,
   DashboardAsistencia,
   DiaCalendario,
+  ImportacionFeriados,
   EquipoAutorizado,
   Horario,
   Justificacion,
@@ -167,10 +168,17 @@ export class AsistenciaService {
     return this.http.get<{ fecha: string; nombre: string }[]>(`${this.url}/calendario/feriados`, { params });
   }
 
-  /** Los feriados nacionales de un año, de una vez. */
-  importarFeriados(anio: number): Observable<{ importados: number }> {
-    const params = new HttpParams().set('anio', anio);
-    return this.http.post<{ importados: number }>(`${this.url}/calendario/feriados`, null, { params });
+  /** Lee el archivo de feriados. Con guardar=false es la vista previa: no toca nada. */
+  importarArchivoFeriados(archivo: File, guardar: boolean): Observable<ImportacionFeriados> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo);
+    const params = new HttpParams().set('guardar', guardar);
+    return this.http.post<ImportacionFeriados>(`${this.url}/calendario/feriados/archivo`, cuerpo, { params });
+  }
+
+  /** La plantilla del archivo: Fecha y Nombre, con los feriados del año que viene. */
+  plantillaFeriados(): Observable<Blob> {
+    return this.http.get(`${this.url}/calendario/feriados/plantilla`, { responseType: 'blob' });
   }
 
   quitarDia(id: number, idSubcartera?: number | null): Observable<void> {

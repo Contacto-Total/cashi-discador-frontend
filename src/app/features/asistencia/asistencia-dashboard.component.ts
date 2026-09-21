@@ -7,7 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Chart, registerables } from 'chart.js';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { DashboardAsistencia, EstadoAsistencia, Justificacion } from './asistencia.models';
+import { CuadroDia, DashboardAsistencia, EstadoAsistencia, Justificacion } from './asistencia.models';
 import { ESTADOS, ESTILOS, duracionCorta, enDuracion, semanaPorDefecto, unidadDe } from './asistencia.estilos';
 
 Chart.register(...registerables);
@@ -19,7 +19,16 @@ const COLOR: Record<string, string> = {
   FALTA: '#dc2626',
   INCOMPLETO: '#8491a3',
   JUSTIFICADO: '#6366f1',
-  NO_LABORABLE: '#e6e9ee'
+  NO_LABORABLE: '#e6e9ee',
+  SIN_ASIGNACION: '#fdeee0'
+};
+
+/**
+ * El día sin asignación lleva el naranja del calendario, con su borde, y no el
+ * gris de «No laborable»: es algo interno de la empresa, no un día libre.
+ */
+const BORDE: Record<string, string> = {
+  SIN_ASIGNACION: '#ea580c'
 };
 
 /**
@@ -56,6 +65,12 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     .lienzo { position: relative; height: 190px }
     .lienzo-dona { height: 170px; flex: none; width: 170px }
     .lienzo-alto { height: 260px }
+    /* Las horas por persona ocupan todo el alto de su tarjeta, que es el del
+       mapa de al lado: así cada barra cae más o menos a la altura de su fila y
+       no se apiñan arriba cuando hay mucha gente. El lienzo va fuera del flujo
+       para que su alto no empuje a la tarjeta y Chart.js no crezca sin parar. */
+    .lienzo-horas { height: auto; flex: 1 1 0 }
+    .lienzo-horas canvas { position: absolute; inset: 0 }
 
     /* La dona con su leyenda al lado, centradas en el hueco de la tarjeta. */
     .dona-con-leyenda { flex: 1; display: flex; align-items: center; justify-content: center; gap: 22px }
@@ -355,8 +370,9 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
                 @for (a of d.agentes; track a.idUsuario) {
                   <span class="nombre" [title]="a.nombreAgente">{{ a.nombreCorto }}</span>
                   @for (c of a.semana; track c.fecha) {
-                    <span class="cuadro-dia" [style.background]="COLOR[c.estado]"
-                          [title]="a.nombreAgente + ' · ' + c.nombreDia + ': ' + ESTADOS[c.estado].texto.toLowerCase()"></span>
+                    <span class="cuadro-dia" [style.background]="COLOR[claveDe(c)]"
+                          [style.box-shadow]="BORDE[claveDe(c)] ? 'inset 0 0 0 1.5px ' + BORDE[claveDe(c)] : null"
+                          [title]="a.nombreAgente + ' · ' + c.nombreDia + ': ' + (c.tipoDia ?? ESTADOS[c.estado].texto).toLowerCase()"></span>
                   }
                   <strong class="text-right text-[12px] tabular-nums">{{ a.porcentajePuntualidad }}%</strong>
                 }
@@ -366,7 +382,8 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[#f1f3f6] pt-2.5 text-[11.5px] text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">
               @for (l of leyendaMapa(); track l.texto) {
                 <span class="inline-flex items-center gap-1.5">
-                  <span class="h-2.5 w-2.5 rounded-[3px]" [style.background]="l.color"></span>{{ l.texto }}
+                  <span class="h-2.5 w-2.5 rounded-[3px]" [style.background]="l.color"
+                        [style.box-shadow]="l.borde ? 'inset 0 0 0 1.5px ' + l.borde : null"></span>{{ l.texto }}
                 </span>
               }
             </div>
@@ -377,7 +394,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             <p class="!mb-3 !mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
               Contra {{ jornadaTexto() }} del rango
             </p>
-            <div class="lienzo lienzo-alto"><canvas #horas></canvas></div>
+            <div class="lienzo lienzo-horas" [style.min-height.px]="altoHoras()"><canvas #horas></canvas></div>
             <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[#f1f3f6] pt-2.5 text-[11.5px] text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">
               <span class="inline-flex items-center gap-1.5">
                 <span class="h-2.5 w-2.5 rounded-[3px] bg-[#16a34a]"></span>Cumple la jornada
@@ -496,6 +513,7 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
 
   protected readonly estilos = ESTILOS;
   protected readonly COLOR = COLOR;
+  protected readonly BORDE = BORDE;
   protected readonly ESTADOS = ESTADOS;
   protected readonly duracionCorta = duracionCorta;
   protected readonly unidadDe = unidadDe;
@@ -566,16 +584,25 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     ].filter(r => r.valor > 0);
   });
 
+  /** Con qué color se pinta un cuadro: el del estado, salvo el día sin asignación. */
+  claveDe(c: CuadroDia): string {
+    return c.estado === 'NO_LABORABLE' && c.codigoTipoDia === 'SIN_ASIGNACION' ? 'SIN_ASIGNACION' : c.estado;
+  }
+
   /**
    * Los cuatro de siempre y, detrás, los que aparezcan en el mapa: un cuadro
    * de un color que no está en la leyenda no se puede leer.
    */
   readonly leyendaMapa = computed(() => {
-    const presentes = new Set((this.datos()?.agentes ?? []).flatMap(a => a.semana.map(c => c.estado)));
-    const orden: EstadoAsistencia[] = ['PUNTUAL', 'TARDE', 'FALTA', 'INCOMPLETO', 'JUSTIFICADO', 'NO_LABORABLE'];
+    const presentes = new Set((this.datos()?.agentes ?? []).flatMap(a => a.semana.map(c => this.claveDe(c))));
+    const orden = ['PUNTUAL', 'TARDE', 'FALTA', 'INCOMPLETO', 'JUSTIFICADO', 'NO_LABORABLE', 'SIN_ASIGNACION'];
     return orden
       .filter((e, i) => i < 4 || presentes.has(e))
-      .map(e => ({ texto: ESTADOS[e].texto, color: COLOR[e] }));
+      .map(e => ({
+        texto: e === 'SIN_ASIGNACION' ? 'Sin asignación' : ESTADOS[e as EstadoAsistencia].texto,
+        color: COLOR[e],
+        borde: BORDE[e] ?? null
+      }));
   });
 
   /** Los días que de verdad tiene el rango, no los siete de siempre. */
@@ -672,6 +699,9 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     const dias = (Date.parse(this.hasta()) - Date.parse(this.desde())) / 86_400_000 + 1;
     return dias <= 7 ? 'en la semana' : 'en el rango';
   });
+
+  /** Lo mínimo para que cada barra tenga su renglón, aunque el mapa no esté al lado. */
+  readonly altoHoras = computed(() => Math.max(230, (this.datos()?.agentes.length ?? 0) * 26 + 36));
 
   readonly jornadaTexto = computed(() => {
     const minutos = this.datos()?.agentes[0]?.minutosJornada ?? 0;
@@ -883,13 +913,20 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     // ---- Horas por persona: barras con la jornada prevista marcada ----
     const horas = this.lienzoHoras()?.nativeElement;
     if (horas) {
-      const jornada = d.agentes[0]?.minutosJornada ?? 0;
+      // En horas y no en minutos: con minutos el eje salía en 8, 17, 25, 33 h.
+      const jornada = (d.agentes[0]?.minutosJornada ?? 0) / 60;
+      const tope = Math.max(jornada, 1, ...d.agentes.map(a => a.minutosTrabajados / 60));
+      // Una marca por día de 8 h mientras quepan; en rangos largos, más espaciadas.
+      // Siempre un paso más allá del tope, para que la raya de la jornada no
+      // quede pegada al borde.
+      const paso = [4, 8, 16, 24, 40, 80, 160].find(p => tope / p <= 6) ?? 160;
+      const maximo = (Math.floor(tope / paso) + 1) * paso;
       this.graficos.push(new Chart(horas, {
         type: 'bar',
         data: {
           labels: d.agentes.map(a => a.nombreCorto),
           datasets: [{
-            data: d.agentes.map(a => a.minutosTrabajados),
+            data: d.agentes.map(a => a.minutosTrabajados / 60),
             backgroundColor: d.agentes.map(a =>
               a.minutosJornada && a.minutosTrabajados >= a.minutosJornada
                 ? COLOR['PUNTUAL'] : COLOR['TARDE']),
@@ -915,9 +952,10 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
           },
           scales: {
             x: {
-              beginAtZero: true,
+              min: 0,
+              max: maximo,
               grid: { color: rejilla },
-              ticks: { color: tinta, callback: v => `${Math.round(Number(v) / 60)} h` }
+              ticks: { color: tinta, stepSize: paso, callback: v => `${v} h` }
             },
             y: { grid: { display: false }, ticks: { color: tinta } }
           }

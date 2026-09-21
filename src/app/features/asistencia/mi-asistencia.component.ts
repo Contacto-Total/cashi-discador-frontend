@@ -14,6 +14,7 @@ import {
   Recuperacion,
   TipoDia
 } from './asistencia.models';
+import { TIPOS_DE_CALENDARIO, avisoAnticipacion, primerDiaPermitido } from './asistencia.estilos';
 
 /** Los mismos nombres y colores que ve la supervisora: una sola leyenda. */
 const ESTADOS: Record<EstadoAsistencia, { texto: string; clase: string }> = {
@@ -386,7 +387,8 @@ const ESTILOS = {
               <div class="flex gap-3">
                 <div class="flex flex-1 flex-col gap-1.5">
                   <label [class]="estilos.etiqueta" for="j-desde">Desde</label>
-                  <input id="j-desde" type="date" [class]="estilos.campo" [(ngModel)]="nuevo.fechaDesde">
+                  <input id="j-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
+                         [(ngModel)]="nuevo.fechaDesde">
                 </div>
                 <div class="flex flex-1 flex-col gap-1.5">
                   <label [class]="estilos.etiqueta" for="j-hasta">Hasta</label>
@@ -510,8 +512,14 @@ export class MiAsistenciaComponent implements OnInit, OnDestroy {
   readonly hayMas = computed(() =>
     (this.pagina() + 1) * this.porPagina < this.solicitudes().length);
 
-  readonly tipoElegido = computed(() =>
-    this.tipos().find(t => t.id === this.nuevo.idTipoDia) ?? null);
+  /** Método y no computed: `nuevo` es un objeto del formulario, no una signal, y el computed no se enteraba del cambio. */
+  tipoElegido(): TipoDia | null {
+    return this.tipos().find(t => t.id === this.nuevo.idTipoDia) ?? null;
+  }
+
+  primerDia(): string | null {
+    return primerDiaPermitido(this.tipoElegido());
+  }
 
   readonly rangoTexto = computed(() => {
     const inicio = new Date(this.lunes() + 'T00:00:00');
@@ -551,8 +559,9 @@ export class MiAsistenciaComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.servicio.tiposDeDia().subscribe({
       next: t => {
-        this.tipos.set(t);
-        this.nuevo.idTipoDia = t[0]?.id ?? null;
+        const deAusencia = t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo));
+        this.tipos.set(deAusencia);
+        this.nuevo.idTipoDia = deAusencia[0]?.id ?? null;
       },
       error: () => this.toast.error('No se pudieron cargar los tipos de justificación')
     });
@@ -660,6 +669,11 @@ export class MiAsistenciaComponent implements OnInit, OnDestroy {
     }
     if (this.nuevo.fechaHasta < this.nuevo.fechaDesde) {
       this.error.set('La fecha final no puede ser anterior a la inicial');
+      return;
+    }
+    const primerDia = this.primerDia();
+    if (primerDia && this.nuevo.fechaDesde < primerDia) {
+      this.error.set(avisoAnticipacion(this.tipoElegido()!));
       return;
     }
     if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {
