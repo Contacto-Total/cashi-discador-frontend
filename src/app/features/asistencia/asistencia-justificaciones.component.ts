@@ -358,7 +358,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
             @if (j.estado === 'PENDIENTE' || j.estado === 'REVISADA') {
               <div class="flex flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="motivo-just">
-                  Motivo @if (!conforme()) { <span class="text-[#b91c1c]">(obligatorio al rechazar)</span> }
+                  Motivo
                 </label>
                 <textarea id="motivo-just" rows="2" [class]="estilos.area"
                           placeholder="Lo que quede registrado con la decisión"

@@ -78,6 +78,7 @@ const COLOR_DIA: Record<string, string> = {
     }
   `],
   template: `
+    <div class="px-7 py-5">
         @if (!idSubcartera()) {
           <div [class]="estilos.vacio">
             <strong class="block text-[13.5px]">Elige un cliente, una cartera o una subcartera</strong>
@@ -324,7 +325,7 @@ const COLOR_DIA: Record<string, string> = {
                role="dialog" aria-modal="true" aria-labelledby="titulo-correccion">
             <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
               <div>
-                <h2 id="titulo-correccion" class="!m-0 text-[15px] font-extrabold">Corregir horas</h2>
+                <h2 id="titulo-correccion" class="!m-0 text-[15px] font-extrabold">Motivo de la corrección</h2>
                 <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                   {{ dia.nombreAgente }} · {{ dia.fecha | date: 'dd/MM/yyyy' }}
                 </p>
@@ -374,6 +375,7 @@ const COLOR_DIA: Record<string, string> = {
           </div>
         </div>
       }
+    </div>
   `
 })
 export class AsistenciaReporteComponent {
