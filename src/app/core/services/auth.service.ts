@@ -290,6 +290,15 @@ export class AuthService {
   }
 
   logout(): void {
+    // La hora de salida del día se cierra aquí, con la última actividad que
+    // apunto el SERVIDOR. Va antes de borrar el token porque la petición lo
+    // necesita, y el resto del cierre no la espera: si falla, el barrido de
+    // fondo cierra la jornada igual.
+    if (this.getToken()) {
+      this.http.post(`${environment.apiUrl}/asistencia/marcaciones/salida`, {})
+        .subscribe({ error: () => { /* el barrido del backend la cierra */ } });
+    }
+
     // Limpiar el intervalo de verificación para evitar múltiples alertas
     if (this.tokenCheckInterval) {
       clearInterval(this.tokenCheckInterval);

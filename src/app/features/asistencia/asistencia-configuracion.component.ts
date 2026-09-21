@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { DiaCalendario, Horario, PoliticaAsistencia, ResumenAgente, TipoDia } from './asistencia.models';
-import { ESTILOS, finDeSemanaDe, hoy, lunesDe } from './asistencia.estilos';
+import { ESTILOS, aMinutos, enDuracion, finDeSemanaDe, hoy, lunesDe } from './asistencia.estilos';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -22,6 +22,9 @@ interface Regla {
   conHora: boolean;
 }
 const CABECERAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+/** 48 horas semanales: es la regla de la empresa y contra eso se compara. */
+const MINUTOS_SEMANA = 48 * 60;
+
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
                'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -41,18 +44,32 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
     :host { display: block; }
     .aparecer { animation: aparecer .18s ease-out }
     @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
-    /* La pista de un día: la jornada sobre el reloj, con el break encima. */
+    /* El reloj de la semana. La pista es la escala del día; el turno, la barra
+       de ese horario, con el mismo grosor y las puntas de las del dashboard. */
+    .tabla-horario .col-reloj { width: 42%; min-width: 320px }
+    .tabla-horario .marcas {
+      display: flex; justify-content: space-between;
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+      color: #8491a3; font-variant-numeric: tabular-nums;
+    }
     .pista {
-      position: relative; height: 22px; border-radius: 6px;
-      background: #f1f3f6; overflow: hidden;
+      position: relative; display: block; height: 14px; border-radius: 999px;
+      /* Mezclada con el texto y no con el borde: sobre blanco, el gris suave
+         casi no se distinguía del fondo de la tabla. */
+      background-color: color-mix(in srgb, #0f172a 9%, #fff);
     }
-    .turno {
-      position: absolute; top: 0; bottom: 0; background: #0f172a;
-      border-radius: 0 6px 6px 0;
+    .pista .turno {
+      position: absolute; top: 0; height: 100%; overflow: hidden;
+      /* Recta donde empieza y curva donde acaba, como las barras del dashboard. */
+      border-radius: 0 999px 999px 0;
+      background: color-mix(in srgb, #0f172a 72%, #fff);
     }
-    .pausa { position: absolute; top: 0; bottom: 0; background: #f59e0b }
-    :host-context(.dark) .pista { background: #1e293b }
-    :host-context(.dark) .turno { background: #e2e8f0 }
+    .pista .corte { position: absolute; top: 0; height: 100% }
+    .pista .corte.almuerzo { background: color-mix(in srgb, #f59e0b 88%, #fff) }
+    .pista .corte.break { background: color-mix(in srgb, #ea580c 82%, #fff) }
+    :host-context(.dark) .pista { background-color: color-mix(in srgb, #f1f5f9 12%, #0f172a) }
+    :host-context(.dark) .pista .turno { background: color-mix(in srgb, #f1f5f9 72%, #0f172a) }
+
     /* El mes: una rejilla con los bordes compartidos, no celdas sueltas. */
     .mes {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
@@ -157,59 +174,126 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
               Lo que se guarde aquí vale solo para esta persona.
             </p>
           }
+          <button type="button" [class]="estilos.botonSecundario + ' ml-auto'"
+                  (click)="abrirHorario()">
+            <lucide-angular name="clock" [size]="15" class="block"></lucide-angular>
+            Nuevo horario
+          </button>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
 
-          <!-- El horario de la semana, dibujado -->
+          <!-- El horario de la semana, con el turno dibujado sobre el eje de horas -->
           <div>
-            <div class="mb-2.5 flex items-center justify-between gap-3">
+            <div class="mb-2.5 flex flex-wrap items-center justify-between gap-3">
               <h2 [class]="estilos.titulo + ' !mb-0'">Horario vigente</h2>
-              <button type="button" [class]="estilos.botonSecundario" (click)="abrirHorario()">
-                <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-                Nuevo horario
-              </button>
-            </div>
-
-            <div [class]="estilos.tarjeta">
-              @for (d of semana(); track d.diaSemana) {
-                <div class="flex items-center gap-3 border-b border-[#f1f3f6] py-2 last:border-0 dark:border-slate-800">
-                  <span class="w-[74px] shrink-0 text-[12.5px] font-semibold">{{ DIAS[d.diaSemana - 1] }}</span>
-                  @if (d.horaEntrada) {
-                    <div class="pista flex-1" [title]="d.horaEntrada + ' – ' + d.horaSalida">
-                      <span class="turno"
-                            [style.left.%]="porcentaje(d.horaEntrada)"
-                            [style.width.%]="porcentaje(d.horaSalida ?? d.horaEntrada) - porcentaje(d.horaEntrada)"></span>
-                      @if (politica()?.horaBreak) {
-                        <span class="pausa"
-                              [style.left.%]="porcentaje(politica()!.horaBreak!)"
-                              [style.width.%]="anchoBreak()"></span>
-                      }
-                    </div>
-                    <span class="w-[104px] shrink-0 text-right text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                      {{ hhmm(d.horaEntrada) }} – {{ hhmm(d.horaSalida!) }}
-                    </span>
-                  } @else {
-                    <div class="pista flex-1"></div>
-                    <span class="w-[104px] shrink-0 text-right text-[12px] text-[#8491a3] dark:text-slate-500">
-                      No se trabaja
-                    </span>
-                  }
-                </div>
-              }
-
-              <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t border-[#f1f3f6] pt-2.5 text-[11.5px] text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">
-                <span class="inline-flex items-center gap-1.5">
-                  <span class="h-2 w-3 rounded-[2px] bg-[#0f172a] dark:bg-slate-200"></span>Jornada
-                </span>
-                @if (politica()?.horaBreak) {
-                  <span class="inline-flex items-center gap-1.5">
-                    <span class="h-2 w-3 rounded-[2px] bg-[#f59e0b]"></span>
-                    Break {{ hhmm(politica()!.horaBreak!) }} · {{ politica()!.minutosBreak }} min
+              <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
+                @for (l of LEYENDA_RELOJ; track l.texto) {
+                  <span class="inline-flex items-center gap-1.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                    <i class="h-[11px] w-[11px] rounded-[3px]" [style.background]="l.color"></i>{{ l.texto }}
                   </span>
                 }
-                <span>De 00:00 a 24:00</span>
+                <span class="text-[11.5px] font-semibold"
+                      [class]="borrador().size ? 'text-[#92400e] dark:text-amber-300' : 'text-[#5f6c80] dark:text-slate-400'">
+                  {{ borrador().size ? borrador().size + ' sin guardar' : 'Sin cambios' }}
+                </span>
+                <button type="button" [class]="estilos.botonPrimario + ' !h-[34px] !text-[12.5px]'"
+                        [disabled]="!borrador().size || !cuadraLaSemana() || guardando()"
+                        [title]="cuadraLaSemana() ? '' : 'No se puede guardar hasta que la semana sume 48 horas'"
+                        (click)="guardarHorarios()">
+                  <lucide-angular name="save" [size]="13" class="block"></lucide-angular>
+                  {{ guardando() ? 'Guardando…' : 'Guardar' }}
+                </button>
               </div>
+            </div>
+
+            <div [class]="estilos.panel">
+              <table class="tabla-horario w-full border-collapse">
+                <caption class="sr-only">
+                  Horario por día de la semana, con el turno dibujado sobre el eje de horas
+                </caption>
+                <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
+                  <tr>
+                    <th scope="col" [class]="estilos.th">Día</th>
+                    <th scope="col" [class]="estilos.th">Entrada</th>
+                    <th scope="col" [class]="estilos.th">Salida</th>
+                    <th scope="col" [class]="estilos.th">Jornada</th>
+                    <th scope="col" [class]="estilos.th + ' col-reloj'">
+                      <!-- El eje de horas vive en la cabecera de su columna. -->
+                      <div class="marcas">
+                        @for (m of marcasDelEje(); track m) { <span>{{ m }}</span> }
+                      </div>
+                    </th>
+                    <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (d of semana(); track d.diaSemana) {
+                    <tr class="border-b border-[#f1f3f6] last:border-0 dark:border-slate-800"
+                        [class.bg-[#fffdf5]]="d.pendiente">
+                      <td [class]="estilos.td">
+                        <strong>{{ DIAS[d.diaSemana - 1] }}</strong>
+                        @if (d.remoto) {
+                          <span class="ml-2.5 rounded-full bg-[#f1f3f6] px-2 py-0.5 text-[11px] font-bold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">
+                            Remoto
+                          </span>
+                        }
+                        @if (d.pendiente) {
+                          <span class="ml-2.5 rounded-full bg-[#fef6e0] px-2 py-0.5 text-[11px] font-bold text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300">
+                            Sin guardar
+                          </span>
+                        }
+                      </td>
+                      <td [class]="estilos.td">{{ d.horaEntrada ?? '—' }}</td>
+                      <td [class]="estilos.td">{{ d.horaSalida ?? '—' }}</td>
+                      <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ d.jornada }}</td>
+                      <td [class]="estilos.td + ' col-reloj'">
+                        @if (d.horaEntrada && d.horaSalida) {
+                          <span class="pista" [title]="d.horaEntrada + ' – ' + d.horaSalida">
+                            <span class="turno" [style.left.%]="d.izquierda" [style.width.%]="d.ancho">
+                              @for (c of d.cortes; track c.tipo) {
+                                <span class="corte" [class]="c.tipo"
+                                      [style.left.%]="c.izquierda" [style.width.%]="c.ancho"></span>
+                              }
+                            </span>
+                          </span>
+                        } @else {
+                          <span class="pista"></span>
+                        }
+                      </td>
+                      <td [class]="estilos.td + ' text-right'">
+                        <div class="flex justify-end gap-1.5">
+                          <button type="button" [class]="estilos.botonIcono" [disabled]="!d.pendiente"
+                                  (click)="deshacer(d.diaSemana)"
+                                  [attr.aria-label]="'Deshacer el cambio del ' + DIAS[d.diaSemana - 1]"
+                                  title="Deshacer">
+                            <lucide-angular name="rotate-ccw" [size]="13" class="block"></lucide-angular>
+                          </button>
+                          <button type="button" [class]="estilos.botonIcono" (click)="abrirHorario(d.diaSemana)"
+                                  [attr.aria-label]="'Cambiar el horario del ' + DIAS[d.diaSemana - 1]"
+                                  title="Cambiar">
+                            <lucide-angular name="pencil" [size]="13" class="block"></lucide-angular>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="border-t border-[#e6e9ee] bg-[#f4f6f9] font-bold dark:border-slate-800 dark:bg-slate-800/60">
+                    <td [class]="estilos.td" colspan="3">Total semanal</td>
+                    <td [class]="estilos.td">{{ totalSemana() }}</td>
+                    <td [class]="estilos.td" colspan="2">
+                      <span class="text-[11.5px] font-bold"
+                            [class]="cuadraLaSemana()
+                              ? 'text-[#166534] dark:text-green-300'
+                              : 'text-[#b91c1c] dark:text-red-300'">
+                        {{ avisoSemana() }}
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
 
             <!-- Tolerancias y pausas: cada regla se cambia por separado,
@@ -580,7 +664,7 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
             <dd class="!m-0">{{ c.motivo }}</dd>
           </dl>
           <footer class="flex justify-end border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonPrimario" (click)="cambio.set(null)">Listo</button>
+            <button type="button" [class]="estilos.botonSecundario" (click)="cambio.set(null)">Cerrar</button>
           </footer>
         </div>
       </div>
@@ -595,10 +679,10 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
               <h2 id="titulo-dia" class="!m-0 text-[15px] font-extrabold">
-                {{ nuevoDia.fecha | date: 'EEEE d \\'de\\' MMMM' }}
+                Día no laborable
               </h2>
               <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                Lo que se marque aquí manda sobre el horario de ese día
+                {{ nuevoDia.fecha | date: 'EEEE d' }} · manda sobre el horario de ese día
               </p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarDia()" aria-label="Cerrar">
@@ -608,7 +692,7 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
 
           <div class="flex flex-col gap-3.5 px-5 py-4">
             <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="d-tipo">Qué es</label>
+              <label [class]="estilos.etiqueta" for="d-tipo">Tipo</label>
               <select id="d-tipo" [class]="estilos.campo" [(ngModel)]="nuevoDia.idTipoDia">
                 @for (t of tiposDeCalendario(); track t.id) {
                   <option [ngValue]="t.id">{{ t.nombre }}</option>
@@ -622,10 +706,15 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
                        placeholder="Ej.: Santa Rosa de Lima" [(ngModel)]="nuevoDia.nombre">
               </div>
             }
+            <div class="flex flex-col gap-1">
+              <span [class]="estilos.etiqueta">Alcance</span>
+              <p class="!m-0 text-[13px]">{{ alcance() }}</p>
+            </div>
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="d-motivo">Motivo</label>
               <input id="d-motivo" type="text" [class]="estilos.campo"
-                     placeholder="Por qué no se trabaja ese día" [(ngModel)]="nuevoDia.motivo">
+                     placeholder="Ej.: sin carga de asignación del estudio"
+                     [(ngModel)]="nuevoDia.motivo">
             </div>
             @if (error()) {
               <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
@@ -633,10 +722,14 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
           </div>
 
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            @if (diaYaMarcado() && !diaHeredado()) {
+              <button type="button" [class]="estilos.botonSecundario + ' mr-auto'"
+                      (click)="quitarDesdeModal()">Quitar</button>
+            }
             <button type="button" [class]="estilos.botonSecundario" (click)="cerrarDia()">Cancelar</button>
             <button type="button" [class]="estilos.botonPrimario" (click)="guardarDia()" [disabled]="guardando()">
               <lucide-angular name="save" [size]="15" class="block"></lucide-angular>
-              {{ guardando() ? 'Guardando…' : 'Marcar día' }}
+              {{ guardando() ? 'Guardando…' : 'Guardar' }}
             </button>
           </footer>
         </div>
@@ -651,6 +744,13 @@ export class AsistenciaConfiguracionComponent {
   protected readonly estilos = ESTILOS;
   protected readonly DIAS = DIAS;
   protected readonly CABECERAS = CABECERAS;
+
+  /** Los tres colores del reloj, con su nombre. */
+  protected readonly LEYENDA_RELOJ = [
+    { texto: 'Trabajo', color: 'color-mix(in srgb, #0f172a 72%, #fff)' },
+    { texto: 'Almuerzo', color: 'color-mix(in srgb, #f59e0b 88%, #fff)' },
+    { texto: 'Break', color: 'color-mix(in srgb, #ea580c 82%, #fff)' }
+  ];
 
   /** Qué dice cada fondo de la rejilla. */
   protected readonly LEYENDA = [
@@ -717,17 +817,130 @@ export class AsistenciaConfiguracionComponent {
     motivo: ''
   };
 
-  /** Los siete días, con hueco en los que no se trabaja. */
-  readonly semana = computed(() => {
+  /** Lo que se ha cambiado y aún no se ha guardado, por día de la semana. */
+  readonly borrador = signal<Map<number, { entrada: string; salida: string; motivo: string }>>(new Map());
+
+  /**
+   * La escala del eje: desde una hora antes de la entrada más temprana hasta
+   * una después de la salida más tardía, redondeado a un número par de horas
+   * para que las marcas caigan cada dos.
+   */
+  private readonly escala = computed(() => {
+    const filas = this.filasCrudas();
+    const conHorario = filas.filter(f => f.entrada && f.salida);
+    if (!conHorario.length) {
+      return { desde: 7 * 60, hasta: 21 * 60 };
+    }
+    const ini = Math.min(...conHorario.map(f => aMinutos(f.entrada))) - 60;
+    const fin = Math.max(...conHorario.map(f => aMinutos(f.salida))) + 60;
+    const desde = Math.floor(ini / 60);
+    let hasta = Math.ceil(fin / 60);
+    if ((hasta - desde) % 2) {
+      hasta += 1;
+    }
+    return { desde: desde * 60, hasta: hasta * 60 };
+  });
+
+  /** Las marcas del eje, cada dos horas. */
+  readonly marcasDelEje = computed(() => {
+    const { desde, hasta } = this.escala();
+    const marcas: string[] = [];
+    for (let m = desde; m <= hasta; m += 120) {
+      marcas.push(`${String(m / 60).padStart(2, '0')}:00`);
+    }
+    return marcas;
+  });
+
+  /** El horario vigente de cada día, con el borrador encima si lo hay. */
+  private readonly filasCrudas = computed(() => {
     const vigentes = this.horarios();
+    const cambios = this.borrador();
     return Array.from({ length: 7 }, (_, i) => {
-      const fila = vigentes.find(h => h.diaSemana === i + 1);
+      const dia = i + 1;
+      const fila = vigentes.find(h => h.diaSemana === dia);
+      const cambio = cambios.get(dia);
       return {
-        diaSemana: i + 1,
-        horaEntrada: fila?.horaEntrada ?? null,
-        horaSalida: fila?.horaSalida ?? null
+        diaSemana: dia,
+        entrada: cambio ? cambio.entrada : (fila ? this.hhmm(fila.horaEntrada) : ''),
+        salida: cambio ? cambio.salida : (fila ? this.hhmm(fila.horaSalida) : ''),
+        pendiente: !!cambio
       };
     });
+  });
+
+  /**
+   * Las siete filas listas para pintar: horas, jornada y el turno situado
+   * sobre el eje, con las pausas que caigan dentro recortadas encima.
+   */
+  readonly semana = computed(() => {
+    const { desde, hasta } = this.escala();
+    const total = hasta - desde;
+    const p = this.politica();
+
+    return this.filasCrudas().map(f => {
+      if (!f.entrada || !f.salida) {
+        return {
+          ...f, horaEntrada: null, horaSalida: null, jornada: 'No se trabaja',
+          minutosJornada: 0, izquierda: 0, ancho: 0, cortes: [], remoto: false
+        };
+      }
+      const ini = aMinutos(f.entrada);
+      const fin = aMinutos(f.salida);
+      const izquierda = ((ini - desde) / total) * 100;
+      const ancho = ((fin - ini) / total) * 100;
+
+      // Solo entra la pausa que cabe ENTERA dentro del turno: un sábado de
+      // media jornada no tiene almuerzo, y una subcartera sin break no lo
+      // tiene ningún día.
+      const cortes = [];
+      for (const [tipo, hora, minutos] of [
+        ['almuerzo', p?.horaAlmuerzo, p?.minutosAlmuerzo],
+        ['break', p?.horaBreak, p?.minutosBreak]
+      ] as [string, string | null | undefined, number | undefined][]) {
+        if (!hora || !minutos) {
+          continue;
+        }
+        const h = aMinutos(this.hhmm(hora));
+        if (h < ini || h + minutos > fin) {
+          continue;
+        }
+        cortes.push({
+          tipo,
+          izquierda: ((h - ini) / (fin - ini)) * 100,
+          ancho: (minutos / (fin - ini)) * 100
+        });
+      }
+
+      const jornada = fin - ini - (cortes.some(c => c.tipo === 'almuerzo') ? (p?.minutosAlmuerzo ?? 0) : 0);
+      return {
+        ...f,
+        horaEntrada: f.entrada,
+        horaSalida: f.salida,
+        jornada: enDuracion(jornada),
+        minutosJornada: jornada,
+        izquierda, ancho, cortes,
+        // El sábado solo lo trabaja CASTIGO, y desde casa.
+        remoto: f.diaSemana === 6
+      };
+    });
+  });
+
+  /** La suma de la semana tal como se está viendo, con el borrador incluido. */
+  private readonly minutosSemana = computed(() =>
+    this.semana().reduce((total, d) => total + d.minutosJornada, 0));
+
+  readonly totalSemana = computed(() => enDuracion(this.minutosSemana()));
+
+  readonly cuadraLaSemana = computed(() => this.minutosSemana() === MINUTOS_SEMANA);
+
+  readonly avisoSemana = computed(() => {
+    const diferencia = this.minutosSemana() - MINUTOS_SEMANA;
+    if (diferencia === 0) {
+      return 'Cumple las 48 horas semanales';
+    }
+    return diferencia < 0
+      ? `Faltan ${enDuracion(-diferencia)} para las 48 horas semanales`
+      : `Se excede en ${enDuracion(diferencia)} de las 48 horas semanales`;
   });
 
   /**
@@ -872,6 +1085,7 @@ export class AsistenciaConfiguracionComponent {
   /** Cambiar de persona recarga el horario: el suyo puede no ser el de todos. */
   elegirPersona(id: number | null): void {
     this.idPersona.set(id);
+    this.borrador.set(new Map());
     this.cargarHorarios(this.idSubcartera());
   }
 
@@ -950,16 +1164,19 @@ export class AsistenciaConfiguracionComponent {
 
   // ==================== HORARIO ====================
 
-  abrirHorario(): void {
+  /** Abre el cambio de un día concreto, con lo que hoy tiene puesto. */
+  abrirHorario(diaSemana?: number): void {
+    const dia = diaSemana ?? this.semana().find(d => d.horaEntrada)?.diaSemana ?? 1;
+    const fila = this.semana().find(d => d.diaSemana === dia);
     this.formHorario.set(true);
     this.error.set('');
-    const primero = this.horarios()[0];
+    this.aplicarSemana = diaSemana === undefined;
     this.nuevoHorario = {
       idSubcartera: this.idSubcartera(),
-      idUsuario: null,
-      diaSemana: primero?.diaSemana ?? 1,
-      horaEntrada: this.hhmm(primero?.horaEntrada ?? '08:00'),
-      horaSalida: this.hhmm(primero?.horaSalida ?? '18:30'),
+      idUsuario: this.idPersona(),
+      diaSemana: dia,
+      horaEntrada: fila?.horaEntrada ?? '08:00',
+      horaSalida: fila?.horaSalida ?? '18:30',
       vigenteDesde: hoy(),
       motivo: ''
     };
@@ -969,6 +1186,52 @@ export class AsistenciaConfiguracionComponent {
     this.formHorario.set(false);
   }
 
+  /** Quita el cambio de un día y deja lo que estaba vigente. */
+  deshacer(diaSemana: number): void {
+    this.borrador.update(actual => {
+      const copia = new Map(actual);
+      copia.delete(diaSemana);
+      return copia;
+    });
+  }
+
+  /**
+   * Guarda los días del borrador de una vez.
+   *
+   * Se acumulan y se guardan juntos, y no uno por uno al cerrar el modal,
+   * porque la semana tiene que sumar 48 horas: cambiar un día suelto la
+   * descuadra y el guardado se bloquea hasta que vuelve a cuadrar.
+   */
+  guardarHorarios(): void {
+    const cambios = [...this.borrador().entries()];
+    if (!cambios.length) {
+      return;
+    }
+
+    this.guardando.set(true);
+    let pendientes = cambios.length;
+    let fallo: string | null = null;
+
+    for (const [diaSemana, cambio] of cambios) {
+      this.servicio.guardarHorario({
+        idSubcartera: this.idSubcartera(),
+        idUsuario: this.idPersona(),
+        diaSemana,
+        horaEntrada: cambio.entrada,
+        horaSalida: cambio.salida,
+        vigenteDesde: hoy(),
+        motivo: cambio.motivo
+      }).subscribe({
+        next: () => this.alGuardarHorario(--pendientes, fallo),
+        error: respuesta => {
+          fallo = respuesta?.error?.error ?? respuesta?.error ?? 'No se pudo guardar';
+          this.alGuardarHorario(--pendientes, fallo);
+        }
+      });
+    }
+  }
+
+  /** El modal no persiste: deja el cambio en el borrador de la tabla. */
   guardarHorario(): void {
     if (!this.nuevoHorario.motivo.trim()) {
       this.error.set('El cambio de horario exige un motivo');
@@ -979,28 +1242,19 @@ export class AsistenciaConfiguracionComponent {
       return;
     }
 
-    // Una fila por día: el horario es por día de la semana, así que aplicarlo
-    // de lunes a viernes son cinco cambios, cada uno con su propio motivo.
     const dias = this.aplicarSemana ? [1, 2, 3, 4, 5] : [this.nuevoHorario.diaSemana];
-
-    this.guardando.set(true);
-    let pendientes = dias.length;
-    let fallo: string | null = null;
-
-    for (const dia of dias) {
-      this.servicio.guardarHorario({
-        ...this.nuevoHorario,
-        diaSemana: dia,
-        idSubcartera: this.idSubcartera(),
-        idUsuario: this.idPersona()
-      }).subscribe({
-        next: () => this.alGuardarHorario(--pendientes, fallo),
-        error: respuesta => {
-          fallo = respuesta?.error?.error ?? respuesta?.error ?? 'No se pudo guardar';
-          this.alGuardarHorario(--pendientes, fallo);
-        }
-      });
-    }
+    this.borrador.update(actual => {
+      const copia = new Map(actual);
+      for (const dia of dias) {
+        copia.set(dia, {
+          entrada: this.nuevoHorario.horaEntrada,
+          salida: this.nuevoHorario.horaSalida,
+          motivo: this.nuevoHorario.motivo.trim()
+        });
+      }
+      return copia;
+    });
+    this.cerrarHorario();
   }
 
   private alGuardarHorario(pendientes: number, fallo: string | null): void {
@@ -1012,8 +1266,8 @@ export class AsistenciaConfiguracionComponent {
       this.error.set(fallo);
       return;
     }
-    this.cerrarHorario();
-    this.toast.success(this.aplicarSemana ? 'Horario de la semana cambiado' : 'Horario cambiado');
+    this.borrador.set(new Map());
+    this.toast.success('Horario guardado');
     this.cargarHorarios(this.idSubcartera());
   }
 
@@ -1124,6 +1378,27 @@ export class AsistenciaConfiguracionComponent {
         this.error.set(respuesta?.error?.error ?? 'No se pudo marcar el día');
       }
     });
+  }
+
+  /** El día que se está editando, si ya estaba marcado. */
+  readonly diaMarcado = computed(() =>
+    this.dias().find(d => d.fecha === this.nuevoDia.fecha) ?? null);
+
+  diaYaMarcado(): boolean {
+    return !!this.diaMarcado();
+  }
+
+  diaHeredado(): boolean {
+    return this.diaMarcado()?.heredado ?? false;
+  }
+
+  /** Quitar desde el propio modal, que es donde se está mirando el día. */
+  quitarDesdeModal(): void {
+    const marcado = this.diaMarcado();
+    if (marcado) {
+      this.cerrarDia();
+      this.quitarDia(marcado);
+    }
   }
 
   quitarDia(d: DiaCalendario): void {

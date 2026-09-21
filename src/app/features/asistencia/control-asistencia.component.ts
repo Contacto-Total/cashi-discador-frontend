@@ -54,7 +54,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
     :host { display: block; }
   `],
   template: `
-    <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
+    <div class="min-h-full overflow-x-hidden bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
       @if (!esPantallaAparte()) {
         <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
