@@ -37,6 +37,8 @@ const ESTILOS = {
 @Component({
   selector: 'app-control-acceso',
   standalone: true,
+  // Engancha las tablas al estilo del módulo (styles.css, «MÓDULO DE ASISTENCIA - tablas»).
+  host: { class: 'cashi-asistencia' },
   imports: [CommonModule, FormsModule, LucideAngularModule],
   styles: [`
     :host { display: block; }
@@ -167,8 +169,8 @@ const ESTILOS = {
                     <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#fafbfc] dark:border-slate-800 dark:hover:bg-slate-800/40"
                         [class.opacity-60]="!e.activo">
                       <td [class]="estilos.td + ' font-bold'">{{ e.nombre }}</td>
-                      <td [class]="estilos.td">{{ e.asignadoA ?? 'Sin asignar' }}</td>
-                      <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ e.subcartera ?? '—' }}</td>
+                      <td [class]="estilos.td + ' max-w-[180px] truncate font-semibold'">{{ e.asignadoA ?? 'Sin asignar' }}</td>
+                      <td [class]="estilos.td + ' secundario'">{{ e.subcartera ?? '—' }}</td>
                       <td [class]="estilos.td">
                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold"
                               [class]="e.ubicacion === 'REMOTO'
@@ -177,8 +179,8 @@ const ESTILOS = {
                           {{ e.ubicacion === 'REMOTO' ? 'Remoto' : 'Oficina' }}
                         </span>
                       </td>
-                      <td [class]="estilos.td + ' tabular-nums'">{{ e.instaladoEn | date: 'dd/MM/yyyy' }}</td>
-                      <td [class]="estilos.td + ' tabular-nums'">
+                      <td [class]="estilos.td + ' secundario'">{{ e.instaladoEn | date: 'dd/MM/yyyy' }}</td>
+                      <td [class]="estilos.td + ' secundario'">
                         {{ e.ultimaConexion ? (e.ultimaConexion | date: 'dd/MM HH:mm') : 'Nunca' }}
                         @if (e.diasSinUsar != null && e.diasSinUsar >= 30) {
                           <span class="ml-1.5 text-[11px] text-[#92400e] dark:text-amber-300">
@@ -213,7 +215,7 @@ const ESTILOS = {
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="8" class="px-3 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                      <td colspan="8" class="secundario !px-3 !py-10 text-center !text-[12.5px]">
                         {{ panel()?.equipos?.length ? 'Ningún equipo cuadra con el filtro' : 'Todavía no hay equipos registrados' }}
                       </td>
                     </tr>
@@ -238,20 +240,22 @@ const ESTILOS = {
                 <tbody>
                   @for (r of p.rechazos; track r.id) {
                     <tr class="border-b border-[#f1f3f6] last:border-0 dark:border-slate-800">
-                      <td [class]="estilos.td + ' tabular-nums'">{{ r.cuando | date: 'dd/MM HH:mm' }}</td>
+                      <td [class]="estilos.td + ' secundario'">{{ r.cuando | date: 'dd/MM HH:mm' }}</td>
                       <td [class]="estilos.td">
                         <span class="font-semibold">{{ r.usuario }}</span>
                         @if (r.nombreAgente) {
                           <span class="ml-1.5 text-[#5f6c80] dark:text-slate-400">{{ r.nombreAgente }}</span>
                         }
                       </td>
-                      <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ r.origen }}</td>
+                      <td [class]="estilos.td">{{ r.origen }}</td>
                       <td [class]="estilos.td">{{ r.dispositivo ?? '—' }}</td>
-                      <td [class]="estilos.td">{{ r.motivo }}</td>
+                      <td [class]="estilos.td">
+                        <span class="inline-flex items-center rounded-full bg-[#fdecec] px-[9px] py-0.5 text-[11.5px] font-bold text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300">{{ r.motivo }}</span>
+                      </td>
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="5" class="px-3 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                      <td colspan="5" class="secundario !px-3 !py-10 text-center !text-[12.5px]">
                         Ningún intento rechazado en los últimos 7 días
                       </td>
                     </tr>

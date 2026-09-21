@@ -260,7 +260,7 @@ const COLOR_DIA: Record<string, string> = {
                       <td [class]="estilos.td">
                         <span [class.manual]="esManual(dia, 'SALIDA')">{{ dia.salida ?? '—' }}</span>
                       </td>
-                      <td [class]="estilos.td + ((dia.minutosTardanza ?? 0) > 0 ? ' text-[#b91c1c] dark:text-red-300' : '')">
+                      <td [class]="estilos.td + ((dia.minutosTardanza ?? 0) > 0 ? ' con-tardanza' : '')">
                         {{ dia.tardanza ?? '—' }}
                       </td>
                       <td [class]="estilos.td">{{ dia.horasManana ?? '—' }}</td>
@@ -292,7 +292,7 @@ const COLOR_DIA: Record<string, string> = {
                           · {{ s.diasFalta }} {{ s.diasFalta === 1 ? 'falta' : 'faltas' }}
                         </span>
                       </td>
-                      <td [class]="estilos.td + (s.minutosTardanza > 0 ? ' text-[#b91c1c] dark:text-red-300' : '')">{{ s.tardanza }}</td>
+                      <td [class]="estilos.td + (s.minutosTardanza > 0 ? ' con-tardanza' : '')">{{ s.tardanza }}</td>
                       <td [class]="estilos.td">—</td>
                       <td [class]="estilos.td">—</td>
                       <td [class]="estilos.td">

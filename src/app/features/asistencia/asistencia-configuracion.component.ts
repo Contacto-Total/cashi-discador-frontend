@@ -350,7 +350,7 @@ function enHoras(minutos: number): string {
                   </td>
                   <td [class]="estilos.td">{{ d.horaEntrada }}</td>
                   <td [class]="estilos.td">{{ d.horaSalida }}</td>
-                  <td [class]="estilos.td + ' !text-[11.5px] text-[#5f6c80] dark:text-slate-400'">{{ d.jornada }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ d.jornada }}</td>
                   <td [class]="estilos.td + ' col-reloj'">
                     <span class="pista" [title]="d.horaEntrada + ' – ' + d.horaSalida">
                       <span class="turno" [style.left.%]="d.izquierda" [style.width.%]="d.ancho">
@@ -363,14 +363,12 @@ function enHoras(minutos: number): string {
                   </td>
                   <td [class]="estilos.td + ' text-right'">
                     <div class="flex justify-end gap-1.5">
-                      <!-- Deshacer solo existe cuando hay un cambio que deshacer. -->
-                      @if (d.pendiente) {
-                        <button type="button" [class]="estilos.botonIcono" (click)="deshacer(d.diaSemana)"
-                                [attr.aria-label]="'Deshacer el cambio del ' + DIAS[d.diaSemana - 1].toLowerCase()"
-                                title="Deshacer">
-                          <lucide-angular name="rotate-ccw" [size]="14" class="block"></lucide-angular>
-                        </button>
-                      }
+                      <button type="button" [class]="estilos.botonIcono" (click)="deshacer(d.diaSemana)"
+                              [disabled]="!d.pendiente"
+                              [attr.aria-label]="'Deshacer el cambio del ' + DIAS[d.diaSemana - 1].toLowerCase()"
+                              title="Deshacer">
+                        <lucide-angular name="rotate-ccw" [size]="14" class="block"></lucide-angular>
+                      </button>
                       <button type="button" [class]="estilos.botonIcono" (click)="abrirHorario(d.diaSemana)"
                               [attr.aria-label]="'Cambiar horario del ' + DIAS[d.diaSemana - 1].toLowerCase()"
                               title="Cambiar">
@@ -381,7 +379,7 @@ function enHoras(minutos: number): string {
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="px-3 py-10 text-center">
+                  <td colspan="6" class="!px-3 !py-10 text-center">
                     <strong class="block text-[13.5px]">Sin horario</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       Ni este ámbito ni la empresa tienen un horario vigente. Créalo con «Nuevo horario».
