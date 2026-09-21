@@ -56,93 +56,100 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
   template: `
     <div class="min-h-full overflow-x-hidden bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-      @if (!esPantallaAparte()) {
-        <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('configuracion')">
-                <lucide-angular name="settings" [size]="15" class="block"></lucide-angular>
-                Configuración
-              </button>
-              <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('edicion')">
-                <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
-                Editar horas
-              </button>
-              <button type="button" [class]="estilos.botonPrimario" (click)="exportar()"
-                      [disabled]="!idSubcartera()">
-                <lucide-angular name="download" [size]="15" class="block"></lucide-angular>
-                Descargar Excel
-              </button>
-            </div>
+      <!-- La cabecera del módulo va siempre, también en Configuración y Editar
+           horas: el ámbito y el rango de arriba son los que esas pantallas usan. -->
+      <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
+            <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
           </div>
-
-          <!-- El ámbito, en los tres niveles con los que está montada la operación -->
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="cliente">Cliente</label>
-              <select id="cliente" [class]="estilos.campo + ' w-[178px]'"
-                      [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
-                <option [ngValue]="null">Todos</option>
-                @for (c of clientes(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option>
-                }
-              </select>
-            </div>
-            <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="cartera">Cartera</label>
-              <select id="cartera" [class]="estilos.campo + ' w-[178px]'"
-                      [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
-                      [disabled]="!idCliente()">
-                <option [ngValue]="null">Todas</option>
-                @for (c of carteras(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.portfolioName }}</option>
-                }
-              </select>
-            </div>
-            <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="subcartera">Subcartera</label>
-              <select id="subcartera" [class]="estilos.campo + ' w-[178px]'"
-                      [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)"
-                      [disabled]="!idCartera()">
-                <option [ngValue]="null">Elige una</option>
-                @for (s of subcarteras(); track s.id) {
-                  <option [ngValue]="s.id">{{ s.subPortfolioName }}</option>
-                }
-              </select>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="desde">Desde</label>
-              <input id="desde" type="date" [class]="estilos.campo + ' w-[148px]'"
-                     [ngModel]="desde()" (ngModelChange)="desde.set($event)">
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="hasta">Hasta</label>
-              <input id="hasta" type="date" [class]="estilos.campo + ' w-[148px]'"
-                     [ngModel]="hasta()" (ngModelChange)="hasta.set($event)">
-            </div>
-
-            <!-- Un solo campo para buscar y elegir: escribir filtra, el desplegable lista el roster. -->
-            <div class="flex min-w-[200px] flex-1 flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="buscar">Agente</label>
-              <input id="buscar" type="text" list="roster-asistencia" autocomplete="off"
-                     placeholder="Escribe o elige de la lista" [class]="estilos.campo"
-                     [ngModel]="agente()" (ngModelChange)="agente.set($event)">
-              <datalist id="roster-asistencia">
-                @for (a of roster(); track a) { <option [value]="a"></option> }
-              </datalist>
-            </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" (click)="pantalla.set('configuracion')"
+                    [class]="estilos.botonSecundario + (pantalla() === 'configuracion' ? ' !bg-[#f4f6f9] dark:!bg-slate-700' : '')"
+                    [attr.aria-current]="pantalla() === 'configuracion' ? 'page' : null">
+              <lucide-angular name="settings" [size]="15" class="block"></lucide-angular>
+              Configuración
+            </button>
+            <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('edicion')"
+                    [attr.aria-current]="pantalla() === 'edicion' ? 'page' : null">
+              <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
+              Editar horas
+            </button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="exportar()"
+                    [disabled]="!idSubcartera()">
+              <lucide-angular name="download" [size]="15" class="block"></lucide-angular>
+              Descargar Excel
+            </button>
           </div>
         </div>
 
+        <!-- El ámbito, en los tres niveles con los que está montada la operación -->
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label [class]="estilos.etiqueta" for="cliente">Cliente</label>
+            <select id="cliente" [class]="estilos.campo + ' w-[178px]'"
+                    [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
+              <option [ngValue]="null">Todos</option>
+              @for (c of clientes(); track c.id) {
+                <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option>
+              }
+            </select>
+          </div>
+          <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
+
+          <div class="flex flex-col gap-1.5">
+            <label [class]="estilos.etiqueta" for="cartera">Cartera</label>
+            <select id="cartera" [class]="estilos.campo + ' w-[178px]'"
+                    [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
+                    [disabled]="!idCliente()">
+              <option [ngValue]="null">Todas</option>
+              @for (c of carteras(); track c.id) {
+                <option [ngValue]="c.id">{{ c.portfolioName }}</option>
+              }
+            </select>
+          </div>
+          <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
+
+          <div class="flex flex-col gap-1.5">
+            <label [class]="estilos.etiqueta" for="subcartera">Subcartera</label>
+            <select id="subcartera" [class]="estilos.campo + ' w-[178px]'"
+                    [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)"
+                    [disabled]="!idCartera()">
+              <option [ngValue]="null">Elige una</option>
+              @for (s of subcarteras(); track s.id) {
+                <option [ngValue]="s.id">{{ s.subPortfolioName }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label [class]="estilos.etiqueta" for="desde">Desde</label>
+            <input id="desde" type="date" [class]="estilos.campo + ' w-[148px]'"
+                   [ngModel]="desde()" (ngModelChange)="desde.set($event)">
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label [class]="estilos.etiqueta" for="hasta">Hasta</label>
+            <input id="hasta" type="date" [class]="estilos.campo + ' w-[148px]'"
+                   [ngModel]="hasta()" (ngModelChange)="hasta.set($event)">
+          </div>
+
+          <!-- Un solo campo para buscar y elegir: escribir filtra, el desplegable lista el roster. -->
+          <div class="flex min-w-[200px] flex-1 flex-col gap-1.5">
+            <label [class]="estilos.etiqueta" for="buscar">Agente</label>
+            <input id="buscar" type="text" list="roster-asistencia" autocomplete="off"
+                   placeholder="Escribe o elige de la lista" [class]="estilos.campo"
+                   [ngModel]="agente()" (ngModelChange)="agente.set($event)">
+            <datalist id="roster-asistencia">
+              @for (a of roster(); track a) { <option [value]="a"></option> }
+            </datalist>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editar horas y Configuración se entran desde la cabecera y salen con
+           «Volver al reporte»: ahí el selector de pantallas no pinta nada. -->
+      @if (!esPantallaAparte()) {
         <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
           <nav [class]="estilos.segmentos" aria-label="Pantallas del módulo">
             @for (t of TABS; track t.clave) {
@@ -177,7 +184,6 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           @case ('dashboard') {
             <app-asistencia-dashboard
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              [justificacionesPendientes]="sinResolver()"
               (semanaAnterior)="retrocederSemana()"
               (irA)="pantalla.set($event)" />
           }
@@ -187,7 +193,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
               (sinResolverCambia)="sinResolver.set($event)" />
           }
           @case ('cierre') {
-            <app-asistencia-cierre [idSubcartera]="idSubcartera()" />
+            <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
           }
           @case ('auditoria') {
             <app-asistencia-auditoria [desde]="desde()" [hasta]="hasta()" />

@@ -141,24 +141,15 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
                       {{ ESTADO_SOLICITUD[j.estado].texto }}
                     </span>
                   </td>
+                  <!-- Un solo botón: abre la solicitud, y dentro se dice a quién le
+                       toca y qué puede hacer. Dos iconos que abrían lo mismo no
+                       decían cuál servía para qué. -->
                   <td [class]="estilos.td + ' text-right'">
-                    <div class="flex justify-end gap-1.5">
-                      <button type="button" [class]="estilos.botonIcono" (click)="abrir(j)"
-                              [attr.aria-label]="'Ver la solicitud de ' + j.nombreAgente" title="Ver detalle">
-                        <lucide-angular name="eye" [size]="13" class="block"></lucide-angular>
-                      </button>
-                      @if (j.estado === 'PENDIENTE') {
-                        <button type="button" [class]="estilos.botonIcono" (click)="abrir(j)"
-                                title="Revisar" aria-label="Revisar">
-                          <lucide-angular name="check" [size]="13" class="block"></lucide-angular>
-                        </button>
-                      } @else if (j.estado === 'REVISADA') {
-                        <button type="button" [class]="estilos.botonIcono" (click)="abrir(j)"
-                                title="Resolver" aria-label="Resolver">
-                          <lucide-angular name="badge-check" [size]="13" class="block"></lucide-angular>
-                        </button>
-                      }
-                    </div>
+                    <button type="button" [class]="estilos.botonChico" (click)="abrir(j)"
+                            [attr.aria-label]="'Abrir la solicitud de ' + j.nombreAgente">
+                      <lucide-angular name="eye" [size]="13" class="block"></lucide-angular>
+                      Abrir
+                    </button>
                   </td>
                 </tr>
               } @empty {
