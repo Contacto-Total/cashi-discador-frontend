@@ -30,28 +30,43 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
     @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
   `],
   template: `
-    <div class="aparecer">
+    <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Justificaciones</h1>
+          <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            La registra la supervisora y la aprueba RR.HH.
+          </p>
+        </div>
+        <button type="button" [class]="estilos.botonPrimario" (click)="registrar.emit()">
+          <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
+          Registrar justificación
+        </button>
+      </div>
 
-      <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3">
-        <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-          Cada solicitud pasa por la supervisora y luego por RR.HH.
-        </p>
-        <div class="flex gap-1.5">
-          @for (f of FILTROS; track f.clave) {
-            <button type="button"
-                    class="h-[32px] rounded-lg border px-3 text-[12.5px] font-semibold transition-colors"
-                    [class]="filtro() === f.clave
-                      ? 'border-[#0f172a] bg-[#0f172a] !text-white dark:border-white dark:bg-white dark:!text-[#0f172a]'
-                      : 'border-[#e6e9ee] bg-white !text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200'"
-                    (click)="filtro.set(f.clave); cargar()">
-              {{ f.texto }}
-              @if (f.clave !== 'TODAS' && cuenta(f.clave)) {
-                <span class="ml-1.5 tabular-nums opacity-70">{{ cuenta(f.clave) }}</span>
-              }
-            </button>
-          }
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="estado-j">Estado</label>
+          <select id="estado-j" [class]="estilos.campo + ' w-[210px]'"
+                  [ngModel]="filtro()" (ngModelChange)="filtro.set($event); cargar()">
+            @for (f of FILTROS; track f.clave) {
+              <option [ngValue]="f.clave">{{ f.texto }}{{ cuenta(f.clave) ? ' (' + cuenta(f.clave) + ')' : '' }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="tipo-j">Tipo</label>
+          <select id="tipo-j" [class]="estilos.campo + ' w-[210px]'"
+                  [ngModel]="tipo()" (ngModelChange)="tipo.set($event); cargar()">
+            <option value="">Todos</option>
+            @for (t of tipos(); track t) { <option [value]="t">{{ t }}</option> }
+          </select>
         </div>
       </div>
+    </div>
+
+    <div class="px-7 py-5">
+    <div class="aparecer">
 
       @if (cargando()) {
         <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando solicitudes…</p>
@@ -152,6 +167,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD } from './asistencia.estilos'
           </table>
         </div>
       }
+    </div>
     </div>
 
     <!-- Detalle y decisión -->
@@ -297,10 +313,11 @@ export class AsistenciaJustificacionesComponent {
 
   /** Los dos primeros son las dos bandejas reales: la de cada paso. */
   protected readonly FILTROS = [
-    { clave: 'PENDIENTE', texto: 'Por revisar' },
-    { clave: 'REVISADA', texto: 'Por aprobar' },
-    { clave: 'RESUELTAS', texto: 'Resueltas' },
-    { clave: 'TODAS', texto: 'Todas' }
+    { clave: 'TODAS', texto: 'Todas' },
+    { clave: 'PENDIENTE', texto: 'Pendientes de revisar' },
+    { clave: 'REVISADA', texto: 'Pendientes de aprobar' },
+    { clave: 'APROBADA', texto: 'Aprobadas' },
+    { clave: 'RECHAZADA', texto: 'Rechazadas' }
   ] as const;
 
   readonly desde = input.required<string>();
@@ -308,13 +325,20 @@ export class AsistenciaJustificacionesComponent {
 
   /** Lo que espera a alguien, para el número de la pestaña. */
   readonly sinResolverCambia = output<number>();
+  /** Registrar se hace desde Mi Asistencia: el formulario es el mismo. */
+  readonly registrar = output<void>();
 
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly todas = signal<Justificacion[]>([]);
   readonly cargando = signal(false);
   readonly guardando = signal(false);
   readonly error = signal('');
-  readonly filtro = signal<string>('PENDIENTE');
+  readonly filtro = signal<string>('TODAS');
+  readonly tipo = signal<string>('');
+
+  /** Los tipos que de verdad aparecen en la bandeja, no el catálogo entero. */
+  readonly tipos = computed(() =>
+    [...new Set(this.todas().map(j => j.tipo).filter((t): t is string => !!t))].sort());
 
   readonly abierta = signal<Justificacion | null>(null);
   readonly vistaPrevia = signal<string | null>(null);
@@ -361,15 +385,9 @@ export class AsistenciaJustificacionesComponent {
 
   private aplicarFiltro(): void {
     const f = this.filtro();
-    this.solicitudes.set(this.todas().filter(j => {
-      if (f === 'TODAS') {
-        return true;
-      }
-      if (f === 'RESUELTAS') {
-        return j.estado === 'APROBADA' || j.estado === 'RECHAZADA';
-      }
-      return j.estado === f;
-    }));
+    const t = this.tipo();
+    this.solicitudes.set(this.todas().filter(j =>
+      (f === 'TODAS' || j.estado === f) && (!t || j.tipo === t)));
   }
 
   // ==================== DECISIÓN ====================

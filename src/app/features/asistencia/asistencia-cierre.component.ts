@@ -1,11 +1,11 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { CierreSemana, Recuperacion } from './asistencia.models';
-import { ESTILOS, duracionCorta, lunesDe, sumarDias, unidadDe } from './asistencia.estilos';
+import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asistencia.estilos';
 
 /**
  * Cierre semanal: congelar las cifras con las que se paga.
@@ -27,26 +27,86 @@ import { ESTILOS, duracionCorta, lunesDe, sumarDias, unidadDe } from './asistenc
     @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
   `],
   template: `
-    <div class="aparecer">
-
-      <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <p class="!m-0 max-w-[560px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-          Cerrar guarda las horas, la tardanza y el bono de esa semana tal como están hoy.
-          Lo que se corrija después se verá como ajuste, no cambiará lo ya pagado.
-        </p>
+    <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Cierre semanal</h1>
+          <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            Abre el lunes y cierra el viernes a mediodía
+          </p>
+        </div>
         <div class="flex flex-wrap items-end gap-2.5">
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="semana-cerrar">Semana</label>
-            <input id="semana-cerrar" type="date" [class]="estilos.campo + ' w-[150px]'"
+            <input id="semana-cerrar" type="date" [class]="estilos.campo + ' w-[148px]'"
                    [(ngModel)]="semanaACerrar">
           </div>
           <button type="button" [class]="estilos.botonPrimario" (click)="cerrarSemana()"
                   [disabled]="guardando()">
             <lucide-angular name="lock" [size]="15" class="block"></lucide-angular>
-            {{ guardando() ? 'Cerrando…' : 'Cerrar semana' }}
+            {{ guardando() ? 'Cerrando…' : 'Cerrar la semana' }}
           </button>
         </div>
       </div>
+    </div>
+
+    <div class="px-7 py-5">
+    <div class="aparecer">
+
+      <!-- Lo que bloquea el cierre, antes de la lista de lo ya cerrado -->
+      <div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div [class]="estilos.tarjeta">
+          <div class="mb-2 flex items-center gap-2.5">
+            <span [class]="estilos.icono">
+              <lucide-angular name="calendar-days" [size]="15" class="block"></lucide-angular>
+            </span>
+            <h3 [class]="estilos.rotulo">Semana en curso</h3>
+          </div>
+          <div [class]="estilos.cifra + ' !text-xl'">{{ rangoSemana() }}</div>
+          <p [class]="estilos.pie">Abierta desde el lunes</p>
+        </div>
+
+        <div [class]="estilos.tarjeta">
+          <div class="mb-2 flex items-center gap-2.5">
+            <span [class]="estilos.icono">
+              <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
+            </span>
+            <h3 [class]="estilos.rotulo">Días por completar</h3>
+          </div>
+          <div [class]="estilos.cifra">{{ incompletos() }}</div>
+          <p [class]="estilos.pie">
+            {{ incompletos() ? 'Bloquean el cierre' : 'Nada bloquea el cierre' }}
+          </p>
+        </div>
+
+        <div [class]="estilos.tarjeta">
+          <div class="mb-2 flex items-center gap-2.5">
+            <span [class]="estilos.icono">
+              <lucide-angular name="file-text" [size]="15" class="block"></lucide-angular>
+            </span>
+            <h3 [class]="estilos.rotulo">Justificaciones</h3>
+          </div>
+          <div [class]="estilos.cifra">{{ sinResolver() }}</div>
+          <p [class]="estilos.pie">
+            {{ sinResolver() ? 'Por resolver antes de cerrar' : 'Todas resueltas' }}
+          </p>
+        </div>
+
+        <div [class]="estilos.tarjeta">
+          <div class="mb-2 flex items-center gap-2.5">
+            <span [class]="estilos.icono">
+              <lucide-angular name="bell" [size]="15" class="block"></lucide-angular>
+            </span>
+            <h3 [class]="estilos.rotulo">Pierden bono</h3>
+          </div>
+          <div [class]="estilos.cifra">
+            {{ pierdenBono() }}<small [class]="estilos.unidad">de {{ personas() }}</small>
+          </div>
+          <p [class]="estilos.pie">Se congela al cerrar</p>
+        </div>
+      </div>
+
+      <h2 [class]="estilos.titulo">Semanas cerradas</h2>
 
       @if (error()) {
         <p class="mb-3 rounded-lg border border-[#f5c2c2] bg-[#fdecec] px-3.5 py-2.5 text-[12.5px] text-[#b91c1c] dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
@@ -183,6 +243,7 @@ import { ESTILOS, duracionCorta, lunesDe, sumarDias, unidadDe } from './asistenc
           </tbody>
         </table>
       </div>
+    </div>
     </div>
 
     <!-- Cerrar una deuda de horas -->
@@ -342,8 +403,48 @@ export class AsistenciaCierreComponent {
   /** Por defecto, la semana pasada: la que ya terminó y toca cerrar. */
   semanaACerrar = sumarDias(lunesDe(new Date()), -7);
 
+  /** Lo que bloquea el cierre de la semana en curso. */
+  readonly incompletos = signal(0);
+  readonly sinResolver = signal(0);
+  readonly pierdenBono = signal(0);
+  readonly personas = signal(0);
+
+  readonly rangoSemana = computed(() => {
+    const lunes = lunesDe(new Date());
+    return `${this.corta(lunes)} – ${this.corta(sumarDias(lunes, 5))}`;
+  });
+
   constructor() {
     this.cargar();
+    // El estado de la semana viva sale del mismo dashboard que ya lo calcula,
+    // para que las cifras no se contradigan entre pantallas.
+    effect(() => {
+      const ambito = this.idSubcartera();
+      if (!ambito) {
+        this.incompletos.set(0);
+        this.pierdenBono.set(0);
+        this.personas.set(0);
+        return;
+      }
+      const lunes = lunesDe(new Date());
+      this.servicio.dashboard(lunes, hoy(), ambito).subscribe({
+        next: d => {
+          this.incompletos.set(d.diasIncompletos);
+          this.pierdenBono.set(d.pierdenBono);
+          this.personas.set(d.personas);
+        },
+        error: () => { /* las tarjetas quedan en cero; la lista sigue sirviendo */ }
+      });
+      this.servicio.justificaciones(lunes, hoy(), ['PENDIENTE', 'REVISADA']).subscribe({
+        next: j => this.sinResolver.set(j.length),
+        error: () => this.sinResolver.set(0)
+      });
+    });
+  }
+
+  private corta(fecha: string): string {
+    const [, mes, dia] = fecha.split('-');
+    return `${dia}/${mes}`;
   }
 
   cargar(): void {

@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
@@ -9,7 +10,7 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte } from './asistencia.models';
-import { ESTILOS, hoy, lunesDe } from './asistencia.estilos';
+import { ESTILOS, hoy, lunesDe, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
 import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
@@ -56,27 +57,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
   template: `
     <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-      @if (esPantallaAparte()) {
-        <!-- Configuración y Editar horas: cabecera propia, sin filtros ni tabs -->
-        <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">
-                {{ pantalla() === 'configuracion' ? 'Configuración' : 'Editar horas' }}
-              </h1>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                {{ pantalla() === 'configuracion'
-                    ? 'Horario, tolerancias y calendario del ámbito'
-                    : 'Se corrige a una persona a la vez' }}
-              </p>
-            </div>
-            <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('asistencia')">
-              <lucide-angular name="arrow-left" [size]="15" class="block"></lucide-angular>
-              Volver al reporte
-            </button>
-          </div>
-        </div>
-      } @else {
+      @if (!esPantallaAparte()) {
         <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -185,7 +166,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
         </div>
       }
 
-      <div class="px-7 py-5">
+      <div>
         @switch (pantalla()) {
           @case ('asistencia') {
             <app-asistencia-reporte
@@ -196,12 +177,14 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           }
           @case ('dashboard') {
             <app-asistencia-dashboard
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
+              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
+              (semanaAnterior)="retrocederSemana()" />
           }
           @case ('justificaciones') {
             <app-asistencia-justificaciones
               [desde]="desde()" [hasta]="hasta()"
-              (sinResolverCambia)="sinResolver.set($event)" />
+              (sinResolverCambia)="sinResolver.set($event)"
+              (registrar)="irAMiAsistencia()" />
           }
           @case ('cierre') {
             <app-asistencia-cierre [idSubcartera]="idSubcartera()" />
@@ -226,6 +209,7 @@ export class ControlAsistenciaComponent implements OnInit {
   private readonly carterasServicio = inject(PortfolioService);
   private readonly servicio = inject(AsistenciaService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   protected readonly estilos = ESTILOS;
 
@@ -373,5 +357,20 @@ export class ControlAsistenciaComponent implements OnInit {
       },
       error: () => this.toast.error('No se pudo generar el Excel')
     });
+  }
+
+  /** El botón «Semana anterior» del dashboard mueve el rango, que vive aquí. */
+  retrocederSemana(): void {
+    this.desde.set(sumarDias(this.desde(), -7));
+    this.hasta.set(sumarDias(this.hasta(), -7));
+  }
+
+  /**
+   * Registrar una justificación se hace desde Mi Asistencia, también cuando la
+   * escribe la supervisora por alguien: el formulario es el mismo y tenerlo en
+   * dos sitios los haría divergir.
+   */
+  irAMiAsistencia(): void {
+    this.router.navigate(['/mi-asistencia']);
   }
 }
