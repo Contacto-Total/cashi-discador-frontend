@@ -136,9 +136,9 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                     }
                   </td>
                   <td [class]="estilos.td">{{ c.cerradoPor ?? '—' }}</td>
-                  <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ c.cerradoEn | date: 'dd/MM HH:mm' }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ c.cerradoEn | date: 'dd/MM HH:mm' }}</td>
                   <td [class]="estilos.td">{{ c.personas }}</td>
-                  <td [class]="estilos.td + ' text-[#b91c1c] dark:text-red-300'">{{ c.sinBono }}</td>
+                  <td [class]="estilos.td + ' peligro'">{{ c.sinBono }}</td>
                   <td [class]="estilos.td">
                     @if (c.ajustesPosteriores > 0) {
                       <span class="inline-flex items-center rounded-full bg-[#fef6e0] px-[9px] py-0.5 text-[11.5px] font-bold text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300">
@@ -158,7 +158,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="7" class="px-3 py-14 text-center">
+                  <td colspan="7" class="!px-3 !py-14 text-center">
                     <strong class="block text-[13.5px]">Ninguna semana cerrada todavía</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       Elige una semana terminada y ciérrala para congelar sus cifras.
@@ -227,7 +227,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
               </tr>
             } @empty {
               <tr>
-                <td colspan="6" class="px-3 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                <td colspan="6" class="secundario !px-3 !py-10 text-center !text-[12.5px]">
                   Nadie debe horas ahora mismo
                 </td>
               </tr>

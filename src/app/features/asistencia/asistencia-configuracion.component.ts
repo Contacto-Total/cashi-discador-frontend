@@ -350,7 +350,7 @@ function enHoras(minutos: number): string {
                   </td>
                   <td [class]="estilos.td">{{ d.horaEntrada }}</td>
                   <td [class]="estilos.td">{{ d.horaSalida }}</td>
-                  <td [class]="estilos.td + ' !text-[11.5px] text-[#5f6c80] dark:text-slate-400'">{{ d.jornada }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ d.jornada }}</td>
                   <td [class]="estilos.td + ' col-reloj'">
                     <span class="pista" [title]="d.horaEntrada + ' – ' + d.horaSalida">
                       <span class="turno" [style.left.%]="d.izquierda" [style.width.%]="d.ancho">
@@ -363,14 +363,12 @@ function enHoras(minutos: number): string {
                   </td>
                   <td [class]="estilos.td + ' text-right'">
                     <div class="flex justify-end gap-1.5">
-                      <!-- Deshacer solo existe cuando hay un cambio que deshacer. -->
-                      @if (d.pendiente) {
-                        <button type="button" [class]="estilos.botonIcono" (click)="deshacer(d.diaSemana)"
-                                [attr.aria-label]="'Deshacer el cambio del ' + DIAS[d.diaSemana - 1].toLowerCase()"
-                                title="Deshacer">
-                          <lucide-angular name="rotate-ccw" [size]="14" class="block"></lucide-angular>
-                        </button>
-                      }
+                      <button type="button" [class]="estilos.botonIcono" (click)="deshacer(d.diaSemana)"
+                              [disabled]="!d.pendiente"
+                              [attr.aria-label]="'Deshacer el cambio del ' + DIAS[d.diaSemana - 1].toLowerCase()"
+                              title="Deshacer">
+                        <lucide-angular name="rotate-ccw" [size]="14" class="block"></lucide-angular>
+                      </button>
                       <button type="button" [class]="estilos.botonIcono" (click)="abrirHorario(d.diaSemana)"
                               [attr.aria-label]="'Cambiar horario del ' + DIAS[d.diaSemana - 1].toLowerCase()"
                               title="Cambiar">
@@ -381,7 +379,7 @@ function enHoras(minutos: number): string {
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="px-3 py-10 text-center">
+                  <td colspan="6" class="!px-3 !py-10 text-center">
                     <strong class="block text-[13.5px]">Sin horario</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       Ni este ámbito ni la empresa tienen un horario vigente. Créalo con «Nuevo horario».
@@ -840,18 +838,18 @@ function enHoras(minutos: number): string {
               @if (r.tipo === 'invalido') {
                 <p class="!m-0 text-[13px]">—</p>
               } @else {
-                <div class="rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                <div class="rounded-lg border border-[#e6e9ee] bg-[#f6f7f9] px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
                   @if (r.tipo === 'no') {
-                    <div class="text-[19px] font-extrabold tracking-[-0.02em]">No se recupera</div>
-                    <p class="!m-0 mt-0.5 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
-                      El día se paga y nadie devuelve horas
+                    <p class="!m-0 text-[12.5px] leading-normal">
+                      <strong class="font-semibold">No se recupera.</strong>
+                      <span class="text-[#5f6c80] dark:text-slate-400">El día se paga y nadie devuelve horas.</span>
                     </p>
                   } @else if (r.tipo === 'nada') {
                     <p class="!m-0 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
                       Ese rango no tiene días laborables {{ r.enAlcance }}: no hay nada que recuperar.
                     </p>
                   } @else {
-                    <div class="text-[19px] font-extrabold tracking-[-0.02em] tabular-nums">
+                    <div class="text-[15px] font-bold tabular-nums">
                       {{ enDuracion(r.minutos) }}<small [class]="estilos.unidad">por recuperar</small>
                     </div>
                     <p class="!m-0 mt-0.5 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">

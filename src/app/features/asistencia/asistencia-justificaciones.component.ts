@@ -134,7 +134,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
                       <span class="text-[#8491a3] dark:text-slate-500">—</span>
                     }
                   </td>
-                  <td [class]="estilos.td">{{ j.revisadaPor ?? '—' }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ j.revisadaPor ?? '—' }}</td>
                   <td [class]="estilos.td">
                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold"
                           [class]="ESTADO_SOLICITUD[j.estado].clase">
@@ -154,7 +154,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="9" class="px-3 py-14 text-center">
+                  <td colspan="9" class="!px-3 !py-14 text-center">
                     <strong class="block text-[13.5px]">Nada por aquí</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       No hay solicitudes con ese filtro en el rango elegido.
@@ -362,9 +362,10 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
             }
           </div>
 
-          <footer class="flex flex-wrap justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cerrar</button>
-
+          <!-- Mientras toca decidir, el pie son las dos decisiones y a quién le
+               corresponde: «Cerrar» ahí sobra, para eso está la X de arriba.
+               Solo cuando ya no queda nada que decidir queda «Cerrar». -->
+          <footer class="flex flex-wrap items-center justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
             @if (j.estado === 'PENDIENTE') {
               <span class="mr-auto text-[12px] font-semibold text-[#5f6c80] dark:text-slate-400">
                 Le toca a la supervisora
@@ -393,6 +394,8 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
                 <lucide-angular name="badge-check" [size]="15" class="block"></lucide-angular>
                 Aprobar
               </button>
+            } @else {
+              <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cerrar</button>
             }
           </footer>
         </div>

@@ -203,7 +203,7 @@ interface Cambio {
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="6" class="px-3 py-14 text-center">
+                    <td colspan="6" class="!px-3 !py-14 text-center">
                       <strong class="block text-[13.5px]">Sin días en ese rango</strong>
                       <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                         Cambia las fechas desde el reporte.
