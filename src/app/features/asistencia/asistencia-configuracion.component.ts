@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -8,6 +8,19 @@ import { DiaCalendario, Horario, PoliticaAsistencia, TipoDia } from './asistenci
 import { ESTILOS, hoy } from './asistencia.estilos';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+/** Una regla de la política, tal como se enseña y se cambia: de una en una. */
+interface Regla {
+  clave: 'dia' | 'semana' | 'almuerzo' | 'break';
+  nombre: string;
+  icono: string;
+  pie: string;
+  cifra: string;
+  unidad: string;
+  minutos: number;
+  hora: string | null;
+  conHora: boolean;
+}
 const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 /**
@@ -56,22 +69,41 @@ const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
     :host-context(.dark) .celda.marcado { border-color: #78350f; background: rgba(120,53,15,.35) }
   `],
   template: `
-    <div class="aparecer">
+    <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Configuración</h1>
+          <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            Horarios y calendario. Se toca de vez en cuando, no a diario
+          </p>
+        </div>
+        <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
+          <lucide-angular name="arrow-left" [size]="15" class="block"></lucide-angular>
+          Volver al reporte
+        </button>
+      </div>
+    </div>
 
-      <!-- Las dos mitades de la configuración -->
-      <div class="mb-4 flex gap-1.5">
+    <div class="flex min-h-[54px] items-center border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
+      <nav [class]="estilos.segmentos" role="tablist">
         @for (t of TABS; track t.clave) {
-          <button type="button"
-                  class="inline-flex h-[34px] items-center gap-1.5 rounded-lg border px-3.5 text-[12.5px] font-semibold transition-colors"
-                  [class]="tab() === t.clave
-                    ? 'border-[#0f172a] bg-[#0f172a] !text-white dark:border-white dark:bg-white dark:!text-[#0f172a]'
-                    : 'border-[#e6e9ee] bg-white !text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200'"
+          <button type="button" role="tab" [attr.aria-selected]="tab() === t.clave"
+                  [class]="estilos.tab + ' ' + (tab() === t.clave ? estilos.tabActiva : estilos.tabApagada)"
                   (click)="tab.set(t.clave)">
-            <lucide-angular [name]="t.icono" [size]="14" class="block"></lucide-angular>
             {{ t.texto }}
+            @if (t.clave === 'calendario' && dias().length) {
+              <span aria-hidden="true"
+                    [class]="estilos.cuenta + ' ' + (tab() === t.clave ? estilos.cuentaActiva : estilos.cuentaApagada)">
+                {{ dias().length }}
+              </span>
+            }
           </button>
         }
-      </div>
+      </nav>
+    </div>
+
+    <div class="px-7 py-5">
+    <div class="aparecer">
 
       @if (tab() === 'horarios') {
         <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
@@ -127,46 +159,33 @@ const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
               </div>
             </div>
 
-            <!-- Tolerancias y pausas -->
-            <div class="mt-4 flex items-center justify-between gap-3">
-              <h2 [class]="estilos.titulo + ' !mb-0'">Tolerancias y pausas</h2>
-              <button type="button" [class]="estilos.botonSecundario" (click)="abrirPolitica()">
-                <lucide-angular name="sliders" [size]="15" class="block"></lucide-angular>
-                Editar
-              </button>
-            </div>
+            <!-- Tolerancias y pausas: cada regla se cambia por separado,
+                 que es como se piensan y como se explican. -->
+            <h2 [class]="estilos.titulo + ' !mt-4'">Tolerancias y pausas</h2>
             @if (politica(); as p) {
-              <div class="mt-2.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div [class]="estilos.tarjeta">
-                  <h3 [class]="estilos.rotulo">Tope del día</h3>
-                  <div [class]="estilos.cifra + ' !text-xl'">{{ p.toleranciaDiaMin }}<small [class]="estilos.unidad">min</small></div>
-                </div>
-                <div [class]="estilos.tarjeta">
-                  <h3 [class]="estilos.rotulo">Tope de la semana</h3>
-                  <div [class]="estilos.cifra + ' !text-xl'">{{ p.toleranciaSemanaMin }}<small [class]="estilos.unidad">min</small></div>
-                </div>
-                <div [class]="estilos.tarjeta">
-                  <h3 [class]="estilos.rotulo">Almuerzo</h3>
-                  <div [class]="estilos.cifra + ' !text-xl'">{{ p.minutosAlmuerzo }}<small [class]="estilos.unidad">min</small></div>
-                  <p [class]="estilos.pie">{{ p.horaAlmuerzo ? hhmm(p.horaAlmuerzo) : 'Sin hora fija' }}</p>
-                </div>
-                <div [class]="estilos.tarjeta">
-                  <h3 [class]="estilos.rotulo">Break</h3>
-                  <div [class]="estilos.cifra + ' !text-xl'">
-                    @if (p.minutosBreak) {
-                      {{ p.minutosBreak }}<small [class]="estilos.unidad">min</small>
-                    } @else {
-                      <span class="text-base font-bold text-[#5f6c80] dark:text-slate-400">Sin break</span>
-                    }
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                @for (r of reglas(); track r.clave) {
+                  <div [class]="estilos.tarjeta">
+                    <div class="mb-2 flex items-center justify-between gap-2">
+                      <span [class]="estilos.icono">
+                        <lucide-angular [name]="r.icono" [size]="15" class="block"></lucide-angular>
+                      </span>
+                      <button type="button" [class]="estilos.botonIcono" (click)="abrirRegla(r)"
+                              [attr.aria-label]="'Cambiar ' + r.nombre" title="Cambiar">
+                        <lucide-angular name="pencil" [size]="13" class="block"></lucide-angular>
+                      </button>
+                    </div>
+                    <h3 [class]="estilos.rotulo">{{ r.nombre }}</h3>
+                    <div [class]="estilos.cifra + ' !text-xl'">
+                      {{ r.cifra }}<small [class]="estilos.unidad">{{ r.unidad }}</small>
+                    </div>
+                    <p [class]="estilos.pie">{{ r.pie }}</p>
                   </div>
-                  @if (p.minutosBreak) {
-                    <p [class]="estilos.pie">{{ p.horaBreak ? hhmm(p.horaBreak) : 'Cuando puede' }}</p>
-                  }
-                </div>
+                }
               </div>
               @if (p.heredada) {
                 <p class="mt-2 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                  Estos valores vienen de la configuración de la empresa. Al editarlos se crea
+                  Estos valores vienen de la configuración de la empresa. Al cambiarlos se crea
                   una propia de esta subcartera.
                 </p>
               }
@@ -189,8 +208,9 @@ const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
                 </thead>
                 <tbody>
                   @for (h of paginaHistorial(); track h.id) {
-                    <tr class="border-b border-[#f1f3f6] last:border-0 dark:border-slate-800"
-                        [class.opacity-60]="h.vigenteHasta">
+                    <tr class="cursor-pointer border-b border-[#f1f3f6] last:border-0 hover:bg-[#fafbfc] dark:border-slate-800 dark:hover:bg-slate-800/40"
+                        [class.opacity-60]="h.vigenteHasta" (click)="cambio.set(h)"
+                        [title]="'Ver el detalle del cambio'">
                       <td [class]="estilos.td">{{ h.nombreDia ?? DIAS[h.diaSemana - 1] }}</td>
                       <td [class]="estilos.td">{{ hhmm(h.horaEntrada) }} – {{ hhmm(h.horaSalida) }}</td>
                       <td [class]="estilos.td">
@@ -281,51 +301,44 @@ const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
           </div>
 
           <div>
-            <h2 [class]="estilos.titulo">Días marcados del mes</h2>
+            <div class="mb-2.5 flex items-baseline justify-between gap-3">
+              <h2 [class]="estilos.titulo + ' !mb-0'">Días registrados</h2>
+              <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                {{ dias().length }} {{ dias().length === 1 ? 'día' : 'días' }} en {{ tituloMes() }}
+              </span>
+            </div>
             <div [class]="estilos.panel">
-              <table class="w-full border-collapse">
-                <caption class="sr-only">Días no laborables del mes</caption>
-                <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
-                  <tr>
-                    <th scope="col" [class]="estilos.th">Fecha</th>
-                    <th scope="col" [class]="estilos.th">Qué es</th>
-                    <th scope="col" [class]="estilos.th">Ámbito</th>
-                    <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (d of dias(); track d.id) {
-                    <tr class="border-b border-[#f1f3f6] last:border-0 dark:border-slate-800">
-                      <td [class]="estilos.td + ' font-semibold'">{{ d.fecha | date: 'dd/MM' }}</td>
-                      <td [class]="estilos.td + ' !whitespace-normal'">
-                        {{ d.nombre ?? d.tipo }}
-                        <span class="block text-[11px] text-[#5f6c80] dark:text-slate-400">{{ d.tipo }}</span>
-                      </td>
-                      <td [class]="estilos.td">
-                        {{ d.heredado ? 'Empresa' : 'Esta subcartera' }}
-                      </td>
-                      <td [class]="estilos.td + ' text-right'">
-                        @if (!d.heredado) {
-                          <button type="button" [class]="estilos.botonIcono" (click)="quitarDia(d)"
-                                  [attr.aria-label]="'Quitar el ' + d.fecha" title="Quitar">
-                            <lucide-angular name="trash-2" [size]="13" class="block"></lucide-angular>
-                          </button>
-                        }
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="4" class="px-3 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                        Ningún día marcado este mes
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+              <ul class="!m-0 list-none !p-0">
+                @for (d of dias(); track d.id) {
+                  <li class="flex items-center gap-3 border-b border-[#f1f3f6] px-4 py-2.5 last:border-0 dark:border-slate-800">
+                    <span class="w-[46px] shrink-0 text-[12.5px] font-bold tabular-nums">
+                      {{ d.fecha | date: 'dd/MM' }}
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <strong class="block truncate text-[12.5px]">{{ d.nombre ?? d.tipo }}</strong>
+                      <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                        {{ d.tipo }} · {{ d.heredado ? 'de la empresa' : 'de esta subcartera' }}
+                      </span>
+                    </div>
+                    @if (!d.heredado) {
+                      <button type="button" [class]="estilos.botonIcono" (click)="quitarDia(d)"
+                              [attr.aria-label]="'Quitar el ' + d.fecha" title="Quitar">
+                        <lucide-angular name="trash-2" [size]="13" class="block"></lucide-angular>
+                      </button>
+                    }
+                  </li>
+                } @empty {
+                  <li class="px-4 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                    Ningún día marcado este mes
+                  </li>
+                }
+              </ul>
             </div>
           </div>
         </div>
       }
+    </div>
+
     </div>
 
     <!-- Editar el horario de un día -->
@@ -391,76 +404,106 @@ const INICIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
       </div>
     }
 
-    <!-- Editar tolerancias -->
-    @if (formPolitica(); as p) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarPolitica()"></div>
+    <!-- Cambiar una regla. Una sola: es como se piensan y como se explican,
+         y un formulario con las ocho a la vez invita a tocar de más. -->
+    @if (regla(); as r) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarRegla()"></div>
       <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,520px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-politica">
+        <div class="pointer-events-auto w-[min(100%,420px)] overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-regla">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-politica" class="!m-0 text-[15px] font-extrabold">Tolerancias y pausas</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                Los dos topes son independientes: se pierde el bono al pasar cualquiera
-              </p>
+              <h2 id="titulo-regla" class="!m-0 text-[15px] font-extrabold">Cambiar regla</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ r.nombre }}</p>
             </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrarPolitica()" aria-label="Cerrar">
+            <button type="button" [class]="estilos.botonIcono" (click)="cerrarRegla()" aria-label="Cerrar">
               <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
             </button>
           </header>
 
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+          <div class="flex flex-col gap-3.5 px-5 py-4">
+            <div class="flex flex-col gap-1">
+              <span [class]="estilos.etiqueta">Alcance</span>
+              <p class="!m-0 text-[13px]">{{ alcance() }}</p>
+            </div>
+
             <div class="flex gap-3">
               <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="p-dia">Tope del día (min)</label>
-                <input id="p-dia" type="number" min="0" [class]="estilos.campo" [(ngModel)]="p.toleranciaDiaMin">
+                <label [class]="estilos.etiqueta" for="r-minutos">Minutos</label>
+                <input id="r-minutos" type="number" min="0" max="240" step="5"
+                       [class]="estilos.campo" [(ngModel)]="reglaMinutos">
               </div>
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="p-semana">Tope de la semana (min)</label>
-                <input id="p-semana" type="number" min="0" [class]="estilos.campo" [(ngModel)]="p.toleranciaSemanaMin">
-              </div>
+              @if (r.conHora) {
+                <div class="flex flex-1 flex-col gap-1.5">
+                  <label [class]="estilos.etiqueta" for="r-hora">Hora</label>
+                  <input id="r-hora" type="time" [class]="estilos.campo"
+                         [(ngModel)]="reglaHora" [disabled]="!reglaMinutos">
+                </div>
+              }
             </div>
-            <div class="flex gap-3">
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="p-almuerzo">Almuerzo (min)</label>
-                <input id="p-almuerzo" type="number" min="0" [class]="estilos.campo" [(ngModel)]="p.minutosAlmuerzo">
-              </div>
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="p-hora-almuerzo">Hora del almuerzo</label>
-                <input id="p-hora-almuerzo" type="time" [class]="estilos.campo" [(ngModel)]="p.horaAlmuerzo">
-              </div>
-            </div>
-            <div class="flex gap-3">
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="p-break">Break (min)</label>
-                <input id="p-break" type="number" min="0" [class]="estilos.campo" [(ngModel)]="p.minutosBreak">
-              </div>
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="p-hora-break">Hora del break</label>
-                <input id="p-hora-break" type="time" [class]="estilos.campo" [(ngModel)]="p.horaBreak"
-                       [disabled]="!p.minutosBreak">
-              </div>
-            </div>
-            <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-              Break en 0 minutos significa que esta subcartera no tiene break.
-            </p>
+
+            @if (r.clave === 'break') {
+              <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                Cero minutos significa que esta subcartera no tiene break.
+              </p>
+            }
+
             <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="p-motivo">Motivo</label>
-              <textarea id="p-motivo" rows="2" [class]="estilos.area"
-                        placeholder="Un tope que cambia sin explicación es una discusión garantizada"
-                        [(ngModel)]="p.motivo"></textarea>
+              <label [class]="estilos.etiqueta" for="r-motivo">Motivo</label>
+              <input id="r-motivo" type="text" [class]="estilos.campo"
+                     placeholder="Un tope que cambia sin explicación es una discusión garantizada"
+                     [(ngModel)]="reglaMotivo">
             </div>
+
             @if (error()) {
               <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
             }
           </div>
 
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarPolitica()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="guardarPolitica()" [disabled]="guardando()">
+            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRegla()">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="guardarRegla()" [disabled]="guardando()">
               <lucide-angular name="save" [size]="15" class="block"></lucide-angular>
-              {{ guardando() ? 'Guardando…' : 'Guardar' }}
+              Guardar
             </button>
+          </footer>
+        </div>
+      </div>
+    }
+
+    <!-- El detalle de un cambio de horario del historial -->
+    @if (cambio(); as c) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cambio.set(null)"></div>
+      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="pointer-events-auto w-[min(100%,440px)] overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-cambio">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 id="titulo-cambio" class="!m-0 text-[15px] font-extrabold">Cambio de horario</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                {{ c.vigenteHasta ? 'Ya no rige' : 'Vigente' }}
+              </p>
+            </div>
+            <button type="button" [class]="estilos.botonIcono" (click)="cambio.set(null)" aria-label="Cerrar">
+              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+            </button>
+          </header>
+          <dl class="!m-0 grid grid-cols-[110px_1fr] gap-x-4 gap-y-2.5 px-5 py-4 text-[13px]">
+            <dt class="text-[#5f6c80] dark:text-slate-400">Alcance</dt>
+            <dd class="!m-0">{{ alcance() }}</dd>
+            <dt class="text-[#5f6c80] dark:text-slate-400">Día</dt>
+            <dd class="!m-0">{{ c.nombreDia ?? DIAS[c.diaSemana - 1] }}</dd>
+            <dt class="text-[#5f6c80] dark:text-slate-400">Horario</dt>
+            <dd class="!m-0 tabular-nums">{{ hhmm(c.horaEntrada) }} – {{ hhmm(c.horaSalida) }}</dd>
+            <dt class="text-[#5f6c80] dark:text-slate-400">Vigencia</dt>
+            <dd class="!m-0 tabular-nums">
+              {{ c.vigenteDesde }}{{ c.vigenteHasta ? ' – ' + c.vigenteHasta : ' — sin cerrar' }}
+            </dd>
+            <dt class="text-[#5f6c80] dark:text-slate-400">Motivo</dt>
+            <dd class="!m-0">{{ c.motivo }}</dd>
+          </dl>
+          <footer class="flex justify-end border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonPrimario" (click)="cambio.set(null)">Listo</button>
           </footer>
         </div>
       </div>
@@ -534,9 +577,12 @@ export class AsistenciaConfiguracionComponent {
   protected readonly porPagina = 8;
 
   protected readonly TABS = [
-    { clave: 'horarios', texto: 'Horarios', icono: 'clock' },
-    { clave: 'calendario', texto: 'Calendario', icono: 'calendar-days' }
+    { clave: 'horarios', texto: 'Horarios' },
+    { clave: 'calendario', texto: 'Calendario' }
   ] as const;
+
+  /** Vuelve al reporte; la pantalla la manda el módulo. */
+  readonly volver = output<void>();
 
   readonly idSubcartera = input<number | null>(null);
 
@@ -553,8 +599,14 @@ export class AsistenciaConfiguracionComponent {
   readonly error = signal('');
 
   readonly formHorario = signal(false);
-  readonly formPolitica = signal<PoliticaAsistencia | null>(null);
   readonly formDia = signal(false);
+
+  /** La regla que se está cambiando, y el detalle de un cambio de horario. */
+  readonly regla = signal<Regla | null>(null);
+  readonly cambio = signal<Horario | null>(null);
+  reglaMinutos = 0;
+  reglaHora: string | null = null;
+  reglaMotivo = '';
 
   nuevoHorario: Horario = {
     idSubcartera: null,
@@ -586,6 +638,52 @@ export class AsistenciaConfiguracionComponent {
       };
     });
   });
+
+  /**
+   * Las cuatro reglas de la política, cada una con lo suyo. Se enseñan y se
+   * cambian por separado porque así es como se piensan: «el break es de 15
+   * minutos a las cinco», no «la política tiene ocho campos».
+   */
+  readonly reglas = computed<Regla[]>(() => {
+    const p = this.politica();
+    if (!p) {
+      return [];
+    }
+    return [
+      {
+        clave: 'dia', nombre: 'Tolerancia del día', icono: 'clock',
+        pie: 'Pasado esto se pierde el bono',
+        cifra: String(p.toleranciaDiaMin), unidad: 'min',
+        minutos: p.toleranciaDiaMin, hora: null, conHora: false
+      },
+      {
+        clave: 'semana', nombre: 'Tolerancia de la semana', icono: 'calendar-days',
+        pie: 'Suma solo los días con retraso',
+        cifra: String(p.toleranciaSemanaMin), unidad: 'min',
+        minutos: p.toleranciaSemanaMin, hora: null, conHora: false
+      },
+      {
+        clave: 'almuerzo', nombre: 'Almuerzo', icono: 'utensils',
+        pie: 'No cuenta como trabajado',
+        cifra: String(p.minutosAlmuerzo),
+        unidad: p.horaAlmuerzo ? `min · ${this.hhmm(p.horaAlmuerzo)}` : 'min',
+        minutos: p.minutosAlmuerzo, hora: p.horaAlmuerzo ? this.hhmm(p.horaAlmuerzo) : null,
+        conHora: true
+      },
+      {
+        clave: 'break', nombre: 'Break', icono: 'coffee',
+        pie: 'Después del almuerzo',
+        cifra: p.minutosBreak ? String(p.minutosBreak) : 'Sin break',
+        unidad: p.minutosBreak ? (p.horaBreak ? `min · ${this.hhmm(p.horaBreak)}` : 'min') : '',
+        minutos: p.minutosBreak, hora: p.horaBreak ? this.hhmm(p.horaBreak) : null,
+        conHora: true
+      }
+    ];
+  });
+
+  /** A quién aplica lo que se está cambiando. */
+  readonly alcance = computed(() =>
+    this.idSubcartera() ? 'Solo esta subcartera' : 'Toda la empresa');
 
   readonly paginaHistorial = computed(() =>
     this.historial().slice(this.pagina() * this.porPagina, (this.pagina() + 1) * this.porPagina));
@@ -732,45 +830,55 @@ export class AsistenciaConfiguracionComponent {
     });
   }
 
-  // ==================== POLÍTICA ====================
+  // ==================== UNA REGLA ====================
 
-  abrirPolitica(): void {
-    const actual = this.politica();
+  abrirRegla(r: Regla): void {
+    this.regla.set(r);
+    this.reglaMinutos = r.minutos;
+    this.reglaHora = r.hora;
+    this.reglaMotivo = '';
     this.error.set('');
-    this.formPolitica.set({
-      idSubcartera: this.idSubcartera(),
-      toleranciaDiaMin: actual?.toleranciaDiaMin ?? 10,
-      toleranciaSemanaMin: actual?.toleranciaSemanaMin ?? 30,
-      minutosAlmuerzo: actual?.minutosAlmuerzo ?? 60,
-      minutosBreak: actual?.minutosBreak ?? 15,
-      horaAlmuerzo: actual?.horaAlmuerzo ? this.hhmm(actual.horaAlmuerzo) : null,
-      horaBreak: actual?.horaBreak ? this.hhmm(actual.horaBreak) : null,
-      avisoPrevioMin: actual?.avisoPrevioMin ?? 5,
-      vigenteDesde: hoy(),
-      motivo: ''
-    });
   }
 
-  cerrarPolitica(): void {
-    this.formPolitica.set(null);
+  cerrarRegla(): void {
+    this.regla.set(null);
   }
 
-  guardarPolitica(): void {
-    const p = this.formPolitica();
-    if (!p) {
+  /**
+   * Guarda la política entera con esa regla cambiada: es versionada, así que
+   * cada cambio cierra la vigente y abre otra con TODOS los valores. Mandar
+   * solo el campo tocado dejaría los demás en su valor por defecto.
+   */
+  guardarRegla(): void {
+    const r = this.regla();
+    const actual = this.politica();
+    if (!r || !actual) {
       return;
     }
-    if (!p.motivo.trim()) {
+    if (!this.reglaMotivo.trim()) {
       this.error.set('El motivo del cambio es obligatorio');
       return;
     }
 
+    const nueva: PoliticaAsistencia = {
+      idSubcartera: this.idSubcartera(),
+      toleranciaDiaMin: r.clave === 'dia' ? this.reglaMinutos : actual.toleranciaDiaMin,
+      toleranciaSemanaMin: r.clave === 'semana' ? this.reglaMinutos : actual.toleranciaSemanaMin,
+      minutosAlmuerzo: r.clave === 'almuerzo' ? this.reglaMinutos : actual.minutosAlmuerzo,
+      minutosBreak: r.clave === 'break' ? this.reglaMinutos : actual.minutosBreak,
+      horaAlmuerzo: r.clave === 'almuerzo' ? this.reglaHora : actual.horaAlmuerzo,
+      horaBreak: r.clave === 'break' ? this.reglaHora : actual.horaBreak,
+      avisoPrevioMin: actual.avisoPrevioMin,
+      vigenteDesde: hoy(),
+      motivo: this.reglaMotivo.trim()
+    };
+
     this.guardando.set(true);
-    this.servicio.guardarPolitica(p).subscribe({
+    this.servicio.guardarPolitica(nueva).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.cerrarPolitica();
-        this.toast.success('Tolerancias guardadas');
+        this.cerrarRegla();
+        this.toast.success(`${r.nombre} actualizada`);
         this.cargarHorarios(this.idSubcartera());
       },
       error: respuesta => {
