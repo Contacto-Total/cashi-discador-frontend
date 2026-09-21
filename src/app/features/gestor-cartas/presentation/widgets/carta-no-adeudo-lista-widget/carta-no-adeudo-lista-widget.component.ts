@@ -50,11 +50,11 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         </div>
 
         <div class="max-h-[34rem] divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700">
-          @for (cliente of clientesFiltrados; track cliente.idGestion) {
+          @for (cliente of clientesFiltrados; track cliente.idCliente) {
             <button
               type="button"
               class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
-              [class.bg-blue-50]="clientePreview?.idGestion === cliente.idGestion"
+              [class.bg-blue-50]="clientePreview?.idCliente === cliente.idCliente"
               (click)="verCarta(cliente)">
               <input
                 type="checkbox"
@@ -141,7 +141,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   }
 
   get clientesSeleccionados(): CartaNoAdeudoClienteCorreo[] {
-    return this.clientes.filter(cliente => this.seleccionados.has(cliente.idGestion));
+    return this.clientes.filter(cliente => this.seleccionados.has(cliente.idCliente));
   }
 
   get fechaActual(): string {
@@ -157,14 +157,14 @@ export class CartaNoAdeudoListaWidgetComponent {
   }
 
   estaSeleccionado(cliente: CartaNoAdeudoClienteCorreo): boolean {
-    return this.seleccionados.has(cliente.idGestion);
+    return this.seleccionados.has(cliente.idCliente);
   }
 
   alternarSeleccion(cliente: CartaNoAdeudoClienteCorreo): void {
-    if (this.seleccionados.has(cliente.idGestion)) {
-      this.seleccionados.delete(cliente.idGestion);
+    if (this.seleccionados.has(cliente.idCliente)) {
+      this.seleccionados.delete(cliente.idCliente);
     } else {
-      this.seleccionados.add(cliente.idGestion);
+      this.seleccionados.add(cliente.idCliente);
     }
     this.seleccionados = new Set(this.seleccionados);
   }
