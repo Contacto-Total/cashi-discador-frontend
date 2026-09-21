@@ -25,7 +25,7 @@ import { AgentState } from '../../../../core/models/agent-status.model';
         <section class="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/80 p-6" aria-live="assertive">
           <div class="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
             <h1 class="text-lg font-semibold text-slate-950">Sesión inactiva</h1>
-            <p class="mt-2 text-sm text-slate-600">Tu estado cambió a desconectado por inactividad.</p>
+            <p class="mt-2 text-sm text-slate-600">Tu estado cambió a En Línea por inactividad.</p>
             <button
               type="button"
               class="mt-5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
@@ -115,7 +115,8 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
 
         this.statusChangedByWhatsapp = false;
         if (markInactive) this.isInactive = true;
-        this.agentStatus.changeStatus(user.id, { estado: AgentState.DESCONECTADO }).subscribe();
+        // Sale de WhatsApp (o se inactiva): sigue conectado, fuera de la cola.
+        this.agentStatus.changeStatus(user.id, { estado: AgentState.EN_LINEA }).subscribe();
       }
     });
   }

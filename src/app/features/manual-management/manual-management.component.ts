@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { map } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
 
 import { ClientSearchService, DynamicClient, GlobalSearchResult } from '../../core/services/client-search.service';
 import { AgentStatusService } from '../../core/services/agent-status.service';
@@ -20,7 +19,7 @@ import { AgentState } from '../../core/models/agent-status.model';
   templateUrl: './manual-management.component.html',
   styleUrls: ['./manual-management.component.css']
 })
-export class ManualManagementComponent implements OnInit, OnDestroy {
+export class ManualManagementComponent implements OnInit {
   // Búsqueda
   searchValue = signal('');
   searchType = signal<'documento' | 'telefono' | 'nombre'>('documento');
@@ -35,10 +34,6 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   // Resultados encontrados (para mostrar contexto antes de navegar)
   foundResults = signal<GlobalSearchResult[]>([]);
 
-  private previousState: string | null = null;
-  private statusSubscription?: Subscription;
-  private transferringToCollection = false;
-
   constructor(
     private router: Router,
     private clientSearchService: ClientSearchService,
@@ -50,13 +45,6 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     // Cambiar estado a GESTION_MANUAL al entrar
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?.id) {
-      // Guardar estado anterior para restaurarlo al salir
-      this.statusSubscription = this.agentStatusService.currentStatus$.subscribe(status => {
-        if (status && !this.previousState && status.estadoActual !== 'GESTION_MANUAL') {
-          this.previousState = status.estadoActual;
-        }
-      });
-
       this.agentStatusService.changeStatus(currentUser.id, {
         estado: AgentState.GESTION_MANUAL,
         notas: 'Entró a gestión manual'
@@ -67,29 +55,10 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.statusSubscription?.unsubscribe();
-
-    // Collection toma control del estado al abrir una ficha manual. Restaurarlo
-    // desde aquí puede llegar tarde y sobrescribir su finalización a DISPONIBLE.
-    if (this.transferringToCollection) return;
-
-    // Restaurar estado anterior al salir (DISPONIBLE por defecto)
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser?.id) {
-      const restoreState = this.previousState === 'DISPONIBLE' || !this.previousState
-        ? AgentState.DISPONIBLE
-        : this.previousState as AgentState;
-
-      this.agentStatusService.changeStatus(currentUser.id, {
-        estado: restoreState,
-        notas: 'Salió de gestión manual'
-      }).subscribe({
-        next: () => console.log(`✅ Estado restaurado a ${restoreState}`),
-        error: (err) => console.error('❌ Error restaurando estado:', err)
-      });
-    }
-  }
+  // Al salir NO se restaura ningun estado: GESTION_MANUAL se mantiene en cualquier
+  // pantalla hasta que el asesor elija otro. Restaurar a DISPONIBLE lo dejaba en la
+  // cola parado en un reporte, recibiendo llamadas. Al ir a la ficha, collection
+  // toma el control del estado sin que nada de aqui lo pise al destruirse.
 
   // ========== BÚSQUEDA GLOBAL DE CLIENTE ==========
 
@@ -199,7 +168,6 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   goToManagement(result: GlobalSearchResult): void {
     if (!result?.clientData?.documento) return;
 
-    this.transferringToCollection = true;
     this.router.navigate(['/collection-management'], {
       queryParams: {
         documento: result.clientData.documento,
@@ -208,8 +176,6 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
         subPortfolioId: result.subPortfolioId,
         source: 'manual'
       }
-    }).then(navigated => {
-      if (!navigated) this.transferringToCollection = false;
     });
   }
 
