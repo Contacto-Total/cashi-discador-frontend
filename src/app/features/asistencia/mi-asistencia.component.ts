@@ -63,6 +63,8 @@ const ESTILOS = {
 @Component({
   selector: 'app-mi-asistencia',
   standalone: true,
+  // Engancha las tablas al estilo del módulo (styles.css, «MÓDULO DE ASISTENCIA - tablas»).
+  host: { class: 'cashi-asistencia' },
   imports: [CommonModule, FormsModule, LucideAngularModule],
   styles: [`
     :host { display: block; }
@@ -252,7 +254,7 @@ const ESTILOS = {
                         </tr>
                       } @empty {
                         <tr>
-                          <td colspan="6" class="px-3 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                          <td colspan="6" class="secundario !px-3 !py-10 text-center !text-[12.5px]">
                             Sin marcaciones en esta semana
                           </td>
                         </tr>

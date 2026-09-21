@@ -88,7 +88,7 @@ const POR_PAGINA = 10;
             <tbody>
               @for (c of visibles(); track c.id) {
                 <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#f4f6f9] dark:border-slate-800 dark:hover:bg-slate-800/40">
-                  <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ c.cuando | date: 'dd/MM HH:mm' }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ c.cuando | date: 'dd/MM HH:mm' }}</td>
                   <td [class]="estilos.td + ' max-w-[180px] truncate font-semibold'">{{ c.nombreAgente }}</td>
                   <td [class]="estilos.td">{{ c.fecha | date: 'dd/MM' }}</td>
                   <td [class]="estilos.td">{{ c.marca }}</td>
@@ -109,11 +109,11 @@ const POR_PAGINA = 10;
                     </span>
                   </td>
                   <td [class]="estilos.td + ' max-w-[240px] !whitespace-normal'">{{ c.motivo ?? '—' }}</td>
-                  <td [class]="estilos.td + ' text-[#5f6c80] dark:text-slate-400'">{{ c.corrigio ?? '—' }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ c.corrigio ?? '—' }}</td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="8" class="px-3 py-14 text-center">
+                  <td colspan="8" class="!px-3 !py-14 text-center">
                     <strong class="block text-[13.5px]">Sin correcciones</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       Nadie ha completado marcaciones a mano en este rango.

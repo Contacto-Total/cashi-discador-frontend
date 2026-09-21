@@ -38,6 +38,8 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
 @Component({
   selector: 'app-control-asistencia',
   standalone: true,
+  // Engancha las tablas al estilo del módulo (styles.css, «MÓDULO DE ASISTENCIA - tablas»).
+  host: { class: 'cashi-asistencia' },
   imports: [
     CommonModule,
     FormsModule,

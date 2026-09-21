@@ -134,7 +134,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
                       <span class="text-[#8491a3] dark:text-slate-500">—</span>
                     }
                   </td>
-                  <td [class]="estilos.td">{{ j.revisadaPor ?? '—' }}</td>
+                  <td [class]="estilos.td + ' secundario'">{{ j.revisadaPor ?? '—' }}</td>
                   <td [class]="estilos.td">
                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold"
                           [class]="ESTADO_SOLICITUD[j.estado].clase">
@@ -154,7 +154,7 @@ import { ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, hoy } from './asistencia.est
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="9" class="px-3 py-14 text-center">
+                  <td colspan="9" class="!px-3 !py-14 text-center">
                     <strong class="block text-[13.5px]">Nada por aquí</strong>
                     <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                       No hay solicitudes con ese filtro en el rango elegido.
