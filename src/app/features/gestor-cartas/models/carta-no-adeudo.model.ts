@@ -87,3 +87,14 @@ export interface CartaNoAdeudoSolicitudFilters {
   page?: number;
   size?: number;
 }
+
+export interface CartaNoAdeudoClienteCorreo {
+  idCliente: number;
+  idGestion: number;
+  documento: string;
+  nombreCliente: string;
+  correo: string | null;
+  idMetodoContacto: number | null;
+  montoPagado: number;
+  fechaUltimoPago: string | null;
+}
