@@ -181,6 +181,16 @@ export interface Justificacion {
 
 // ==================== CALENDARIO ====================
 
+/**
+ * Qué puede hacer quien entra al módulo. RR.HH. es configuración y no un rol:
+ * Emily es SUPERVISOR como las demás y lo que la distingue viene de aquí.
+ */
+export interface PerfilAsistencia {
+  rrhh: boolean;
+  supervisora: boolean;
+  subcarteras: { id: number; nombre: string; cartera: string }[];
+}
+
 /** Lo que sale de leer el archivo de feriados, fila por fila. */
 export interface ImportacionFeriados {
   guardado: boolean;
@@ -321,6 +331,8 @@ export interface DashboardAsistencia {
   minutosTopeEquipo: number;
   pierdenBono: number;
   diasIncompletos: number;
+  /** Días con alguna marca sin registrar, break incluido: los que bloquean el cierre. */
+  diasPorCompletar: number;
   totalPuntual: number;
   totalTarde: number;
   totalFalta: number;

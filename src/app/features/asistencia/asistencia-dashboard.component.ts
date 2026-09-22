@@ -278,7 +278,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
               <span [class]="estilos.icono">
                 <lucide-angular name="bell" [size]="15" class="block"></lucide-angular>
               </span>
-              <h3 [class]="estilos.rotulo">Pierden bono</h3>
+              <h3 [class]="estilos.rotulo">Límite excedido</h3>
             </div>
             <div [class]="estilos.cifra">
               {{ d.pierdenBono }}<small [class]="estilos.unidad">de {{ d.personas }}</small>
@@ -287,7 +287,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
               <div class="fila-personas">
                 @for (a of d.agentes; track a.idUsuario) {
                   <span [class.mal]="a.pierdeBono"
-                        [title]="a.nombreAgente + ': ' + (a.pierdeBono ? 'pierde' : 'mantiene') + ' el bono'">
+                        [title]="a.nombreAgente + ': ' + (a.pierdeBono ? 'límite de tardanza excedido' : 'dentro del límite')">
                     <lucide-angular name="user" [size]="16" class="block"></lucide-angular>
                   </span>
                 }
@@ -454,7 +454,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         <div [class]="estilos.tarjeta">
           <h2 [class]="estilos.titulo + ' !mb-0'">Avisos a la supervisora</h2>
           <p class="!mb-3 !mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Exceso de break y de almuerzo. No afectan al bono: se gestionan como llamada de atención.
+            Exceso de break y de almuerzo. No cuentan como tardanza: se gestionan como llamada de atención.
           </p>
 
           <div class="total-avisos">

@@ -1276,7 +1276,7 @@ export class AsistenciaConfiguracionComponent {
     return [
       {
         clave: 'dia', nombre: 'Tolerancia del día', icono: 'clock',
-        pie: 'Pasado esto se pierde el bono',
+        pie: 'Pasado esto, límite diario excedido',
         cifra: String(p.toleranciaDiaMin), unidad: 'min',
         minutos: p.toleranciaDiaMin, hora: null, conHora: false
       },

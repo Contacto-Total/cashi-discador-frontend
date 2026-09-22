@@ -156,12 +156,19 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           <nav [class]="estilos.segmentos" aria-label="Pantallas del módulo">
             @for (t of TABS; track t.clave) {
               <button type="button"
-                      [class]="estilos.tab + ' ' + (pantalla() === t.clave ? estilos.tabActiva : estilos.tabApagada)"
+                      [class]="estilos.tab + ' ' + (pantalla() === t.clave ? estilos.tabActiva : estilos.tabApagada)
+                        + ' disabled:cursor-default disabled:opacity-60'"
+                      [disabled]="t.pronto"
                       [attr.aria-current]="pantalla() === t.clave ? 'page' : null"
                       [attr.aria-label]="t.clave === 'justificaciones' && sinResolver()
                         ? 'Justificaciones, ' + sinResolver() + ' sin resolver' : null"
                       (click)="pantalla.set(t.clave)">
                 {{ t.texto }}
+                @if (t.pronto) {
+                  <span class="rounded-full bg-[#eef2ff] px-1.5 py-px text-[10.5px] font-bold text-[#4338ca] dark:bg-indigo-950/60 dark:text-indigo-300">
+                    Pronto
+                  </span>
+                }
                 @if (t.clave === 'justificaciones' && sinResolver()) {
                   <span aria-hidden="true"
                         [class]="estilos.cuenta + ' ' + (pantalla() === t.clave ? estilos.cuentaActiva : estilos.cuentaApagada)">
@@ -223,12 +230,16 @@ export class ControlAsistenciaComponent implements OnInit {
 
   protected readonly estilos = ESTILOS;
 
+  /**
+   * `pronto`: la pantalla existe pero todavía no se abre. El Dashboard queda
+   * así por decisión de RR.HH. (22/09/2026): se usará, pero no en esta versión.
+   */
   protected readonly TABS = [
-    { clave: 'asistencia', texto: 'Reporte' },
-    { clave: 'dashboard', texto: 'Dashboard' },
-    { clave: 'justificaciones', texto: 'Justificaciones' },
-    { clave: 'cierre', texto: 'Cierre semanal' },
-    { clave: 'auditoria', texto: 'Auditoría' }
+    { clave: 'asistencia', texto: 'Reporte', pronto: false },
+    { clave: 'dashboard', texto: 'Dashboard', pronto: true },
+    { clave: 'justificaciones', texto: 'Justificaciones', pronto: false },
+    { clave: 'cierre', texto: 'Cierre semanal', pronto: false },
+    { clave: 'auditoria', texto: 'Auditoría', pronto: false }
   ] as const;
 
   readonly pantalla = signal<string>('asistencia');
