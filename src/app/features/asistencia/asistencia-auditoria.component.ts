@@ -54,7 +54,7 @@ const POR_PAGINA = 10;
                  [ngModel]="hastaAud()" (ngModelChange)="cambiarRango(desdeAud(), $event)">
         </div>
         <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="aud-quien">Quién corrigió</label>
+          <label [class]="estilos.etiqueta" for="aud-quien">Corregido por</label>
           <select id="aud-quien" [class]="estilos.campo + ' w-[210px]'"
                   [ngModel]="quien()" (ngModelChange)="quien.set($event); pagina.set(1)">
             <option value="">Todos</option>
@@ -82,7 +82,7 @@ const POR_PAGINA = 10;
                 <th scope="col" [class]="estilos.th">Antes</th>
                 <th scope="col" [class]="estilos.th">Después</th>
                 <th scope="col" [class]="estilos.th">Motivo</th>
-                <th scope="col" [class]="estilos.th">Corrigió</th>
+                <th scope="col" [class]="estilos.th">Corregido por</th>
               </tr>
             </thead>
             <tbody>
@@ -205,7 +205,7 @@ export class AsistenciaAuditoriaComponent {
    * devolver algo distinto de lo que se acaba de filtrar.
    */
   descargar(): void {
-    const cabecera = ['Cuándo', 'Persona', 'Día', 'Marca', 'Antes', 'Después', 'Motivo', 'Corrigió'];
+    const cabecera = ['Cuándo', 'Persona', 'Día', 'Marca', 'Antes', 'Después', 'Motivo', 'Corregido por'];
     const filas = this.filtradas().map(c => [
       c.cuando, c.nombreAgente ?? '', c.fecha, c.marca,
       c.antes ?? 'sin marca', c.despues ?? '', c.motivo ?? '', c.corrigio ?? ''

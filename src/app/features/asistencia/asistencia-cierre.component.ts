@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { CierreSemana, Justificacion, Recuperacion } from './asistencia.models';
-import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asistencia.estilos';
+import { CierreSemana, ExcepcionDeHorario, Justificacion, ProximaSemana, Recuperacion } from './asistencia.models';
+import {
+  DIAS_DE_RECUPERACION, ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, textoDias, unidadDe
+} from './asistencia.estilos';
 
 /**
  * Cierre semanal: congelar las cifras con las que se paga.
@@ -100,6 +102,71 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
         </div>
       </div>
 
+      <!-- Horario de la próxima semana: el del equipo y, encima, quien recupera horas -->
+      @if (idSubcartera()) {
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 [class]="estilos.titulo + ' !mb-0'">Horario de la próxima semana</h2>
+            <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subProxima() }}</p>
+          </div>
+          <button type="button" [class]="estilos.botonPrimario" (click)="compartir()"
+                  [disabled]="guardando() || !proxima() || !!proxima()?.compartidoEn">
+            <lucide-angular name="send" [size]="15" class="block"></lucide-angular>
+            {{ proxima()?.compartidoEn ? 'Compartido con el equipo' : 'Compartir con el equipo' }}
+          </button>
+        </div>
+
+        <div class="mb-6 grid gap-4 min-[640px]:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
+          <div [class]="estilos.panel">
+            <table class="w-full border-collapse">
+              <caption class="sr-only">Horario del equipo para la próxima semana</caption>
+              <thead>
+                <tr>
+                  <th scope="col" [class]="estilos.th">Día</th>
+                  <th scope="col" [class]="estilos.th">Entrada</th>
+                  <th scope="col" [class]="estilos.th">Salida</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of proxima()?.dias ?? []; track d.diaSemana) {
+                  <tr>
+                    <td [class]="estilos.td + ' font-bold'">{{ d.nombre }}</td>
+                    <td [class]="estilos.td">{{ d.entrada.slice(0, 5) }}</td>
+                    <td [class]="estilos.td">{{ d.salida.slice(0, 5) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div [class]="estilos.tarjeta">
+            <h2 [class]="estilos.titulo + ' !mb-0'">Excepciones de esta semana</h2>
+            <p class="!mb-3 mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+              Quien deba horas sale más tarde. El sistema lo calcula y Emily lo ajusta si lo acordó de otra forma.
+            </p>
+            <ul class="!m-0 !list-none !p-0">
+              @for (e of proxima()?.excepciones ?? []; track e.idRecuperacion) {
+                <li class="flex items-center gap-3 border-b border-[#f1f3f6] py-2.5 last:border-0 dark:border-slate-800">
+                  <div class="min-w-0 flex-1">
+                    <strong class="block text-[13px]">{{ e.nombre }}</strong>
+                    <span class="block text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                      @if (e.minutosExtra > 0) {
+                        {{ textoDias(e.dias) }} hasta las {{ salidaCon(e) }} · +{{ e.minutosExtra }} min · {{ e.motivo }}
+                      } @else {
+                        Sin horario extendido · {{ e.motivo }}
+                      }
+                    </span>
+                  </div>
+                  <button type="button" [class]="estilos.botonChico" (click)="abrirAjuste(e.idRecuperacion)">Ajustar</button>
+                </li>
+              } @empty {
+                <li class="py-2.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Ninguna: todos con el horario del equipo</li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
       <h2 [class]="estilos.titulo">Semanas cerradas</h2>
 
       @if (error()) {
@@ -117,7 +184,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
             <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
               <tr>
                 <th scope="col" [class]="estilos.th">Semana</th>
-                <th scope="col" [class]="estilos.th">Cerró</th>
+                <th scope="col" [class]="estilos.th">Cerrado por</th>
                 <th scope="col" [class]="estilos.th">Cuándo</th>
                 <th scope="col" [class]="estilos.th">Personas</th>
                 <th scope="col" [class]="estilos.th">Límite excedido</th>
@@ -217,11 +284,10 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                   }
                 </td>
                 <td [class]="estilos.td + ' text-right'">
-                  <button type="button" [class]="estilos.botonChico" (click)="abrirCierreDeuda(r)"
-                          [attr.aria-label]="'Resolver la recuperación de ' + r.nombreAgente"
-                          title="Dar por cumplida o condonar">
-                    <lucide-angular name="check" [size]="13" class="block"></lucide-angular>
-                    Resolver
+                  <button type="button" [class]="estilos.botonChico" (click)="abrirAjuste(r.id)"
+                          [attr.aria-label]="'Ajustar el horario de ' + r.nombreAgente">
+                    <lucide-angular name="clock" [size]="13" class="block"></lucide-angular>
+                    Ajustar horario
                   </button>
                 </td>
               </tr>
@@ -238,42 +304,45 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
     </div>
     </div>
 
-    <!-- Cerrar una deuda de horas -->
-    @if (deuda(); as r) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarDeuda()"></div>
+    <!-- Ajustar la recuperación: los días y los minutos con que devuelve horas -->
+    @if (ajuste(); as a) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="ajuste.set(null)"></div>
       <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto w-[min(100%,460px)] overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-deuda">
-          <header class="border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <h2 id="titulo-deuda" class="!m-0 text-[15px] font-extrabold">
-              {{ r.pendientes }} de {{ r.nombreAgente }}
-            </h2>
-            <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-              Del {{ r.fechaOrigen | date: 'dd/MM/yyyy' }}, con plazo al {{ r.fechaLimite | date: 'dd/MM' }}
-            </p>
+        <div class="pointer-events-auto flex w-[min(100%,420px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-ajuste">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 id="titulo-ajuste" class="!m-0 text-[15px] font-extrabold">Ajustar la recuperación</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ a.nombre }} · {{ a.motivo }}</p>
+            </div>
+            <button type="button" [class]="estilos.botonIcono" (click)="ajuste.set(null)" aria-label="Cerrar">
+              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+            </button>
           </header>
           <div class="flex flex-col gap-3.5 px-5 py-4">
             <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="deuda-estado">Qué se hace</label>
-              <select id="deuda-estado" [class]="estilos.campo" [(ngModel)]="estadoDeuda">
-                <option value="CUMPLIDA">Dar por cumplida (ya devolvió las horas)</option>
-                <option value="CONDONADA">Condonar (no las devuelve)</option>
+              <label [class]="estilos.etiqueta" for="a-dias">Días</label>
+              <select id="a-dias" [class]="estilos.campo" [(ngModel)]="ajusteDias">
+                @for (o of DIAS_DE_RECUPERACION; track o.texto) {
+                  <option [ngValue]="o.texto">{{ o.texto }}</option>
+                }
               </select>
             </div>
             <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="deuda-motivo">Motivo</label>
-              <input id="deuda-motivo" type="text" [class]="estilos.campo"
-                     placeholder="Queda registrado con la decisión" [(ngModel)]="motivoDeuda">
+              <label [class]="estilos.etiqueta" for="a-extra">Minutos extra por día</label>
+              <input id="a-extra" type="number" min="0" max="60" step="5" [class]="estilos.campo"
+                     [(ngModel)]="ajusteMinutos">
             </div>
+            <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+              Lo acordado con el asesor manda: esto es lo que verá en Mi Asistencia.
+            </p>
             @if (error()) {
-              <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
+              <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
             }
           </div>
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarDeuda()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="confirmarDeuda()"
-                    [disabled]="guardando()">
-              <lucide-angular name="save" [size]="15" class="block"></lucide-angular>
+            <button type="button" [class]="estilos.botonSecundario" (click)="ajuste.set(null)">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="guardarAjuste()" [disabled]="guardando()">
               Guardar
             </button>
           </footer>
@@ -389,9 +458,6 @@ export class AsistenciaCierreComponent {
 
   readonly cierres = signal<CierreSemana[]>([]);
   readonly recuperaciones = signal<Recuperacion[]>([]);
-  readonly deuda = signal<Recuperacion | null>(null);
-  estadoDeuda: 'CUMPLIDA' | 'CONDONADA' = 'CUMPLIDA';
-  motivoDeuda = '';
   readonly detalle = signal<CierreSemana | null>(null);
   readonly cargando = signal(false);
   readonly guardando = signal(false);
@@ -432,7 +498,7 @@ export class AsistenciaCierreComponent {
     const cierre = this.cierreDeLaSemana();
     if (cierre) {
       const cuando = cierre.cerradoEn ? ` el ${this.corta(cierre.cerradoEn.slice(0, 10))}` : '';
-      return { titulo: 'Semana cerrada', pie: `Cerró ${cierre.cerradoPor ?? 'RR.HH.'}${cuando}` };
+      return { titulo: 'Semana cerrada', pie: `Cerrada por ${cierre.cerradoPor ?? 'RR.HH.'}${cuando}` };
     }
     return this.terminada()
       ? { titulo: 'Semana por cerrar', pie: 'Ya se puede cerrar' }
@@ -462,6 +528,7 @@ export class AsistenciaCierreComponent {
       const ambito = this.idSubcartera();
       const lunes = this.lunes();
       const sabado = this.sabado();
+      this.cargarProxima();
       if (!ambito) {
         this.incompletos.set(0);
         this.pierdenBono.set(0);
@@ -508,40 +575,114 @@ export class AsistenciaCierreComponent {
     });
   }
 
-  // ==================== DEUDAS DE HORAS ====================
+  // ==================== HORARIO DE LA PRÓXIMA SEMANA ====================
 
-  abrirCierreDeuda(r: Recuperacion): void {
-    this.deuda.set(r);
-    this.estadoDeuda = 'CUMPLIDA';
-    this.motivoDeuda = '';
+  readonly proxima = signal<ProximaSemana | null>(null);
+  readonly ajuste = signal<ExcepcionDeHorario | null>(null);
+  ajusteDias = DIAS_DE_RECUPERACION[0].texto;
+  ajusteMinutos = 0;
+  protected readonly DIAS_DE_RECUPERACION = DIAS_DE_RECUPERACION;
+  protected readonly textoDias = textoDias;
+
+  readonly subProxima = computed(() => {
+    const p = this.proxima();
+    if (!p) {
+      return '';
+    }
+    const corta = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+    const cuando = p.compartidoEn ? ` · compartido el ${corta(p.compartidoEn.slice(0, 10))}` : '';
+    return `Semana del ${corta(p.lunes)} al ${corta(p.sabado)}${cuando}`;
+  });
+
+  private cargarProxima(): void {
+    const sub = this.idSubcartera();
+    if (!sub) {
+      this.proxima.set(null);
+      return;
+    }
+    this.servicio.proximaSemana(sub).subscribe({
+      next: p => this.proxima.set(p),
+      error: () => this.proxima.set(null)
+    });
+  }
+
+  /** La hora de salida del equipo ese día más lo que se queda la persona. */
+  salidaCon(e: ExcepcionDeHorario): string {
+    const dia = this.proxima()?.dias.find(d => e.dias.includes(d.diaSemana));
+    if (!dia) {
+      return '—';
+    }
+    const [h, m] = dia.salida.split(':').map(Number);
+    const total = h * 60 + m + e.minutosExtra;
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  }
+
+  /**
+   * Abre el ajuste con lo que hay: lo guardado, o lo que propone el sistema. Si
+   * la persona no está en la semana cargada (otra subcartera), se propone aquí
+   * con la misma cuenta: lo que debe por semana repartido de martes a viernes.
+   */
+  abrirAjuste(idRecuperacion: number): void {
+    let e = this.proxima()?.excepciones.find(x => x.idRecuperacion === idRecuperacion) ?? null;
+    if (!e) {
+      const r = this.recuperaciones().find(x => x.id === idRecuperacion);
+      if (!r) {
+        return;
+      }
+      const porDia = Math.min(60, Math.ceil((r.minutosPorSemana || 0) / 4 / 5) * 5);
+      e = { idRecuperacion: r.id, idUsuario: r.idUsuario, nombre: r.nombreAgente ?? '', dias: [2, 3, 4, 5],
+            minutosExtra: porDia, guardada: false, motivo: `Recupera ${r.pendientes}`, pendientes: r.pendientes };
+    }
+    const actual = e.dias.join(',');
+    this.ajusteDias = DIAS_DE_RECUPERACION.find(o => o.dias.join(',') === actual)?.texto
+      ?? DIAS_DE_RECUPERACION[0].texto;
+    this.ajusteMinutos = e.minutosExtra;
     this.error.set('');
+    this.ajuste.set(e);
   }
 
-  cerrarDeuda(): void {
-    this.deuda.set(null);
-  }
-
-  confirmarDeuda(): void {
-    const r = this.deuda();
-    if (!r) {
+  guardarAjuste(): void {
+    const a = this.ajuste();
+    if (!a) {
       return;
     }
-    if (!this.motivoDeuda.trim()) {
-      this.error.set('Di por qué se cierra');
+    const minutos = Number(this.ajusteMinutos);
+    if (!Number.isFinite(minutos) || minutos < 0 || minutos > 60) {
+      this.error.set('Entre 0 y 60 minutos por día');
       return;
     }
-
+    const dias = DIAS_DE_RECUPERACION.find(o => o.texto === this.ajusteDias)?.dias ?? [2, 3, 4, 5];
     this.guardando.set(true);
-    this.servicio.cerrarRecuperacion(r.id, this.estadoDeuda, this.motivoDeuda.trim()).subscribe({
+    this.servicio.ajustarRecuperacion(a.idRecuperacion, dias, minutos).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.cerrarDeuda();
-        this.toast.success('Recuperación cerrada');
-        this.cargar();
+        this.ajuste.set(null);
+        this.toast.success(minutos ? 'Horario de la próxima semana ajustado' : 'Sin horario extendido esa semana');
+        this.cargarProxima();
       },
       error: respuesta => {
         this.guardando.set(false);
-        this.error.set(respuesta?.error?.error ?? 'No se pudo cerrar');
+        this.error.set(respuesta?.error?.error ?? 'No se pudo guardar el ajuste');
+      }
+    });
+  }
+
+  /** Se comparte una vez por subcartera: lo propuesto que nadie tocó se guarda tal cual. */
+  compartir(): void {
+    const sub = this.idSubcartera();
+    if (!sub) {
+      return;
+    }
+    this.guardando.set(true);
+    this.servicio.compartirSemana(sub).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.toast.success('Horario compartido: los asesores ya lo ven en Mi Asistencia');
+        this.cargarProxima();
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.toast.error(respuesta?.error?.error ?? 'No se pudo compartir el horario');
       }
     });
   }
@@ -554,6 +695,7 @@ export class AsistenciaCierreComponent {
         this.guardando.set(false);
         this.toast.success('Semana cerrada');
         this.cargar();
+        this.cargarProxima();
       },
       error: respuesta => {
         this.guardando.set(false);

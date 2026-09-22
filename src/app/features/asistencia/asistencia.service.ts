@@ -12,6 +12,8 @@ import {
   DiaCalendario,
   ImportacionFeriados,
   PerfilAsistencia,
+  ProximaSemana,
+  MiProximaSemana,
   EquipoAutorizado,
   Horario,
   Justificacion,
@@ -99,6 +101,25 @@ export class AsistenciaService {
    * Lo que hay que decirle ahora sobre su jornada. Se consulta y no se empuja:
    * montar un canal solo para esto sería una pieza más que mantener.
    */
+  /** El horario de la semana que viene de una subcartera, con las excepciones de quien recupera. */
+  proximaSemana(idSubcartera: number): Observable<ProximaSemana> {
+    return this.http.get<ProximaSemana>(`${this.url}/proxima-semana`, { params: { idSubcartera } });
+  }
+
+  /** Guarda cuánto sale más tarde una persona la semana que viene. 0 minutos la quita. */
+  ajustarRecuperacion(idRecuperacion: number, dias: number[], minutosExtra: number): Observable<void> {
+    return this.http.post<void>(`${this.url}/proxima-semana/ajustar`, { idRecuperacion, dias, minutosExtra });
+  }
+
+  compartirSemana(idSubcartera: number): Observable<void> {
+    return this.http.post<void>(`${this.url}/proxima-semana/compartir`, { idSubcartera });
+  }
+
+  /** El del asesor; null si RR.HH. todavía no la compartió. */
+  miProximaSemana(): Observable<MiProximaSemana | null> {
+    return this.http.get<MiProximaSemana | null>(`${this.url}/proxima-semana/mia`);
+  }
+
   /** Si es RR.HH., si supervisa y qué subcarteras ve. */
   perfil(): Observable<PerfilAsistencia> {
     return this.http.get<PerfilAsistencia>(`${this.url}/perfil`);

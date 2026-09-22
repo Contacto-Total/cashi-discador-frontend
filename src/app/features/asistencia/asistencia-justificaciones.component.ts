@@ -84,7 +84,7 @@ import {
                 <th scope="col" [class]="estilos.th">Tipo</th>
                 <th scope="col" [class]="estilos.th">Días</th>
                 <th scope="col" [class]="estilos.th">Certificado</th>
-                <th scope="col" [class]="estilos.th">Revisó</th>
+                <th scope="col" [class]="estilos.th">Revisado por</th>
                 <th scope="col" [class]="estilos.th">Estado</th>
                 <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
               </tr>
