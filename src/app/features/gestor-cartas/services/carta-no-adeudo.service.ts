@@ -31,6 +31,19 @@ export class CartaNoAdeudoService {
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoClienteCorreo>>(`${this.baseUrl}/candidatos`, { params });
   }
 
+  generarVistaPrevia(cliente: CartaNoAdeudoClienteCorreo): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/cartas/carta-no-adeudo/generar-validado`,
+      {
+        documento: cliente.documento,
+        tenantId: cliente.idTenant,
+        carteraId: cliente.idCartera,
+        subcarteraId: cliente.idSubcartera
+      },
+      { responseType: 'blob' }
+    );
+  }
+
   listarSolicitudes(filters: CartaNoAdeudoSolicitudFilters): Observable<CartaNoAdeudoPage<CartaNoAdeudoSolicitud>> {
     let params = this.contextParams(filters)
       .set('page', (filters.page ?? 0).toString())

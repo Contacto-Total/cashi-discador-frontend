@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.model';
 
@@ -88,24 +89,17 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
       </div>
 
       <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        @if (clientePreview; as cliente) {
-          <div class="mx-auto max-w-2xl text-sm leading-7 text-slate-700 dark:text-slate-200">
-            <div class="mb-10 flex items-start justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span>Vista previa de carta</span>
-              <span>{{ cliente.documento }}</span>
-            </div>
-            <p class="mb-8 text-right">Lima, {{ fechaActual }}</p>
-            <h2 class="mb-8 text-center text-base font-bold tracking-wide">CARTA DE NO ADEUDO</h2>
-            <p class="mb-6">Por medio de la presente se deja constancia que:</p>
-            <div class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-              <p class="font-semibold">{{ cliente.nombreCliente }}</p>
-              <p>DNI: {{ cliente.documento }}</p>
-            </div>
-            <p>
-              No mantiene deuda o saldo pendiente, conforme a los pagos registrados y validados en el sistema.
-            </p>
-            <p class="mt-10">Atentamente,</p>
+        @if (cargandoVistaPrevia) {
+          <div class="flex h-full min-h-[28rem] flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
+            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+            <p class="mt-3 text-sm font-medium">Generando vista previa...</p>
           </div>
+        } @else if (vistaPreviaUrl) {
+          <iframe
+            [src]="vistaPreviaUrl"
+            title="Vista previa de carta de no adeudo"
+            class="h-[34rem] w-full rounded border-0 bg-white">
+          </iframe>
         } @else {
           <div class="flex h-full min-h-[28rem] flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
             <lucide-angular name="file-text" [size]="36" class="mb-3 text-slate-400"></lucide-angular>
@@ -136,8 +130,11 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Input() page = 0;
   @Input() totalPages = 0;
   @Input() totalElements = 0;
+  @Input() vistaPreviaUrl: SafeResourceUrl | null = null;
+  @Input() cargandoVistaPrevia = false;
   @Output() readonly buscar = new EventEmitter<string>();
   @Output() readonly cambiarPagina = new EventEmitter<number>();
+  @Output() readonly verVistaPrevia = new EventEmitter<CartaNoAdeudoClienteCorreo>();
   @Output() readonly enviarValidacionPagos = new EventEmitter<CartaNoAdeudoClienteCorreo[]>();
 
   filtroDocumento = '';
@@ -155,16 +152,9 @@ export class CartaNoAdeudoListaWidgetComponent {
     return this.clientes.filter(cliente => this.seleccionados.has(cliente.idCliente));
   }
 
-  get fechaActual(): string {
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    }).format(new Date());
-  }
-
   verCarta(cliente: CartaNoAdeudoClienteCorreo): void {
     this.clientePreview = cliente;
+    this.verVistaPrevia.emit(cliente);
   }
 
   copiarCorreo(correo: string | null): void {
