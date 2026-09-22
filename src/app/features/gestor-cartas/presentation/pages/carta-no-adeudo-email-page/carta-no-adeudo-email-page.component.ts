@@ -55,7 +55,11 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
         @if (activeTab() === 'correo') {
           <app-carta-no-adeudo-lista-widget
             [clientes]="clientes()"
-            (buscar)="cargarCandidatos($event)">
+            [page]="pagina()"
+            [totalPages]="totalPaginas()"
+            [totalElements]="totalCandidatos()"
+            (buscar)="cargarCandidatos($event)"
+            (cambiarPagina)="cambiarPagina($event)">
           </app-carta-no-adeudo-lista-widget>
         }
       </div>
@@ -67,15 +71,29 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit {
 
   readonly activeTab = signal<'correo' | 'pagos' | 'historial'>('correo');
   readonly clientes = signal<CartaNoAdeudoClienteCorreo[]>([]);
+  readonly pagina = signal(0);
+  readonly totalPaginas = signal(0);
+  readonly totalCandidatos = signal(0);
+  private documentoBusqueda?: string;
 
   ngOnInit(): void {
     this.cargarCandidatos();
   }
 
-  cargarCandidatos(documento?: string): void {
-    this.cartaNoAdeudoService.listarCandidatos(documento).subscribe({
-      next: response => this.clientes.set(response.content),
+  cargarCandidatos(documento?: string, page = 0): void {
+    this.documentoBusqueda = documento?.trim() || undefined;
+    this.cartaNoAdeudoService.listarCandidatos(this.documentoBusqueda, page, 20).subscribe({
+      next: response => {
+        this.clientes.set(response.content.slice(0, 20));
+        this.pagina.set(response.page);
+        this.totalPaginas.set(response.totalPages);
+        this.totalCandidatos.set(response.totalElements);
+      },
       error: error => console.error('No se pudieron cargar candidatos para carta de no adeudo', error)
     });
+  }
+
+  cambiarPagina(page: number): void {
+    this.cargarCandidatos(this.documentoBusqueda, page);
   }
 }

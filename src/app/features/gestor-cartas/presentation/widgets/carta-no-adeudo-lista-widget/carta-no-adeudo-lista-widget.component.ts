@@ -62,13 +62,15 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
                 [checked]="estaSeleccionado(cliente)"
                 (click)="$event.stopPropagation()"
                 (change)="alternarSeleccion(cliente)" />
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-medium text-slate-800 dark:text-white">{{ cliente.nombreCliente }}</span>
-                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{{ cliente.documento }}</span>
-                <span class="mt-1 block truncate text-xs text-slate-600 dark:text-slate-300">
+              <span class="grid min-w-0 flex-1 grid-cols-2 gap-x-3 text-xs">
+                <span class="row-span-2 self-center truncate text-sm font-medium text-slate-800 dark:text-white">
+                  {{ cliente.nombreCliente }}
+                </span>
+                <span class="truncate text-slate-600 dark:text-slate-300">
                   <lucide-angular name="mail" [size]="13" class="mr-1 inline-block"></lucide-angular>
                   {{ cliente.correo || 'Sin correo registrado' }}
                 </span>
+                <span class="mt-0.5 text-slate-500 dark:text-slate-400">{{ cliente.documento }}</span>
               </span>
             </button>
           } @empty {
@@ -77,6 +79,28 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
             </div>
           }
         </div>
+
+        @if (totalPages > 1) {
+          <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
+            <span>Página {{ page + 1 }} de {{ totalPages }} ({{ totalElements }} clientes)</span>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="rounded-md border border-slate-300 px-3 py-1.5 font-medium transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-700"
+                [disabled]="page === 0"
+                (click)="cambiarPagina.emit(page - 1)">
+                Anterior
+              </button>
+              <button
+                type="button"
+                class="rounded-md border border-slate-300 px-3 py-1.5 font-medium transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-700"
+                [disabled]="page >= totalPages - 1"
+                (click)="cambiarPagina.emit(page + 1)">
+                Siguiente
+              </button>
+            </div>
+          </div>
+        }
       </div>
 
       <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -125,7 +149,11 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
 })
 export class CartaNoAdeudoListaWidgetComponent {
   @Input() clientes: CartaNoAdeudoClienteCorreo[] = [];
+  @Input() page = 0;
+  @Input() totalPages = 0;
+  @Input() totalElements = 0;
   @Output() readonly buscar = new EventEmitter<string>();
+  @Output() readonly cambiarPagina = new EventEmitter<number>();
   @Output() readonly crearSolicitud = new EventEmitter<void>();
   @Output() readonly enviarValidacionPagos = new EventEmitter<CartaNoAdeudoClienteCorreo[]>();
 
