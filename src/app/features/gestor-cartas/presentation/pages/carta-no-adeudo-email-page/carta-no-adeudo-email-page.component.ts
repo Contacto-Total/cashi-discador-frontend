@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.model';
 import { CartaNoAdeudoService } from '../../../services/carta-no-adeudo.service';
@@ -58,23 +59,31 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
             [page]="pagina()"
             [totalPages]="totalPaginas()"
             [totalElements]="totalCandidatos()"
+            [vistaPreviaUrl]="vistaPreviaUrl()"
+            [cargandoVistaPrevia]="cargandoVistaPrevia()"
             (buscar)="cargarCandidatos($event)"
-            (cambiarPagina)="cambiarPagina($event)">
+            (cambiarPagina)="cambiarPagina($event)"
+            (verVistaPrevia)="generarVistaPrevia($event)">
           </app-carta-no-adeudo-lista-widget>
         }
       </div>
     </div>
   `
 })
-export class CartaNoAdeudoEmailPageComponent implements OnInit {
+export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   private readonly cartaNoAdeudoService = inject(CartaNoAdeudoService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly activeTab = signal<'correo' | 'pagos' | 'historial'>('correo');
   readonly clientes = signal<CartaNoAdeudoClienteCorreo[]>([]);
   readonly pagina = signal(0);
   readonly totalPaginas = signal(0);
   readonly totalCandidatos = signal(0);
+  readonly vistaPreviaUrl = signal<SafeResourceUrl | null>(null);
+  readonly cargandoVistaPrevia = signal(false);
   private documentoBusqueda?: string;
+  private objectUrl?: string;
+  private solicitudVistaPrevia = 0;
 
   ngOnInit(): void {
     this.cargarCandidatos();
@@ -95,5 +104,41 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit {
 
   cambiarPagina(page: number): void {
     this.cargarCandidatos(this.documentoBusqueda, page);
+  }
+
+  generarVistaPrevia(cliente: CartaNoAdeudoClienteCorreo): void {
+    const solicitudActual = ++this.solicitudVistaPrevia;
+    this.cargandoVistaPrevia.set(true);
+    this.limpiarVistaPrevia();
+    this.vistaPreviaUrl.set(null);
+    this.cartaNoAdeudoService.generarVistaPrevia(cliente).subscribe({
+      next: pdf => {
+        if (solicitudActual !== this.solicitudVistaPrevia) {
+          return;
+        }
+        this.objectUrl = URL.createObjectURL(pdf);
+        this.vistaPreviaUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.objectUrl));
+        this.cargandoVistaPrevia.set(false);
+      },
+      error: error => {
+        if (solicitudActual !== this.solicitudVistaPrevia) {
+          return;
+        }
+        this.cargandoVistaPrevia.set(false);
+        console.error('No se pudo generar la vista previa de la carta', error);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.solicitudVistaPrevia++;
+    this.limpiarVistaPrevia();
+  }
+
+  private limpiarVistaPrevia(): void {
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = undefined;
+    }
   }
 }

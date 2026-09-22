@@ -90,7 +90,10 @@ export interface CartaNoAdeudoSolicitudFilters {
 
 export interface CartaNoAdeudoClienteCorreo {
   idCliente: number;
-  idGestion: number | null;
+  idGestion: number;
+  idTenant: number;
+  idCartera: number;
+  idSubcartera: number;
   documento: string;
   nombreCliente: string;
   correo: string | null;
