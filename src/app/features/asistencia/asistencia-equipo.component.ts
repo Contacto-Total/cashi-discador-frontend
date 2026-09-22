@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
+import { TenantService } from '../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../maintenance/services/portfolio.service';
+import { Tenant } from '../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte, Justificacion, PerfilAsistencia, TipoDia } from './asistencia.models';
 import {
@@ -73,11 +77,34 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
 
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="eq-cliente">Cliente</label>
+          <select id="eq-cliente" [class]="estilos.campo + ' w-[178px]'"
+                  [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
+            <option [ngValue]="null">Elige uno</option>
+            @for (c of clientes(); track c.id) {
+              <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option>
+            }
+          </select>
+        </div>
+        <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
+        <div class="flex flex-col gap-1.5">
+          <label [class]="estilos.etiqueta" for="eq-cartera">Cartera</label>
+          <select id="eq-cartera" [class]="estilos.campo + ' w-[178px]'"
+                  [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)" [disabled]="!idCliente()">
+            <option [ngValue]="null">Elige una</option>
+            @for (c of carteras(); track c.id) {
+              <option [ngValue]="c.id">{{ c.portfolioName }}</option>
+            }
+          </select>
+        </div>
+        <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
+        <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="eq-subcartera">Subcartera</label>
-          <select id="eq-subcartera" [class]="estilos.campo + ' w-[200px]'"
-                  [ngModel]="idSubcartera()" (ngModelChange)="cambiarSubcartera($event)">
+          <select id="eq-subcartera" [class]="estilos.campo + ' w-[178px]'"
+                  [ngModel]="idSubcartera()" (ngModelChange)="cambiarSubcartera($event)" [disabled]="!idCartera()">
+            <option [ngValue]="null">Elige una</option>
             @for (s of subcarteras(); track s.id) {
-              <option [ngValue]="s.id">{{ s.texto }}</option>
+              <option [ngValue]="s.id">{{ s.subPortfolioName }}</option>
             }
           </select>
         </div>
@@ -101,11 +128,18 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
     <div class="px-7 py-5">
       @if (cargando()) {
         <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando tu equipo…</p>
-      } @else if (!subcarteras().length) {
+      } @else if (sinAsignar()) {
         <div [class]="estilos.vacio">
           <strong class="block text-[13.5px]">No tienes subcarteras asignadas</strong>
           <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
             Esta vista muestra a los asesores de las subcarteras que supervisas.
+          </span>
+        </div>
+      } @else if (!idSubcartera()) {
+        <div [class]="estilos.vacio">
+          <strong class="block text-[13.5px]">Elige una subcartera</strong>
+          <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+            Las alertas y las justificaciones son de los asesores de esa subcartera.
           </span>
         </div>
       } @else {
@@ -387,6 +421,8 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
 export class AsistenciaEquipoComponent implements OnInit {
   private readonly servicio = inject(AsistenciaService);
   private readonly toast = inject(ToastService);
+  private readonly clientesServicio = inject(TenantService);
+  private readonly carterasServicio = inject(PortfolioService);
 
   protected readonly estilos = ESTILOS;
   protected readonly PASTILLA_ALERTA = PASTILLA_ALERTA;
@@ -419,13 +455,31 @@ export class AsistenciaEquipoComponent implements OnInit {
   nueva = { idUsuario: null as number | null, idTipoDia: null as number | null,
             fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
 
-  /** «Lima» existe en Tramo 3 y en Tramo 5: la repetida lleva su cartera delante. */
-  readonly subcarteras = computed(() => {
-    const lista = this.perfil()?.subcarteras ?? [];
-    return lista.map(s => ({
-      id: s.id,
-      texto: lista.filter(o => o.nombre === s.nombre).length > 1 ? `${s.cartera} · ${s.nombre}` : s.nombre
-    }));
+  readonly idCliente = signal<number | null>(null);
+  readonly idCartera = signal<number | null>(null);
+  readonly clientes = signal<Tenant[]>([]);
+  readonly carteras = signal<Portfolio[]>([]);
+  readonly subcarteras = signal<SubPortfolio[]>([]);
+
+  /**
+   * Lo que puede elegir: RR.HH. y ADMIN, todo; la supervisora, solo las
+   * subcarteras que supervisa y, hacia arriba, sus carteras y clientes.
+   */
+  private readonly permitido = computed(() => {
+    const p = this.perfil();
+    if (!p || p.rrhh) {
+      return null;
+    }
+    return {
+      clientes: new Set(p.subcarteras.map(s => s.idCliente)),
+      carteras: new Set(p.subcarteras.map(s => s.idCartera)),
+      subcarteras: new Set(p.subcarteras.map(s => s.id))
+    };
+  });
+
+  readonly sinAsignar = computed(() => {
+    const p = this.perfil();
+    return !!p && !p.rrhh && !p.subcarteras.length;
   });
 
   readonly sabado = computed(() => sumarDias(this.lunes(), 5));
@@ -527,8 +581,8 @@ export class AsistenciaEquipoComponent implements OnInit {
     this.servicio.perfil().subscribe({
       next: p => {
         this.perfil.set(p);
-        this.idSubcartera.set(p.subcarteras[0]?.id ?? null);
-        this.cargar();
+        this.cargando.set(false);
+        this.cargarClientes();
       },
       error: () => {
         this.cargando.set(false);
@@ -541,9 +595,76 @@ export class AsistenciaEquipoComponent implements OnInit {
     });
   }
 
-  cambiarSubcartera(id: number): void {
+  // ==================== ÁMBITO ====================
+
+  /** Sin filtrar por `isActive`, como en Control de Asistencia: Financiera Oh está inactiva en QAS. */
+  private cargarClientes(): void {
+    this.clientesServicio.getAllTenants().subscribe({
+      next: c => {
+        const permitido = this.permitido();
+        const lista = c.filter(x => !permitido || permitido.clientes.has(x.id))
+          .sort((a, b) => (a.businessName || a.tenantName).localeCompare(b.businessName || b.tenantName));
+        this.clientes.set(lista);
+        if (lista.length === 1) {
+          this.elegirCliente(lista[0].id);
+        }
+      },
+      error: () => this.toast.error('No se pudieron cargar los clientes')
+    });
+  }
+
+  elegirCliente(id: number | null): void {
+    this.idCliente.set(id);
+    this.idCartera.set(null);
+    this.idSubcartera.set(null);
+    this.carteras.set([]);
+    this.subcarteras.set([]);
+    this.reporte.set(null);
+    if (!id) {
+      return;
+    }
+    this.carterasServicio.getPortfoliosByTenant(id).subscribe({
+      next: c => {
+        const permitido = this.permitido();
+        const lista = c.filter(x => !permitido || permitido.carteras.has(x.id))
+          .sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
+        this.carteras.set(lista);
+        if (lista.length === 1) {
+          this.elegirCartera(lista[0].id);
+        }
+      },
+      error: () => this.toast.error('No se pudieron cargar las carteras')
+    });
+  }
+
+  elegirCartera(id: number | null): void {
+    this.idCartera.set(id);
+    this.idSubcartera.set(null);
+    this.subcarteras.set([]);
+    this.reporte.set(null);
+    if (!id) {
+      return;
+    }
+    this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
+      next: s => {
+        const permitido = this.permitido();
+        const lista = s.filter(x => !permitido || permitido.subcarteras.has(x.id))
+          .sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
+        this.subcarteras.set(lista);
+        if (lista.length === 1) {
+          this.cambiarSubcartera(lista[0].id);
+        }
+      },
+      error: () => this.toast.error('No se pudieron cargar las subcarteras')
+    });
+  }
+
+  cambiarSubcartera(id: number | null): void {
     this.idSubcartera.set(id);
-    this.cargar();
+    this.reporte.set(null);
+    if (id) {
+      this.cargar();
+    }
   }
 
   moverSemana(n: number): void {

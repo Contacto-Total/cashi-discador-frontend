@@ -10,6 +10,7 @@ import {
   AsistenciaReporte,
   EstadoAsistencia,
   Justificacion,
+  MiProximaSemana,
   Recuperacion,
   TipoDia
 } from './asistencia.models';
@@ -211,6 +212,24 @@ const ESTILOS = {
                 <p [class]="estilos.pie">{{ textoAbiertas() }}</p>
               </div>
             </div>
+
+            <!-- El horario de la semana que viene, cuando RR.HH. ya lo compartió -->
+            @if (proxima(); as p) {
+              <div [class]="estilos.tarjeta + ' mb-4'">
+                <h2 [class]="estilos.titulo + ' !mb-0'">Tu horario de la próxima semana</h2>
+                <p class="!mb-2.5 mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                  Semana del {{ corta(p.lunes) }} al {{ corta(p.sabado) }} · compartido por RR.HH.
+                </p>
+                <p class="!m-0 text-[13px]">
+                  <strong>{{ textoProxima() }}</strong>.
+                  @if (p.minutosExtra) {
+                    <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                      {{ p.minutosExtra }} min más al final del día · {{ p.motivo }}.
+                    </span>
+                  }
+                </p>
+              </div>
+            }
 
             <div class="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
 
@@ -432,6 +451,31 @@ export class MiAsistenciaComponent implements OnInit {
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly recuperaciones = signal<Recuperacion[]>([]);
   readonly tipos = signal<TipoDia[]>([]);
+  /** El horario de la semana que viene; null hasta que RR.HH. lo comparte. */
+  readonly proxima = signal<MiProximaSemana | null>(null);
+
+  /**
+   * «Lunes de 08:00 a 19:00 y de martes a viernes de 08:00 a 19:00»: los días
+   * seguidos con el mismo horario se dicen juntos.
+   */
+  readonly textoProxima = computed(() => {
+    const dias = this.proxima()?.dias ?? [];
+    const tramos: { desde: string; hasta: string; entrada: string; salida: string }[] = [];
+    for (const d of dias) {
+      const ultimo = tramos[tramos.length - 1];
+      if (ultimo && ultimo.entrada === d.entrada && ultimo.salida === d.salida) {
+        ultimo.hasta = d.nombre;
+      } else {
+        tramos.push({ desde: d.nombre, hasta: d.nombre, entrada: d.entrada, salida: d.salida });
+      }
+    }
+    const frase = tramos.map((t, i) => {
+      const cuando = t.desde === t.hasta ? t.desde : `${t.desde} a ${t.hasta}`;
+      return `${i === 0 ? cuando : 'de ' + cuando.toLowerCase()} de ${t.entrada.slice(0, 5)} a ${t.salida.slice(0, 5)}`;
+    });
+    return frase.length > 1 ? `${frase.slice(0, -1).join(', ')} y ${frase[frase.length - 1]}` : frase[0] ?? '';
+  });
+
   readonly pagina = signal(0);
 
   readonly formulario = signal(false);
@@ -540,6 +584,10 @@ export class MiAsistenciaComponent implements OnInit {
     this.cargar();
     this.cargarSolicitudes();
     this.cargarRecuperaciones();
+    this.servicio.miProximaSemana().subscribe({
+      next: p => this.proxima.set(p),
+      error: () => this.proxima.set(null)
+    });
 
   }
 
@@ -712,7 +760,7 @@ export class MiAsistenciaComponent implements OnInit {
     return hora.length > 5 ? hora.slice(0, 5) : hora;
   }
 
-  private corta(fecha: string): string {
+  protected corta(fecha: string): string {
     const [, mes, dia] = fecha.split('-');
     return `${dia}/${mes}`;
   }

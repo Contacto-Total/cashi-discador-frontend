@@ -188,7 +188,47 @@ export interface Justificacion {
 export interface PerfilAsistencia {
   rrhh: boolean;
   supervisora: boolean;
-  subcarteras: { id: number; nombre: string; cartera: string }[];
+  subcarteras: { id: number; nombre: string; cartera: string; idCartera: number; idCliente: number | null }[];
+}
+
+/** Un día del horario de la semana que viene. */
+export interface DiaDeHorario {
+  diaSemana: number;
+  nombre: string;
+  entrada: string;
+  salida: string;
+}
+
+/** Quien debe horas y sale más tarde la semana que viene. */
+export interface ExcepcionDeHorario {
+  idRecuperacion: number;
+  idUsuario: number;
+  nombre: string;
+  dias: number[];
+  minutosExtra: number;
+  /** false = lo propone el sistema y todavía nadie lo guardó. */
+  guardada: boolean;
+  motivo: string;
+  pendientes: string;
+}
+
+export interface ProximaSemana {
+  lunes: string;
+  sabado: string;
+  idSubcartera: number | null;
+  dias: DiaDeHorario[];
+  excepciones: ExcepcionDeHorario[];
+  compartidoEn: string | null;
+  compartidoPor: string | null;
+}
+
+/** Lo que ve el asesor cuando RR.HH. ya compartió la semana. */
+export interface MiProximaSemana {
+  lunes: string;
+  sabado: string;
+  dias: DiaDeHorario[];
+  minutosExtra: number | null;
+  motivo: string | null;
 }
 
 /** Lo que sale de leer el archivo de feriados, fila por fila. */

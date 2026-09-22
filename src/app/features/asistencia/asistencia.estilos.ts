@@ -140,6 +140,30 @@ export function textoLimite(s: { superoToleranciaDiaria: boolean; superoToleranc
   return s.superoToleranciaSemanal ? 'Límite semanal excedido' : 'Dentro del límite';
 }
 
+const NOMBRES_DIA = ['', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+/** Las opciones de días con que se devuelven horas. Martes a viernes es lo acordado. */
+export const DIAS_DE_RECUPERACION = [
+  { texto: 'Martes a viernes', dias: [2, 3, 4, 5] },
+  { texto: 'Lunes a viernes', dias: [1, 2, 3, 4, 5] },
+  { texto: 'Solo martes y jueves', dias: [2, 4] }
+];
+
+/** «Martes a viernes», «Martes y jueves»: los días como se dicen. */
+export function textoDias(dias: number[]): string {
+  const orden = [...dias].sort((a, b) => a - b);
+  if (!orden.length) {
+    return '';
+  }
+  const seguidos = orden.every((d, i) => i === 0 || d === orden[i - 1] + 1);
+  const nombre = (d: number) => NOMBRES_DIA[d] ?? '';
+  const frase = orden.length > 2 && seguidos
+    ? `${nombre(orden[0])} a ${nombre(orden[orden.length - 1])}`
+    : orden.length === 1 ? nombre(orden[0])
+    : `${orden.slice(0, -1).map(nombre).join(', ')} y ${nombre(orden[orden.length - 1])}`;
+  return frase.charAt(0).toUpperCase() + frase.slice(1);
+}
+
 export function hoy(): string {
   return fechaTexto(new Date());
 }
