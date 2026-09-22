@@ -10,11 +10,12 @@ import {
   AsistenciaReporte,
   EstadoAsistencia,
   Justificacion,
-  MiProximaSemana,
   Recuperacion,
   TipoDia
 } from './asistencia.models';
-import { TIPOS_DE_CALENDARIO, avisoAnticipacion, primerDiaPermitido } from './asistencia.estilos';
+import {
+  RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, detalleRecuperacion, errorDeRecuperacion, primerDiaPermitido
+} from './asistencia.estilos';
 
 /** Los mismos nombres y colores que ve la supervisora: una sola leyenda. */
 const ESTADOS: Record<EstadoAsistencia, { texto: string; clase: string }> = {
@@ -102,7 +103,7 @@ const ESTILOS = {
           </div>
           <button type="button" [class]="estilos.botonPrimario" (click)="abrirSolicitud()">
             <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-            Solicitar justificación
+            Registrar solicitud
           </button>
         </div>
       </div>
@@ -144,10 +145,10 @@ const ESTILOS = {
                   del {{ r.fechaOrigen | date: 'dd/MM' }}.
                   @if (r.diasRestantes < 0) {
                     El plazo venció el {{ r.fechaLimite | date: 'dd/MM' }}.
+                  } @else if (r.programada) {
+                    Hasta el {{ r.fechaLimite | date: 'dd/MM' }}. Recuperación: {{ r.programada }}.
                   } @else {
-                    Hasta el {{ r.fechaLimite | date: 'dd/MM' }}:
-                    unos {{ r.minutosPorSemana }} min más por semana durante
-                    {{ r.semanasRestantes }} {{ r.semanasRestantes === 1 ? 'semana' : 'semanas' }}.
+                    Hasta el {{ r.fechaLimite | date: 'dd/MM' }}. Registra una solicitud de recuperación con los días en que la devuelves.
                   }
                 </div>
               </div>
@@ -212,24 +213,6 @@ const ESTILOS = {
                 <p [class]="estilos.pie">{{ textoAbiertas() }}</p>
               </div>
             </div>
-
-            <!-- El horario de la semana que viene, cuando RR.HH. ya lo compartió -->
-            @if (proxima(); as p) {
-              <div [class]="estilos.tarjeta + ' mb-4'">
-                <h2 [class]="estilos.titulo + ' !mb-0'">Tu horario de la próxima semana</h2>
-                <p class="!mb-2.5 mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                  Semana del {{ corta(p.lunes) }} al {{ corta(p.sabado) }} · compartido por RR.HH.
-                </p>
-                <p class="!m-0 text-[13px]">
-                  <strong>{{ textoProxima() }}</strong>.
-                  @if (p.minutosExtra) {
-                    <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                      {{ p.minutosExtra }} min más al final del día · {{ p.motivo }}.
-                    </span>
-                  }
-                </p>
-              </div>
-            }
 
             <div class="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
 
@@ -301,6 +284,9 @@ const ESTILOS = {
                               @if (s.fechaHasta !== s.fechaDesde) { – {{ s.fechaHasta | date: 'dd/MM' }} }
                               · {{ s.dias }} {{ s.dias === 1 ? 'día' : 'días' }}
                             </span>
+                            @if (detalleRecuperacion(s); as d) {
+                              <span class="block text-[11.5px] text-[#92400e] dark:text-amber-300">{{ d }}</span>
+                            }
                           </div>
                           <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold"
                                 [class]="ESTADO_SOLICITUD[s.estado].clase">
@@ -350,7 +336,7 @@ const ESTILOS = {
         }
       </div>
 
-      <!-- Solicitar justificación -->
+      <!-- Registrar solicitud -->
       @if (formulario()) {
         <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarSolicitud()"></div>
         <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -358,7 +344,7 @@ const ESTILOS = {
                role="dialog" aria-modal="true" aria-labelledby="titulo-solicitud">
             <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
               <div>
-                <h2 id="titulo-solicitud" class="!m-0 text-[15px] font-extrabold">Solicitar justificación</h2>
+                <h2 id="titulo-solicitud" class="!m-0 text-[15px] font-extrabold">Registrar solicitud</h2>
                 <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                   La revisa tu supervisora y la aprueba RR.HH.
                 </p>
@@ -379,9 +365,17 @@ const ESTILOS = {
                 </select>
               </div>
 
+              @if (esRecuperacion()) {
+                <div class="flex flex-col gap-1.5">
+                  <label [class]="estilos.etiqueta" for="j-origen">Recupera lo del</label>
+                  <input id="j-origen" type="date" [class]="estilos.campo" [max]="hoy()"
+                         [(ngModel)]="nuevo.fechaOrigen">
+                </div>
+              }
+
               <div class="flex gap-3">
                 <div class="flex flex-1 flex-col gap-1.5">
-                  <label [class]="estilos.etiqueta" for="j-desde">Desde</label>
+                  <label [class]="estilos.etiqueta" for="j-desde">{{ esRecuperacion() ? 'Recupera desde' : 'Desde' }}</label>
                   <input id="j-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
                          [(ngModel)]="nuevo.fechaDesde">
                 </div>
@@ -390,10 +384,23 @@ const ESTILOS = {
                   <input id="j-hasta" type="date" [class]="estilos.campo" [(ngModel)]="nuevo.fechaHasta">
                 </div>
               </div>
-              <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                Sirve para días pasados y para días futuros.
-              </p>
 
+              @if (esRecuperacion()) {
+                <div class="flex flex-col gap-1.5">
+                  <label [class]="estilos.etiqueta" for="j-minutos">Minutos extra por día</label>
+                  <input id="j-minutos" type="number" min="5" max="60" step="5" [class]="estilos.campo"
+                         [(ngModel)]="nuevo.minutosExtra">
+                  <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                    Esos días sales más tarde. La tardanza igual cuenta para el límite.
+                  </p>
+                </div>
+              } @else {
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                  Sirve para días pasados y para días futuros.
+                </p>
+              }
+
+              @if (!esRecuperacion()) {
               <div class="flex flex-col gap-1.5">
                 <span [class]="estilos.etiqueta">Certificado</span>
                 <label class="zona-archivo" for="j-archivo">
@@ -407,6 +414,7 @@ const ESTILOS = {
                        accept="image/jpeg,image/png,image/webp,application/pdf"
                        (change)="elegirArchivo($event)">
               </div>
+              }
 
               <div class="flex flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="j-comentario">Comentario</label>
@@ -451,31 +459,6 @@ export class MiAsistenciaComponent implements OnInit {
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly recuperaciones = signal<Recuperacion[]>([]);
   readonly tipos = signal<TipoDia[]>([]);
-  /** El horario de la semana que viene; null hasta que RR.HH. lo comparte. */
-  readonly proxima = signal<MiProximaSemana | null>(null);
-
-  /**
-   * «Lunes de 08:00 a 19:00 y de martes a viernes de 08:00 a 19:00»: los días
-   * seguidos con el mismo horario se dicen juntos.
-   */
-  readonly textoProxima = computed(() => {
-    const dias = this.proxima()?.dias ?? [];
-    const tramos: { desde: string; hasta: string; entrada: string; salida: string }[] = [];
-    for (const d of dias) {
-      const ultimo = tramos[tramos.length - 1];
-      if (ultimo && ultimo.entrada === d.entrada && ultimo.salida === d.salida) {
-        ultimo.hasta = d.nombre;
-      } else {
-        tramos.push({ desde: d.nombre, hasta: d.nombre, entrada: d.entrada, salida: d.salida });
-      }
-    }
-    const frase = tramos.map((t, i) => {
-      const cuando = t.desde === t.hasta ? t.desde : `${t.desde} a ${t.hasta}`;
-      return `${i === 0 ? cuando : 'de ' + cuando.toLowerCase()} de ${t.entrada.slice(0, 5)} a ${t.salida.slice(0, 5)}`;
-    });
-    return frase.length > 1 ? `${frase.slice(0, -1).join(', ')} y ${frase[frase.length - 1]}` : frase[0] ?? '';
-  });
-
   readonly pagina = signal(0);
 
   readonly formulario = signal(false);
@@ -490,8 +473,12 @@ export class MiAsistenciaComponent implements OnInit {
     idTipoDia: null as number | null,
     fechaDesde: this.hoy(),
     fechaHasta: this.hoy(),
-    comentario: ''
+    comentario: '',
+    fechaOrigen: this.hoy(),
+    minutosExtra: null as number | null
   };
+
+  protected readonly detalleRecuperacion = detalleRecuperacion;
 
   /** El nombre que ya trae la sesión: no hace falta pedirlo otra vez. */
   readonly nombre = computed(() => {
@@ -535,6 +522,10 @@ export class MiAsistenciaComponent implements OnInit {
 
   primerDia(): string | null {
     return primerDiaPermitido(this.tipoElegido());
+  }
+
+  esRecuperacion(): boolean {
+    return this.tipoElegido()?.codigo === RECUPERACION;
   }
 
   readonly rangoTexto = computed(() => {
@@ -584,10 +575,6 @@ export class MiAsistenciaComponent implements OnInit {
     this.cargar();
     this.cargarSolicitudes();
     this.cargarRecuperaciones();
-    this.servicio.miProximaSemana().subscribe({
-      next: p => this.proxima.set(p),
-      error: () => this.proxima.set(null)
-    });
 
   }
 
@@ -642,7 +629,9 @@ export class MiAsistenciaComponent implements OnInit {
       idTipoDia: this.tipos()[0]?.id ?? null,
       fechaDesde: this.hoy(),
       fechaHasta: this.hoy(),
-      comentario: ''
+      comentario: '',
+      fechaOrigen: this.hoy(),
+      minutosExtra: null
     };
   }
 
@@ -675,6 +664,12 @@ export class MiAsistenciaComponent implements OnInit {
       this.error.set(avisoAnticipacion(this.tipoElegido()!));
       return;
     }
+    const recupera = this.esRecuperacion();
+    const errorRecuperacion = recupera ? errorDeRecuperacion(this.nuevo) : null;
+    if (errorRecuperacion) {
+      this.error.set(errorRecuperacion);
+      return;
+    }
     if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {
       this.error.set(`${this.tipoElegido()!.nombre} necesita certificado adjunto`);
       return;
@@ -686,7 +681,9 @@ export class MiAsistenciaComponent implements OnInit {
       fechaDesde: this.nuevo.fechaDesde,
       fechaHasta: this.nuevo.fechaHasta,
       comentario: this.nuevo.comentario,
-      archivo: this.archivo()
+      archivo: recupera ? null : this.archivo(),
+      minutosExtra: recupera ? Number(this.nuevo.minutosExtra) : null,
+      fechaOrigen: recupera ? this.nuevo.fechaOrigen : null
     }).subscribe({
       next: () => {
         this.enviando.set(false);
@@ -765,7 +762,7 @@ export class MiAsistenciaComponent implements OnInit {
     return `${dia}/${mes}`;
   }
 
-  private hoy(): string {
+  protected hoy(): string {
     return new Date().toISOString().slice(0, 10);
   }
 

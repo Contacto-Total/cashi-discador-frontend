@@ -6,7 +6,8 @@ import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { Justificacion, ResumenAgente, TipoDia } from './asistencia.models';
 import {
-  ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, TIPOS_DE_CALENDARIO, avisoAnticipacion, hoy, primerDiaPermitido
+  ESTADO_SOLICITUD, ESTILOS, FILA_SOLICITUD, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion,
+  detalleRecuperacion, errorDeRecuperacion, hoy, primerDiaPermitido
 } from './asistencia.estilos';
 
 /**
@@ -42,7 +43,7 @@ import {
         </div>
         <button type="button" [class]="estilos.botonPrimario" (click)="abrirAlta()">
           <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-          Registrar justificación
+          Registrar solicitud
         </button>
       </div>
 
@@ -108,6 +109,9 @@ import {
                   </td>
                   <td [class]="estilos.td">
                     {{ j.tipo }}
+                    @if (detalleRecuperacion(j); as d) {
+                      <span class="block text-[11px] text-[#92400e] dark:text-amber-300">{{ d }}</span>
+                    }
                     @if (j.recuperable) {
                       <span class="ml-1.5 rounded-full bg-[#f1f3f6] px-1.5 py-0.5 text-[10.5px] font-bold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">
                         se recupera
@@ -180,7 +184,7 @@ import {
              role="dialog" aria-modal="true" aria-labelledby="titulo-alta-just">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-alta-just" class="!m-0 text-[15px] font-extrabold">Registrar justificación</h2>
+              <h2 id="titulo-alta-just" class="!m-0 text-[15px] font-extrabold">Registrar solicitud</h2>
               <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                 La registra la supervisora; RR.HH. la recibe para aprobar
               </p>
@@ -213,9 +217,17 @@ import {
               </select>
             </div>
 
+            @if (esRecuperacion()) {
+              <div class="flex flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="f-origen">Recupera lo del</label>
+                <input id="f-origen" type="date" [class]="estilos.campo" [max]="hoyTexto"
+                       [(ngModel)]="nueva.fechaOrigen">
+              </div>
+            }
+
             <div class="flex gap-3">
               <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="f-desde">Desde</label>
+                <label [class]="estilos.etiqueta" for="f-desde">{{ esRecuperacion() ? 'Recupera desde' : 'Desde' }}</label>
                 <input id="f-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
                        [(ngModel)]="nueva.fechaDesde">
               </div>
@@ -225,6 +237,16 @@ import {
               </div>
             </div>
 
+            @if (esRecuperacion()) {
+              <div class="flex flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="f-minutos">Minutos extra por día</label>
+                <input id="f-minutos" type="number" min="5" max="60" step="5" [class]="estilos.campo"
+                       [(ngModel)]="nueva.minutosExtra">
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                  Esos días sale más tarde. La tardanza igual cuenta para el límite.
+                </p>
+              </div>
+            } @else {
             <div class="flex flex-col gap-1.5">
               <span [class]="estilos.etiqueta">Certificado</span>
               <label class="flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border border-dashed border-[#8491a3] p-[18px] text-center hover:bg-[#f4f6f9] dark:border-slate-600 dark:hover:bg-slate-800"
@@ -239,6 +261,7 @@ import {
                      accept="image/jpeg,image/png,image/webp,application/pdf"
                      (change)="elegirArchivo($event)">
             </div>
+            }
 
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="f-comentario">Comentario</label>
@@ -278,6 +301,9 @@ import {
                 @if (j.fechaHasta !== j.fechaDesde) { al {{ j.fechaHasta | date: 'dd/MM/yyyy' }} }
                 · {{ j.dias }} {{ j.dias === 1 ? 'día' : 'días' }}
               </p>
+              @if (detalleRecuperacion(j); as d) {
+                <p class="mt-[3px] text-[12.5px] font-semibold text-[#92400e] dark:text-amber-300">{{ d }}</p>
+              }
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrar()" aria-label="Cerrar">
               <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
@@ -452,8 +478,12 @@ export class AsistenciaJustificacionesComponent {
     idTipoDia: null as number | null,
     fechaDesde: hoy(),
     fechaHasta: hoy(),
-    comentario: ''
+    comentario: '',
+    fechaOrigen: hoy(),
+    minutosExtra: null as number | null
   };
+  protected readonly hoyTexto = hoy();
+  protected readonly detalleRecuperacion = detalleRecuperacion;
 
   /** Método y no computed: `nueva` es un objeto del formulario, no una signal, y el computed no se enteraba del cambio. */
   tipoElegido(): TipoDia | null {
@@ -462,6 +492,10 @@ export class AsistenciaJustificacionesComponent {
 
   primerDia(): string | null {
     return primerDiaPermitido(this.tipoElegido());
+  }
+
+  esRecuperacion(): boolean {
+    return this.tipoElegido()?.codigo === RECUPERACION;
   }
 
   readonly abierta = signal<Justificacion | null>(null);
@@ -514,7 +548,9 @@ export class AsistenciaJustificacionesComponent {
       idTipoDia: this.catalogo()[0]?.id ?? null,
       fechaDesde: hoy(),
       fechaHasta: hoy(),
-      comentario: ''
+      comentario: '',
+      fechaOrigen: hoy(),
+      minutosExtra: null
     };
   }
 
@@ -546,6 +582,12 @@ export class AsistenciaJustificacionesComponent {
       this.error.set(avisoAnticipacion(this.tipoElegido()!));
       return;
     }
+    const recupera = this.esRecuperacion();
+    const errorRecuperacion = recupera ? errorDeRecuperacion(this.nueva) : null;
+    if (errorRecuperacion) {
+      this.error.set(errorRecuperacion);
+      return;
+    }
     if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {
       this.error.set(`${this.tipoElegido()!.nombre} necesita certificado adjunto`);
       return;
@@ -558,12 +600,14 @@ export class AsistenciaJustificacionesComponent {
       fechaHasta: this.nueva.fechaHasta,
       comentario: this.nueva.comentario,
       idUsuario: this.nueva.idUsuario,
-      archivo: this.archivo()
+      archivo: recupera ? null : this.archivo(),
+      minutosExtra: recupera ? Number(this.nueva.minutosExtra) : null,
+      fechaOrigen: recupera ? this.nueva.fechaOrigen : null
     }).subscribe({
       next: () => {
         this.guardando.set(false);
         this.cerrarAlta();
-        this.toast.success('Justificación registrada');
+        this.toast.success('Solicitud registrada');
         this.cargarRango(this.desde(), this.hasta());
       },
       error: respuesta => {

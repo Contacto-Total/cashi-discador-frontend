@@ -140,28 +140,39 @@ export function textoLimite(s: { superoToleranciaDiaria: boolean; superoToleranc
   return s.superoToleranciaSemanal ? 'Límite semanal excedido' : 'Dentro del límite';
 }
 
-const NOMBRES_DIA = ['', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+/**
+ * La solicitud de recuperar horas: qué día recupera, en qué días y con cuántos
+ * minutos de más a la salida. No justifica: la tardanza sigue contando.
+ */
+export const RECUPERACION = 'RECUPERACION';
 
-/** Las opciones de días con que se devuelven horas. Martes a viernes es lo acordado. */
-export const DIAS_DE_RECUPERACION = [
-  { texto: 'Martes a viernes', dias: [2, 3, 4, 5] },
-  { texto: 'Lunes a viernes', dias: [1, 2, 3, 4, 5] },
-  { texto: 'Solo martes y jueves', dias: [2, 4] }
-];
+/** Hasta una hora extra al día; más deja de ser una recuperación razonable. */
+export const TOPE_RECUPERACION = 60;
 
-/** «Martes a viernes», «Martes y jueves»: los días como se dicen. */
-export function textoDias(dias: number[]): string {
-  const orden = [...dias].sort((a, b) => a - b);
-  if (!orden.length) {
-    return '';
+/** Lo que falla en una recuperación, con el mismo texto que el backend; null si está bien. */
+export function errorDeRecuperacion(n: { fechaOrigen: string; fechaDesde: string; minutosExtra: number | null }): string | null {
+  const minutos = Number(n.minutosExtra);
+  if (!Number.isFinite(minutos) || minutos <= 0 || minutos > TOPE_RECUPERACION) {
+    return `Los minutos extra van de 1 a ${TOPE_RECUPERACION} por día`;
   }
-  const seguidos = orden.every((d, i) => i === 0 || d === orden[i - 1] + 1);
-  const nombre = (d: number) => NOMBRES_DIA[d] ?? '';
-  const frase = orden.length > 2 && seguidos
-    ? `${nombre(orden[0])} a ${nombre(orden[orden.length - 1])}`
-    : orden.length === 1 ? nombre(orden[0])
-    : `${orden.slice(0, -1).map(nombre).join(', ')} y ${nombre(orden[orden.length - 1])}`;
-  return frase.charAt(0).toUpperCase() + frase.slice(1);
+  if (!n.fechaOrigen) {
+    return 'Elige el día que recupera';
+  }
+  if (n.fechaOrigen > n.fechaDesde) {
+    return 'Se recupera el mismo día o después, no antes';
+  }
+  if (n.fechaOrigen > hoy()) {
+    return 'El día que se recupera no puede ser futuro';
+  }
+  return null;
+}
+
+/** «Sale 20 min más tarde · recupera lo del 23/09», para las listas de solicitudes. */
+export function detalleRecuperacion(j: { minutosExtra: number | null; fechaOrigen: string | null }): string | null {
+  if (!j.minutosExtra || !j.fechaOrigen) {
+    return null;
+  }
+  return `Sale ${j.minutosExtra} min más tarde · recupera lo del ${j.fechaOrigen.slice(8, 10)}/${j.fechaOrigen.slice(5, 7)}`;
 }
 
 export function hoy(): string {

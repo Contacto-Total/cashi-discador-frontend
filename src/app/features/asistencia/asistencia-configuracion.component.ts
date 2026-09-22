@@ -293,7 +293,7 @@ function enHoras(minutos: number): string {
 
         <!-- El horario de la semana, con el turno dibujado sobre el eje de horas -->
         <div class="fila-seccion">
-          <h2 class="titulo-seccion !m-0">Horario vigente</h2>
+          <h2 class="titulo-seccion !m-0">Horario fijo</h2>
           <div class="flex flex-wrap items-center gap-2.5">
             <div class="leyenda-cal">
               @for (l of LEYENDA_RELOJ; track l.texto) {
