@@ -11,6 +11,7 @@ import {
   DashboardAsistencia,
   DiaCalendario,
   ImportacionFeriados,
+  PerfilAsistencia,
   EquipoAutorizado,
   Horario,
   Justificacion,
@@ -98,6 +99,11 @@ export class AsistenciaService {
    * Lo que hay que decirle ahora sobre su jornada. Se consulta y no se empuja:
    * montar un canal solo para esto sería una pieza más que mantener.
    */
+  /** Si es RR.HH., si supervisa y qué subcarteras ve. */
+  perfil(): Observable<PerfilAsistencia> {
+    return this.http.get<PerfilAsistencia>(`${this.url}/perfil`);
+  }
+
   misAvisos(): Observable<AvisoAsistencia[]> {
     return this.http.get<AvisoAsistencia[]>(`${this.url}/marcaciones/avisos`);
   }

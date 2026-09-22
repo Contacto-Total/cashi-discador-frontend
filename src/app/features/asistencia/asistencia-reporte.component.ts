@@ -11,7 +11,7 @@ import {
   SemanaAgente,
   TipoMarcacion
 } from './asistencia.models';
-import { ESTADOS, ESTILOS } from './asistencia.estilos';
+import { ESTADOS, ESTILOS, textoLimite } from './asistencia.estilos';
 
 /** Las seis marcas, en el orden en que ocurren: el break va después del almuerzo. */
 const MARCAS: { tipo: TipoMarcacion; etiqueta: string; campo: keyof AsistenciaDia }[] = [
@@ -301,11 +301,10 @@ const COLOR_DIA: Record<string, string> = {
                       </td>
                       <td [class]="estilos.td" colspan="2">
                         <span class="inline-flex items-center gap-1.5 text-[11.5px] font-bold"
-                              [class]="s.pierdeBono ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#166534] dark:text-green-300'"
-                              [title]="motivoDelBono(s)">
+                              [class]="s.pierdeBono ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#166534] dark:text-green-300'">
                           <span class="h-2 w-2 rounded-full"
                                 [class]="s.pierdeBono ? 'bg-[#dc2626]' : 'bg-[#16a34a]'"></span>
-                          {{ s.pierdeBono ? 'Pierde el bono' : 'Mantiene el bono' }}
+                          {{ textoLimite(s) }}
                         </span>
                       </td>
                     </tr>
@@ -650,15 +649,8 @@ export class AsistenciaReporteComponent {
     return (dia[campo] as string | null) ?? '';
   }
 
-  motivoDelBono(s: SemanaAgente): string {
-    const motivos: string[] = [];
-    if (s.superoToleranciaDiaria) {
-      motivos.push('pasó el tope de un día');
-    }
-    if (s.superoToleranciaSemanal) {
-      motivos.push('pasó el tope de la semana');
-    }
-    return motivos.join(' y ');
+  textoLimite(s: SemanaAgente): string {
+    return textoLimite(s);
   }
 
   /** La duración sin unidad: «43 h 57», «38». Una duración no es una hora de reloj. */

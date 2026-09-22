@@ -32,7 +32,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
         <div>
           <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Cierre semanal</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Abre el lunes y cierra el viernes a mediodía
+            Se cierra el lunes siguiente; hasta entonces entran justificaciones y correcciones
           </p>
         </div>
         <!-- La semana es la del rango de arriba, como en el resto del módulo. -->
@@ -91,7 +91,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
             <span [class]="estilos.icono">
               <lucide-angular name="bell" [size]="15" class="block"></lucide-angular>
             </span>
-            <h3 [class]="estilos.rotulo">Pierden bono</h3>
+            <h3 [class]="estilos.rotulo">Límite excedido</h3>
           </div>
           <div [class]="estilos.cifra">
             {{ pierdenBono() }}<small [class]="estilos.unidad">de {{ personas() }}</small>
@@ -120,7 +120,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                 <th scope="col" [class]="estilos.th">Cerró</th>
                 <th scope="col" [class]="estilos.th">Cuándo</th>
                 <th scope="col" [class]="estilos.th">Personas</th>
-                <th scope="col" [class]="estilos.th">Sin bono</th>
+                <th scope="col" [class]="estilos.th">Límite excedido</th>
                 <th scope="col" [class]="estilos.th">Ajustes posteriores</th>
                 <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
               </tr>
@@ -311,7 +311,7 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                   <th scope="col" [class]="estilos.th">Días</th>
                   <th scope="col" [class]="estilos.th">Tardanza</th>
                   <th scope="col" [class]="estilos.th">Trabajadas</th>
-                  <th scope="col" [class]="estilos.th">Bono</th>
+                  <th scope="col" [class]="estilos.th">Límite de tardanza</th>
                   <th scope="col" [class]="estilos.th">Ajuste posterior</th>
                 </tr>
               </thead>
@@ -332,11 +332,10 @@ import { ESTILOS, duracionCorta, hoy, lunesDe, sumarDias, unidadDe } from './asi
                     </td>
                     <td [class]="estilos.td">
                       <span class="inline-flex items-center gap-1.5 text-[11.5px] font-bold"
-                            [class]="a.pierdeBono ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#166534] dark:text-green-300'"
-                            [title]="a.motivoBono ?? ''">
+                            [class]="a.pierdeBono ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#166534] dark:text-green-300'">
                         <span class="h-2 w-2 rounded-full"
                               [class]="a.pierdeBono ? 'bg-[#dc2626]' : 'bg-[#16a34a]'"></span>
-                        {{ a.pierdeBono ? 'Lo pierde' : 'Lo mantiene' }}
+                        {{ a.pierdeBono ? (a.motivoBono ?? 'Excedido') : 'Dentro del límite' }}
                       </span>
                     </td>
                     <td [class]="estilos.td">
@@ -425,7 +424,8 @@ export class AsistenciaCierreComponent {
     this.cierres().find(c => c.lunes === this.lunes()
       && (c.idSubcartera ?? null) === (this.idSubcartera() ?? null)) ?? null);
 
-  private readonly terminada = computed(() => hoy() > this.sabado());
+  /** Se cierra desde el lunes siguiente: el fin de semana la semana que terminó todavía recibe cambios. */
+  private readonly terminada = computed(() => hoy() >= sumarDias(this.lunes(), 7));
 
   /** El título y el pie de la primera tarjeta, según en qué punto está la semana. */
   readonly estadoSemana = computed(() => {
@@ -435,7 +435,7 @@ export class AsistenciaCierreComponent {
       return { titulo: 'Semana cerrada', pie: `Cerró ${cierre.cerradoPor ?? 'RR.HH.'}${cuando}` };
     }
     return this.terminada()
-      ? { titulo: 'Semana por cerrar', pie: 'Terminó el sábado; falta cerrarla' }
+      ? { titulo: 'Semana por cerrar', pie: 'Ya se puede cerrar' }
       : { titulo: 'Semana en curso', pie: 'Abierta desde el lunes' };
   });
 
@@ -445,11 +445,11 @@ export class AsistenciaCierreComponent {
       return 'Esta semana ya está cerrada';
     }
     if (!this.terminada()) {
-      return 'La semana todavía no ha terminado';
+      return 'Esta semana se cierra desde el lunes siguiente';
     }
     // Con algo pendiente no se cierra: la semana quedaría con datos a medias.
     if (this.incompletos() || this.sinResolver()) {
-      return 'Faltan días por completar o justificaciones por resolver';
+      return 'Faltan marcas por completar o justificaciones por resolver';
     }
     return null;
   });
@@ -471,7 +471,7 @@ export class AsistenciaCierreComponent {
       }
       this.servicio.dashboard(lunes, sabado, ambito).subscribe({
         next: d => {
-          this.incompletos.set(d.diasIncompletos);
+          this.incompletos.set(d.diasPorCompletar);
           this.pierdenBono.set(d.pierdenBono);
           this.personas.set(d.personas);
           this.gente.set(new Set(d.agentes.map(a => a.idUsuario)));

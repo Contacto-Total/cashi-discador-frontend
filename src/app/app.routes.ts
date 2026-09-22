@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { rrhhGuard } from './features/asistencia/asistencia.guards';
 import { adminGuard } from './core/guards/admin.guard';
 import { adminOrSupervisorGuard } from './core/guards/admin-or-supervisor.guard';
 import { gestionPendienteGuard } from './core/guards/gestion-pendiente.guard';
@@ -524,8 +525,17 @@ export const routes: Routes = [
   {
     path: 'asistencia',
     loadComponent: () => import('./features/asistencia/control-asistencia.component').then(m => m.ControlAsistenciaComponent),
-    // sin adminGuard: la supervisora revisa la asistencia de su cartera.
-    // AsistenciaController admite ADMIN y SUPERVISOR y acota por subcartera.
+    // De RR.HH.: corregir, aprobar, cerrar y configurar. RR.HH. es configuración
+    // (asistencia_rrhh) y no rol, por eso no basta un roleGuard; la supervisora
+    // que llega por la URL va a la vista de su equipo.
+    canActivate: [authGuard, rrhhGuard]
+  },
+
+  {
+    path: 'asistencia-equipo',
+    loadComponent: () => import('./features/asistencia/asistencia-equipo.component').then(m => m.AsistenciaEquipoComponent),
+    // La vista de la supervisora: alertas de su equipo y justificaciones por
+    // revisar. El reporte que la alimenta ya acota por subcartera.
     canActivate: [authGuard]
   },
 

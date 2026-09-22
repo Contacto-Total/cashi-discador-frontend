@@ -126,6 +126,20 @@ export function avisoAnticipacion(tipo: { nombre: string; diasAnticipacion: numb
   return `${tipo.nombre} se registra con ${dias === 1 ? 'un día' : dias + ' días'} de anticipación`;
 }
 
+/**
+ * Qué límite de tardanza pasó la semana. El módulo es de asistencia: no habla
+ * de bonos, dice qué límite se excedió y el resto lo decide RR.HH.
+ */
+export function textoLimite(s: { superoToleranciaDiaria: boolean; superoToleranciaSemanal: boolean }): string {
+  if (s.superoToleranciaDiaria && s.superoToleranciaSemanal) {
+    return 'Límite diario y semanal excedidos';
+  }
+  if (s.superoToleranciaDiaria) {
+    return 'Límite diario excedido';
+  }
+  return s.superoToleranciaSemanal ? 'Límite semanal excedido' : 'Dentro del límite';
+}
+
 export function hoy(): string {
   return fechaTexto(new Date());
 }

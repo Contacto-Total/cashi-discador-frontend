@@ -30,6 +30,7 @@ import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 import { WhatsAppNotificationPopupComponent } from './features/whatsapp/components/notification-popup/whatsapp-notification-popup.component';
+import { AvisosAsistenciaComponent } from './features/asistencia/avisos-asistencia.component';
 
 @Component({
   selector: 'app-root',
@@ -45,7 +46,8 @@ import { WhatsAppNotificationPopupComponent } from './features/whatsapp/componen
     SupervisionPanelComponent,
     PeripheralStatusBannerComponent,
     ToastNotificationComponent,
-    WhatsAppNotificationPopupComponent
+    WhatsAppNotificationPopupComponent,
+    AvisosAsistenciaComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],

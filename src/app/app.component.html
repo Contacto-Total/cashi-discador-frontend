@@ -208,6 +208,8 @@
 </div>
 
 <app-whatsapp-notification-popup *ngIf="!isLoginPage() && authService.isAuthenticated()"></app-whatsapp-notification-popup>
+<!-- Los avisos de la jornada del asesor, en cualquier pantalla -->
+<app-avisos-asistencia *ngIf="!isLoginPage()"></app-avisos-asistencia>
 
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">
   <router-outlet></router-outlet>
