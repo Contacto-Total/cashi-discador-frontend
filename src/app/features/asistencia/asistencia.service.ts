@@ -12,8 +12,7 @@ import {
   DiaCalendario,
   ImportacionFeriados,
   PerfilAsistencia,
-  ProximaSemana,
-  MiProximaSemana,
+  HorarioDeSemana,
   EquipoAutorizado,
   Horario,
   Justificacion,
@@ -97,27 +96,9 @@ export class AsistenciaService {
     return this.http.post<Horario>(`${this.url}/horarios`, horario);
   }
 
-  /**
-   * Lo que hay que decirle ahora sobre su jornada. Se consulta y no se empuja:
-   * montar un canal solo para esto sería una pieza más que mantener.
-   */
-  /** El horario de la semana que viene de una subcartera, con las excepciones de quien recupera. */
-  proximaSemana(idSubcartera: number): Observable<ProximaSemana> {
-    return this.http.get<ProximaSemana>(`${this.url}/proxima-semana`, { params: { idSubcartera } });
-  }
-
-  /** Guarda cuánto sale más tarde una persona la semana que viene. 0 minutos la quita. */
-  ajustarRecuperacion(idRecuperacion: number, dias: number[], minutosExtra: number): Observable<void> {
-    return this.http.post<void>(`${this.url}/proxima-semana/ajustar`, { idRecuperacion, dias, minutosExtra });
-  }
-
-  compartirSemana(idSubcartera: number): Observable<void> {
-    return this.http.post<void>(`${this.url}/proxima-semana/compartir`, { idSubcartera });
-  }
-
-  /** El del asesor; null si RR.HH. todavía no la compartió. */
-  miProximaSemana(): Observable<MiProximaSemana | null> {
-    return this.http.get<MiProximaSemana | null>(`${this.url}/proxima-semana/mia`);
+  /** El horario de una semana: el fijo con lo que cambian las solicitudes. Solo lectura. */
+  horarioSemana(idSubcartera: number, lunes: string): Observable<HorarioDeSemana> {
+    return this.http.get<HorarioDeSemana>(`${this.url}/horario-semana`, { params: { idSubcartera, lunes } });
   }
 
   /** Si es RR.HH., si supervisa y qué subcarteras ve. */
@@ -125,6 +106,10 @@ export class AsistenciaService {
     return this.http.get<PerfilAsistencia>(`${this.url}/perfil`);
   }
 
+  /**
+   * Lo que hay que decirle ahora sobre su jornada. Se consulta y no se empuja:
+   * montar un canal solo para esto sería una pieza más que mantener.
+   */
   misAvisos(): Observable<AvisoAsistencia[]> {
     return this.http.get<AvisoAsistencia[]>(`${this.url}/marcaciones/avisos`);
   }
@@ -255,6 +240,8 @@ export class AsistenciaService {
     comentario?: string;
     idUsuario?: number | null;
     archivo?: File | null;
+    minutosExtra?: number | null;
+    fechaOrigen?: string | null;
   }): Observable<{ id: number }> {
     const cuerpo = new FormData();
     cuerpo.append('idTipoDia', String(datos.idTipoDia));
@@ -268,6 +255,12 @@ export class AsistenciaService {
     }
     if (datos.archivo) {
       cuerpo.append('archivo', datos.archivo);
+    }
+    if (datos.minutosExtra) {
+      cuerpo.append('minutosExtra', String(datos.minutosExtra));
+    }
+    if (datos.fechaOrigen) {
+      cuerpo.append('fechaOrigen', datos.fechaOrigen);
     }
     return this.http.post<{ id: number }>(`${this.url}/justificaciones`, cuerpo);
   }

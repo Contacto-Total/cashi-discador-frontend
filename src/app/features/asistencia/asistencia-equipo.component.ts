@@ -10,7 +10,8 @@ import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.mode
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte, Justificacion, PerfilAsistencia, TipoDia } from './asistencia.models';
 import {
-  ESTILOS, TIPOS_DE_CALENDARIO, avisoAnticipacion, fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
+  ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, detalleRecuperacion, errorDeRecuperacion,
+  fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
 } from './asistencia.estilos';
 
 type TipoAlerta = 'MARCA' | 'PAUSA' | 'TARDANZA';
@@ -71,7 +72,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
         </div>
         <button type="button" [class]="estilos.botonPrimario" (click)="abrirRegistro()" [disabled]="!gente().length">
           <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-          Registrar justificación
+          Registrar solicitud
         </button>
       </div>
 
@@ -222,12 +223,12 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             </div>
           </section>
 
-          <!-- Justificaciones por revisar -->
+          <!-- Solicitudes por revisar -->
           <section class="mt-6" aria-labelledby="titulo-just">
             <div class="mb-3">
-              <h2 id="titulo-just" [class]="estilos.titulo + ' !mb-0'">Justificaciones por revisar</h2>
+              <h2 id="titulo-just" [class]="estilos.titulo + ' !mb-0'">Solicitudes por revisar</h2>
               <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                Confirma que la ausencia ocurrió; la aprobación es de RR.HH.
+                Confirma lo que pasó; la aprobación es de RR.HH.
               </p>
             </div>
             <div [class]="estilos.panel">
@@ -248,7 +249,12 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                     <tr>
                       <td [class]="estilos.td + ' secundario'">{{ j.solicitadaEn | date: 'dd/MM HH:mm' }}</td>
                       <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold'">{{ j.nombreAgente }}</td>
-                      <td [class]="estilos.td">{{ j.tipo }}</td>
+                      <td [class]="estilos.td">
+                        {{ j.tipo }}
+                        @if (detalleRecuperacion(j); as d) {
+                          <span class="block text-[11px] text-[#92400e] dark:text-amber-300">{{ d }}</span>
+                        }
+                      </td>
                       <td [class]="estilos.td">{{ diasDe(j) }}</td>
                       <td [class]="estilos.td">
                         @if (j.tieneArchivo) {
@@ -289,7 +295,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
              role="dialog" aria-modal="true" aria-labelledby="titulo-revisar">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-revisar" class="!m-0 text-[15px] font-extrabold">Revisar justificación</h2>
+              <h2 id="titulo-revisar" class="!m-0 text-[15px] font-extrabold">Revisar solicitud</h2>
               <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                 {{ j.nombreAgente }} · solicitada el {{ j.solicitadaEn | date: 'dd/MM HH:mm' }}
               </p>
@@ -303,6 +309,9 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             <dl class="ficha">
               <dt>Tipo</dt><dd>{{ j.tipo }}</dd>
               <dt>Días</dt><dd>{{ diasDe(j) }}</dd>
+              @if (detalleRecuperacion(j); as d) {
+                <dt>Recuperación</dt><dd>{{ d }}</dd>
+              }
               <dt>Comentario</dt><dd>{{ j.comentario || '—' }}</dd>
               <dt>Adjunto</dt>
               <dd>
@@ -342,7 +351,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
       </div>
     }
 
-    <!-- Registrar justificación -->
+    <!-- Registrar solicitud -->
     @if (registrando()) {
       <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="registrando.set(false)"></div>
       <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -350,7 +359,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
              role="dialog" aria-modal="true" aria-labelledby="titulo-registrar">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-registrar" class="!m-0 text-[15px] font-extrabold">Registrar justificación</h2>
+              <h2 id="titulo-registrar" class="!m-0 text-[15px] font-extrabold">Registrar solicitud</h2>
               <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                 Para un asesor que no puede registrarla él mismo
               </p>
@@ -377,9 +386,16 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 }
               </select>
             </div>
+            @if (esRecuperacion()) {
+              <div class="flex flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="eq-origen">Recupera lo del</label>
+                <input id="eq-origen" type="date" [class]="estilos.campo" [max]="hoyTexto"
+                       [(ngModel)]="nueva.fechaOrigen">
+              </div>
+            }
             <div class="flex gap-3">
               <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-desde">Desde</label>
+                <label [class]="estilos.etiqueta" for="eq-desde">{{ esRecuperacion() ? 'Recupera desde' : 'Desde' }}</label>
                 <input id="eq-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
                        [(ngModel)]="nueva.fechaDesde">
               </div>
@@ -389,11 +405,22 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                        [(ngModel)]="nueva.fechaHasta">
               </div>
             </div>
+            @if (esRecuperacion()) {
+              <div class="flex flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="eq-minutos">Minutos extra por día</label>
+                <input id="eq-minutos" type="number" min="5" max="60" step="5" [class]="estilos.campo"
+                       [(ngModel)]="nueva.minutosExtra">
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                  Esos días sale más tarde. La tardanza igual cuenta para el límite.
+                </p>
+              </div>
+            }
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-comentario">Comentario</label>
               <textarea id="eq-comentario" rows="3" [class]="estilos.area" placeholder="Qué pasó, en una línea"
                         [(ngModel)]="nueva.comentario"></textarea>
             </div>
+            @if (!esRecuperacion()) {
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-adjunto">Certificado o constancia</label>
               <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="text-[12.5px]"
@@ -402,6 +429,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 {{ tipoElegido()?.exigeCertificado ? 'Obligatorio para este tipo' : 'Opcional' }} · hasta 10 MB
               </p>
             </div>
+            }
             @if (error()) {
               <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
             }
@@ -453,7 +481,10 @@ export class AsistenciaEquipoComponent implements OnInit {
   readonly error = signal('');
   private archivo: File | null = null;
   nueva = { idUsuario: null as number | null, idTipoDia: null as number | null,
-            fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
+            fechaDesde: hoy(), fechaHasta: hoy(), comentario: '',
+            fechaOrigen: hoy(), minutosExtra: null as number | null };
+  protected readonly hoyTexto = hoy();
+  protected readonly detalleRecuperacion = detalleRecuperacion;
 
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
@@ -572,7 +603,7 @@ export class AsistenciaEquipoComponent implements OnInit {
         pie: 'Break o almuerzo sin marcar' },
       { titulo: 'Excesos de pausa', icono: 'coffee', cifra: cuenta('PAUSA'), de: null,
         pie: 'Break o almuerzo más largo de lo permitido' },
-      { titulo: 'Justificaciones por revisar', icono: 'file-text', cifra: this.porRevisar().length, de: null,
+      { titulo: 'Solicitudes por revisar', icono: 'file-text', cifra: this.porRevisar().length, de: null,
         pie: 'Esperan tu revisión para pasar a RR.HH.' }
     ];
   });
@@ -765,9 +796,14 @@ export class AsistenciaEquipoComponent implements OnInit {
     return primerDiaPermitido(this.tipoElegido());
   }
 
+  esRecuperacion(): boolean {
+    return this.tipoElegido()?.codigo === RECUPERACION;
+  }
+
   abrirRegistro(): void {
     this.nueva = { idUsuario: this.gente()[0]?.idUsuario ?? null, idTipoDia: this.tipos()[0]?.id ?? null,
-                   fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
+                   fechaDesde: hoy(), fechaHasta: hoy(), comentario: '',
+                   fechaOrigen: hoy(), minutosExtra: null };
     this.archivo = null;
     this.error.set('');
     this.registrando.set(true);
@@ -792,6 +828,12 @@ export class AsistenciaEquipoComponent implements OnInit {
       this.error.set(avisoAnticipacion(tipo));
       return;
     }
+    const recupera = tipo.codigo === RECUPERACION;
+    const errorRecuperacion = recupera ? errorDeRecuperacion(this.nueva) : null;
+    if (errorRecuperacion) {
+      this.error.set(errorRecuperacion);
+      return;
+    }
     if (tipo.exigeCertificado && !this.archivo) {
       this.error.set(`${tipo.nombre} necesita certificado adjunto`);
       return;
@@ -805,7 +847,9 @@ export class AsistenciaEquipoComponent implements OnInit {
       fechaDesde: this.nueva.fechaDesde,
       fechaHasta: this.nueva.fechaHasta,
       comentario: this.nueva.comentario.trim() || undefined,
-      archivo: this.archivo
+      archivo: recupera ? null : this.archivo,
+      minutosExtra: recupera ? Number(this.nueva.minutosExtra) : null,
+      fechaOrigen: recupera ? this.nueva.fechaOrigen : null
     }).subscribe({
       next: () => {
         this.guardando.set(false);
@@ -814,7 +858,7 @@ export class AsistenciaEquipoComponent implements OnInit {
       },
       error: respuesta => {
         this.guardando.set(false);
-        this.error.set(respuesta?.error?.error ?? 'No se pudo registrar la justificación');
+        this.error.set(respuesta?.error?.error ?? 'No se pudo registrar la solicitud');
       }
     });
   }

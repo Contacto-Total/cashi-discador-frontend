@@ -203,7 +203,8 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
               (sinResolverCambia)="sinResolver.set($event)" />
           }
           @case ('cierre') {
-            <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" />
+            <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
+              (modificarHorario)="pantalla.set('configuracion')" />
           }
           @case ('auditoria') {
             <app-asistencia-auditoria [desde]="desde()" [hasta]="hasta()" />

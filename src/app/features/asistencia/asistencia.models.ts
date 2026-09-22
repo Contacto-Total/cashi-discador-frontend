@@ -56,6 +56,9 @@ export interface AsistenciaDia {
   tardanza: string | null;
   minutosExceso: number | null;
   exceso: string | null;
+  /** Recuperación aprobada ese día: minutos más a la salida y si la cumplió (null = aún sin salida). */
+  minutosRecupera: number | null;
+  recuperoCumplida: boolean | null;
 
   minutosManana: number | null;
   horasManana: string | null;
@@ -167,6 +170,9 @@ export interface Justificacion {
   fechaHasta: string;
   dias: number;
   comentario: string | null;
+  /** Solo en una recuperación: minutos más a la salida cada día y el día que recupera. */
+  minutosExtra: number | null;
+  fechaOrigen: string | null;
   archivoNombre: string | null;
   tieneArchivo: boolean;
   estado: EstadoJustificacion;
@@ -191,7 +197,7 @@ export interface PerfilAsistencia {
   subcarteras: { id: number; nombre: string; cartera: string; idCartera: number; idCliente: number | null }[];
 }
 
-/** Un día del horario de la semana que viene. */
+/** Un día del horario del equipo. */
 export interface DiaDeHorario {
   diaSemana: number;
   nombre: string;
@@ -199,36 +205,31 @@ export interface DiaDeHorario {
   salida: string;
 }
 
-/** Quien debe horas y sale más tarde la semana que viene. */
-export interface ExcepcionDeHorario {
-  idRecuperacion: number;
-  idUsuario: number;
-  nombre: string;
-  dias: number[];
-  minutosExtra: number;
-  /** false = lo propone el sistema y todavía nadie lo guardó. */
-  guardada: boolean;
-  motivo: string;
-  pendientes: string;
+/**
+ * El horario de una persona un día. `distinto` = no es el del equipo;
+ * `minutosRecupera` = sale más tarde por una recuperación; `solicitud` = el
+ * tipo que cambia ese día («Descanso médico»); `porAprobar` si esa solicitud
+ * todavía espera a RR.HH.
+ */
+export interface CeldaDeHorario {
+  diaSemana: number;
+  entrada: string;
+  salida: string;
+  distinto: boolean;
+  minutosRecupera: number | null;
+  solicitud: string | null;
+  porAprobar: boolean;
+  motivo: string | null;
 }
 
-export interface ProximaSemana {
+/** El horario de una semana: el fijo del equipo más lo que cambian las solicitudes. */
+export interface HorarioDeSemana {
   lunes: string;
   sabado: string;
   idSubcartera: number | null;
-  dias: DiaDeHorario[];
-  excepciones: ExcepcionDeHorario[];
-  compartidoEn: string | null;
-  compartidoPor: string | null;
-}
-
-/** Lo que ve el asesor cuando RR.HH. ya compartió la semana. */
-export interface MiProximaSemana {
-  lunes: string;
-  sabado: string;
-  dias: DiaDeHorario[];
-  minutosExtra: number | null;
-  motivo: string | null;
+  /** `calendario` = feriado o sin asignación: ese día no se espera a nadie. */
+  dias: (DiaDeHorario & { calendario: string | null })[];
+  personas: { idUsuario: number; nombre: string; dias: CeldaDeHorario[] }[];
 }
 
 /** Lo que sale de leer el archivo de feriados, fila por fila. */
@@ -428,6 +429,8 @@ export interface Recuperacion {
   diasRestantes: number;
   semanasRestantes: number;
   minutosPorSemana: number;
+  /** Las solicitudes de recuperación que abonan a esta deuda, en una línea. null = ninguna. */
+  programada: string | null;
   estado: 'PENDIENTE' | 'CUMPLIDA' | 'VENCIDA' | 'CONDONADA';
   motivoCierre: string | null;
 }
