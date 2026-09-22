@@ -63,7 +63,16 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
             [cargandoVistaPrevia]="cargandoVistaPrevia()"
             (buscar)="cargarCandidatos($event)"
             (cambiarPagina)="cambiarPagina($event)"
-            (verVistaPrevia)="generarVistaPrevia($event)">
+            (verVistaPrevia)="generarVistaPrevia($event)"
+            (enviarValidacionPagos)="enviarAValidacionPagos($event)">
+          </app-carta-no-adeudo-lista-widget>
+        }
+        @if (activeTab() === 'pagos') {
+          <app-carta-no-adeudo-lista-widget
+            [clientes]="clientesEnPagos()"
+            [modoSoloLectura]="true"
+            titulo="Clientes en validación de pagos"
+            descripcion="Solicitudes enviadas a validación de pagos.">
           </app-carta-no-adeudo-lista-widget>
         }
       </div>
@@ -81,6 +90,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly totalCandidatos = signal(0);
   readonly vistaPreviaUrl = signal<SafeResourceUrl | null>(null);
   readonly cargandoVistaPrevia = signal(false);
+  readonly clientesEnPagos = signal<CartaNoAdeudoClienteCorreo[]>([]);
   private documentoBusqueda?: string;
   private objectUrl?: string;
   private solicitudVistaPrevia = 0;
@@ -104,6 +114,27 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
 
   cambiarPagina(page: number): void {
     this.cargarCandidatos(this.documentoBusqueda, page);
+  }
+
+  enviarAValidacionPagos(clientes: CartaNoAdeudoClienteCorreo[]): void {
+    const solicitudes = clientes.map(cliente => ({
+      idCliente: cliente.idCliente,
+      idGestion: cliente.idGestion,
+      idTenant: cliente.idTenant,
+      idCartera: cliente.idCartera,
+      idSubcartera: cliente.idSubcartera,
+      tipoSolicitud: 'ORIGINAL' as const,
+      idMetodoContactoDestino: cliente.idMetodoContacto ?? undefined,
+      correoDestino: cliente.correo ?? ''
+    }));
+    this.cartaNoAdeudoService.enviarAValidacionPagos(solicitudes).subscribe({
+      next: () => {
+        this.clientesEnPagos.set(clientes);
+        this.cargarCandidatos(this.documentoBusqueda, this.pagina());
+        this.activeTab.set('pagos');
+      },
+      error: error => console.error('No se pudieron enviar las cartas a validación de pagos', error)
+    });
   }
 
   generarVistaPrevia(cliente: CartaNoAdeudoClienteCorreo): void {

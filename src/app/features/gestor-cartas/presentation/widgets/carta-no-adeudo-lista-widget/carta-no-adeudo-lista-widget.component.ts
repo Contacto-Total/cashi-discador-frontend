@@ -11,8 +11,18 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
     <section class="grid gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.6fr)]">
       <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-          <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Clientes con pago cumplido</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Selecciona un cliente para revisar su carta.</p>
+          <h2 class="text-sm font-semibold text-slate-800 dark:text-white">{{ titulo }}</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">{{ descripcion }}</p>
+          @if (!modoSoloLectura) {
+            <label class="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              [checked]="todosSeleccionados"
+              (change)="alternarTodos()" />
+            Seleccionar todos
+            </label>
+          }
           <div class="mt-2 flex w-full max-w-64 gap-1.5">
             <input
               #documento
@@ -39,12 +49,14 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
               class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
               [class.bg-blue-50]="clientePreview?.idCliente === cliente.idCliente"
               (click)="verCarta(cliente)">
-              <input
-                type="checkbox"
-                class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                [checked]="estaSeleccionado(cliente)"
-                (click)="$event.stopPropagation()"
-                (change)="alternarSeleccion(cliente)" />
+              @if (!modoSoloLectura) {
+                <input
+                  type="checkbox"
+                  class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  [checked]="estaSeleccionado(cliente)"
+                  (click)="$event.stopPropagation()"
+                  (change)="alternarSeleccion(cliente)" />
+              }
               <span class="grid min-w-0 flex-1 grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] gap-x-3 text-xs">
                 <span class="row-span-2 max-h-8 self-center overflow-hidden break-words text-xs font-medium leading-4 text-slate-800 dark:text-white">
                   {{ cliente.nombreCliente }}
@@ -110,6 +122,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
       </article>
     </section>
 
+    @if (!modoSoloLectura) {
     <footer class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
       <p class="text-sm text-slate-600 dark:text-slate-300">
         {{ seleccionados.size }} cliente{{ seleccionados.size === 1 ? '' : 's' }} seleccionado{{ seleccionados.size === 1 ? '' : 's' }}
@@ -123,6 +136,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         Enviar a validación de pagos
       </button>
     </footer>
+    }
   `
 })
 export class CartaNoAdeudoListaWidgetComponent {
@@ -130,6 +144,9 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Input() page = 0;
   @Input() totalPages = 0;
   @Input() totalElements = 0;
+  @Input() modoSoloLectura = false;
+  @Input() titulo = 'Clientes con pago cumplido';
+  @Input() descripcion = 'Selecciona un cliente para revisar su carta.';
   @Input() vistaPreviaUrl: SafeResourceUrl | null = null;
   @Input() cargandoVistaPrevia = false;
   @Output() readonly buscar = new EventEmitter<string>();
@@ -152,6 +169,10 @@ export class CartaNoAdeudoListaWidgetComponent {
     return this.clientes.filter(cliente => this.seleccionados.has(cliente.idCliente));
   }
 
+  get todosSeleccionados(): boolean {
+    return this.clientes.length > 0 && this.clientes.every(cliente => this.seleccionados.has(cliente.idCliente));
+  }
+
   verCarta(cliente: CartaNoAdeudoClienteCorreo): void {
     this.clientePreview = cliente;
     this.verVistaPrevia.emit(cliente);
@@ -172,6 +193,15 @@ export class CartaNoAdeudoListaWidgetComponent {
       this.seleccionados.delete(cliente.idCliente);
     } else {
       this.seleccionados.add(cliente.idCliente);
+    }
+    this.seleccionados = new Set(this.seleccionados);
+  }
+
+  alternarTodos(): void {
+    if (this.todosSeleccionados) {
+      this.clientes.forEach(cliente => this.seleccionados.delete(cliente.idCliente));
+    } else {
+      this.clientes.forEach(cliente => this.seleccionados.add(cliente.idCliente));
     }
     this.seleccionados = new Set(this.seleccionados);
   }
