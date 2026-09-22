@@ -44,6 +44,13 @@ export class CartaNoAdeudoService {
     );
   }
 
+  enviarAValidacionPagos(solicitudes: CrearCartaNoAdeudoSolicitudRequest[]): Observable<CartaNoAdeudoSolicitud[]> {
+    return this.http.post<CartaNoAdeudoSolicitud[]>(
+      `${this.baseUrl}/solicitudes/enviar-validacion-pagos`,
+      { solicitudes }
+    );
+  }
+
   listarSolicitudes(filters: CartaNoAdeudoSolicitudFilters): Observable<CartaNoAdeudoPage<CartaNoAdeudoSolicitud>> {
     let params = this.contextParams(filters)
       .set('page', (filters.page ?? 0).toString())
