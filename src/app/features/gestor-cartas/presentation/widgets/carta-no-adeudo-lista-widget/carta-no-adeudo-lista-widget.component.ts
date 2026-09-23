@@ -8,37 +8,39 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
   standalone: true,
   imports: [LucideAngularModule],
   template: `
-    <section class="grid gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.6fr)]">
+    <section class="grid gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.6fr)] xl:items-start">
       <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div class="border-b border-slate-200 px-3 py-2.5 dark:border-slate-700">
           <h2 class="text-sm font-semibold text-slate-800 dark:text-white">{{ titulo }}</h2>
           <p class="text-xs text-slate-500 dark:text-slate-400">{{ descripcion }}</p>
-          @if (!modoSoloLectura) {
-            <label class="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
-            <input
-              type="checkbox"
-              class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              [checked]="todosSeleccionados"
-              (change)="alternarTodos()" />
-            Seleccionar todos
-            </label>
-          }
-          <div class="mt-2 flex w-full max-w-64 gap-1.5">
-            <input
-              #documento
-              id="documento"
-              type="search"
-              placeholder="Buscar por documento"
-              class="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              (input)="filtroDocumento = documento.value.trim()"
-              (keyup.enter)="buscar.emit(filtroDocumento)" />
-            <button
-              type="button"
-              class="inline-flex items-center justify-center rounded-md bg-blue-600 px-2 text-white transition-colors hover:bg-blue-700"
-              (click)="buscar.emit(filtroDocumento)"
-              aria-label="Buscar por documento">
-              <lucide-angular name="search" [size]="15"></lucide-angular>
-            </button>
+          <div class="mt-2 flex items-center gap-2">
+            @if (!modoSoloLectura) {
+              <label class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  [checked]="todosSeleccionados"
+                  (change)="cambiarTodos($event)" />
+                Todos
+              </label>
+            }
+            <div class="flex min-w-0 flex-1 gap-1.5">
+              <input
+                #documento
+                id="documento"
+                type="search"
+                placeholder="Buscar por documento"
+                class="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                (input)="filtroDocumento = documento.value.trim()"
+                (keyup.enter)="buscar.emit(filtroDocumento)" />
+              <button
+                type="button"
+                class="inline-flex items-center justify-center rounded-md bg-blue-600 px-2 text-white transition-colors hover:bg-blue-700"
+                (click)="buscar.emit(filtroDocumento)"
+                aria-label="Buscar por documento">
+                <lucide-angular name="search" [size]="15"></lucide-angular>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -100,7 +102,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         }
       </div>
 
-      <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-4 shadow-sm xl:h-[34rem] xl:overflow-y-auto dark:border-slate-700 dark:bg-slate-800">
         <ng-content select="[correoControls]"></ng-content>
         <ng-content select="[detalleDerecho]"></ng-content>
 
@@ -141,7 +143,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
             <iframe
               [srcdoc]="correoCuerpoHtml"
               title="Vista previa del correo"
-              class="h-[34rem] w-full border-0 bg-white">
+              class="h-[28rem] w-full border-0 bg-white">
             </iframe>
             @if (correoAdjuntoNombre) {
               <div class="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
@@ -154,7 +156,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
           <iframe
             [src]="vistaPreviaUrl"
             title="Vista previa de carta de no adeudo"
-            class="h-[34rem] w-full rounded border-0 bg-white">
+            class="h-[28rem] w-full rounded border-0 bg-white">
           </iframe>
         } @else {
           <div class="flex h-full min-h-[28rem] flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
@@ -170,12 +172,12 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
     @if (!modoSoloLectura && mostrarAccion) {
     <footer class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
       <p class="text-sm text-slate-600 dark:text-slate-300">
-        {{ seleccionados.size }} cliente{{ seleccionados.size === 1 ? '' : 's' }} seleccionado{{ seleccionados.size === 1 ? '' : 's' }}
+        {{ todosSeleccionados ? totalElements : seleccionados.size }} cliente{{ (todosSeleccionados ? totalElements : seleccionados.size) === 1 ? '' : 's' }} seleccionado{{ (todosSeleccionados ? totalElements : seleccionados.size) === 1 ? '' : 's' }}
       </p>
       <button
         type="button"
         class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-        [disabled]="seleccionados.size === 0"
+        [disabled]="!todosSeleccionados && seleccionados.size === 0"
         (click)="enviarValidacionPagos.emit(clientesSeleccionados)">
         <lucide-angular name="send" [size]="18"></lucide-angular>
         Enviar a validación de pagos
@@ -196,6 +198,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Input() vistaPreviaUrl: SafeResourceUrl | null = null;
   @Input() cargandoVistaPrevia = false;
   @Input() mostrarVistaDetalle = true;
+  @Input() todosSeleccionados = false;
   @Input() correoRemitente = '';
   @Input() correoDestinatario: string | null = null;
   @Input() correoAsunto = '';
@@ -206,6 +209,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Output() readonly verVistaPrevia = new EventEmitter<CartaNoAdeudoClienteCorreo>();
   @Output() readonly enviarValidacionPagos = new EventEmitter<CartaNoAdeudoClienteCorreo[]>();
   @Output() readonly seleccionadosCambiaron = new EventEmitter<CartaNoAdeudoClienteCorreo[]>();
+  @Output() readonly todosCambiaron = new EventEmitter<boolean>();
 
   filtroDocumento = '';
   clientePreview: CartaNoAdeudoClienteCorreo | null = null;
@@ -221,10 +225,6 @@ export class CartaNoAdeudoListaWidgetComponent {
 
   get clientesSeleccionados(): CartaNoAdeudoClienteCorreo[] {
     return this.clientes.filter(cliente => this.seleccionados.has(cliente.idCliente));
-  }
-
-  get todosSeleccionados(): boolean {
-    return this.clientes.length > 0 && this.clientes.every(cliente => this.seleccionados.has(cliente.idCliente));
   }
 
   verCarta(cliente: CartaNoAdeudoClienteCorreo): void {
@@ -252,13 +252,12 @@ export class CartaNoAdeudoListaWidgetComponent {
     this.seleccionadosCambiaron.emit(this.clientesSeleccionados);
   }
 
-  alternarTodos(): void {
-    if (this.todosSeleccionados) {
-      this.clientes.forEach(cliente => this.seleccionados.delete(cliente.idCliente));
-    } else {
-      this.clientes.forEach(cliente => this.seleccionados.add(cliente.idCliente));
+  cambiarTodos(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      this.seleccionados = new Set();
+      this.seleccionadosCambiaron.emit([]);
     }
-    this.seleccionados = new Set(this.seleccionados);
-    this.seleccionadosCambiaron.emit(this.clientesSeleccionados);
+    this.todosCambiaron.emit(checked);
   }
 }
