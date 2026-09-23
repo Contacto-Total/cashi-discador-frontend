@@ -1,12 +1,27 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
-import { CartaNoAdeudoClienteCorreo, CartaNoAdeudoRechazo, MetodoContactoCorreo } from '../../../models/carta-no-adeudo.model';
+import {
+  CartaNoAdeudoClienteCorreo,
+  CartaNoAdeudoFallido,
+  CartaNoAdeudoRechazo,
+  MetodoContactoCorreo
+} from '../../../models/carta-no-adeudo.model';
+import {
+  CARTA_NO_ADEUDO_ASUNTO,
+  CARTA_NO_ADEUDO_CUERPO,
+  CARTA_NO_ADEUDO_REMITENTE,
+  nombreAdjuntoCartaNoAdeudo,
+  renderPlantillaCorreo
+} from '../../../models/carta-no-adeudo-email-template';
 import { CartaNoAdeudoService } from '../../../services/carta-no-adeudo.service';
 import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo-lista-widget/carta-no-adeudo-lista-widget.component';
 import { CorreccionPagosService } from '../../../../../pagos-bancarios/services/correccion-pagos.service';
 import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../../../../../pagos-bancarios/models/correccion-pagos.model';
 import { forkJoin } from 'rxjs';
+
+type PestanaCarta = 'correo' | 'pagos' | 'fallidos' | 'historial';
+type OrigenEnvio = 'pagos' | 'fallidos';
 
 @Component({
   selector: 'app-carta-no-adeudo-email-page',
@@ -28,9 +43,9 @@ import { forkJoin } from 'rxjs';
             [class.text-blue-600]="activeTab() === 'correo'"
             [class.border-transparent]="activeTab() !== 'correo'"
             [class.text-slate-500]="activeTab() !== 'correo'"
-            (click)="activeTab.set('correo')">
+            (click)="seleccionarTab('correo')">
             <lucide-angular name="mail" [size]="16"></lucide-angular>
-            Validación de usuarios por correo
+            Validación de correo
           </button>
           <button
             type="button"
@@ -39,9 +54,20 @@ import { forkJoin } from 'rxjs';
             [class.text-blue-600]="activeTab() === 'pagos'"
             [class.border-transparent]="activeTab() !== 'pagos'"
             [class.text-slate-500]="activeTab() !== 'pagos'"
-            (click)="activeTab.set('pagos')">
+            (click)="seleccionarTab('pagos')">
             <lucide-angular name="badge-check" [size]="16"></lucide-angular>
             Validación de pagos
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors"
+            [class.border-blue-600]="activeTab() === 'fallidos'"
+            [class.text-blue-600]="activeTab() === 'fallidos'"
+            [class.border-transparent]="activeTab() !== 'fallidos'"
+            [class.text-slate-500]="activeTab() !== 'fallidos'"
+            (click)="seleccionarTab('fallidos')">
+            <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+            Fallidos
           </button>
           <button
             type="button"
@@ -50,7 +76,7 @@ import { forkJoin } from 'rxjs';
             [class.text-blue-600]="activeTab() === 'historial'"
             [class.border-transparent]="activeTab() !== 'historial'"
             [class.text-slate-500]="activeTab() !== 'historial'"
-            (click)="activeTab.set('historial')">
+            (click)="seleccionarTab('historial')">
             <lucide-angular name="history" [size]="16"></lucide-angular>
             Historial
           </button>
@@ -64,18 +90,46 @@ import { forkJoin } from 'rxjs';
             [totalElements]="totalCandidatos()"
             [vistaPreviaUrl]="vistaPreviaUrl()"
             [cargandoVistaPrevia]="cargandoVistaPrevia()"
+            [correoRemitente]="remitenteCorreo"
+            [correoDestinatario]="clienteCorreo()?.correo"
+            [correoAsunto]="correoAsuntoRender()"
+            [correoCuerpoHtml]="correoSeguroHtml()"
+            [correoAdjuntoNombre]="correoAdjuntoRender()"
             (buscar)="cargarCandidatos($event)"
             (cambiarPagina)="cambiarPagina($event)"
             (verVistaPrevia)="generarVistaPrevia($event)"
             (enviarValidacionPagos)="enviarAValidacionPagos($event)">
+            @if (clienteCorreo(); as cliente) {
+              <section correoControls class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Correo para {{ cliente.documento }}</h2>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  @for (correo of correos(); track correo.id) {
+                    <button
+                      type="button"
+                      (click)="seleccionarCorreo(cliente, correo)"
+                      class="rounded-full border px-3 py-1.5 text-xs"
+                      [class.border-blue-600]="cliente.correo === correo.valor"
+                      [class.text-blue-600]="cliente.correo === correo.valor">{{ correo.valor }}</button>
+                  } @empty {
+                    <p class="text-xs text-slate-500">Sin correos registrados.</p>
+                  }
+                </div>
+                <div class="mt-3 flex max-w-md gap-2">
+                  <input
+                    #nuevoCorreo
+                    type="email"
+                    placeholder="nuevo@correo.com"
+                    class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                    (input)="correoNuevo.set(nuevoCorreo.value.trim())" />
+                  <button
+                    type="button"
+                    [disabled]="!correoValido()"
+                    (click)="agregarCorreo(cliente)"
+                    class="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
+                </div>
+              </section>
+            }
           </app-carta-no-adeudo-lista-widget>
-          @if (clienteCorreo(); as cliente) {
-            <section class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Correo para {{ cliente.documento }}</h2>
-              <div class="mt-3 flex flex-wrap gap-2">@for (correo of correos(); track correo.id) { <button type="button" (click)="seleccionarCorreo(cliente, correo)" class="rounded-full border px-3 py-1.5 text-xs" [class.border-blue-600]="cliente.correo === correo.valor" [class.text-blue-600]="cliente.correo === correo.valor">{{ correo.valor }}</button> }</div>
-              <div class="mt-3 flex max-w-md gap-2"><input #nuevoCorreo type="email" placeholder="nuevo@correo.com" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500" (input)="correoNuevo.set(nuevoCorreo.value.trim())" /><button type="button" [disabled]="!correoValido()" (click)="agregarCorreo(cliente)" class="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-40">Agregar</button></div>
-            </section>
-          }
           <section class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <div class="flex items-center justify-between"><h2 class="text-sm font-semibold">Retornados a validación de correo</h2><span class="text-xs text-slate-500">{{ totalRechazos() }}</span></div>
             <div class="mt-3 divide-y divide-slate-100 dark:divide-slate-700">
@@ -84,10 +138,18 @@ import { forkJoin } from 'rxjs';
             @if (totalPaginasRechazos() > 1) { <div class="mt-3 flex justify-end gap-2"><button [disabled]="paginaRechazos() === 0" (click)="cargarRechazos(paginaRechazos() - 1)" class="rounded px-2 py-1 text-xs disabled:opacity-40">Anterior</button><button [disabled]="paginaRechazos() >= totalPaginasRechazos() - 1" (click)="cargarRechazos(paginaRechazos() + 1)" class="rounded px-2 py-1 text-xs disabled:opacity-40">Siguiente</button></div> }
           </section>
         }
+
         @if (activeTab() === 'pagos') {
           <app-carta-no-adeudo-lista-widget
             [clientes]="clientesEnPagos()"
             [mostrarAccion]="false"
+            [vistaPreviaUrl]="vistaPreviaUrl()"
+            [cargandoVistaPrevia]="cargandoVistaPrevia()"
+            [correoRemitente]="remitenteCorreo"
+            [correoDestinatario]="clienteCorreo()?.correo"
+            [correoAsunto]="correoAsuntoRender()"
+            [correoCuerpoHtml]="correoSeguroHtml()"
+            [correoAdjuntoNombre]="correoAdjuntoRender()"
             titulo="Clientes en validación de pagos"
             descripcion="Selecciona un cliente para revisar pagos y gestiones."
             (verVistaPrevia)="cargarPagosCliente($event)"
@@ -115,17 +177,63 @@ import { forkJoin } from 'rxjs';
           <footer class="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <input #correoPrueba type="email" placeholder="Correo para prueba" class="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none" (input)="correoPruebaEnvio.set(correoPrueba.value.trim())" />
             <button type="button" [disabled]="!correoPruebaEnvio()" class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Enviar prueba</button>
-            <button type="button" (click)="dialogEnvio.set(true)" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Enviar</button>
+            <button type="button" (click)="abrirDialogoEnvio('pagos')" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Enviar</button>
           </footer>
-          @if (dialogEnvio()) {
-            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-              <div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800">
-                <h2 class="text-base font-semibold">Confirmar envío</h2>
-                <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Se enviarán {{ seleccionadosPagos().length }} correos.</p>
-                <div class="mt-5 flex justify-end gap-2"><button class="rounded-lg px-3 py-2 text-sm">Cancelar</button><button class="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white">Aceptar</button></div>
+        }
+
+        @if (activeTab() === 'fallidos') {
+          <app-carta-no-adeudo-lista-widget
+            [clientes]="clientesEnFallidos()"
+            [page]="paginaFallidos()"
+            [totalPages]="totalPaginasFallidos()"
+            [totalElements]="totalFallidos()"
+            [mostrarAccion]="false"
+            titulo="Cartas con error de envío"
+            descripcion="Selecciona las solicitudes para reintentar el envío."
+            [vistaPreviaUrl]="vistaPreviaUrl()"
+            [cargandoVistaPrevia]="cargandoVistaPrevia()"
+            [correoRemitente]="remitenteCorreo"
+            [correoDestinatario]="clienteCorreo()?.correo"
+            [correoAsunto]="correoAsuntoRender()"
+            [correoCuerpoHtml]="correoSeguroHtml()"
+            [correoAdjuntoNombre]="correoAdjuntoRender()"
+            (verVistaPrevia)="generarVistaPrevia($event)"
+            (cambiarPagina)="cargarFallidos($event)"
+            (seleccionadosCambiaron)="seleccionadosFallidos.set($event)">
+          </app-carta-no-adeudo-lista-widget>
+          <footer class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              {{ seleccionadosFallidos().length }} solicitud{{ seleccionadosFallidos().length === 1 ? '' : 'es' }} seleccionada{{ seleccionadosFallidos().length === 1 ? '' : 's' }}
+            </p>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              [disabled]="seleccionadosFallidos().length === 0"
+              (click)="abrirDialogoEnvio('fallidos')">
+              <lucide-angular name="rotate-ccw" [size]="18"></lucide-angular>
+              Reintentar envío
+            </button>
+          </footer>
+        }
+
+        @if (dialogEnvio()) {
+          <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" (click)="dialogEnvio.set(false)">
+            <div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800" (click)="$event.stopPropagation()">
+              <h2 class="text-base font-semibold text-slate-800 dark:text-white">Confirmar envío</h2>
+              <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Se enviarán {{ cantidadSeleccionada() }} correos.</p>
+              <div class="mt-5 flex justify-end gap-2">
+                <button type="button" class="rounded-lg px-3 py-2 text-sm text-slate-600 disabled:opacity-40 dark:text-slate-300" [disabled]="cargandoEnvio()" (click)="dialogEnvio.set(false)">Cancelar</button>
+                <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" [disabled]="cargandoEnvio()" (click)="confirmarEnvio()">
+                  @if (cargandoEnvio()) {
+                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                    Enviando...
+                  } @else {
+                    Aceptar
+                  }
+                </button>
               </div>
             </div>
-          }
+          </div>
         }
       </div>
     </div>
@@ -136,7 +244,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly correccionPagosService = inject(CorreccionPagosService);
 
-  readonly activeTab = signal<'correo' | 'pagos' | 'historial'>('correo');
+  readonly activeTab = signal<PestanaCarta>('correo');
   readonly clientes = signal<CartaNoAdeudoClienteCorreo[]>([]);
   readonly pagina = signal(0);
   readonly totalPaginas = signal(0);
@@ -150,6 +258,8 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly seleccionadosPagos = signal<CartaNoAdeudoClienteCorreo[]>([]);
   readonly correoPruebaEnvio = signal('');
   readonly dialogEnvio = signal(false);
+  readonly origenEnvio = signal<OrigenEnvio>('pagos');
+  readonly cargandoEnvio = signal(false);
   readonly rechazos = signal<CartaNoAdeudoRechazo[]>([]);
   readonly paginaRechazos = signal(0);
   readonly totalPaginasRechazos = signal(0);
@@ -158,13 +268,70 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly clienteCorreo = signal<CartaNoAdeudoClienteCorreo | null>(null);
   readonly correos = signal<MetodoContactoCorreo[]>([]);
   readonly correoNuevo = signal('');
+  readonly fallidos = signal<CartaNoAdeudoFallido[]>([]);
+  readonly paginaFallidos = signal(0);
+  readonly totalPaginasFallidos = signal(0);
+  readonly totalFallidos = signal(0);
+  readonly seleccionadosFallidos = signal<CartaNoAdeudoClienteCorreo[]>([]);
   private documentoBusqueda?: string;
   private objectUrl?: string;
   private solicitudVistaPrevia = 0;
+  private fallidosCargados = false;
+
+  readonly clientesEnFallidos = computed<CartaNoAdeudoClienteCorreo[]>(() =>
+    this.fallidos().map(fallido => ({
+      idSolicitud: fallido.idSolicitud,
+      idCliente: fallido.idCliente,
+      idGestion: fallido.idGestion,
+      idTenant: fallido.idTenant,
+      idCartera: fallido.idCartera,
+      idSubcartera: fallido.idSubcartera,
+      documento: fallido.documento ?? '',
+      nombreCliente: fallido.nombreCliente ?? '',
+      correo: fallido.correoDestino,
+      idMetodoContacto: null,
+      montoPagado: 0,
+      fechaUltimoPago: null
+    }))
+  );
+
+  readonly remitenteCorreo = CARTA_NO_ADEUDO_REMITENTE;
+
+  readonly correoSeguroHtml = computed<SafeHtml | null>(() => {
+    const cliente = this.clienteCorreo();
+    if (!cliente) {
+      return null;
+    }
+    return this.sanitizer.bypassSecurityTrustHtml(renderPlantillaCorreo(CARTA_NO_ADEUDO_CUERPO, {
+      nombre: cliente.nombreCliente,
+      documento: cliente.documento
+    }));
+  });
+
+  readonly correoAsuntoRender = computed(() =>
+    renderPlantillaCorreo(CARTA_NO_ADEUDO_ASUNTO, {
+      nombre: this.clienteCorreo()?.nombreCliente ?? '',
+      documento: this.clienteCorreo()?.documento ?? ''
+    })
+  );
+
+  readonly correoAdjuntoRender = computed(() => {
+    const cliente = this.clienteCorreo();
+    return cliente ? nombreAdjuntoCartaNoAdeudo(cliente.documento) : '';
+  });
 
   ngOnInit(): void {
     this.cargarCandidatos();
     this.cargarRechazos();
+  }
+
+  seleccionarTab(tab: PestanaCarta): void {
+    this.activeTab.set(tab);
+    this.seleccionadosPagos.set([]);
+    this.seleccionadosFallidos.set([]);
+    if (tab === 'fallidos' && !this.fallidosCargados) {
+      this.cargarFallidos(0);
+    }
   }
 
   cargarCandidatos(documento?: string, page = 0): void {
@@ -210,6 +377,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
 
   cargarPagosCliente(cliente: CartaNoAdeudoClienteCorreo): void {
     this.clientePagos.set(cliente);
+    this.generarVistaPrevia(cliente);
     const contexto = { documento: cliente.documento, tenantId: cliente.idTenant, carteraId: cliente.idCartera, subcarteraId: cliente.idSubcartera };
     forkJoin({
       cuotas: this.correccionPagosService.buscarCuotasValidasTipificar(contexto),
@@ -238,6 +406,65 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
       next: response => { this.rechazos.set(response.content); this.paginaRechazos.set(response.page); this.totalPaginasRechazos.set(response.totalPages); this.totalRechazos.set(response.totalElements); },
       error: error => console.error('No se pudieron cargar rechazos', error)
     });
+  }
+
+  cargarFallidos(page = 0): void {
+    this.cartaNoAdeudoService.listarFallidos(page, 20).subscribe({
+      next: response => {
+        this.fallidos.set(response.content);
+        this.paginaFallidos.set(response.page);
+        this.totalPaginasFallidos.set(response.totalPages);
+        this.totalFallidos.set(response.totalElements);
+        this.fallidosCargados = true;
+      },
+      error: error => console.error('No se pudieron cargar las cartas fallidas', error)
+    });
+  }
+
+  abrirDialogoEnvio(origen: OrigenEnvio): void {
+    if (this.seleccionActual(origen).length === 0) return;
+    this.origenEnvio.set(origen);
+    this.dialogEnvio.set(true);
+  }
+
+  cantidadSeleccionada(): number {
+    return this.seleccionActual(this.origenEnvio()).length;
+  }
+
+  confirmarEnvio(): void {
+    const origen = this.origenEnvio();
+    const ids = this.seleccionActual(origen)
+      .map(cliente => cliente.idSolicitud)
+      .filter((id): id is number => typeof id === 'number');
+    if (!ids.length || this.cargandoEnvio()) return;
+
+    this.cargandoEnvio.set(true);
+    this.cartaNoAdeudoService.enviarSolicitudes(ids, CARTA_NO_ADEUDO_ASUNTO, CARTA_NO_ADEUDO_CUERPO).subscribe({
+      next: response => {
+        this.cargandoEnvio.set(false);
+        this.dialogEnvio.set(false);
+        const enviadas = new Set(response.resultados.filter(resultado => resultado.exito).map(resultado => resultado.idSolicitud));
+        if (origen === 'pagos') {
+          this.clientesEnPagos.update(clientes => clientes.filter(cliente => !(cliente.idSolicitud && enviadas.has(cliente.idSolicitud))));
+          this.seleccionadosPagos.set([]);
+        } else {
+          this.fallidos.update(fallidos => fallidos.filter(fallido => !enviadas.has(fallido.idSolicitud)));
+          this.seleccionadosFallidos.set([]);
+        }
+        if (response.fallidas > 0) {
+          this.fallidosCargados = false;
+          this.cargarFallidos(0);
+        }
+      },
+      error: error => {
+        this.cargandoEnvio.set(false);
+        console.error('No se pudieron enviar las cartas de no adeudo', error);
+      }
+    });
+  }
+
+  private seleccionActual(origen: OrigenEnvio): CartaNoAdeudoClienteCorreo[] {
+    return origen === 'fallidos' ? this.seleccionadosFallidos() : this.seleccionadosPagos();
   }
 
   generarVistaPrevia(cliente: CartaNoAdeudoClienteCorreo): void {

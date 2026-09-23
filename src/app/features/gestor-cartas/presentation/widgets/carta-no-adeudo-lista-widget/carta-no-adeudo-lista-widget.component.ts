@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { SafeResourceUrl } from '@angular/platform-browser';
+import { SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.model';
 
@@ -43,7 +43,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         </div>
 
         <div class="max-h-[34rem] divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700">
-          @for (cliente of clientesFiltrados; track cliente.idCliente) {
+          @for (cliente of clientesFiltrados; track cliente.idSolicitud ?? cliente.idCliente) {
             <button
               type="button"
               class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
@@ -101,10 +101,52 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
       </div>
 
       <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <ng-content select="[correoControls]"></ng-content>
+
+        @if (correoCuerpoHtml) {
+          <div class="mb-3 inline-flex gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium dark:bg-slate-700">
+            <button
+              type="button"
+              class="rounded-md px-3 py-1.5 transition-colors"
+              [class.bg-white]="vistaDetalle === 'correo'"
+              [class.shadow]="vistaDetalle === 'correo'"
+              [class.text-blue-600]="vistaDetalle === 'correo'"
+              [class.text-slate-500]="vistaDetalle !== 'correo'"
+              (click)="vistaDetalle = 'correo'">Correo</button>
+            <button
+              type="button"
+              class="rounded-md px-3 py-1.5 transition-colors"
+              [class.bg-white]="vistaDetalle === 'pdf'"
+              [class.shadow]="vistaDetalle === 'pdf'"
+              [class.text-blue-600]="vistaDetalle === 'pdf'"
+              [class.text-slate-500]="vistaDetalle !== 'pdf'"
+              (click)="vistaDetalle = 'pdf'">PDF adjunto</button>
+          </div>
+        }
+
         @if (cargandoVistaPrevia) {
           <div class="flex h-full min-h-[28rem] flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
             <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
             <p class="mt-3 text-sm font-medium">Generando vista previa...</p>
+          </div>
+        } @else if (vistaDetalle === 'correo' && correoCuerpoHtml) {
+          <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+            <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
+              <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ correoAsunto }}</p>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">De:</span> {{ correoRemitente }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">Para:</span> {{ correoDestinatario || 'Sin correo registrado' }}</p>
+            </div>
+            <iframe
+              [srcdoc]="correoCuerpoHtml"
+              title="Vista previa del correo"
+              class="h-[34rem] w-full border-0 bg-white">
+            </iframe>
+            @if (correoAdjuntoNombre) {
+              <div class="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+                <lucide-angular name="file-text" [size]="14"></lucide-angular>
+                {{ correoAdjuntoNombre }}
+              </div>
+            }
           </div>
         } @else if (vistaPreviaUrl) {
           <iframe
@@ -150,6 +192,11 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Input() descripcion = 'Selecciona un cliente para revisar su carta.';
   @Input() vistaPreviaUrl: SafeResourceUrl | null = null;
   @Input() cargandoVistaPrevia = false;
+  @Input() correoRemitente = '';
+  @Input() correoDestinatario: string | null = null;
+  @Input() correoAsunto = '';
+  @Input() correoCuerpoHtml: SafeHtml | null = null;
+  @Input() correoAdjuntoNombre = '';
   @Output() readonly buscar = new EventEmitter<string>();
   @Output() readonly cambiarPagina = new EventEmitter<number>();
   @Output() readonly verVistaPrevia = new EventEmitter<CartaNoAdeudoClienteCorreo>();
@@ -159,6 +206,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   filtroDocumento = '';
   clientePreview: CartaNoAdeudoClienteCorreo | null = null;
   seleccionados = new Set<number>();
+  vistaDetalle: 'correo' | 'pdf' = 'correo';
 
   get clientesFiltrados(): CartaNoAdeudoClienteCorreo[] {
     if (!this.filtroDocumento) {

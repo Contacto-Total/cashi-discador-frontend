@@ -118,3 +118,32 @@ export interface MetodoContactoCorreo {
   valor: string;
   subtipo: string;
 }
+
+export interface ResultadoEnvioSolicitud {
+  idSolicitud: number;
+  exito: boolean;
+  estado: CartaNoAdeudoEstado | string;
+  mensaje: string;
+}
+
+export interface EnviarCartasNoAdeudoResponse {
+  total: number;
+  enviadas: number;
+  fallidas: number;
+  resultados: ResultadoEnvioSolicitud[];
+}
+
+export interface CartaNoAdeudoFallido {
+  idSolicitud: number;
+  idCliente: number;
+  idGestion: number;
+  idTenant: number;
+  idCartera: number;
+  idSubcartera: number;
+  documento: string | null;
+  nombreCliente: string | null;
+  correoDestino: string | null;
+  numeroIntento: number | null;
+  detalleError: string | null;
+  fechaUltimaActualizacion: string | null;
+}
