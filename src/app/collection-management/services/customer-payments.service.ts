@@ -10,7 +10,7 @@ export class CustomerPaymentsService {
 
   constructor(private http: HttpClient) {}
 
-  getCancelaciones(
+  getPagos(
     documento: string,
     context: CustomerPaymentsContext,
     page: number,
@@ -24,7 +24,7 @@ export class CustomerPaymentsService {
       .set('size', size.toString());
 
     return this.http.get<CustomerPaymentsPage>(
-      `${this.baseUrl}/clientes/${encodeURIComponent(documento)}/cancelaciones`,
+      `${this.baseUrl}/clientes/${encodeURIComponent(documento)}/pagos`,
       { params }
     );
   }

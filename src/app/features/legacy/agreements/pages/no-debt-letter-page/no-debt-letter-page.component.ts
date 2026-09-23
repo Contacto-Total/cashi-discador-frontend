@@ -1,12 +1,12 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
-import { ThemeService } from '../../../../../shared/services/theme.service';
 import { FormatService } from '@/shared/services/format.service';
 import { ClientSearchService } from '../../../../../core/services/client-search.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -20,7 +20,10 @@ export class NoDebtLetterPageComponent {
 
   searchForm: FormGroup;
   letterForm: FormGroup;
-  isDarkMode = false;
+
+  private readonly authService = inject(AuthService);
+  readonly puedeEmitirCartasPropias =
+    this.authService.hasAnyRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR TRAMO PROPIO');
 
   isLoading = false;
   mostrarDocumento = false;
@@ -40,7 +43,6 @@ export class NoDebtLetterPageComponent {
   constructor(
     private fb: FormBuilder,
     private agreementsService: AgreementsService,
-    private themeService: ThemeService,
     private clientSearchService: ClientSearchService
   ) {
     this.searchForm = this.fb.group({
@@ -53,10 +55,6 @@ export class NoDebtLetterPageComponent {
       numeroCuenta: ['', Validators.required],
       fechaActual: [this.formatDate(new Date()), Validators.required],
       fechaCancelacion: [this.formatDate(new Date()), Validators.required]
-    });
-
-    effect(() => {
-      this.isDarkMode = this.themeService.isDarkMode();
     });
   }
 

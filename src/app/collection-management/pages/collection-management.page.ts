@@ -2322,7 +2322,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },
-    { id: 'pagos', label: 'Cancelaciones', icon: 'credit-card' }
+    { id: 'pagos', label: 'Pagos', icon: 'credit-card' }
   ];
 
   managementForm: ManagementForm = {

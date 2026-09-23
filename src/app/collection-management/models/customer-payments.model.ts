@@ -4,18 +4,14 @@ export interface CustomerPaymentsContext {
   subcarteraId: number;
 }
 
-export interface CustomerCancellationReconciliation {
+export interface CustomerBankPayment {
   id: number;
-  fechaCancelacion: string;
-  montoCancelacion: number | null;
-  banco: string | null;
-  montoBanco: number | null;
-  fechaBanco: string | null;
-  estadoConciliacion: 'CONCILIADO' | 'PENDIENTE_CONCILIACION' | 'INCONSISTENTE';
+  fechaPago: string | null;
+  montoPago: number | null;
 }
 
 export interface CustomerPaymentsPage {
-  content: CustomerCancellationReconciliation[];
+  content: CustomerBankPayment[];
   page: number;
   size: number;
   totalElements: number;
