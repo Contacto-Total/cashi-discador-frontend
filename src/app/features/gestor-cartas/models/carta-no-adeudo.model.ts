@@ -60,6 +60,16 @@ export interface CartaNoAdeudoHistorial {
   fechaResultado: string | null;
 }
 
+export interface CartaNoAdeudoRechazo {
+  id: number;
+  idSolicitud: number;
+  estadoAnterior: CartaNoAdeudoEstado;
+  estadoResultante: CartaNoAdeudoEstado;
+  justificacion: string;
+  idUsuarioRechazo: number;
+  fechaRechazo: string;
+}
+
 export interface CartaNoAdeudoDocumento {
   id: number;
   idSolicitud: number;
@@ -89,6 +99,7 @@ export interface CartaNoAdeudoSolicitudFilters {
 }
 
 export interface CartaNoAdeudoClienteCorreo {
+  idSolicitud?: number;
   idCliente: number;
   idGestion: number;
   idTenant: number;

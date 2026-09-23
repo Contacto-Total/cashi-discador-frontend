@@ -122,7 +122,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
       </article>
     </section>
 
-    @if (!modoSoloLectura) {
+    @if (!modoSoloLectura && mostrarAccion) {
     <footer class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
       <p class="text-sm text-slate-600 dark:text-slate-300">
         {{ seleccionados.size }} cliente{{ seleccionados.size === 1 ? '' : 's' }} seleccionado{{ seleccionados.size === 1 ? '' : 's' }}
@@ -145,6 +145,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Input() totalPages = 0;
   @Input() totalElements = 0;
   @Input() modoSoloLectura = false;
+  @Input() mostrarAccion = true;
   @Input() titulo = 'Clientes con pago cumplido';
   @Input() descripcion = 'Selecciona un cliente para revisar su carta.';
   @Input() vistaPreviaUrl: SafeResourceUrl | null = null;
@@ -153,6 +154,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Output() readonly cambiarPagina = new EventEmitter<number>();
   @Output() readonly verVistaPrevia = new EventEmitter<CartaNoAdeudoClienteCorreo>();
   @Output() readonly enviarValidacionPagos = new EventEmitter<CartaNoAdeudoClienteCorreo[]>();
+  @Output() readonly seleccionadosCambiaron = new EventEmitter<CartaNoAdeudoClienteCorreo[]>();
 
   filtroDocumento = '';
   clientePreview: CartaNoAdeudoClienteCorreo | null = null;
@@ -195,6 +197,7 @@ export class CartaNoAdeudoListaWidgetComponent {
       this.seleccionados.add(cliente.idCliente);
     }
     this.seleccionados = new Set(this.seleccionados);
+    this.seleccionadosCambiaron.emit(this.clientesSeleccionados);
   }
 
   alternarTodos(): void {
@@ -204,5 +207,6 @@ export class CartaNoAdeudoListaWidgetComponent {
       this.clientes.forEach(cliente => this.seleccionados.add(cliente.idCliente));
     }
     this.seleccionados = new Set(this.seleccionados);
+    this.seleccionadosCambiaron.emit(this.clientesSeleccionados);
   }
 }
