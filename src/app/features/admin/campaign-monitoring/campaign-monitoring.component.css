@@ -1501,6 +1501,47 @@ body.light-theme .agente-tiempo {
   cursor: not-allowed;
 }
 
+/* Aviso cuando el asesor esta en llamada o tipificando: los estados quedan bloqueados. */
+.status-lock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #B45309;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.status-release-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 10px 0 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(6, 182, 212, 0.45);
+  background: rgba(6, 182, 212, 0.12);
+  color: #0E7490;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.status-release-btn:hover:not(:disabled) {
+  background: rgba(6, 182, 212, 0.2);
+}
+
+.status-release-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .status-modal-loading {
   display: flex;
   align-items: center;

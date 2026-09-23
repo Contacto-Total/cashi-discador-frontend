@@ -440,15 +440,29 @@
       </span>
     </div>
 
+    <div class="status-lock" *ngIf="agenteEnCicloDeLlamada">
+      <lucide-angular name="lock" [size]="16"></lucide-angular>
+      <span>{{ mensajeCicloDeLlamada }}</span>
+    </div>
+
+    <button
+      class="status-release-btn"
+      *ngIf="puedeLiberarTipificacion"
+      (click)="liberarTipificacion()"
+      [disabled]="changingStatus">
+      <lucide-angular name="unlock" [size]="16"></lucide-angular>
+      <span>Liberar tipificación</span>
+    </button>
+
     <div class="status-options">
       <button
         *ngFor="let estado of estadosDisponibles"
         class="status-option-btn"
         [class.current]="isCurrentStatus(estado.value)"
-        [class.disabled]="changingStatus"
+        [class.disabled]="changingStatus || agenteEnCicloDeLlamada"
         [style.--estado-color]="estado.color"
         (click)="changeAgentStatus(estado.value)"
-        [disabled]="changingStatus">
+        [disabled]="changingStatus || agenteEnCicloDeLlamada">
         <lucide-angular [name]="estado.icon" [size]="18"></lucide-angular>
         <span>{{ estado.label }}</span>
         <lucide-angular name="check" [size]="16" class="check-icon" *ngIf="isCurrentStatus(estado.value)"></lucide-angular>

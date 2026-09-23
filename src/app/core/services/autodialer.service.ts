@@ -217,6 +217,19 @@ export class AutoDialerService {
   /**
    * Cambia el estado de un agente (para uso de supervisores)
    */
+  /**
+   * Cierra una tipificacion que quedo abierta (el asesor cerro la ficha o perdio la
+   * conexion). Es el mismo endpoint que usa el sistema al guardar una gestion, asi que
+   * deja al asesor como el flujo normal: DISPONIBLE, o SEGUIMIENTO si esta en recordatorios.
+   */
+  finalizarTipificacionAgente(idUsuario: number): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/agent-status/${idUsuario}/sistema/finalizar-tipificacion`,
+      {},
+      { headers: this.getHeaders() }
+    );
+  }
+
   cambiarEstadoAgente(idUsuario: number, estado: string, notas?: string): Observable<any> {
     return this.http.post<any>(
       `${environment.apiUrl}/agent-status/${idUsuario}/cambiar-estado`,
