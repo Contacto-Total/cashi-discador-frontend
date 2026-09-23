@@ -6,6 +6,7 @@ import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { FormatService } from '@/shared/services/format.service';
 import { ClientSearchService } from '../../../../../core/services/client-search.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -19,6 +20,10 @@ export class NoDebtLetterPageComponent {
 
   searchForm: FormGroup;
   letterForm: FormGroup;
+
+  private readonly authService = inject(AuthService);
+  readonly puedeEmitirCartasPropias =
+    this.authService.hasAnyRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR TRAMO PROPIO');
 
   isLoading = false;
   mostrarDocumento = false;

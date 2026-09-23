@@ -24,6 +24,7 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
 import { BcpPagosService } from '../../../../../pagos-bancarios/services/bcp-pagos.service';
 import { ResumenConciliacionCliente } from '../../../../../pagos-bancarios/models/bcp-archivo.model';
 import { ClienteResumenConciliacionLecturaWidget } from '../../../../../pagos-bancarios/widgets/cliente-resumen-conciliacion-lectura.widget';
+import { AuthService } from '../../../../../core/services/auth.service';
 import { firstValueFrom } from 'rxjs';
 
 type PestanaCarta = 'correo' | 'pagos' | 'historial';
@@ -40,7 +41,9 @@ type OrigenEnvio = 'pagos' | 'fallidos';
         <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 class="text-base font-semibold text-slate-800 dark:text-white">Emisión de cartas por correo</h1>
           <div class="flex items-center gap-2">
+          @if (tieneAcceso) {
           <nav class="inline-flex w-full rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-medium shadow-sm sm:w-auto dark:border-slate-700 dark:bg-slate-800" aria-label="Etapas de emisión">
+            @if (puedeCorreo) {
             <button
               type="button"
               class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors sm:flex-none"
@@ -51,6 +54,8 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               <lucide-angular name="mail" [size]="14"></lucide-angular>
               Validación de correo
             </button>
+            }
+            @if (puedePagos) {
             <button
               type="button"
               class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors sm:flex-none"
@@ -61,6 +66,8 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               <lucide-angular name="badge-check" [size]="14"></lucide-angular>
               Validación de pagos
             </button>
+            }
+            @if (puedeHistorial) {
             <button
               type="button"
               class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors sm:flex-none"
@@ -71,7 +78,10 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               <lucide-angular name="history" [size]="14"></lucide-angular>
               Historial
             </button>
+            }
           </nav>
+          }
+          @if (puedeHistorial) {
           <button
             type="button"
             (click)="abrirSidenav()"
@@ -79,10 +89,17 @@ type OrigenEnvio = 'pagos' | 'fallidos';
             aria-label="Abrir seguimiento">
             Seguimiento
           </button>
+          }
           </div>
         </div>
 
-        @if (activeTab() === 'correo') {
+        @if (!tieneAcceso) {
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200">
+            No tienes permisos para acceder a este módulo.
+          </div>
+        }
+
+        @if (activeTab() === 'correo' && puedeCorreo) {
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <button
@@ -235,7 +252,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
           }
         }
 
-        @if (activeTab() === 'pagos') {
+        @if (activeTab() === 'pagos' && puedePagos) {
           <div class="mb-3 inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <button
               type="button"
@@ -358,7 +375,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
           }
         }
 
-        @if (activeTab() === 'historial') {
+        @if (activeTab() === 'historial' && puedeHistorial) {
           <div class="mb-3 flex w-full max-w-md gap-2">
             <input
               #correoBusqueda
@@ -486,7 +503,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
           </div>
         }
 
-        @if (sidenavAbierto()) {
+        @if (sidenavAbierto() && puedeHistorial) {
           <div class="fixed inset-0 z-50 flex justify-end bg-slate-950/20" (click)="cerrarSidenav()">
             <aside class="flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:w-[440px] sm:max-w-[94vw]" (click)="$event.stopPropagation()">
               <header class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
@@ -581,6 +598,12 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   private readonly cartaNoAdeudoService = inject(CartaNoAdeudoService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly bcpPagosService = inject(BcpPagosService);
+  private readonly authService = inject(AuthService);
+
+  readonly puedeCorreo = this.authService.hasAnyRole('ADMIN', 'SUPERVISOR TRAMO PROPIO');
+  readonly puedePagos = this.authService.hasAnyRole('ADMIN', 'SUPERVISOR');
+  readonly puedeHistorial = this.authService.hasAnyRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR TRAMO PROPIO');
+  readonly tieneAcceso = this.puedeCorreo || this.puedePagos || this.puedeHistorial;
 
   readonly activeTab = signal<PestanaCarta>('correo');
   readonly subTabPagos = signal<SubTabPagos>('validacion');
@@ -694,7 +717,21 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.cargarCandidatos();
+    if (!this.puedeCorreo && this.puedePagos) {
+      this.activeTab.set('pagos');
+    } else if (!this.puedeCorreo && !this.puedePagos) {
+      this.activeTab.set('historial');
+    }
+
+    if (this.activeTab() === 'correo' && this.puedeCorreo) {
+      this.cargarCandidatos();
+    }
+    if (this.activeTab() === 'pagos' && this.puedePagos) {
+      this.cargarValidacionPagos(0);
+    }
+    if (this.activeTab() === 'historial' && this.puedeHistorial) {
+      this.listarEnviadas(0);
+    }
   }
 
   cambiarModoCorreo(modo: 'pendientes' | 'rechazados'): void {

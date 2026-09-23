@@ -272,6 +272,7 @@ export class AuthService {
           firstName: firstName,
           lastName: lastName,
           role: this.mapRoleToBase(response.roles?.[0]) as UserRole,
+          roles: response.roles ?? [],
           sipExtension: response.extensionSip,
           sipPassword: response.sipPassword,
           active: true,
@@ -355,6 +356,29 @@ export class AuthService {
 
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
+  }
+
+  /**
+   * True si el usuario actual tiene alguno de los roles indicados.
+   * Compara contra los roles crudos del backend (ej. 'SUPERVISOR TRAMO PROPIO')
+   * y, solo si no hay roles crudos, cae al rol base (ADMIN/SUPERVISOR/AGENT).
+   */
+  hasAnyRole(...roles: string[]): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+
+    const deseados = new Set(roles.map(rol => this.normalizarRol(rol)));
+    const crudos = (user.roles ?? []).filter((rol): rol is string => !!rol && rol.trim() !== '');
+
+    const actuales = crudos.length > 0
+      ? new Set(crudos.map(rol => this.normalizarRol(rol)))
+      : new Set(user.role ? [this.normalizarRol(String(user.role))] : []);
+
+    return Array.from(deseados).some(rol => actuales.has(rol));
+  }
+
+  private normalizarRol(rol: string): string {
+    return rol.toUpperCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   getCurrentUserId(): number | null {
