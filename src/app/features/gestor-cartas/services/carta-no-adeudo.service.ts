@@ -7,6 +7,7 @@ import {
   CartaNoAdeudoClienteCorreo,
   CartaNoAdeudoEnviada,
   CartaNoAdeudoFallido,
+  CartaNoAdeudoValidacionPago,
   CartaNoAdeudoHistorial,
   CartaNoAdeudoRechazo,
   CartaNoAdeudoPage,
@@ -87,9 +88,18 @@ export class CartaNoAdeudoService {
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoFallido>>(`${this.baseUrl}/solicitudes/fallidos`, { params });
   }
 
-  listarEnviadas(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoEnviada>> {
-    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+  listarEnviadas(page = 0, size = 20, correo?: string): Observable<CartaNoAdeudoPage<CartaNoAdeudoEnviada>> {
+    let params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    if (correo?.trim()) {
+      params = params.set('correo', correo.trim());
+    }
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoEnviada>>(`${this.baseUrl}/solicitudes/enviadas`, { params });
+  }
+
+  listarValidacionPagos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoValidacionPago>> {
+    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoValidacionPago>>(
+      `${this.baseUrl}/solicitudes/validacion-pagos`, { params });
   }
 
   enviarCopia(

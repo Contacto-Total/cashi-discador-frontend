@@ -10,7 +10,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
   template: `
     <section class="grid gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.6fr)]">
       <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+        <div class="border-b border-slate-200 px-3 py-2.5 dark:border-slate-700">
           <h2 class="text-sm font-semibold text-slate-800 dark:text-white">{{ titulo }}</h2>
           <p class="text-xs text-slate-500 dark:text-slate-400">{{ descripcion }}</p>
           @if (!modoSoloLectura) {
@@ -46,7 +46,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
           @for (cliente of clientesFiltrados; track cliente.idSolicitud ?? cliente.idCliente) {
             <button
               type="button"
-              class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
+              class="flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
               [class.bg-blue-50]="clientePreview?.idCliente === cliente.idCliente"
               (click)="verCarta(cliente)">
               @if (!modoSoloLectura) {
@@ -78,7 +78,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         </div>
 
         @if (totalPages > 1) {
-          <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
+          <div class="flex items-center justify-between border-t border-slate-200 px-3 py-2.5 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
             <span>Página {{ page + 1 }} de {{ totalPages }} ({{ totalElements }} clientes)</span>
             <div class="flex gap-2">
               <button
@@ -100,9 +100,11 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         }
       </div>
 
-      <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <ng-content select="[correoControls]"></ng-content>
+        <ng-content select="[detalleDerecho]"></ng-content>
 
+        @if (mostrarVistaDetalle) {
         @if (correoCuerpoHtml) {
           <div class="mb-3 inline-flex gap-1 rounded-lg bg-slate-100 p-1 text-xs font-medium dark:bg-slate-700">
             <button
@@ -131,7 +133,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
           </div>
         } @else if (vistaDetalle === 'correo' && correoCuerpoHtml) {
           <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-            <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
+            <div class="border-b border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900/40">
               <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ correoAsunto }}</p>
               <p class="mt-1 text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">De:</span> {{ correoRemitente }}</p>
               <p class="text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">Para:</span> {{ correoDestinatario || 'Sin correo registrado' }}</p>
@@ -160,6 +162,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
             <p class="text-sm font-medium">Selecciona un cliente</p>
             <p class="mt-1 text-xs">La vista previa de la carta se mostrará aquí.</p>
           </div>
+        }
         }
       </article>
     </section>
@@ -192,6 +195,7 @@ export class CartaNoAdeudoListaWidgetComponent {
   @Input() descripcion = 'Selecciona un cliente para revisar su carta.';
   @Input() vistaPreviaUrl: SafeResourceUrl | null = null;
   @Input() cargandoVistaPrevia = false;
+  @Input() mostrarVistaDetalle = true;
   @Input() correoRemitente = '';
   @Input() correoDestinatario: string | null = null;
   @Input() correoAsunto = '';
