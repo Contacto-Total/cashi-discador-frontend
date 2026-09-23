@@ -24,6 +24,7 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
 import { BcpPagosService } from '../../../../../pagos-bancarios/services/bcp-pagos.service';
 import { ResumenConciliacionCliente } from '../../../../../pagos-bancarios/models/bcp-archivo.model';
 import { ClienteResumenConciliacionLecturaWidget } from '../../../../../pagos-bancarios/widgets/cliente-resumen-conciliacion-lectura.widget';
+import { firstValueFrom } from 'rxjs';
 
 type PestanaCarta = 'correo' | 'pagos' | 'historial';
 type SubTabPagos = 'validacion' | 'fallidos';
@@ -35,8 +36,6 @@ type OrigenEnvio = 'pagos' | 'fallidos';
   imports: [LucideAngularModule, CartaNoAdeudoListaWidgetComponent, ClienteResumenConciliacionLecturaWidget],
   template: `
     <div class="min-h-screen bg-slate-50 p-4 dark:bg-slate-900">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <div class="min-w-0 flex-1">
       <div class="mx-auto max-w-7xl">
         <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 class="text-base font-semibold text-slate-800 dark:text-white">Emisión de cartas por correo</h1>
@@ -78,7 +77,6 @@ type OrigenEnvio = 'pagos' | 'fallidos';
             (click)="abrirSidenav()"
             class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-blue-300"
             aria-label="Abrir seguimiento">
-            <lucide-angular name="package" [size]="14"></lucide-angular>
             Seguimiento
           </button>
           </div>
@@ -119,6 +117,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               [page]="pagina()"
               [totalPages]="totalPaginas()"
               [totalElements]="totalCandidatos()"
+              [todosSeleccionados]="todosCorreo()"
               [vistaPreviaUrl]="vistaPreviaUrl()"
               [cargandoVistaPrevia]="cargandoVistaPrevia()"
               [correoRemitente]="remitenteCorreo"
@@ -129,6 +128,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               (buscar)="cargarCandidatos($event)"
               (cambiarPagina)="cambiarPagina($event)"
               (verVistaPrevia)="generarVistaPrevia($event)"
+              (todosCambiaron)="cambiarTodosCorreo($event)"
               (enviarValidacionPagos)="enviarAValidacionPagos($event)">
               @if (clienteCorreo(); as cliente) {
                 <section correoControls class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
@@ -140,21 +140,16 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                       <span class="ml-auto truncate rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">{{ cliente.correo }}</span>
                     }
                   </div>
-                  <div class="mt-2 flex flex-wrap gap-1.5">
-                    @for (correo of correos(); track correo.id) {
-                      <button
-                        type="button"
-                        (click)="seleccionarCorreo(cliente, correo)"
-                        class="rounded-full border px-2.5 py-1 text-xs transition-colors"
-                        [class.border-blue-600]="cliente.correo === correo.valor"
-                        [class.bg-blue-50]="cliente.correo === correo.valor"
-                        [class.text-blue-600]="cliente.correo === correo.valor"
-                        [class.text-slate-600]="cliente.correo !== correo.valor">{{ correo.valor }}</button>
-                    } @empty {
-                      <p class="text-xs text-slate-500">Sin correos registrados.</p>
-                    }
-                  </div>
-                  <div class="mt-2 flex max-w-sm gap-1.5">
+                  <div class="mt-2 flex items-center gap-1.5">
+                    <select
+                      #selectorCorreo
+                      class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      (change)="seleccionarCorreoPorValor(cliente, selectorCorreo.value)">
+                      <option value="">Seleccionar correo</option>
+                      @for (correo of correos(); track correo.id) {
+                        <option [value]="correo.valor" [selected]="cliente.correo === correo.valor">{{ correo.valor }}</option>
+                      }
+                    </select>
                     <input
                       #nuevoCorreo
                       type="email"
@@ -165,7 +160,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                       type="button"
                       [disabled]="!correoValido()"
                       (click)="agregarCorreo(cliente)"
-                      class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
+                      class="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
                   </div>
                 </section>
               }
@@ -173,6 +168,8 @@ type OrigenEnvio = 'pagos' | 'fallidos';
           } @else {
             <app-carta-no-adeudo-lista-widget
               [clientes]="clientesRechazados()"
+              [totalElements]="clientesRechazados().length"
+              [todosSeleccionados]="todosRechazados()"
               [vistaPreviaUrl]="vistaPreviaUrl()"
               [cargandoVistaPrevia]="cargandoVistaPrevia()"
               [correoRemitente]="remitenteCorreo"
@@ -183,6 +180,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               titulo="Clientes que requieren corrección"
               descripcion="Rechazados en Validación de pagos. Corrige el correo y reenvíalos."
               (verVistaPrevia)="generarVistaPrevia($event)"
+              (todosCambiaron)="cambiarTodosRechazados($event)"
               (enviarValidacionPagos)="reenviarRechazadosAValidacionPagos($event)">
               @if (clienteCorreo(); as cliente) {
                 <section correoControls class="mb-3 space-y-2">
@@ -195,21 +193,16 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                         <span class="ml-auto truncate rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">{{ cliente.correo }}</span>
                       }
                     </div>
-                    <div class="mt-2 flex flex-wrap gap-1.5">
-                      @for (correo of correos(); track correo.id) {
-                        <button
-                          type="button"
-                          (click)="seleccionarCorreo(cliente, correo)"
-                          class="rounded-full border px-2.5 py-1 text-xs transition-colors"
-                          [class.border-blue-600]="cliente.correo === correo.valor"
-                          [class.bg-blue-50]="cliente.correo === correo.valor"
-                          [class.text-blue-600]="cliente.correo === correo.valor"
-                          [class.text-slate-600]="cliente.correo !== correo.valor">{{ correo.valor }}</button>
-                      } @empty {
-                        <p class="text-xs text-slate-500">Sin correos registrados.</p>
-                      }
-                    </div>
-                    <div class="mt-2 flex max-w-sm gap-1.5">
+                    <div class="mt-2 flex items-center gap-1.5">
+                      <select
+                        #selectorCorreoRechazado
+                        class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        (change)="seleccionarCorreoPorValor(cliente, selectorCorreoRechazado.value)">
+                        <option value="">Seleccionar correo</option>
+                        @for (correo of correos(); track correo.id) {
+                          <option [value]="correo.valor" [selected]="cliente.correo === correo.valor">{{ correo.valor }}</option>
+                        }
+                      </select>
                       <input
                         #nuevoCorreoRechazado
                         type="email"
@@ -220,16 +213,16 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                         type="button"
                         [disabled]="!correoValido()"
                         (click)="agregarCorreo(cliente)"
-                        class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
+                        class="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
                     </div>
                   </div>
-                  <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20">
-                    <h3 class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Observaciones</h3>
-                    <div class="mt-2 space-y-2">
+                  <div class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-700/60 dark:bg-amber-900/20">
+                    <h3 class="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Observaciones</h3>
+                    <div class="mt-1.5 max-h-[9rem] space-y-1.5 overflow-y-auto pr-1">
                       @for (observacion of observacionesSeleccionadas(); track $index) {
-                        <div class="rounded-md border border-amber-200 bg-white px-3 py-2 dark:border-amber-700/60 dark:bg-slate-800">
-                          <p class="text-sm text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
-                          <p class="mt-1 text-xs text-slate-500">{{ observacion.fecha }}</p>
+                        <div class="rounded-md border border-amber-200 bg-white px-2 py-1.5 dark:border-amber-700/60 dark:bg-slate-800">
+                          <p class="text-xs text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
+                          <p class="mt-0.5 text-[10px] text-slate-500">{{ observacion.fecha }}</p>
                         </div>
                       } @empty {
                         <p class="text-xs text-slate-500">Sin observaciones registradas.</p>
@@ -274,21 +267,23 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               [totalElements]="totalPagos()"
               [mostrarAccion]="false"
               [mostrarVistaDetalle]="false"
+              [todosSeleccionados]="todosPagos()"
               titulo="Clientes en validación de pagos"
               descripcion="Selecciona un cliente para revisar pagos y gestiones."
               (verVistaPrevia)="cargarPagosCliente($event)"
               (cambiarPagina)="cargarValidacionPagos($event)"
+              (todosCambiaron)="cambiarTodosPagos($event)"
               (seleccionadosCambiaron)="seleccionadosPagos.set($event)">
               @if (clientePagos(); as cliente) {
                 <div detalleDerecho class="space-y-3">
-                  <section class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+                  <section class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-900/40">
                     <div class="flex items-center justify-between gap-2">
-                      <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rechazar solicitud</h2>
+                      <h2 class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rechazar solicitud</h2>
                       <span class="truncate text-[11px] text-slate-500">{{ cliente.nombreCliente }}</span>
                     </div>
-                    <div class="mt-2 flex gap-2">
-                      <textarea #justificacion rows="2" placeholder="Justificación del rechazo" class="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-rose-500 dark:border-slate-600 dark:bg-slate-700" (input)="justificacionRechazo.set(justificacion.value.trim())"></textarea>
-                      <button type="button" [disabled]="!cliente.idSolicitud || !justificacionRechazo()" (click)="rechazarCliente(cliente)" class="self-start rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Rechazar</button>
+                    <div class="mt-1.5 flex gap-1.5">
+                      <textarea #justificacion rows="2" placeholder="Justificación del rechazo" maxlength="300" class="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 p-1.5 text-xs outline-none focus:border-rose-500 dark:border-slate-600 dark:bg-slate-700" (input)="justificacionRechazo.set(justificacion.value.trim())"></textarea>
+                      <button type="button" [disabled]="!cliente.idSolicitud || !justificacionRechazo()" (click)="rechazarCliente(cliente)" class="self-start rounded-lg bg-rose-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Rechazar</button>
                     </div>
                   </section>
                   <app-cliente-resumen-conciliacion-lectura
@@ -304,13 +299,13 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                   </app-cliente-resumen-conciliacion-lectura>
                   @if (observacionesDe(cliente); as observaciones) {
                     @if (observaciones.length > 0) {
-                      <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Historial de observaciones</h3>
-                        <div class="mt-2 space-y-2">
+                      <div class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-700/60 dark:bg-amber-900/20">
+                        <h3 class="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Historial de observaciones</h3>
+                        <div class="mt-1.5 max-h-[9rem] space-y-1.5 overflow-y-auto pr-1">
                           @for (observacion of observaciones; track $index) {
-                            <div class="rounded-md border border-amber-200 bg-white px-3 py-2 dark:border-amber-700/60 dark:bg-slate-800">
-                              <p class="text-sm text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
-                              <p class="mt-1 text-xs text-slate-500">{{ observacion.fecha }}</p>
+                            <div class="rounded-md border border-amber-200 bg-white px-2 py-1.5 dark:border-amber-700/60 dark:bg-slate-800">
+                              <p class="text-xs text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
+                              <p class="mt-0.5 text-[10px] text-slate-500">{{ observacion.fecha }}</p>
                             </div>
                           }
                         </div>
@@ -332,6 +327,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               [totalPages]="totalPaginasFallidos()"
               [totalElements]="totalFallidos()"
               [mostrarAccion]="false"
+              [todosSeleccionados]="todosFallidos()"
               titulo="Cartas con error de envío"
               descripcion="Selecciona las solicitudes para reintentar el envío."
               [vistaPreviaUrl]="vistaPreviaUrl()"
@@ -343,16 +339,17 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               [correoAdjuntoNombre]="correoAdjuntoRender()"
               (verVistaPrevia)="generarVistaPrevia($event)"
               (cambiarPagina)="cargarFallidos($event)"
+              (todosCambiaron)="cambiarTodosFallidos($event)"
               (seleccionadosCambiaron)="seleccionadosFallidos.set($event)">
             </app-carta-no-adeudo-lista-widget>
             <footer class="mt-3 flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
               <p class="text-xs text-slate-600 dark:text-slate-300">
-                {{ seleccionadosFallidos().length }} solicitud{{ seleccionadosFallidos().length === 1 ? '' : 'es' }} seleccionada{{ seleccionadosFallidos().length === 1 ? '' : 's' }}
+                {{ todosFallidos() ? totalFallidos() : seleccionadosFallidos().length }} solicitud{{ (todosFallidos() ? totalFallidos() : seleccionadosFallidos().length) === 1 ? '' : 'es' }} seleccionada{{ (todosFallidos() ? totalFallidos() : seleccionadosFallidos().length) === 1 ? '' : 's' }}
               </p>
               <button
                 type="button"
                 class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                [disabled]="seleccionadosFallidos().length === 0"
+                [disabled]="(todosFallidos() ? totalFallidos() : seleccionadosFallidos().length) === 0"
                 (click)="abrirDialogoEnvio('fallidos')">
                 <lucide-angular name="rotate-ccw" [size]="16"></lucide-angular>
                 Reintentar envío
@@ -489,11 +486,9 @@ type OrigenEnvio = 'pagos' | 'fallidos';
           </div>
         }
 
-      </div>
-      </div>
-
         @if (sidenavAbierto()) {
-          <aside class="w-full shrink-0 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100vh-2rem)] lg:w-[420px] lg:flex-col lg:overflow-hidden">
+          <div class="fixed inset-0 z-50 flex justify-end bg-slate-950/20" (click)="cerrarSidenav()">
+            <aside class="flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:w-[440px] sm:max-w-[94vw]" (click)="$event.stopPropagation()">
               <header class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
                 <div>
                   <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Seguimiento del cliente</h2>
@@ -575,7 +570,8 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                   </div>
                 }
               </div>
-          </aside>
+            </aside>
+          </div>
         }
       </div>
     </div>
@@ -608,6 +604,10 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly origenEnvio = signal<OrigenEnvio>('pagos');
   readonly cargandoEnvio = signal(false);
   readonly modoCorreo = signal<'pendientes' | 'rechazados'>('pendientes');
+  readonly todosCorreo = signal(false);
+  readonly todosRechazados = signal(false);
+  readonly todosPagos = signal(false);
+  readonly todosFallidos = signal(false);
   readonly clientesRechazados = signal<CartaNoAdeudoClienteCorreo[]>([]);
   readonly observacionesPorCliente = signal<Record<number, CartaNoAdeudoObservacion[]>>({});
   readonly justificacionRechazo = signal('');
@@ -700,11 +700,42 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   cambiarModoCorreo(modo: 'pendientes' | 'rechazados'): void {
     if (this.modoCorreo() === modo) return;
     this.modoCorreo.set(modo);
+    this.todosCorreo.set(false);
+    this.todosRechazados.set(false);
     this.clienteCorreo.set(null);
     this.correos.set([]);
     this.limpiarVistaPrevia();
     this.vistaPreviaUrl.set(null);
     this.cargandoVistaPrevia.set(false);
+  }
+
+  cambiarTodosCorreo(checked: boolean): void {
+    this.todosCorreo.set(checked);
+  }
+
+  cambiarTodosRechazados(checked: boolean): void {
+    this.todosRechazados.set(checked);
+  }
+
+  cambiarTodosPagos(checked: boolean): void {
+    this.todosPagos.set(checked);
+    if (checked) {
+      this.seleccionadosPagos.set([]);
+    }
+  }
+
+  cambiarTodosFallidos(checked: boolean): void {
+    this.todosFallidos.set(checked);
+    if (checked) {
+      this.seleccionadosFallidos.set([]);
+    }
+  }
+
+  seleccionarCorreoPorValor(cliente: CartaNoAdeudoClienteCorreo, valor: string): void {
+    const correo = this.correos().find(item => item.valor === valor);
+    if (correo) {
+      this.seleccionarCorreo(cliente, correo);
+    }
   }
 
   seleccionarTab(tab: PestanaCarta): void {
@@ -779,25 +810,40 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   enviarAValidacionPagos(clientes: CartaNoAdeudoClienteCorreo[]): void {
-    const solicitudes = clientes.map(cliente => ({
-      idCliente: cliente.idCliente,
-      idGestion: cliente.idGestion,
-      idTenant: cliente.idTenant,
-      idCartera: cliente.idCartera,
-      idSubcartera: cliente.idSubcartera,
-      tipoSolicitud: 'ORIGINAL' as const,
-      idMetodoContactoDestino: cliente.idMetodoContacto ?? undefined,
-      correoDestino: cliente.correo ?? ''
-    }));
-    this.cartaNoAdeudoService.enviarAValidacionPagos(solicitudes).subscribe({
-      next: () => {
-        this.cargarCandidatos(this.documentoBusqueda, this.pagina());
-        this.pagosCargados = false;
-        this.cargarValidacionPagos(0);
-        this.activeTab.set('pagos');
-      },
-      error: error => console.error('No se pudieron enviar las cartas a validación de pagos', error)
+    const fuente = this.todosCorreo() ? this.obtenerTodosLosCandidatos() : Promise.resolve(clientes);
+    fuente.then(lista => {
+      if (!lista.length) return;
+      const solicitudes = lista.map(cliente => ({
+        idCliente: cliente.idCliente,
+        idGestion: cliente.idGestion,
+        idTenant: cliente.idTenant,
+        idCartera: cliente.idCartera,
+        idSubcartera: cliente.idSubcartera,
+        tipoSolicitud: 'ORIGINAL' as const,
+        idMetodoContactoDestino: cliente.idMetodoContacto ?? undefined,
+        correoDestino: cliente.correo ?? ''
+      }));
+      this.cartaNoAdeudoService.enviarAValidacionPagos(solicitudes).subscribe({
+        next: () => {
+          this.todosCorreo.set(false);
+          this.cargarCandidatos(this.documentoBusqueda, this.pagina());
+          this.pagosCargados = false;
+          this.cargarValidacionPagos(0);
+          this.activeTab.set('pagos');
+        },
+        error: error => console.error('No se pudieron enviar las cartas a validación de pagos', error)
+      });
     });
+  }
+
+  private async obtenerTodosLosCandidatos(): Promise<CartaNoAdeudoClienteCorreo[]> {
+    const primera = await firstValueFrom(this.cartaNoAdeudoService.listarCandidatos(this.documentoBusqueda, 0, 100));
+    const items = [...primera.content];
+    for (let page = 1; page < primera.totalPages; page++) {
+      const response = await firstValueFrom(this.cartaNoAdeudoService.listarCandidatos(this.documentoBusqueda, page, 100));
+      items.push(...response.content);
+    }
+    return items;
   }
 
   cargarPagosCliente(cliente: CartaNoAdeudoClienteCorreo): void {
@@ -856,7 +902,8 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   reenviarRechazadosAValidacionPagos(clientes: CartaNoAdeudoClienteCorreo[]): void {
-    const reenvios: ReenviarCartaNoAdeudoItem[] = clientes
+    const seleccion = this.todosRechazados() ? this.clientesRechazados() : clientes;
+    const reenvios: ReenviarCartaNoAdeudoItem[] = seleccion
       .filter(cliente => typeof cliente.idSolicitud === 'number')
       .map(cliente => ({
         idSolicitud: cliente.idSolicitud as number,
@@ -869,6 +916,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
       next: () => {
         const reenviados = new Set(reenvios.map(reenvio => reenvio.idSolicitud));
         this.clientesRechazados.update(lista => lista.filter(item => !(item.idSolicitud && reenviados.has(item.idSolicitud))));
+        this.todosRechazados.set(false);
         this.clienteCorreo.set(null);
         this.modoCorreo.set('pendientes');
         this.pagosCargados = false;
@@ -1036,49 +1084,96 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   abrirDialogoEnvio(origen: OrigenEnvio): void {
-    if (this.seleccionActual(origen).length === 0) return;
+    if (this.cantidadSeleccion(origen) === 0) return;
     this.origenEnvio.set(origen);
     this.dialogEnvio.set(true);
   }
 
   cantidadSeleccionada(): number {
-    return this.seleccionActual(this.origenEnvio()).length;
+    return this.cantidadSeleccion(this.origenEnvio());
+  }
+
+  private cantidadSeleccion(origen: OrigenEnvio): number {
+    if (origen === 'fallidos') {
+      return this.todosFallidos() ? this.totalFallidos() : this.seleccionadosFallidos().length;
+    }
+    return this.todosPagos() ? this.totalPagos() : this.seleccionadosPagos().length;
   }
 
   confirmarEnvio(): void {
     const origen = this.origenEnvio();
-    const ids = this.seleccionActual(origen)
-      .map(cliente => cliente.idSolicitud)
-      .filter((id): id is number => typeof id === 'number');
-    if (!ids.length || this.cargandoEnvio()) return;
+    if (this.cargandoEnvio()) return;
 
-    this.cargandoEnvio.set(true);
-    this.cartaNoAdeudoService.enviarSolicitudes(ids, CARTA_NO_ADEUDO_ASUNTO, CARTA_NO_ADEUDO_CUERPO).subscribe({
-      next: response => {
-        this.cargandoEnvio.set(false);
-        this.dialogEnvio.set(false);
-        const enviadas = new Set(response.resultados.filter(resultado => resultado.exito).map(resultado => resultado.idSolicitud));
-        if (origen === 'pagos') {
-          this.clientesEnPagos.update(clientes => clientes.filter(cliente => !(cliente.idSolicitud && enviadas.has(cliente.idSolicitud))));
-          this.seleccionadosPagos.set([]);
-          this.pagosCargados = false;
-        } else {
-          this.fallidos.update(fallidos => fallidos.filter(fallido => !enviadas.has(fallido.idSolicitud)));
-          this.seleccionadosFallidos.set([]);
+    const todos = origen === 'fallidos' ? this.todosFallidos() : this.todosPagos();
+    const idsPromise: Promise<number[]> = todos
+      ? (origen === 'fallidos' ? this.idsTodosFallidos() : this.idsTodosPagos())
+      : Promise.resolve(this.seleccionActual(origen)
+          .map(cliente => cliente.idSolicitud)
+          .filter((id): id is number => typeof id === 'number'));
+
+    idsPromise.then(ids => {
+      if (!ids.length) return;
+      this.cargandoEnvio.set(true);
+      this.cartaNoAdeudoService.enviarSolicitudes(ids, CARTA_NO_ADEUDO_ASUNTO, CARTA_NO_ADEUDO_CUERPO).subscribe({
+        next: response => {
+          this.cargandoEnvio.set(false);
+          this.dialogEnvio.set(false);
+          const enviadas = new Set(response.resultados.filter(resultado => resultado.exito).map(resultado => resultado.idSolicitud));
+          if (origen === 'pagos') {
+            this.clientesEnPagos.update(clientes => clientes.filter(cliente => !(cliente.idSolicitud && enviadas.has(cliente.idSolicitud))));
+            this.seleccionadosPagos.set([]);
+            this.pagosCargados = false;
+            if (todos) this.cargarValidacionPagos(this.paginaPagos());
+          } else {
+            this.fallidos.update(fallidos => fallidos.filter(fallido => !enviadas.has(fallido.idSolicitud)));
+            this.seleccionadosFallidos.set([]);
+            if (todos) {
+              this.fallidosCargados = false;
+              this.cargarFallidos(this.paginaFallidos());
+            }
+          }
+          this.todosPagos.set(false);
+          this.todosFallidos.set(false);
+          if (response.fallidas > 0) {
+            this.fallidosCargados = false;
+            this.cargarFallidos(0);
+          }
+          if (response.enviadas > 0) {
+            this.enviadasCargadas = false;
+          }
+        },
+        error: error => {
+          this.cargandoEnvio.set(false);
+          console.error('No se pudieron enviar las cartas de no adeudo', error);
         }
-        if (response.fallidas > 0) {
-          this.fallidosCargados = false;
-          this.cargarFallidos(0);
-        }
-        if (response.enviadas > 0) {
-          this.enviadasCargadas = false;
-        }
-      },
-      error: error => {
-        this.cargandoEnvio.set(false);
-        console.error('No se pudieron enviar las cartas de no adeudo', error);
-      }
+      });
     });
+  }
+
+  private async idsTodosPagos(): Promise<number[]> {
+    const ids: number[] = [];
+    let page = 0;
+    let totalPages = 1;
+    do {
+      const response = await firstValueFrom(this.cartaNoAdeudoService.listarValidacionPagos(page, 100));
+      response.content.forEach(item => ids.push(item.idSolicitud));
+      totalPages = response.totalPages;
+      page++;
+    } while (page < totalPages);
+    return ids;
+  }
+
+  private async idsTodosFallidos(): Promise<number[]> {
+    const ids: number[] = [];
+    let page = 0;
+    let totalPages = 1;
+    do {
+      const response = await firstValueFrom(this.cartaNoAdeudoService.listarFallidos(page, 100));
+      response.content.forEach(item => ids.push(item.idSolicitud));
+      totalPages = response.totalPages;
+      page++;
+    } while (page < totalPages);
+    return ids;
   }
 
   private seleccionActual(origen: OrigenEnvio): CartaNoAdeudoClienteCorreo[] {
