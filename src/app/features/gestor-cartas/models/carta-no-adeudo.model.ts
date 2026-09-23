@@ -112,3 +112,9 @@ export interface CartaNoAdeudoClienteCorreo {
   montoPagado: number;
   fechaUltimoPago: string | null;
 }
+
+export interface MetodoContactoCorreo {
+  id: number;
+  valor: string;
+  subtipo: string;
+}

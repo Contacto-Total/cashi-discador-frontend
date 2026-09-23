@@ -9,6 +9,7 @@ import {
   CartaNoAdeudoRechazo,
   CartaNoAdeudoPage,
   CartaNoAdeudoSolicitud,
+  MetodoContactoCorreo,
   CartaNoAdeudoSolicitudFilters,
   CrearCartaNoAdeudoSolicitudRequest
 } from '../models/carta-no-adeudo.model';
@@ -62,6 +63,20 @@ export class CartaNoAdeudoService {
   listarRechazos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoRechazo>> {
     const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoRechazo>>(`${this.baseUrl}/rechazos`, { params });
+  }
+
+  listarCorreos(cliente: CartaNoAdeudoClienteCorreo, page = 0, size = 20): Observable<CartaNoAdeudoPage<MetodoContactoCorreo>> {
+    const params = new HttpParams().set('tenantId', cliente.idTenant).set('carteraId', cliente.idCartera)
+      .set('subcarteraId', cliente.idSubcartera).set('page', page).set('size', size);
+    return this.http.get<CartaNoAdeudoPage<MetodoContactoCorreo>>(
+      `${environment.apiUrl}/contacts/${encodeURIComponent(cliente.documento)}/emails`, { params });
+  }
+
+  agregarCorreo(cliente: CartaNoAdeudoClienteCorreo, valor: string): Observable<MetodoContactoCorreo> {
+    return this.http.post<MetodoContactoCorreo>(`${environment.apiUrl}/contacts/metodo-contacto-email`, {
+      documento: cliente.documento, valor, subtipo: 'email_principal', tenantId: cliente.idTenant,
+      carteraId: cliente.idCartera, subcarteraId: cliente.idSubcartera
+    });
   }
 
   listarSolicitudes(filters: CartaNoAdeudoSolicitudFilters): Observable<CartaNoAdeudoPage<CartaNoAdeudoSolicitud>> {
