@@ -4,8 +4,8 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CartaNoAdeudoClienteCorreo, CartaNoAdeudoRechazo } from '../../../models/carta-no-adeudo.model';
 import { CartaNoAdeudoService } from '../../../services/carta-no-adeudo.service';
 import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo-lista-widget/carta-no-adeudo-lista-widget.component';
-import { CorreccionPagosService } from '../../../../pagos-bancarios/services/correccion-pagos.service';
-import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../../../../pagos-bancarios/models/correccion-pagos.model';
+import { CorreccionPagosService } from '../../../../../pagos-bancarios/services/correccion-pagos.service';
+import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../../../../../pagos-bancarios/models/correccion-pagos.model';
 import { forkJoin } from 'rxjs';
 
 @Component({
