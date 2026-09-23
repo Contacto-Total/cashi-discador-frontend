@@ -12,7 +12,7 @@ export interface RegistroEstadoDTO {
   estadoNuevo: string;
   timestampInicio: string;
   timestampFin: string;
-  duracionMinutos: number | null;
+  duracionSegundos: number | null;
   duracionFormateada: string;
   notas: string | null;
   sessionId: string | null;
@@ -79,7 +79,13 @@ export interface ResumenEstadoAgentes {
 }
 
 export interface ReporteEstadoAgentesResponse {
+  /** Tramos del periodo, paginados. El resumen no depende de ellos; la linea de
+   *  tiempo de la pantalla si, y por eso se piden aparte con un size alto. */
+  registros: RegistroEstadoDTO[];
   resumen: ResumenEstadoAgentes;
+  total: number;
+  page: number;
+  size: number;
 }
 
 // ==================== ASISTENCIA ====================
@@ -168,13 +174,18 @@ export class EstadoAgentesReportService {
 
   constructor(private http: HttpClient) {}
 
-  /** Solo el resumen por agente. El detalle fila por fila va en el Excel. */
+  /**
+   * Resumen por agente y, si se pide un `size` alto, los tramos del dia para dibujar
+   * la jornada. Por defecto el backend devuelve 50 tramos: alcanza para el resumen.
+   */
   getReporte(
     fechaDesde: string,
     fechaHasta: string,
     tenantId?: number,
     carteraId?: number,
-    subcarteraId?: number
+    subcarteraId?: number,
+    page?: number,
+    size?: number
   ): Observable<ReporteEstadoAgentesResponse> {
     let params = new HttpParams()
       .set('fechaDesde', fechaDesde)
@@ -183,6 +194,8 @@ export class EstadoAgentesReportService {
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());
     if (subcarteraId) params = params.set('subcarteraId', subcarteraId.toString());
+    if (page != null) params = params.set('page', page.toString());
+    if (size != null) params = params.set('size', size.toString());
 
     return this.http.get<ReporteEstadoAgentesResponse>(this.baseUrl, { params });
   }
