@@ -6,6 +6,7 @@ import {
   CartaNoAdeudoDocumento,
   CartaNoAdeudoClienteCorreo,
   CartaNoAdeudoHistorial,
+  CartaNoAdeudoRechazo,
   CartaNoAdeudoPage,
   CartaNoAdeudoSolicitud,
   CartaNoAdeudoSolicitudFilters,
@@ -49,6 +50,18 @@ export class CartaNoAdeudoService {
       `${this.baseUrl}/solicitudes/enviar-validacion-pagos`,
       { solicitudes }
     );
+  }
+
+  rechazarSolicitud(idSolicitud: number, justificacion: string): Observable<CartaNoAdeudoSolicitud> {
+    return this.http.post<CartaNoAdeudoSolicitud>(
+      `${this.baseUrl}/solicitudes/${idSolicitud}/rechazar`,
+      { justificacion }
+    );
+  }
+
+  listarRechazos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoRechazo>> {
+    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoRechazo>>(`${this.baseUrl}/rechazos`, { params });
   }
 
   listarSolicitudes(filters: CartaNoAdeudoSolicitudFilters): Observable<CartaNoAdeudoPage<CartaNoAdeudoSolicitud>> {
