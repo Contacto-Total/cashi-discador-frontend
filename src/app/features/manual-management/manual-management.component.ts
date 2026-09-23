@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { map } from 'rxjs/operators';
 
@@ -36,12 +36,24 @@ export class ManualManagementComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private clientSearchService: ClientSearchService,
     private agentStatusService: AgentStatusService,
     private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    // Llegada desde "Llamadas agendadas": el cliente viene en la URL y se busca solo.
+    // Sin esto la supervisora tenía que copiar el documento a mano desde la cita.
+    const q = this.route.snapshot.queryParamMap;
+    const documento = q.get('documento');
+    const telefono = q.get('telefono');
+    if (documento || telefono) {
+      this.searchType.set(documento ? 'documento' : 'telefono');
+      this.searchValue.set((documento || telefono) as string);
+      this.search();
+    }
+
     // Cambiar estado a GESTION_MANUAL al entrar
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?.id) {

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-/** Una llamada que el bot pactó con el cliente para que la atienda un asesor. */
+/** Una llamada que el bot pactó con el cliente para que la atienda una persona. */
 export interface BotAgendaFila {
   id: number;
   fechaHoraPactada: string;
@@ -19,6 +19,12 @@ export interface BotAgendaFila {
   idAgenteTitular?: number;
   idAgenteAsignado?: number;
   nombreAgente?: string;
+  /**
+   * Quién pactó la cita. Hoy todas las crea el bot y el backend aún no manda el
+   * campo, así que se asume BOT; cuando las asesoras puedan registrar las suyas,
+   * el backend lo enviará y la etiqueta cambiará sola.
+   */
+  origen?: 'BOT' | 'ASESOR';
 }
 
 /**
@@ -48,6 +54,7 @@ export class BotAgendaService {
     return this.http.get<Record<string, number>>(`${this.apiUrl}/resumen${q}`);
   }
 
+  /** `contesto` distingue una cita atendida de una que no respondió. */
   cerrar(id: number, contesto: boolean): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${id}/cerrar?contesto=${contesto}`, {});
   }

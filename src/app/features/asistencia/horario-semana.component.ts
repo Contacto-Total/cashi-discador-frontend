@@ -29,7 +29,7 @@ type EstadoCelda = 'igual' | 'recupera' | 'solicitud' | 'porAprobar' | 'propio' 
       </div>
       <button type="button" [class]="estilos.botonSecundario" (click)="modificar.emit()">
         <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
-        Modificar horario fijo
+        Modificar horario
       </button>
     </div>
 
