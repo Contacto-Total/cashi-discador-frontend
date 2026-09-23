@@ -133,6 +133,17 @@ export interface EnviarCartasNoAdeudoResponse {
   resultados: ResultadoEnvioSolicitud[];
 }
 
+export interface CartaNoAdeudoObservacion {
+  justificacion: string;
+  fecha: string;
+}
+
+export interface ReenviarCartaNoAdeudoItem {
+  idSolicitud: number;
+  correoDestino?: string | null;
+  idMetodoContactoDestino?: number | null;
+}
+
 export interface CartaNoAdeudoFallido {
   idSolicitud: number;
   idCliente: number;
