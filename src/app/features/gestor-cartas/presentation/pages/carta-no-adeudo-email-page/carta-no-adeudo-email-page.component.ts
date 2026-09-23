@@ -4,8 +4,9 @@ import { LucideAngularModule } from 'lucide-angular';
 import {
   CartaNoAdeudoClienteCorreo,
   CartaNoAdeudoFallido,
-  CartaNoAdeudoRechazo,
-  MetodoContactoCorreo
+  CartaNoAdeudoObservacion,
+  MetodoContactoCorreo,
+  ReenviarCartaNoAdeudoItem
 } from '../../../models/carta-no-adeudo.model';
 import {
   CARTA_NO_ADEUDO_ASUNTO,
@@ -83,60 +84,141 @@ type OrigenEnvio = 'pagos' | 'fallidos';
         </nav>
 
         @if (activeTab() === 'correo') {
-          <app-carta-no-adeudo-lista-widget
-            [clientes]="clientes()"
-            [page]="pagina()"
-            [totalPages]="totalPaginas()"
-            [totalElements]="totalCandidatos()"
-            [vistaPreviaUrl]="vistaPreviaUrl()"
-            [cargandoVistaPrevia]="cargandoVistaPrevia()"
-            [correoRemitente]="remitenteCorreo"
-            [correoDestinatario]="clienteCorreo()?.correo ?? null"
-            [correoAsunto]="correoAsuntoRender()"
-            [correoCuerpoHtml]="correoSeguroHtml()"
-            [correoAdjuntoNombre]="correoAdjuntoRender()"
-            (buscar)="cargarCandidatos($event)"
-            (cambiarPagina)="cambiarPagina($event)"
-            (verVistaPrevia)="generarVistaPrevia($event)"
-            (enviarValidacionPagos)="enviarAValidacionPagos($event)">
-            @if (clienteCorreo(); as cliente) {
-              <section correoControls class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-                <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Correo para {{ cliente.documento }}</h2>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  @for (correo of correos(); track correo.id) {
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <div class="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <button
+                type="button"
+                class="rounded-md px-3 py-1.5 transition-colors"
+                [class.bg-blue-600]="modoCorreo() === 'pendientes'"
+                [class.text-white]="modoCorreo() === 'pendientes'"
+                [class.text-slate-500]="modoCorreo() !== 'pendientes'"
+                (click)="cambiarModoCorreo('pendientes')">
+                Pendientes
+              </button>
+              <button
+                type="button"
+                class="rounded-md px-3 py-1.5 transition-colors"
+                [class.bg-blue-600]="modoCorreo() === 'rechazados'"
+                [class.text-white]="modoCorreo() === 'rechazados'"
+                [class.text-slate-500]="modoCorreo() !== 'rechazados'"
+                (click)="cambiarModoCorreo('rechazados')">
+                Requieren corrección ({{ clientesRechazados().length }})
+              </button>
+            </div>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ modoCorreo() === 'rechazados' ? 'Rechazados en Validación de pagos' : 'Clientes con pago cumplido' }}
+            </span>
+          </div>
+
+          @if (modoCorreo() === 'pendientes') {
+            <app-carta-no-adeudo-lista-widget
+              [clientes]="clientes()"
+              [page]="pagina()"
+              [totalPages]="totalPaginas()"
+              [totalElements]="totalCandidatos()"
+              [vistaPreviaUrl]="vistaPreviaUrl()"
+              [cargandoVistaPrevia]="cargandoVistaPrevia()"
+              [correoRemitente]="remitenteCorreo"
+              [correoDestinatario]="clienteCorreo()?.correo ?? null"
+              [correoAsunto]="correoAsuntoRender()"
+              [correoCuerpoHtml]="correoSeguroHtml()"
+              [correoAdjuntoNombre]="correoAdjuntoRender()"
+              (buscar)="cargarCandidatos($event)"
+              (cambiarPagina)="cambiarPagina($event)"
+              (verVistaPrevia)="generarVistaPrevia($event)"
+              (enviarValidacionPagos)="enviarAValidacionPagos($event)">
+              @if (clienteCorreo(); as cliente) {
+                <section correoControls class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                  <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Correo para {{ cliente.documento }}</h2>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    @for (correo of correos(); track correo.id) {
+                      <button
+                        type="button"
+                        (click)="seleccionarCorreo(cliente, correo)"
+                        class="rounded-full border px-3 py-1.5 text-xs"
+                        [class.border-blue-600]="cliente.correo === correo.valor"
+                        [class.text-blue-600]="cliente.correo === correo.valor">{{ correo.valor }}</button>
+                    } @empty {
+                      <p class="text-xs text-slate-500">Sin correos registrados.</p>
+                    }
+                  </div>
+                  <div class="mt-3 flex max-w-md gap-2">
+                    <input
+                      #nuevoCorreo
+                      type="email"
+                      placeholder="nuevo@correo.com"
+                      class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                      (input)="correoNuevo.set(nuevoCorreo.value.trim())" />
                     <button
                       type="button"
-                      (click)="seleccionarCorreo(cliente, correo)"
-                      class="rounded-full border px-3 py-1.5 text-xs"
-                      [class.border-blue-600]="cliente.correo === correo.valor"
-                      [class.text-blue-600]="cliente.correo === correo.valor">{{ correo.valor }}</button>
-                  } @empty {
-                    <p class="text-xs text-slate-500">Sin correos registrados.</p>
-                  }
-                </div>
-                <div class="mt-3 flex max-w-md gap-2">
-                  <input
-                    #nuevoCorreo
-                    type="email"
-                    placeholder="nuevo@correo.com"
-                    class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                    (input)="correoNuevo.set(nuevoCorreo.value.trim())" />
-                  <button
-                    type="button"
-                    [disabled]="!correoValido()"
-                    (click)="agregarCorreo(cliente)"
-                    class="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
-                </div>
-              </section>
-            }
-          </app-carta-no-adeudo-lista-widget>
-          <section class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div class="flex items-center justify-between"><h2 class="text-sm font-semibold">Retornados a validación de correo</h2><span class="text-xs text-slate-500">{{ totalRechazos() }}</span></div>
-            <div class="mt-3 divide-y divide-slate-100 dark:divide-slate-700">
-              @for (rechazo of rechazos(); track rechazo.id) { <div class="py-3"><p class="text-xs font-medium">Solicitud #{{ rechazo.idSolicitud }}</p><p class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ rechazo.justificacion }}</p><p class="mt-1 text-xs text-slate-500">{{ rechazo.fechaRechazo }}</p></div> } @empty { <p class="py-4 text-sm text-slate-500">No hay clientes retornados.</p> }
-            </div>
-            @if (totalPaginasRechazos() > 1) { <div class="mt-3 flex justify-end gap-2"><button [disabled]="paginaRechazos() === 0" (click)="cargarRechazos(paginaRechazos() - 1)" class="rounded px-2 py-1 text-xs disabled:opacity-40">Anterior</button><button [disabled]="paginaRechazos() >= totalPaginasRechazos() - 1" (click)="cargarRechazos(paginaRechazos() + 1)" class="rounded px-2 py-1 text-xs disabled:opacity-40">Siguiente</button></div> }
-          </section>
+                      [disabled]="!correoValido()"
+                      (click)="agregarCorreo(cliente)"
+                      class="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
+                  </div>
+                </section>
+              }
+            </app-carta-no-adeudo-lista-widget>
+          } @else {
+            <app-carta-no-adeudo-lista-widget
+              [clientes]="clientesRechazados()"
+              [vistaPreviaUrl]="vistaPreviaUrl()"
+              [cargandoVistaPrevia]="cargandoVistaPrevia()"
+              [correoRemitente]="remitenteCorreo"
+              [correoDestinatario]="clienteCorreo()?.correo ?? null"
+              [correoAsunto]="correoAsuntoRender()"
+              [correoCuerpoHtml]="correoSeguroHtml()"
+              [correoAdjuntoNombre]="correoAdjuntoRender()"
+              titulo="Clientes que requieren corrección"
+              descripcion="Rechazados en Validación de pagos. Corrige el correo y reenvíalos."
+              (verVistaPrevia)="generarVistaPrevia($event)"
+              (enviarValidacionPagos)="reenviarRechazadosAValidacionPagos($event)">
+              @if (clienteCorreo(); as cliente) {
+                <section correoControls class="mb-4 space-y-3">
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                    <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Correo para {{ cliente.documento }}</h2>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      @for (correo of correos(); track correo.id) {
+                        <button
+                          type="button"
+                          (click)="seleccionarCorreo(cliente, correo)"
+                          class="rounded-full border px-3 py-1.5 text-xs"
+                          [class.border-blue-600]="cliente.correo === correo.valor"
+                          [class.text-blue-600]="cliente.correo === correo.valor">{{ correo.valor }}</button>
+                      } @empty {
+                        <p class="text-xs text-slate-500">Sin correos registrados.</p>
+                      }
+                    </div>
+                    <div class="mt-3 flex max-w-md gap-2">
+                      <input
+                        #nuevoCorreoRechazado
+                        type="email"
+                        placeholder="nuevo@correo.com"
+                        class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                        (input)="correoNuevo.set(nuevoCorreoRechazado.value.trim())" />
+                      <button
+                        type="button"
+                        [disabled]="!correoValido()"
+                        (click)="agregarCorreo(cliente)"
+                        class="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-40">Agregar</button>
+                    </div>
+                  </div>
+                  <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-700/60 dark:bg-amber-900/20">
+                    <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Observaciones de {{ cliente.documento }}</h2>
+                    <div class="mt-3 space-y-2">
+                      @for (observacion of observacionesSeleccionadas(); track $index) {
+                        <div class="rounded-lg border border-amber-200 bg-white px-3 py-2 dark:border-amber-700/60 dark:bg-slate-800">
+                          <p class="text-sm text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
+                          <p class="mt-1 text-xs text-slate-500">{{ observacion.fecha }}</p>
+                        </div>
+                      } @empty {
+                        <p class="text-xs text-slate-500">Sin observaciones registradas.</p>
+                      }
+                    </div>
+                  </div>
+                </section>
+              }
+            </app-carta-no-adeudo-lista-widget>
+          }
         }
 
         @if (activeTab() === 'pagos') {
@@ -260,10 +342,9 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly dialogEnvio = signal(false);
   readonly origenEnvio = signal<OrigenEnvio>('pagos');
   readonly cargandoEnvio = signal(false);
-  readonly rechazos = signal<CartaNoAdeudoRechazo[]>([]);
-  readonly paginaRechazos = signal(0);
-  readonly totalPaginasRechazos = signal(0);
-  readonly totalRechazos = signal(0);
+  readonly modoCorreo = signal<'pendientes' | 'rechazados'>('pendientes');
+  readonly clientesRechazados = signal<CartaNoAdeudoClienteCorreo[]>([]);
+  readonly observacionesPorCliente = signal<Record<number, CartaNoAdeudoObservacion[]>>({});
   readonly justificacionRechazo = signal('');
   readonly clienteCorreo = signal<CartaNoAdeudoClienteCorreo | null>(null);
   readonly correos = signal<MetodoContactoCorreo[]>([]);
@@ -320,9 +401,29 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     return cliente ? nombreAdjuntoCartaNoAdeudo(cliente.documento) : '';
   });
 
+  readonly observacionesSeleccionadas = computed<CartaNoAdeudoObservacion[]>(() => {
+    if (this.modoCorreo() !== 'rechazados') {
+      return [];
+    }
+    const cliente = this.clienteCorreo();
+    if (!cliente) {
+      return [];
+    }
+    return this.observacionesPorCliente()[cliente.idCliente] ?? [];
+  });
+
   ngOnInit(): void {
     this.cargarCandidatos();
-    this.cargarRechazos();
+  }
+
+  cambiarModoCorreo(modo: 'pendientes' | 'rechazados'): void {
+    if (this.modoCorreo() === modo) return;
+    this.modoCorreo.set(modo);
+    this.clienteCorreo.set(null);
+    this.correos.set([]);
+    this.limpiarVistaPrevia();
+    this.vistaPreviaUrl.set(null);
+    this.cargandoVistaPrevia.set(false);
   }
 
   seleccionarTab(tab: PestanaCarta): void {
@@ -390,21 +491,58 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
 
   rechazarCliente(cliente: CartaNoAdeudoClienteCorreo): void {
     if (!cliente.idSolicitud || !this.justificacionRechazo()) return;
-    this.cartaNoAdeudoService.rechazarSolicitud(cliente.idSolicitud, this.justificacionRechazo()).subscribe({
+    const justificacion = this.justificacionRechazo();
+    this.cartaNoAdeudoService.rechazarSolicitud(cliente.idSolicitud, justificacion).subscribe({
       next: () => {
         this.clientesEnPagos.update(clientes => clientes.filter(item => item.idSolicitud !== cliente.idSolicitud));
+        this.registrarRechazado(cliente, justificacion);
         this.clientePagos.set(null);
         this.justificacionRechazo.set('');
-        this.cargarRechazos();
       },
       error: error => console.error('No se pudo rechazar la solicitud', error)
     });
   }
 
-  cargarRechazos(page = 0): void {
-    this.cartaNoAdeudoService.listarRechazos(page, 20).subscribe({
-      next: response => { this.rechazos.set(response.content); this.paginaRechazos.set(response.page); this.totalPaginasRechazos.set(response.totalPages); this.totalRechazos.set(response.totalElements); },
-      error: error => console.error('No se pudieron cargar rechazos', error)
+  private registrarRechazado(cliente: CartaNoAdeudoClienteCorreo, justificacion: string): void {
+    const observacion: CartaNoAdeudoObservacion = {
+      justificacion,
+      fecha: new Date().toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })
+    };
+    this.observacionesPorCliente.update(mapa => ({
+      ...mapa,
+      [cliente.idCliente]: [...(mapa[cliente.idCliente] ?? []), observacion]
+    }));
+    this.clientesRechazados.update(lista => {
+      const existe = lista.some(item => item.idCliente === cliente.idCliente);
+      return existe
+        ? lista.map(item => item.idCliente === cliente.idCliente ? { ...item, ...cliente } : item)
+        : [...lista, { ...cliente }];
+    });
+  }
+
+  reenviarRechazadosAValidacionPagos(clientes: CartaNoAdeudoClienteCorreo[]): void {
+    const reenvios: ReenviarCartaNoAdeudoItem[] = clientes
+      .filter(cliente => typeof cliente.idSolicitud === 'number')
+      .map(cliente => ({
+        idSolicitud: cliente.idSolicitud as number,
+        correoDestino: cliente.correo,
+        idMetodoContactoDestino: cliente.idMetodoContacto
+      }));
+    if (!reenvios.length) return;
+
+    this.cartaNoAdeudoService.reenviarAValidacionPagos(reenvios).subscribe({
+      next: () => {
+        const reenviados = new Set(reenvios.map(reenvio => reenvio.idSolicitud));
+        this.clientesEnPagos.update(pagos => [
+          ...pagos,
+          ...clientes.map(cliente => ({ ...cliente }))
+        ]);
+        this.clientesRechazados.update(lista => lista.filter(item => !(item.idSolicitud && reenviados.has(item.idSolicitud))));
+        this.clienteCorreo.set(null);
+        this.modoCorreo.set('pendientes');
+        this.activeTab.set('pagos');
+      },
+      error: error => console.error('No se pudieron reenviar las solicitudes a validación de pagos', error)
     });
   }
 
@@ -495,7 +633,12 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
 
   correoValido(): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.correoNuevo()); }
   cargarCorreos(cliente: CartaNoAdeudoClienteCorreo): void { this.cartaNoAdeudoService.listarCorreos(cliente).subscribe({ next: pagina => this.correos.set(pagina.content), error: error => console.error('No se pudieron cargar correos', error) }); }
-  seleccionarCorreo(cliente: CartaNoAdeudoClienteCorreo, correo: MetodoContactoCorreo): void { const actualizado = { ...cliente, correo: correo.valor, idMetodoContacto: correo.id }; this.clienteCorreo.set(actualizado); this.clientes.update(clientes => clientes.map(item => item.idCliente === cliente.idCliente ? actualizado : item)); }
+  seleccionarCorreo(cliente: CartaNoAdeudoClienteCorreo, correo: MetodoContactoCorreo): void {
+    const actualizado = { ...cliente, correo: correo.valor, idMetodoContacto: correo.id };
+    this.clienteCorreo.set(actualizado);
+    this.clientes.update(clientes => clientes.map(item => item.idCliente === cliente.idCliente ? actualizado : item));
+    this.clientesRechazados.update(lista => lista.map(item => item.idCliente === cliente.idCliente ? { ...item, ...actualizado } : item));
+  }
   agregarCorreo(cliente: CartaNoAdeudoClienteCorreo): void { if (!this.correoValido()) return; this.cartaNoAdeudoService.agregarCorreo(cliente, this.correoNuevo()).subscribe({ next: correo => { this.seleccionarCorreo(cliente, correo); this.correoNuevo.set(''); this.cargarCorreos(cliente); }, error: error => console.error('No se pudo agregar correo', error) }); }
 
   ngOnDestroy(): void {

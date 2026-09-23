@@ -13,7 +13,8 @@ import {
   EnviarCartasNoAdeudoResponse,
   MetodoContactoCorreo,
   CartaNoAdeudoSolicitudFilters,
-  CrearCartaNoAdeudoSolicitudRequest
+  CrearCartaNoAdeudoSolicitudRequest,
+  ReenviarCartaNoAdeudoItem
 } from '../models/carta-no-adeudo.model';
 
 @Injectable({ providedIn: 'root' })
@@ -59,6 +60,13 @@ export class CartaNoAdeudoService {
     return this.http.post<CartaNoAdeudoSolicitud>(
       `${this.baseUrl}/solicitudes/${idSolicitud}/rechazar`,
       { justificacion }
+    );
+  }
+
+  reenviarAValidacionPagos(reenvios: ReenviarCartaNoAdeudoItem[]): Observable<CartaNoAdeudoSolicitud[]> {
+    return this.http.post<CartaNoAdeudoSolicitud[]>(
+      `${this.baseUrl}/solicitudes/reenviar-validacion-pagos`,
+      { reenvios }
     );
   }
 
