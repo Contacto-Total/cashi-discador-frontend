@@ -144,6 +144,22 @@ export interface ReenviarCartaNoAdeudoItem {
   idMetodoContactoDestino?: number | null;
 }
 
+export interface CartaNoAdeudoEnviada {
+  idSolicitud: number;
+  idCliente: number;
+  idGestion: number;
+  idTenant: number;
+  idCartera: number;
+  idSubcartera: number;
+  documento: string | null;
+  nombreCliente: string | null;
+  correoDestino: string;
+  tipoSolicitud: CartaNoAdeudoTipoSolicitud;
+  idSolicitudOrigen: number | null;
+  idMensajeServidor: string | null;
+  fechaEnvio: string | null;
+}
+
 export interface CartaNoAdeudoFallido {
   idSolicitud: number;
   idCliente: number;

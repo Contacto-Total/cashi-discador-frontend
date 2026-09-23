@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import {
   CartaNoAdeudoDocumento,
   CartaNoAdeudoClienteCorreo,
+  CartaNoAdeudoEnviada,
   CartaNoAdeudoFallido,
   CartaNoAdeudoHistorial,
   CartaNoAdeudoRechazo,
@@ -84,6 +85,23 @@ export class CartaNoAdeudoService {
   listarFallidos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoFallido>> {
     const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoFallido>>(`${this.baseUrl}/solicitudes/fallidos`, { params });
+  }
+
+  listarEnviadas(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoEnviada>> {
+    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoEnviada>>(`${this.baseUrl}/solicitudes/enviadas`, { params });
+  }
+
+  enviarCopia(
+    idSolicitud: number,
+    correoDestino: string,
+    asunto?: string,
+    cuerpo?: string
+  ): Observable<EnviarCartasNoAdeudoResponse> {
+    return this.http.post<EnviarCartasNoAdeudoResponse>(
+      `${this.baseUrl}/solicitudes/${idSolicitud}/enviar-copia`,
+      { correoDestino, asunto, cuerpo }
+    );
   }
 
   listarRechazos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoRechazo>> {

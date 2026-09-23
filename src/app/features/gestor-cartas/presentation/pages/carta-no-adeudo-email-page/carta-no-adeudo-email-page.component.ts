@@ -3,6 +3,7 @@ import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-brows
 import { LucideAngularModule } from 'lucide-angular';
 import {
   CartaNoAdeudoClienteCorreo,
+  CartaNoAdeudoEnviada,
   CartaNoAdeudoFallido,
   CartaNoAdeudoObservacion,
   MetodoContactoCorreo,
@@ -254,6 +255,21 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                   @for (pago of pagos(); track pago.pagoCuotaId) { <p class="text-xs text-slate-700 dark:text-slate-300">{{ pago.fechaPago }} · {{ pago.montoPago }} · {{ pago.estadoPagoGestion }}</p> } @empty { <p class="text-xs text-slate-500">Sin pagos pendientes.</p> }
                 </div>
               </div>
+              @if (observacionesDe(cliente); as observaciones) {
+                @if (observaciones.length > 0) {
+                  <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-700/60 dark:bg-amber-900/20">
+                    <h3 class="text-sm font-semibold text-slate-800 dark:text-white">Historial de observaciones</h3>
+                    <div class="mt-3 space-y-2">
+                      @for (observacion of observaciones; track $index) {
+                        <div class="rounded-lg border border-amber-200 bg-white px-3 py-2 dark:border-amber-700/60 dark:bg-slate-800">
+                          <p class="text-sm text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
+                          <p class="mt-1 text-xs text-slate-500">{{ observacion.fecha }}</p>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              }
             </section>
           }
           <footer class="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -298,6 +314,65 @@ type OrigenEnvio = 'pagos' | 'fallidos';
           </footer>
         }
 
+        @if (activeTab() === 'historial') {
+          <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold">Documento</th>
+                    <th class="px-4 py-3 text-left font-semibold">Cliente</th>
+                    <th class="px-4 py-3 text-left font-semibold">Correo</th>
+                    <th class="px-4 py-3 text-left font-semibold">Tipo</th>
+                    <th class="px-4 py-3 text-left font-semibold">Fecha de envío</th>
+                    <th class="px-4 py-3 text-right font-semibold">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                  @for (enviada of enviadas(); track enviada.idSolicitud) {
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                      <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ enviada.documento }}</td>
+                      <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ enviada.nombreCliente }}</td>
+                      <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ enviada.correoDestino }}</td>
+                      <td class="px-4 py-3">
+                        <span
+                          class="rounded-full px-2 py-0.5 text-xs font-medium"
+                          [class.bg-blue-100]="enviada.tipoSolicitud === 'ORIGINAL'"
+                          [class.text-blue-700]="enviada.tipoSolicitud === 'ORIGINAL'"
+                          [class.bg-amber-100]="enviada.tipoSolicitud === 'COPIA_PERDIDA'"
+                          [class.text-amber-700]="enviada.tipoSolicitud === 'COPIA_PERDIDA'">
+                          {{ enviada.tipoSolicitud === 'COPIA_PERDIDA' ? 'Copia' : 'Original' }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ formatearFecha(enviada.fechaEnvio) }}</td>
+                      <td class="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          (click)="abrirDialogoCopia(enviada)"
+                          class="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                          <lucide-angular name="copy" [size]="14"></lucide-angular>
+                          Enviar copia
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">No hay cartas enviadas.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (totalPaginasEnviadas() > 1) {
+              <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                <span>Página {{ paginaEnviadas() + 1 }} de {{ totalPaginasEnviadas() }} ({{ totalEnviadas() }})</span>
+                <div class="flex gap-2">
+                  <button type="button" [disabled]="paginaEnviadas() === 0" (click)="listarEnviadas(paginaEnviadas() - 1)" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600">Anterior</button>
+                  <button type="button" [disabled]="paginaEnviadas() >= totalPaginasEnviadas() - 1" (click)="listarEnviadas(paginaEnviadas() + 1)" class="rounded-md border border-slate-300 px-3 py-1.5 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600">Siguiente</button>
+                </div>
+              </div>
+            }
+          </section>
+        }
+
         @if (dialogEnvio()) {
           <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" (click)="dialogEnvio.set(false)">
             <div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800" (click)="$event.stopPropagation()">
@@ -311,6 +386,39 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                     Enviando...
                   } @else {
                     Aceptar
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (dialogCopia()) {
+          <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" (click)="cerrarDialogoCopia()">
+            <div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800" (click)="$event.stopPropagation()">
+              <h2 class="text-base font-semibold text-slate-800 dark:text-white">Enviar copia</h2>
+              @if (copiaSolicitud(); as solicitud) {
+                <p class="mt-1 text-xs text-slate-500">{{ solicitud.documento }} · {{ solicitud.nombreCliente }}</p>
+              }
+              <label class="mt-4 block text-xs font-medium text-slate-600 dark:text-slate-300">Correo destinatario</label>
+              <input
+                #correoCopiaInput
+                type="email"
+                [value]="correoCopia()"
+                (input)="correoCopia.set(correoCopiaInput.value.trim())"
+                placeholder="correo@destino.com"
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+              <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200">
+                Verificar que haya realizado el pago a derecho a copia antes de enviar.
+              </div>
+              <div class="mt-5 flex justify-end gap-2">
+                <button type="button" class="rounded-lg px-3 py-2 text-sm text-slate-600 disabled:opacity-40 dark:text-slate-300" [disabled]="enviandoCopia()" (click)="cerrarDialogoCopia()">Cancelar</button>
+                <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" [disabled]="enviandoCopia() || !correoCopiaValido()" (click)="confirmarEnvioCopia()">
+                  @if (enviandoCopia()) {
+                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                    Enviando...
+                  } @else {
+                    Enviar
                   }
                 </button>
               </div>
@@ -354,10 +462,19 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly totalPaginasFallidos = signal(0);
   readonly totalFallidos = signal(0);
   readonly seleccionadosFallidos = signal<CartaNoAdeudoClienteCorreo[]>([]);
+  readonly enviadas = signal<CartaNoAdeudoEnviada[]>([]);
+  readonly paginaEnviadas = signal(0);
+  readonly totalPaginasEnviadas = signal(0);
+  readonly totalEnviadas = signal(0);
+  readonly dialogCopia = signal(false);
+  readonly enviandoCopia = signal(false);
+  readonly copiaSolicitud = signal<CartaNoAdeudoEnviada | null>(null);
+  readonly correoCopia = signal('');
   private documentoBusqueda?: string;
   private objectUrl?: string;
   private solicitudVistaPrevia = 0;
   private fallidosCargados = false;
+  private enviadasCargadas = false;
 
   readonly clientesEnFallidos = computed<CartaNoAdeudoClienteCorreo[]>(() =>
     this.fallidos().map(fallido => ({
@@ -432,6 +549,9 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     this.seleccionadosFallidos.set([]);
     if (tab === 'fallidos' && !this.fallidosCargados) {
       this.cargarFallidos(0);
+    }
+    if (tab === 'historial' && !this.enviadasCargadas) {
+      this.listarEnviadas(0);
     }
   }
 
@@ -559,6 +679,73 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  listarEnviadas(page = 0): void {
+    this.cartaNoAdeudoService.listarEnviadas(page, 20).subscribe({
+      next: response => {
+        this.enviadas.set(response.content);
+        this.paginaEnviadas.set(response.page);
+        this.totalPaginasEnviadas.set(response.totalPages);
+        this.totalEnviadas.set(response.totalElements);
+        this.enviadasCargadas = true;
+      },
+      error: error => console.error('No se pudieron cargar las cartas enviadas', error)
+    });
+  }
+
+  observacionesDe(cliente: CartaNoAdeudoClienteCorreo): CartaNoAdeudoObservacion[] {
+    return this.observacionesPorCliente()[cliente.idCliente] ?? [];
+  }
+
+  formatearFecha(fecha: string | null): string {
+    if (!fecha) return '';
+    const valor = new Date(fecha);
+    return Number.isNaN(valor.getTime())
+      ? fecha
+      : valor.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  abrirDialogoCopia(enviada: CartaNoAdeudoEnviada): void {
+    this.copiaSolicitud.set(enviada);
+    this.correoCopia.set(enviada.correoDestino ?? '');
+    this.dialogCopia.set(true);
+  }
+
+  cerrarDialogoCopia(): void {
+    if (this.enviandoCopia()) return;
+    this.dialogCopia.set(false);
+    this.copiaSolicitud.set(null);
+    this.correoCopia.set('');
+  }
+
+  correoCopiaValido(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.correoCopia());
+  }
+
+  confirmarEnvioCopia(): void {
+    const solicitud = this.copiaSolicitud();
+    if (!solicitud || !this.correoCopiaValido() || this.enviandoCopia()) return;
+
+    this.enviandoCopia.set(true);
+    this.cartaNoAdeudoService
+      .enviarCopia(solicitud.idSolicitud, this.correoCopia(), CARTA_NO_ADEUDO_ASUNTO, CARTA_NO_ADEUDO_CUERPO)
+      .subscribe({
+        next: response => {
+          this.enviandoCopia.set(false);
+          if (response.fallidas > 0) {
+            console.error('No se pudo enviar la copia', response.resultados);
+            return;
+          }
+          this.cerrarDialogoCopia();
+          this.enviadasCargadas = false;
+          this.listarEnviadas(0);
+        },
+        error: error => {
+          this.enviandoCopia.set(false);
+          console.error('No se pudo enviar la copia', error);
+        }
+      });
+  }
+
   abrirDialogoEnvio(origen: OrigenEnvio): void {
     if (this.seleccionActual(origen).length === 0) return;
     this.origenEnvio.set(origen);
@@ -592,6 +779,9 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
         if (response.fallidas > 0) {
           this.fallidosCargados = false;
           this.cargarFallidos(0);
+        }
+        if (response.enviadas > 0) {
+          this.enviadasCargadas = false;
         }
       },
       error: error => {
