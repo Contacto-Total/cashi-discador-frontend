@@ -13,6 +13,13 @@ import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiem
 import { WebsocketService } from '../../../core/services/websocket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserRole } from '../../../core/models/user.model';
+import {
+  AgentState,
+  AGENT_STATE_LABELS,
+  AGENT_STATE_UI,
+  AGENT_STATE_UI_FALLBACK,
+  MANUAL_STATES
+} from '../../../core/models/agent-status.model';
 import { StatusAlarmClockComponent } from '../../../shared/components/status-alarm-clock/status-alarm-clock.component';
 
 // Interfaz para alertas de agentes
@@ -91,14 +98,15 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   showChangeStatusModal = false;
   selectedAgentForStatusChange: AgenteMonitoreo | null = null;
   changingStatus = false;
-  estadosDisponibles = [
-    { value: 'DISPONIBLE', label: 'Disponible', icon: 'circle', color: '#10B981' },
-    { value: 'EN_REUNION', label: 'En Reunión', icon: 'users', color: '#8B5CF6' },
-    { value: 'REFRIGERIO', label: 'Refrigerio', icon: 'coffee', color: '#F59E0B' },
-    { value: 'SSHH', label: 'SSHH', icon: 'user', color: '#F59E0B' },
-    { value: 'GESTION_MANUAL', label: 'Gestión Manual', icon: 'clipboard-list', color: '#009688' },
-    { value: 'EN_MANUAL', label: 'Modo Manual', icon: 'pencil', color: '#6B7280' }
-  ];
+  // Los mismos 9 estados que el asesor ve en su selector, con el mismo nombre, icono y
+  // color. Antes eran 6 escritos a mano: el supervisor no podia poner Comida,
+  // Capacitacion, Ausente ni Soporte.
+  estadosDisponibles = MANUAL_STATES.map(estado => ({
+    value: estado as string,
+    label: AGENT_STATE_LABELS[estado],
+    icon: AGENT_STATE_UI[estado].icon,
+    color: AGENT_STATE_UI[estado].color
+  }));
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -568,17 +576,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    * Convierte estado a texto hablado
    */
   private getEstadoHablado(estado: string): string {
-    const estados: Record<string, string> = {
-      'DISPONIBLE': 'disponible',
-      'EN_LLAMADA': 'en llamada',
-      'TIPIFICANDO': 'tipificando',
-      'EN_REUNION': 'en reunión',
-      'REFRIGERIO': 'refrigerio',
-      'SSHH': 'baño',
-      'EN_MANUAL': 'modo manual',
-      'GESTION_MANUAL': 'gestión manual'
-    };
-    return estados[estado] || estado;
+    return this.getEstadoUi(estado).hablado;
   }
 
   /**
@@ -774,57 +772,24 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Obtiene el color según el estado del agente
+   * Color, icono y texto del estado. Salen de AGENT_STATE_UI / AGENT_STATE_LABELS
+   * (core/models/agent-status.model.ts), que cubre los 17 estados. Antes eran tres
+   * switch con 9 casos y todo lo demas caia en gris con el nombre crudo del enum.
    */
+  private getEstadoUi(estado: string) {
+    return AGENT_STATE_UI[estado as AgentState] ?? AGENT_STATE_UI_FALLBACK;
+  }
+
   getEstadoColor(estado: string): string {
-    switch (estado) {
-      case 'DISPONIBLE': return '#10B981'; // Verde
-      case 'EN_LLAMADA': return '#3B82F6'; // Azul
-      case 'DESCONECTADO': return '#EF4444'; // Rojo
-      case 'GESTION_MANUAL': return '#009688'; // Teal
-      case 'EN_REUNION': return '#8B5CF6'; // Púrpura
-      case 'REFRIGERIO': return '#F59E0B'; // Amarillo
-      case 'SSHH': return '#F59E0B'; // Amarillo
-      case 'TIPIFICANDO': return '#06B6D4'; // Cyan
-      case 'SEGUIMIENTO': return '#E91E63'; // Rosa/Pink
-      default: return '#6B7280'; // Gris
-    }
+    return this.getEstadoUi(estado).color;
   }
 
-  /**
-   * Obtiene el ícono según el estado del agente
-   */
   getEstadoIcon(estado: string): string {
-    switch (estado) {
-      case 'DISPONIBLE': return 'circle';
-      case 'EN_LLAMADA': return 'phone-call';
-      case 'DESCONECTADO': return 'circle';
-      case 'GESTION_MANUAL': return 'clipboard-edit';
-      case 'EN_REUNION': return 'users';
-      case 'REFRIGERIO': return 'coffee';
-      case 'SSHH': return 'user';
-      case 'TIPIFICANDO': return 'edit';
-      case 'SEGUIMIENTO': return 'bell-ring';
-      default: return 'circle';
-    }
+    return this.getEstadoUi(estado).icon;
   }
 
-  /**
-   * Obtiene texto legible del estado
-   */
   getEstadoTexto(estado: string): string {
-    switch (estado) {
-      case 'DISPONIBLE': return 'Libre';
-      case 'EN_LLAMADA': return 'En Llamada';
-      case 'DESCONECTADO': return 'Desconectado';
-      case 'GESTION_MANUAL': return 'Gestión Manual';
-      case 'EN_REUNION': return 'En Reunión';
-      case 'REFRIGERIO': return 'Refrigerio';
-      case 'SSHH': return 'SSHH';
-      case 'TIPIFICANDO': return 'Tipificando';
-      case 'SEGUIMIENTO': return 'Seguimiento';
-      default: return estado;
-    }
+    return AGENT_STATE_LABELS[estado as AgentState] ?? estado;
   }
 
   /**
@@ -926,6 +891,13 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Ni interrumpir una llamada o una gestion a medio llenar. El backend tambien lo
+    // rechaza; esto evita el viaje y da el mensaje al toque.
+    if (this.agenteEnCicloDeLlamada) {
+      alert(this.mensajeCicloDeLlamada);
+      return;
+    }
+
     // No cambiar si ya está en ese estado
     if (this.selectedAgentForStatusChange.estadoActual === nuevoEstado) {
       this.closeChangeStatusModal();
@@ -961,6 +933,54 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   isCurrentStatus(estado: string): boolean {
     return this.selectedAgentForStatusChange?.estadoActual === estado;
+  }
+
+  /** El asesor esta hablando o tipificando: no se le cambia el estado desde afuera. */
+  get agenteEnCicloDeLlamada(): boolean {
+    const estado = this.selectedAgentForStatusChange?.estadoActual;
+    return estado === AgentState.EN_LLAMADA || estado === AgentState.TIPIFICANDO;
+  }
+
+  get mensajeCicloDeLlamada(): string {
+    return this.selectedAgentForStatusChange?.estadoActual === AgentState.EN_LLAMADA
+      ? 'El asesor está en una llamada. Espera a que termine.'
+      : 'El asesor está tipificando una gestión. Espera a que la guarde.';
+  }
+
+  /** Solo para la tipificacion: una llamada activa la corta el propio flujo de la llamada. */
+  get puedeLiberarTipificacion(): boolean {
+    return this.selectedAgentForStatusChange?.estadoActual === AgentState.TIPIFICANDO;
+  }
+
+  /**
+   * Saca al asesor de una tipificacion que quedo abierta (cerro la ficha, se le corto la
+   * conexion). Es la unica salida que le queda al supervisor con el candado puesto.
+   */
+  liberarTipificacion(): void {
+    if (!this.selectedAgentForStatusChange || this.changingStatus) return;
+
+    const idUsuario = this.selectedAgentForStatusChange.idUsuario;
+    const nombreAgente = this.selectedAgentForStatusChange.nombreCompleto;
+    if (!confirm(`¿Liberar la tipificación de ${nombreAgente}? Se pierde la gestión que no haya guardado.`)) {
+      return;
+    }
+
+    this.changingStatus = true;
+    this.autoDialerService.finalizarTipificacionAgente(idUsuario).subscribe({
+      next: (response) => {
+        console.log(`✅ Tipificación de ${nombreAgente} liberada`, response);
+        if (this.selectedAgentForStatusChange && response?.estadoActual) {
+          this.selectedAgentForStatusChange.estadoActual = response.estadoActual;
+          this.selectedAgentForStatusChange.segundosEnEstado = 0;
+        }
+        this.closeChangeStatusModal();
+      },
+      error: (error) => {
+        console.error(`❌ Error liberando tipificación de ${nombreAgente}:`, error);
+        alert(`Error al liberar la tipificación: ${error.error?.error || error.message || 'Error desconocido'}`);
+        this.changingStatus = false;
+      }
+    });
   }
 
   // ==================== PERIFÉRICOS ====================

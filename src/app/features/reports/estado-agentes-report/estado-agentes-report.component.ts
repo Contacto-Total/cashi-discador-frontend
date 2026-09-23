@@ -435,7 +435,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                   <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Soporte</th>
 
                   <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
-                      title="Interactuando + Tipificando + Ocupado + Seguimiento. No incluye WhatsApp.">Productivo</th>
+                      title="Interactuando + Tipificando + Seguimiento. No incluye Ocupado ni WhatsApp.">Productivo</th>
                   <th class="px-3 py-2" title="Productivo / (Conectado - Pausas)">% Ocupacion</th>
                   <th class="px-3 py-2" title="En cola / Conectado">% En cola</th>
                   <th class="px-3 py-2" title="Fuera de la cola / Conectado">% Fuera de<br>la cola</th>

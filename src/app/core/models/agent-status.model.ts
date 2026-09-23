@@ -86,6 +86,50 @@ export const AGENT_STATE_LABELS: Record<AgentState, string> = {
   [AgentState.SOPORTE]: 'Soporte'
 };
 
+/**
+ * Como se dibuja cada estado: color, icono y como se lee en voz alta.
+ * Fuente unica para las pantallas de supervisor. Si se agrega un estado al enum,
+ * TypeScript obliga a completarlo aca y ninguna pantalla queda mostrandolo en gris.
+ *
+ * Los iconos son nombres de lucide y tienen que estar en el pick de app.config.ts.
+ */
+export interface AgentStateUi {
+  color: string;
+  icon: string;
+  /** Texto para la alerta hablada del supervisor (speechSynthesis). */
+  hablado: string;
+}
+
+export const AGENT_STATE_UI: Record<AgentState, AgentStateUi> = {
+  // En la cola
+  [AgentState.DISPONIBLE]:       { color: '#10B981', icon: 'circle',          hablado: 'disponible' },
+  [AgentState.EN_LLAMADA]:       { color: '#3B82F6', icon: 'phone-call',      hablado: 'en llamada' },
+  [AgentState.TIPIFICANDO]:      { color: '#06B6D4', icon: 'edit',            hablado: 'tipificando' },
+  [AgentState.EN_MANUAL]:        { color: '#475569', icon: 'pencil',          hablado: 'en modo manual' },
+  // Fuera de la cola, trabajando
+  [AgentState.GESTION_MANUAL]:   { color: '#009688', icon: 'clipboard-edit',  hablado: 'en gestion manual' },
+  [AgentState.SEGUIMIENTO]:      { color: '#E91E63', icon: 'bell-ring',       hablado: 'en seguimiento' },
+  [AgentState.WHATSAPP]:         { color: '#25D366', icon: 'message-circle',  hablado: 'en whatsapp' },
+  [AgentState.CONSULTA_TIEMPOS]: { color: '#A855F7', icon: 'clock',           hablado: 'consultando sus tiempos' },
+  [AgentState.EN_REUNION]:       { color: '#8B5CF6', icon: 'users',           hablado: 'en reunion' },
+  [AgentState.CAPACITACION]:     { color: '#6366F1', icon: 'book-open',       hablado: 'en capacitacion' },
+  // Fuera de la cola, sin actividad
+  [AgentState.EN_LINEA]:         { color: '#94A3B8', icon: 'user-check',      hablado: 'en linea, fuera de la cola' },
+  // Pausas
+  [AgentState.REFRIGERIO]:       { color: '#F59E0B', icon: 'coffee',          hablado: 'en break' },
+  [AgentState.COMIDA]:           { color: '#EA580C', icon: 'utensils',        hablado: 'en comida' },
+  [AgentState.SSHH]:             { color: '#FBBF24', icon: 'user',            hablado: 'en el bano' },
+  [AgentState.AUSENTE]:          { color: '#B91C1C', icon: 'user-x',          hablado: 'ausente' },
+  [AgentState.SOPORTE]:          { color: '#0EA5E9', icon: 'monitor',         hablado: 'en soporte' },
+  // Sin sesion
+  [AgentState.DESCONECTADO]:     { color: '#EF4444', icon: 'circle',          hablado: 'desconectado' }
+};
+
+/** Estado desconocido (dato viejo o estado nuevo sin mapear todavia). */
+export const AGENT_STATE_UI_FALLBACK: AgentStateUi = {
+  color: '#6B7280', icon: 'circle', hablado: 'sin estado'
+};
+
 // Estados que el agente elige desde su selector, en el orden en que los ve.
 // NO estan aca a proposito:
 //   EN_LINEA          lo pone el sistema al entrar y al salir de cada actividad (fase 3)

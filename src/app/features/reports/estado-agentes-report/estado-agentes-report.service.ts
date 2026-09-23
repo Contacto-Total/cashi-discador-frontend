@@ -28,7 +28,9 @@ export interface RegistroEstadoDTO {
  *    `- PAUSAS        = REFRIGERIO + COMIDA + SSHH + AUSENTE + SOPORTE
  *
  * PRODUCTIVO cruza los dos grupos, no es subtotal de ninguno:
- *   EN_LLAMADA + TIPIFICANDO + EN_MANUAL + GESTION_MANUAL + SEGUIMIENTO
+ *   EN_LLAMADA + TIPIFICANDO + SEGUIMIENTO
+ * Desde 2026-09 no cuenta la gestion manual (GESTION_MANUAL / EN_MANUAL): el estado se
+ * mantiene aunque el asesor salga de la pantalla. WhatsApp tampoco, por lo mismo.
  */
 export interface ResumenPorAgente {
   idUsuario: number;
