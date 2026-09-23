@@ -7,6 +7,7 @@ import {
   CartaNoAdeudoClienteCorreo,
   CartaNoAdeudoEnviada,
   CartaNoAdeudoFallido,
+  CartaNoAdeudoSeguimiento,
   CartaNoAdeudoValidacionPago,
   CartaNoAdeudoHistorial,
   CartaNoAdeudoRechazo,
@@ -100,6 +101,11 @@ export class CartaNoAdeudoService {
     const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoValidacionPago>>(
       `${this.baseUrl}/solicitudes/validacion-pagos`, { params });
+  }
+
+  obtenerSeguimiento(documento: string): Observable<CartaNoAdeudoSeguimiento> {
+    const params = new HttpParams().set('documento', documento.trim());
+    return this.http.get<CartaNoAdeudoSeguimiento>(`${this.baseUrl}/seguimiento`, { params });
   }
 
   enviarCopia(
