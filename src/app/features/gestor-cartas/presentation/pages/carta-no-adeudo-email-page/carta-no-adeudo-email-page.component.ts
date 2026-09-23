@@ -6,6 +6,8 @@ import {
   CartaNoAdeudoEnviada,
   CartaNoAdeudoFallido,
   CartaNoAdeudoObservacion,
+  CartaNoAdeudoSeguimiento,
+  CartaNoAdeudoSeguimientoEvento,
   CartaNoAdeudoValidacionPago,
   MetodoContactoCorreo,
   ReenviarCartaNoAdeudoItem
@@ -21,7 +23,7 @@ import { CartaNoAdeudoService } from '../../../services/carta-no-adeudo.service'
 import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo-lista-widget/carta-no-adeudo-lista-widget.component';
 import { BcpPagosService } from '../../../../../pagos-bancarios/services/bcp-pagos.service';
 import { ResumenConciliacionCliente } from '../../../../../pagos-bancarios/models/bcp-archivo.model';
-import { ClienteResumenConciliacionDrawerWidget } from '../../../../../pagos-bancarios/widgets/cliente-resumen-conciliacion-drawer.widget';
+import { ClienteResumenConciliacionLecturaWidget } from '../../../../../pagos-bancarios/widgets/cliente-resumen-conciliacion-lectura.widget';
 
 type PestanaCarta = 'correo' | 'pagos' | 'historial';
 type SubTabPagos = 'validacion' | 'fallidos';
@@ -30,12 +32,15 @@ type OrigenEnvio = 'pagos' | 'fallidos';
 @Component({
   selector: 'app-carta-no-adeudo-email-page',
   standalone: true,
-  imports: [LucideAngularModule, CartaNoAdeudoListaWidgetComponent, ClienteResumenConciliacionDrawerWidget],
+  imports: [LucideAngularModule, CartaNoAdeudoListaWidgetComponent, ClienteResumenConciliacionLecturaWidget],
   template: `
     <div class="min-h-screen bg-slate-50 p-4 dark:bg-slate-900">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div class="min-w-0 flex-1">
       <div class="mx-auto max-w-7xl">
         <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 class="text-base font-semibold text-slate-800 dark:text-white">Emisión de cartas por correo</h1>
+          <div class="flex items-center gap-2">
           <nav class="inline-flex w-full rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-medium shadow-sm sm:w-auto dark:border-slate-700 dark:bg-slate-800" aria-label="Etapas de emisión">
             <button
               type="button"
@@ -68,6 +73,15 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               Historial
             </button>
           </nav>
+          <button
+            type="button"
+            (click)="abrirSidenav()"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-blue-300"
+            aria-label="Abrir seguimiento">
+            <lucide-angular name="package" [size]="14"></lucide-angular>
+            Seguimiento
+          </button>
+          </div>
         </div>
 
         @if (activeTab() === 'correo') {
@@ -277,7 +291,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                       <button type="button" [disabled]="!cliente.idSolicitud || !justificacionRechazo()" (click)="rechazarCliente(cliente)" class="self-start rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Rechazar</button>
                     </div>
                   </section>
-                  <app-cliente-resumen-conciliacion-drawer
+                  <app-cliente-resumen-conciliacion-lectura
                     mode="inline"
                     [open]="true"
                     [loading]="cargandoResumenPagos()"
@@ -286,9 +300,8 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                     [resumen]="resumenPagos()"
                     [tenantId]="cliente.idTenant"
                     [carteraId]="cliente.idCartera"
-                    [subcarteraId]="cliente.idSubcartera"
-                    (refreshRequested)="cargarPagosCliente(cliente)">
-                  </app-cliente-resumen-conciliacion-drawer>
+                    [subcarteraId]="cliente.idSubcartera">
+                  </app-cliente-resumen-conciliacion-lectura>
                   @if (observacionesDe(cliente); as observaciones) {
                     @if (observaciones.length > 0) {
                       <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20">
@@ -475,6 +488,95 @@ type OrigenEnvio = 'pagos' | 'fallidos';
             </div>
           </div>
         }
+
+      </div>
+      </div>
+
+        @if (sidenavAbierto()) {
+          <aside class="w-full shrink-0 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100vh-2rem)] lg:w-[420px] lg:flex-col lg:overflow-hidden">
+              <header class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                <div>
+                  <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Seguimiento del cliente</h2>
+                  <p class="text-[11px] text-slate-500">Recorrido de la carta de no adeudo</p>
+                </div>
+                <button type="button" (click)="cerrarSidenav()" class="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar seguimiento">
+                  <lucide-angular name="x" [size]="16"></lucide-angular>
+                </button>
+              </header>
+
+              <div class="border-b border-slate-200 p-3 dark:border-slate-700">
+                <div class="flex gap-2">
+                  <input
+                    #documentoSeguimiento
+                    type="search"
+                    placeholder="Buscar por documento"
+                    [value]="busquedaSeguimiento()"
+                    (input)="busquedaSeguimiento.set(documentoSeguimiento.value)"
+                    (keyup.enter)="buscarSeguimiento(documentoSeguimiento.value)"
+                    class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  <button type="button" (click)="buscarSeguimiento(documentoSeguimiento.value)" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-white transition-colors hover:bg-blue-700" aria-label="Buscar">
+                    <lucide-angular name="search" [size]="16"></lucide-angular>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex-1 overflow-y-auto p-4">
+                @if (cargandoSeguimiento()) {
+                  <div class="flex flex-col items-center justify-center py-16 text-slate-500">
+                    <div class="h-7 w-7 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                    <p class="mt-3 text-sm">Buscando...</p>
+                  </div>
+                } @else if (errorSeguimiento()) {
+                  <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">{{ errorSeguimiento() }}</div>
+                } @else if (seguimiento(); as data) {
+                  @if (!data.encontrado || data.solicitudes.length === 0) {
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800">
+                      No hay un proceso de carta de no adeudo para este cliente.
+                    </div>
+                  } @else {
+                    <div class="mb-4">
+                      <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ data.nombreCliente || 'Cliente' }}</p>
+                      <p class="text-xs text-slate-500">Documento: {{ data.documento }}</p>
+                    </div>
+                    @for (solicitud of data.solicitudes; track solicitud.idSolicitud) {
+                      <div class="mb-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <div class="mb-3 flex items-center justify-between gap-2">
+                          <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">Solicitud #{{ solicitud.idSolicitud }}</p>
+                          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {{ solicitud.tipoSolicitud === 'COPIA_PERDIDA' ? 'Copia' : 'Original' }} · {{ solicitud.estado }}
+                          </span>
+                        </div>
+                        <ol class="relative ml-1.5 border-l border-slate-200 dark:border-slate-700">
+                          @for (evento of solicitud.eventos; track $index) {
+                            <li class="relative mb-3 ml-4 last:mb-0">
+                              <span
+                                class="absolute -left-[22px] mt-1 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900"
+                                [class.bg-blue-500]="tonoEvento(evento) === 'info'"
+                                [class.bg-emerald-500]="tonoEvento(evento) === 'ok'"
+                                [class.bg-rose-500]="tonoEvento(evento) === 'error'"
+                                [class.bg-amber-500]="tonoEvento(evento) === 'warn'"></span>
+                              <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ descripcionEvento(evento) }}</p>
+                              <p class="text-[11px] text-slate-500">{{ formatearFecha(evento.fecha) }}</p>
+                              @if (evento.detalle) {
+                                <p class="mt-0.5 rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-500 dark:bg-slate-800">{{ evento.detalle }}</p>
+                              }
+                            </li>
+                          } @empty {
+                            <li class="ml-4 text-[11px] text-slate-500">Sin eventos registrados.</li>
+                          }
+                        </ol>
+                      </div>
+                    }
+                  }
+                } @else {
+                  <div class="flex flex-col items-center justify-center py-16 text-center text-slate-400">
+                    <lucide-angular name="package" [size]="32"></lucide-angular>
+                    <p class="mt-2 text-sm">Busca un documento para ver su recorrido.</p>
+                  </div>
+                }
+              </div>
+          </aside>
+        }
       </div>
     </div>
   `
@@ -526,6 +628,11 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly copiaSolicitud = signal<CartaNoAdeudoEnviada | null>(null);
   readonly correoCopia = signal('');
   readonly busquedaCorreoHistorial = signal('');
+  readonly sidenavAbierto = signal(false);
+  readonly busquedaSeguimiento = signal('');
+  readonly seguimiento = signal<CartaNoAdeudoSeguimiento | null>(null);
+  readonly cargandoSeguimiento = signal(false);
+  readonly errorSeguimiento = signal<string | null>(null);
   private documentoBusqueda?: string;
   private objectUrl?: string;
   private solicitudVistaPrevia = 0;
@@ -813,6 +920,77 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     return Number.isNaN(valor.getTime())
       ? fecha
       : valor.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  abrirSidenav(): void {
+    this.sidenavAbierto.set(true);
+  }
+
+  cerrarSidenav(): void {
+    this.sidenavAbierto.set(false);
+  }
+
+  buscarSeguimiento(termino: string): void {
+    const documento = termino.trim();
+    this.busquedaSeguimiento.set(documento);
+    if (!documento) {
+      this.seguimiento.set(null);
+      this.errorSeguimiento.set(null);
+      return;
+    }
+    this.cargandoSeguimiento.set(true);
+    this.errorSeguimiento.set(null);
+    this.cartaNoAdeudoService.obtenerSeguimiento(documento).subscribe({
+      next: seguimiento => {
+        this.seguimiento.set(seguimiento);
+        this.cargandoSeguimiento.set(false);
+      },
+      error: error => {
+        this.cargandoSeguimiento.set(false);
+        this.seguimiento.set(null);
+        this.errorSeguimiento.set(
+          error?.error?.mensaje || error?.error?.message || 'No se pudo obtener el seguimiento del cliente');
+        console.error('No se pudo obtener el seguimiento del cliente', error);
+      }
+    });
+  }
+
+  descripcionEvento(evento: CartaNoAdeudoSeguimientoEvento): string {
+    switch (evento.tipoEvento) {
+      case 'SOLICITUD_CREADA':
+        return 'Solicitud creada';
+      case 'ENVIADA_A_VALIDACION_PAGOS':
+        return 'Enviada a Validación de pagos';
+      case 'RECHAZADA_EN_VALIDACION_PAGOS':
+      case 'RECHAZO_EN_VALIDACION_PAGOS':
+        return 'Rechazada en Validación de pagos — regresa a Validación de correo';
+      case 'REENVIADA_A_VALIDACION_PAGOS':
+        return 'Reenviada a Validación de pagos';
+      case 'COPIA_CREADA':
+        return 'Copia generada';
+      case 'ENVIO_INICIADO':
+        return evento.numeroIntento ? `Envío iniciado (intento ${evento.numeroIntento})` : 'Envío iniciado';
+      case 'ENVIO_EXITOSO':
+        return 'Carta enviada';
+      case 'ENVIO_FALLIDO':
+        return 'Error al enviar la carta';
+      default:
+        return evento.tipoEvento;
+    }
+  }
+
+  tonoEvento(evento: CartaNoAdeudoSeguimientoEvento): 'info' | 'ok' | 'warn' | 'error' {
+    switch (evento.tipoEvento) {
+      case 'ENVIO_EXITOSO':
+        return 'ok';
+      case 'ENVIO_FALLIDO':
+        return 'error';
+      case 'RECHAZADA_EN_VALIDACION_PAGOS':
+      case 'RECHAZO_EN_VALIDACION_PAGOS':
+        return 'warn';
+      default:
+        return 'info';
+    }
   }
 
   abrirDialogoCopia(enviada: CartaNoAdeudoEnviada): void {

@@ -144,6 +144,33 @@ export interface ReenviarCartaNoAdeudoItem {
   idMetodoContactoDestino?: number | null;
 }
 
+export interface CartaNoAdeudoSeguimientoEvento {
+  tipoEvento: string;
+  estadoAnterior: string | null;
+  estadoNuevo: string | null;
+  numeroIntento: number | null;
+  correoDestino: string | null;
+  detalle: string | null;
+  fecha: string | null;
+}
+
+export interface CartaNoAdeudoSeguimientoSolicitud {
+  idSolicitud: number;
+  tipoSolicitud: CartaNoAdeudoTipoSolicitud;
+  estado: CartaNoAdeudoEstado | string;
+  correoDestino: string;
+  fechaSolicitud: string | null;
+  fechaUltimaActualizacion: string | null;
+  eventos: CartaNoAdeudoSeguimientoEvento[];
+}
+
+export interface CartaNoAdeudoSeguimiento {
+  documento: string;
+  nombreCliente: string | null;
+  encontrado: boolean;
+  solicitudes: CartaNoAdeudoSeguimientoSolicitud[];
+}
+
 export interface CartaNoAdeudoValidacionPago {
   idSolicitud: number;
   idCliente: number;
