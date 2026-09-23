@@ -5651,6 +5651,11 @@ input[type="datetime-local"]:lang(es) {
    todos. Por lo mismo, las celdas con color propio usan `secundario` y `peligro`
    y no una utilidad de Tailwind: el !important del tema las tapa. */
 body .cashi-asistencia.cashi-asistencia {
+  /* Contiene lo posicionado del módulo, como los <caption class="sr-only">.
+     Sin esto su bloque contenedor es el body: se salen del scroll de
+     .main-content, estiran la página y al bajar queda un espacio en blanco
+     debajo de la última tabla. */
+  position: relative;
   --tabla-texto: #0f172a;
   --tabla-apagado: #5f6c80;
   --tabla-borde: #e6e9ee;
