@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
-import { CartaNoAdeudoClienteCorreo, CartaNoAdeudoRechazo } from '../../../models/carta-no-adeudo.model';
+import { CartaNoAdeudoClienteCorreo, CartaNoAdeudoRechazo, MetodoContactoCorreo } from '../../../models/carta-no-adeudo.model';
 import { CartaNoAdeudoService } from '../../../services/carta-no-adeudo.service';
 import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo-lista-widget/carta-no-adeudo-lista-widget.component';
 import { CorreccionPagosService } from '../../../../../pagos-bancarios/services/correccion-pagos.service';
@@ -69,6 +69,13 @@ import { forkJoin } from 'rxjs';
             (verVistaPrevia)="generarVistaPrevia($event)"
             (enviarValidacionPagos)="enviarAValidacionPagos($event)">
           </app-carta-no-adeudo-lista-widget>
+          @if (clienteCorreo(); as cliente) {
+            <section class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Correo para {{ cliente.documento }}</h2>
+              <div class="mt-3 flex flex-wrap gap-2">@for (correo of correos(); track correo.id) { <button type="button" (click)="seleccionarCorreo(cliente, correo)" class="rounded-full border px-3 py-1.5 text-xs" [class.border-blue-600]="cliente.correo === correo.valor" [class.text-blue-600]="cliente.correo === correo.valor">{{ correo.valor }}</button> }</div>
+              <div class="mt-3 flex max-w-md gap-2"><input #nuevoCorreo type="email" placeholder="nuevo@correo.com" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500" (input)="correoNuevo.set(nuevoCorreo.value.trim())" /><button type="button" [disabled]="!correoValido()" (click)="agregarCorreo(cliente)" class="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-40">Agregar</button></div>
+            </section>
+          }
           <section class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <div class="flex items-center justify-between"><h2 class="text-sm font-semibold">Retornados a validación de correo</h2><span class="text-xs text-slate-500">{{ totalRechazos() }}</span></div>
             <div class="mt-3 divide-y divide-slate-100 dark:divide-slate-700">
@@ -148,6 +155,9 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly totalPaginasRechazos = signal(0);
   readonly totalRechazos = signal(0);
   readonly justificacionRechazo = signal('');
+  readonly clienteCorreo = signal<CartaNoAdeudoClienteCorreo | null>(null);
+  readonly correos = signal<MetodoContactoCorreo[]>([]);
+  readonly correoNuevo = signal('');
   private documentoBusqueda?: string;
   private objectUrl?: string;
   private solicitudVistaPrevia = 0;
@@ -231,6 +241,8 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   generarVistaPrevia(cliente: CartaNoAdeudoClienteCorreo): void {
+    this.clienteCorreo.set(cliente);
+    this.cargarCorreos(cliente);
     const solicitudActual = ++this.solicitudVistaPrevia;
     this.cargandoVistaPrevia.set(true);
     this.limpiarVistaPrevia();
@@ -253,6 +265,11 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  correoValido(): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.correoNuevo()); }
+  cargarCorreos(cliente: CartaNoAdeudoClienteCorreo): void { this.cartaNoAdeudoService.listarCorreos(cliente).subscribe({ next: pagina => this.correos.set(pagina.content), error: error => console.error('No se pudieron cargar correos', error) }); }
+  seleccionarCorreo(cliente: CartaNoAdeudoClienteCorreo, correo: MetodoContactoCorreo): void { const actualizado = { ...cliente, correo: correo.valor, idMetodoContacto: correo.id }; this.clienteCorreo.set(actualizado); this.clientes.update(clientes => clientes.map(item => item.idCliente === cliente.idCliente ? actualizado : item)); }
+  agregarCorreo(cliente: CartaNoAdeudoClienteCorreo): void { if (!this.correoValido()) return; this.cartaNoAdeudoService.agregarCorreo(cliente, this.correoNuevo()).subscribe({ next: correo => { this.seleccionarCorreo(cliente, correo); this.correoNuevo.set(''); this.cargarCorreos(cliente); }, error: error => console.error('No se pudo agregar correo', error) }); }
 
   ngOnDestroy(): void {
     this.solicitudVistaPrevia++;
