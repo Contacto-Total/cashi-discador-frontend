@@ -200,6 +200,16 @@ export class EstadoAgentesReportService {
     return this.http.get<ReporteEstadoAgentesResponse>(this.baseUrl, { params });
   }
 
+  /**
+   * La jornada del asesor que pregunta. El backend resuelve el usuario desde el token,
+   * asi que no se manda ningun id: no hay forma de pedir la de otro.
+   */
+  getMisTiempos(fecha: string): Observable<ReporteEstadoAgentesResponse> {
+    return this.http.get<ReporteEstadoAgentesResponse>(`${this.baseUrl}/mis-tiempos`, {
+      params: new HttpParams().set('fecha', fecha)
+    });
+  }
+
   exportarExcel(
     fechaDesde: string,
     fechaHasta: string,

@@ -135,6 +135,13 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    // Cada asesor ve su propia jornada. Sin guard de supervisor: el backend acota por
+    // el usuario del token, no por parametro.
+    path: 'mis-tiempos',
+    loadComponent: () => import('./features/mis-tiempos/mis-tiempos.component').then(m => m.MisTiemposComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'reports/estado-agentes',
     loadComponent: () => import('./features/reports/estado-agentes-report/estado-agentes-report.component').then(m => m.EstadoAgentesReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
