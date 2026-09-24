@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.model';
@@ -186,7 +186,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
     }
   `
 })
-export class CartaNoAdeudoListaWidgetComponent {
+export class CartaNoAdeudoListaWidgetComponent implements OnChanges {
   @Input() clientes: CartaNoAdeudoClienteCorreo[] = [];
   @Input() page = 0;
   @Input() totalPages = 0;
@@ -225,6 +225,12 @@ export class CartaNoAdeudoListaWidgetComponent {
 
   get clientesSeleccionados(): CartaNoAdeudoClienteCorreo[] {
     return this.clientes.filter(cliente => this.seleccionados.has(cliente.idCliente));
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['clientes']) {
+      this.clientePreview = null;
+    }
   }
 
   verCarta(cliente: CartaNoAdeudoClienteCorreo): void {
