@@ -517,7 +517,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
         }
 
         @if (dialogEnvio()) {
-          <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" (click)="dialogEnvio.set(false)">
+          <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4" (click)="dialogEnvio.set(false)">
             <div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800" (click)="$event.stopPropagation()">
               <h2 class="text-base font-semibold text-slate-800 dark:text-white">Confirmar envío</h2>
               <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Se enviarán {{ cantidadSeleccionada() }} correos.</p>
@@ -537,7 +537,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
         }
 
         @if (dialogCopia()) {
-          <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" (click)="cerrarDialogoCopia()">
+          <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4" (click)="cerrarDialogoCopia()">
             <div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800" (click)="$event.stopPropagation()">
               <h2 class="text-base font-semibold text-slate-800 dark:text-white">Enviar copia</h2>
               @if (copiaSolicitud(); as solicitud) {
