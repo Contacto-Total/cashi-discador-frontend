@@ -5,6 +5,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: UserRole;
+  roles?: string[];
   sipExtension: string;
   sipPassword?: string;
   active: boolean;

@@ -1,16 +1,17 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
-import { ThemeService } from '../../../../../shared/services/theme.service';
 import { FormatService } from '@/shared/services/format.service';
 import { ClientSearchService } from '../../../../../core/services/client-search.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule],
+  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, RouterLink],
   templateUrl: './no-debt-letter-page.component.html',
   styleUrls: ['./no-debt-letter-page.component.css']
 })
@@ -19,9 +20,11 @@ export class NoDebtLetterPageComponent {
 
   searchForm: FormGroup;
   letterForm: FormGroup;
-  isDarkMode = false;
 
-  activeTab: 'nuevo' | 'antiguo' = 'nuevo';
+  private readonly authService = inject(AuthService);
+  readonly puedeEmitirCartasPropias =
+    this.authService.hasAnyRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR TRAMO PROPIO');
+
   isLoading = false;
   mostrarDocumento = false;
 
@@ -40,7 +43,6 @@ export class NoDebtLetterPageComponent {
   constructor(
     private fb: FormBuilder,
     private agreementsService: AgreementsService,
-    private themeService: ThemeService,
     private clientSearchService: ClientSearchService
   ) {
     this.searchForm = this.fb.group({
@@ -53,10 +55,6 @@ export class NoDebtLetterPageComponent {
       numeroCuenta: ['', Validators.required],
       fechaActual: [this.formatDate(new Date()), Validators.required],
       fechaCancelacion: [this.formatDate(new Date()), Validators.required]
-    });
-
-    effect(() => {
-      this.isDarkMode = this.themeService.isDarkMode();
     });
   }
 
@@ -76,13 +74,6 @@ export class NoDebtLetterPageComponent {
     return formatted.replace('septiembre', 'setiembre');
   }
 
-  switchTab(tab: 'nuevo' | 'antiguo') {
-    if (this.activeTab === tab) return;
-    this.activeTab = tab;
-    this.limpiarCampos();
-    this.searchForm.reset();
-  }
-
   buscarPorDni() {
     if (this.searchForm.invalid) {
       this.searchForm.markAllAsTouched();
@@ -94,11 +85,7 @@ export class NoDebtLetterPageComponent {
     this.searchForm.reset();
     this.isLoading = true;
 
-    if (this.activeTab === 'nuevo') {
-      this.buscarNuevoSistema(dni);
-    } else {
-      this.buscarAntiguoSistema(dni);
-    }
+    this.buscarNuevoSistema(dni);
   }
 
   private buscarNuevoSistema(dni: string) {
@@ -120,7 +107,7 @@ export class NoDebtLetterPageComponent {
 
             this.mostrarDocumento = true;
             this.isLoading = false;
-            this.showToast('success', 'Datos cargados correctamente (sistema nuevo)');
+            this.showToast('success', 'Datos cargados correctamente');
           },
           error: (error: any) => this.handleNuevoSistemaError(error)
         });
@@ -139,35 +126,6 @@ export class NoDebtLetterPageComponent {
     } else {
       this.showToast('error', error.message || 'Error al obtener datos del cliente.');
     }
-  }
-
-  private buscarAntiguoSistema(dni: string) {
-    this.agreementsService.getAgreementData(dni).subscribe({
-      next: (response) => {
-        this.letterForm.patchValue({
-          nombreCompleto: response.nombreDelTitular,
-          dni: dni,
-          numeroCuenta: response.cuentaTarjeta,
-          fechaActual: this.formatDate(new Date()),
-          fechaCancelacion: this.formatDate(new Date())
-        });
-
-        this.mostrarDocumento = true;
-        this.isLoading = false;
-        this.showToast('success', 'Datos cargados correctamente');
-      },
-      error: (error: any) => {
-        this.isLoading = false;
-
-        if (error.status === 404) {
-          this.showToast('error', 'Cliente no encontrado en la base de datos.');
-        } else if (error.status === 422) {
-          this.showToast('warning', 'El cliente no tiene datos registrados.');
-        } else {
-          this.showToast('error', 'Error al obtener datos del cliente.');
-        }
-      }
-    });
   }
 
   generarPDF() {
@@ -190,11 +148,7 @@ export class NoDebtLetterPageComponent {
       rucNsoluciones: this.rucNsoluciones
     };
 
-    const download$ = this.activeTab === 'nuevo'
-      ? this.agreementsService.downloadNoDebtLetterNuevo(request)
-      : this.agreementsService.downloadNoDebtLetter(request);
-
-    download$.subscribe({
+    this.agreementsService.downloadNoDebtLetterNuevo(request).subscribe({
       next: (blob) => {
         this.downloadFile(blob, `CARTA_NO_ADEUDO_${formValue.dni}.pdf`);
         this.isLoading = false;
