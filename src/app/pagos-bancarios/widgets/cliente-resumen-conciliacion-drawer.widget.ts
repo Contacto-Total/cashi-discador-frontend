@@ -51,7 +51,7 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
             } @else if (resumen) {
               <div class="mb-3 grid grid-cols-4 gap-2">
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                  <p class="text-[10px] text-slate-500 dark:text-slate-400">Carta de no adeudo disponible</p>
+                  <p class="line-clamp-3 text-[10px] leading-tight text-slate-500 dark:text-slate-400">Carta de no adeudo disponible</p>
                   <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
                 </div>
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
