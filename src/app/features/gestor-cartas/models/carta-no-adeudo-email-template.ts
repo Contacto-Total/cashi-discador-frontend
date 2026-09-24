@@ -4,12 +4,13 @@
  * en POST /solicitudes/enviar para que el correo real use exactamente este formato.
  *
  * Placeholders soportados (los reemplaza el backend por destinatario):
- *   {nombre}    -> nombre completo del cliente
- *   {documento} -> numero de documento del cliente
+ *   {nombre}             -> nombre completo del cliente
+ *   {nombre_mayusculas}  -> nombre completo del cliente en MAYUSCULAS
+ *   {documento}          -> numero de documento del cliente
  */
-export const CARTA_NO_ADEUDO_REMITENTE = 'NSOLUCIONES';
+export const CARTA_NO_ADEUDO_REMITENTE = 'Corporativo nsoluciones';
 
-export const CARTA_NO_ADEUDO_ASUNTO = 'Su carta de no adeudo';
+export const CARTA_NO_ADEUDO_ASUNTO = 'CARTA DE NO ADEUDO - {nombre_mayusculas}';
 
 export const CARTA_NO_ADEUDO_CUERPO = `<!DOCTYPE html>
 <html lang="es">
@@ -17,41 +18,25 @@ export const CARTA_NO_ADEUDO_CUERPO = `<!DOCTYPE html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.12);">
-          <tr>
-            <td style="background:#1d4ed8;padding:20px 32px;">
-              <span style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">NSOLUCIONES</span>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:32px;">
-              <p style="margin:0 0 16px;font-size:15px;line-height:22px;">Estimulado(a) <strong>{nombre}</strong>,</p>
-              <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
-                Le hacemos llegar su <strong>carta de no adeudo</strong> correspondiente al documento
-                <strong>{documento}</strong>. La encontrara adjunta a este correo en formato PDF.
-              </p>
-              <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
-                Si tiene alguna consulta, puede responder directamente a este correo.
-              </p>
-              <p style="margin:24px 0 0;font-size:14px;line-height:22px;">
-                Saludos cordiales,<br>
-                <strong>Equipo NSOLUCIONES</strong>
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:11px;line-height:16px;color:#64748b;">
-              Este es un mensaje automatico. Por su seguridad, no comparta sus datos personales por correo.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+  <div style="max-width:600px;margin:0 auto;padding:24px;font-size:14px;line-height:22px;">
+    <p style="margin:0 0 12px;">Estimado (a):<br>Reciba un cordial saludo.</p>
+    <p style="margin:0 0 12px;">
+      Por medio del presente, adjuntamos la <strong>CARTA DE NO ADEUDO</strong>, documento que respalda la cancelaci&oacute;n total de su deuda.
+    </p>
+    <p style="margin:0 0 12px;">
+      Le informamos que la presente se emite considerando la cancelaci&oacute;n total del producto otorgado originalmente por
+      <strong>INFINANCE XP S.A.</strong> (Anteriormente con la raz&oacute;n social de <strong>FINANCIERA OH! S.A.</strong>)
+      y posteriormente adquirido por <strong>NSOLUCIONES CONSULTING S.A.C.</strong>, quedando a la fecha sin saldo pendiente.
+    </p>
+    <p style="margin:0 0 12px;">Atentamente,</p>
+    <p style="margin:0;line-height:20px;">
+      <strong>Emily Saenz Martinez</strong><br>
+      NSOLUCIONES CONSULTING S.A.C.<br>
+      +51 915 257 493<br>
+      contactototal.com.pe
+    </p>
+  </div>
 </body>
 </html>`;
 
@@ -61,8 +46,10 @@ export interface DatosPlantillaCorreo {
 }
 
 export function renderPlantillaCorreo(plantilla: string, datos: DatosPlantillaCorreo): string {
+  const nombre = datos.nombre?.trim() || 'cliente';
   return plantilla
-    .split('{nombre}').join(datos.nombre?.trim() || 'cliente')
+    .split('{nombre_mayusculas}').join(nombre.toUpperCase())
+    .split('{nombre}').join(nombre)
     .split('{documento}').join(datos.documento?.trim() || '');
 }
 
