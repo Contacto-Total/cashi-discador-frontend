@@ -6,6 +6,7 @@ import {
   EstadoAgentesReportService,
   ResumenEstadoAgentes,
   ResumenPorAgente,
+  RegistroEstadoDTO,
   RegistroAsistenciaDTO,
   ResumenAsistencia,
   AgenteOption
@@ -13,784 +14,671 @@ import {
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
 
+import {
+  Vista, Grupo, Col, TramoTL, COLS, GRUPOS, ESTADOS, RAYADO,
+  etiquetaGrupo, colorGrupo, numCol, textoCol, formatSeg, pctSeguro,
+  composicion, desglose, colorOcupacion, fondoOcupacion, colorOcioso, fondoOcioso,
+  tramosDeAgente, ventanaDe, construirLinea, ejeHoras
+} from './estado-agentes-catalogo';
+
 @Component({
   selector: 'app-estado-agentes-report',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
-      <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-          <lucide-angular name="user-check" [size]="28" class="text-indigo-500"></lucide-angular>
-          Reporte de Estados por Agente
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Historial de estados de agentes con tiempos y ratios de ocupacion
-        </p>
-      </div>
+    <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif]
+                text-[#0f172a] p-4 md:p-5 dark:bg-slate-950 dark:text-slate-100">
 
-      <!-- Filtros -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <!-- Fecha: un solo dia para el Resumen, rango para Asistencia -->
-          @if (activeTab() === 'asistencia') {
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Desde *
-              </label>
-              <input
-                type="date"
-                [(ngModel)]="filtrosAsistencia.fechaDesde"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Hasta *
-              </label>
-              <input
-                type="date"
-                [(ngModel)]="filtrosAsistencia.fechaHasta"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-          } @else {
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Fecha *
-              </label>
-              <input
-                type="date"
-                [(ngModel)]="filtros.fecha"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-          }
-
-          <!-- Proveedor -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Proveedor
-            </label>
-            <select
-              [(ngModel)]="filtros.idProveedor"
-              (ngModelChange)="onProveedorChange($event)"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option [ngValue]="null">Todos</option>
-              @for (prov of proveedores(); track prov.id) {
-                <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
-              }
-            </select>
-          </div>
-
-          <!-- Cartera -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Cartera
-            </label>
-            <select
-              [(ngModel)]="filtros.idCartera"
-              (ngModelChange)="onCarteraChange($event)"
-              [disabled]="!filtros.idProveedor"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option [ngValue]="null">Todas</option>
-              @for (cart of carteras(); track cart.id) {
-                <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
-              }
-            </select>
-          </div>
-
-          <!-- Subcartera -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Subcartera
-            </label>
-            <select
-              [(ngModel)]="filtros.idSubcartera"
-              (ngModelChange)="onSubcarteraChange($event)"
-              [disabled]="!filtros.idCartera"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option [ngValue]="null">Todas</option>
-              @for (sub of subcarteras(); track sub.id) {
-                <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
-              }
-            </select>
-          </div>
-
-          <!-- Botones -->
-          <div class="flex items-end gap-2">
-            <button
-              (click)="onBuscar()"
-              [disabled]="anyLoading() || !filtrosCompletos()"
-              class="flex-1 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold
-                     rounded-lg transition-colors flex items-center justify-center gap-2
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              @if (anyLoading()) {
-                <lucide-angular name="loader-2" [size]="18" class="animate-spin"></lucide-angular>
-              } @else {
-                <lucide-angular name="search" [size]="18"></lucide-angular>
-              }
-              Buscar
-            </button>
-            <button
-              (click)="onExportar()"
-              [disabled]="anyLoading() || !hayDatosParaExportar()"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
-                     rounded-lg transition-colors flex items-center gap-2
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <lucide-angular name="download" [size]="18"></lucide-angular>
-              Excel
-            </button>
-          </div>
+      <!-- ============ Cabecera ============ -->
+      <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.015em]">Estados por Agente</h1>
+          <p class="mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subtitulo() }}</p>
         </div>
-
-        <!-- Filtros propios del tab de Asistencia -->
-        @if (activeTab() === 'asistencia') {
-          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700
-                      grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Hora de entrada
-              </label>
-              <input
-                type="time"
-                step="1"
-                [(ngModel)]="filtrosAsistencia.horaEntrada"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tolerancia (min)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="120"
-                [(ngModel)]="filtrosAsistencia.toleranciaMin"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Minutos de gracia antes de marcar TARDE
-              </p>
-            </div>
-
-            <!-- Multiselect de agentes -->
-            <div class="relative">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Agentes
-              </label>
-              <button
-                type="button"
-                (click)="showAgentePicker.set(!showAgentePicker())"
-                [disabled]="agentesDisponibles().length === 0"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left text-sm
-                       flex items-center justify-between gap-2
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span class="truncate">{{ etiquetaAgentes() }}</span>
-                <lucide-angular name="chevron-down" [size]="16" class="shrink-0"></lucide-angular>
-              </button>
-
-              @if (showAgentePicker()) {
-                <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg shadow-lg
-                            bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
-                  <div class="sticky top-0 flex gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800
-                              border-b border-gray-200 dark:border-gray-600">
-                    <button type="button" (click)="seleccionarTodosAgentes()"
-                            class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                      Todos
-                    </button>
-                    <button type="button" (click)="limpiarAgentes()"
-                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:underline">
-                      Ninguno
-                    </button>
-                  </div>
-                  @for (ag of agentesDisponibles(); track ag.id) {
-                    <label class="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer
-                                  text-gray-700 dark:text-gray-200
-                                  hover:bg-gray-50 dark:hover:bg-gray-600">
-                      <input
-                        type="checkbox"
-                        [checked]="agentesSeleccionados().includes(ag.id)"
-                        (change)="toggleAgente(ag.id)"
-                        class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span class="truncate">{{ ag.nombre }}</span>
-                    </label>
-                  }
-                </div>
-              }
-              @if (agentesDisponibles().length === 0) {
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Elegi una subcartera para acotar la lista
-                </p>
-              }
-            </div>
-
-            <div class="flex items-end">
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="filtrosAsistencia.incluirDomingos"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                Incluir domingos
-              </label>
-            </div>
-          </div>
-        }
-
-        @if (!filtrosCompletos()) {
-          <p class="mt-2 text-sm text-amber-600 dark:text-amber-400">
-            @if (activeTab() === 'asistencia') {
-              * El rango de fechas es obligatorio
+        <div class="flex gap-2">
+          <button type="button" (click)="onExportar()"
+            [disabled]="anyLoading() || !hayDatosParaExportar()"
+            class="inline-flex h-9 items-center gap-2 rounded-lg border border-[#d5dbe3] bg-white px-3.5
+                   text-[12.5px] font-bold transition-colors hover:border-[#8491a3] hover:bg-[#f8fafc]
+                   disabled:cursor-not-allowed disabled:opacity-50
+                   dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800">
+            <lucide-angular name="download" [size]="15"></lucide-angular>
+            Excel
+          </button>
+          <button type="button" (click)="onBuscar()"
+            [disabled]="anyLoading() || !filtrosCompletos()"
+            class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0f172a] px-4 text-[12.5px]
+                   font-bold text-white transition-colors hover:bg-[#1e293b]
+                   disabled:cursor-not-allowed disabled:opacity-50
+                   dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+            @if (anyLoading()) {
+              <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+              Buscando
             } @else {
-              * La fecha es obligatoria
+              <lucide-angular name="search" [size]="15"></lucide-angular>
+              Buscar
             }
-          </p>
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ Filtros ============ -->
+      <div class="mb-3 flex flex-wrap items-end gap-2.5">
+        @if (activeTab() === 'asistencia') {
+          <div class="flex flex-col gap-1.5">
+            <label for="f-desde" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Desde</label>
+            <input id="f-desde" type="date" [(ngModel)]="filtrosAsistencia.fechaDesde" [class]="claseInput"/>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="f-hasta" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Hasta</label>
+            <input id="f-hasta" type="date" [(ngModel)]="filtrosAsistencia.fechaHasta" [class]="claseInput"/>
+          </div>
+        } @else {
+          <div class="flex flex-col gap-1.5">
+            <label for="f-fecha" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Fecha</label>
+            <input id="f-fecha" type="date" [(ngModel)]="filtros.fecha" [class]="claseInput"/>
+          </div>
         }
-      </div>
 
-      <!-- Tabs: siempre visibles, Asistencia no depende de haber buscado antes -->
-      <div class="flex flex-wrap gap-2 mb-4">
-        <button
-          (click)="cambiarTab('resumen')"
-          [class]="tabClass('resumen')"
-        >
-          Resumen por Agente
-        </button>
-        <button
-          (click)="cambiarTab('asistencia')"
-          [class]="tabClass('asistencia')"
-        >
-          Asistencia
-        </button>
-      </div>
-
-      <!-- KPI Cards: los 5 indicadores del catalogo, sobre el total del equipo -->
-      @if (resumen() && activeTab() !== 'asistencia') {
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                <lucide-angular name="users" [size]="24" class="text-indigo-600 dark:text-indigo-400"></lucide-angular>
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ resumen()!.totalAgentes }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Agentes</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <lucide-angular name="clock" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ totales().pOcupacion }}%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400" title="Productivo / (Conectado - Pausas)">% Ocupacion</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <lucide-angular name="repeat" [size]="24" class="text-blue-600 dark:text-blue-400"></lucide-angular>
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ totales().pEnCola }}%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400" title="En cola / Conectado">% En cola</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
-                <lucide-angular name="timer" [size]="24" class="text-sky-600 dark:text-sky-400"></lucide-angular>
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-sky-600 dark:text-sky-400">{{ totales().pFueraDeCola }}%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400" title="Fuera de la cola / Conectado">% Fuera de la cola</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                <lucide-angular name="user-x" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ totales().pOcioso }}%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400" title="Ocioso / En cola. Mide al discador, no al asesor.">% Ocioso</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <lucide-angular name="coffee" [size]="24" class="text-orange-600 dark:text-orange-400"></lucide-angular>
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ totales().pPausas }}%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400" title="Pausas / Conectado">% Pausas</p>
-              </div>
-            </div>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="f-cli" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Cliente</label>
+          <select id="f-cli" [(ngModel)]="filtros.idProveedor" (ngModelChange)="onProveedorChange($event)" [class]="claseInput">
+            <option [ngValue]="null">Todos</option>
+            @for (p of proveedores(); track p.id) {
+              <option [ngValue]="p.id">{{ p.nombreInquilino }}</option>
+            }
+          </select>
         </div>
 
+        <span class="pb-2.5 text-[#c5ccd6]">&rsaquo;</span>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="f-car" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Cartera</label>
+          <select id="f-car" [(ngModel)]="filtros.idCartera" (ngModelChange)="onCarteraChange($event)"
+                  [disabled]="carteras().length === 0" [class]="claseInput">
+            <option [ngValue]="null">Todas</option>
+            @for (c of carteras(); track c.id) {
+              <option [ngValue]="c.id">{{ c.nombreCartera }}</option>
+            }
+          </select>
+        </div>
+
+        <span class="pb-2.5 text-[#c5ccd6]">&rsaquo;</span>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="f-sub" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Subcartera</label>
+          <select id="f-sub" [(ngModel)]="filtros.idSubcartera" (ngModelChange)="onSubcarteraChange($event)"
+                  [disabled]="subcarteras().length === 0" [class]="claseInput">
+            <option [ngValue]="null">Todas</option>
+            @for (s of subcarteras(); track s.id) {
+              <option [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
+            }
+          </select>
+        </div>
+
+        <label class="flex h-[38px] min-w-[190px] flex-1 items-center gap-2.5 rounded-lg border border-[#d5dbe3]
+                      bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+          <lucide-angular name="search" [size]="14" class="shrink-0 text-[#8491a3]"></lucide-angular>
+          <input type="text" [ngModel]="buscarAgente()" (ngModelChange)="buscarAgente.set($event)"
+            [placeholder]="activeTab() === 'asistencia' ? 'Filtrar por agente o estado' : 'Buscar asesor por nombre'"
+            aria-label="Buscar asesor"
+            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] outline-none
+                   placeholder:text-[#8491a3] dark:text-slate-100"/>
+        </label>
+      </div>
+
+      <!-- Filtros propios de Asistencia -->
+      @if (activeTab() === 'asistencia') {
+        <div class="mb-3 flex flex-wrap items-end gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-4 py-3
+                    dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex flex-col gap-1.5">
+            <label for="f-hora" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Hora de entrada</label>
+            <input id="f-hora" type="time" step="1" [(ngModel)]="filtrosAsistencia.horaEntrada" [class]="claseInput"/>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="f-tol" class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Tolerancia (min)</label>
+            <input id="f-tol" type="number" min="0" max="120" [(ngModel)]="filtrosAsistencia.toleranciaMin"
+                   [class]="claseInput + ' w-[120px]'"/>
+          </div>
+
+          <div class="relative flex flex-col gap-1.5">
+            <label class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Agentes</label>
+            <button type="button" (click)="showAgentePicker.set(!showAgentePicker())"
+              [disabled]="agentesDisponibles().length === 0"
+              class="flex h-[38px] min-w-[210px] items-center justify-between gap-2 rounded-lg border
+                     border-[#d5dbe3] bg-white px-3 text-[13px] font-semibold disabled:opacity-50
+                     dark:border-slate-700 dark:bg-slate-900">
+              <span class="truncate">{{ etiquetaAgentes() }}</span>
+              <lucide-angular name="chevron-down" [size]="15" class="shrink-0 text-[#8491a3]"></lucide-angular>
+            </button>
+            @if (showAgentePicker()) {
+              <div class="absolute top-full z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border
+                          border-[#e6e9ee] bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                <div class="sticky top-0 flex gap-3 border-b border-[#e6e9ee] bg-[#f8fafc] px-3 py-2
+                            dark:border-slate-700 dark:bg-slate-800">
+                  <button type="button" (click)="seleccionarTodosAgentes()"
+                          class="text-[11.5px] font-bold text-[#2563eb] hover:underline">Todos</button>
+                  <button type="button" (click)="limpiarAgentes()"
+                          class="text-[11.5px] font-bold text-[#5f6c80] hover:underline">Ninguno</button>
+                </div>
+                @for (ag of agentesDisponibles(); track ag.id) {
+                  <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#f8fafc]
+                                dark:hover:bg-slate-800">
+                    <input type="checkbox" [checked]="agentesSeleccionados().includes(ag.id)"
+                           (change)="toggleAgente(ag.id)" class="rounded border-[#c5ccd6] text-[#2563eb]"/>
+                    <span class="truncate">{{ ag.nombre }}</span>
+                  </label>
+                }
+              </div>
+            }
+          </div>
+
+          <label class="flex h-[38px] cursor-pointer items-center gap-2 text-[13px] font-semibold text-[#334155]
+                        dark:text-slate-300">
+            <input type="checkbox" [(ngModel)]="filtrosAsistencia.incluirDomingos"
+                   class="rounded border-[#c5ccd6] text-[#2563eb]"/>
+            Incluir domingos
+          </label>
+
+          <p class="pb-2 text-[11.5px] text-[#8491a3]">
+            {{ agentesDisponibles().length === 0
+                ? 'Elegí una subcartera para acotar la lista de agentes'
+                : 'Minutos de gracia antes de marcar TARDE' }}
+          </p>
+        </div>
       }
 
-      <!-- Tab: Resumen por Agente -->
-      @if (activeTab() === 'resumen' && resumen()) {
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs whitespace-nowrap">
+      @if (!filtrosCompletos()) {
+        <p class="mb-3 rounded-[10px] border border-[#f3e2c0] bg-[#fdf6e7] px-3 py-2 text-[12.5px] font-semibold text-[#b45309]">
+          {{ activeTab() === 'asistencia' ? 'El rango de fechas es obligatorio' : 'La fecha es obligatoria' }}
+        </p>
+      }
+
+      <!-- ============ Pestañas ============ -->
+      <div class="mb-4 flex h-[38px] w-fit rounded-lg border border-[#c5ccd6] bg-white p-[3px]
+                  dark:border-slate-600 dark:bg-slate-800">
+        <button type="button" (click)="cambiarTab('resumen')" [attr.aria-pressed]="activeTab() === 'resumen'"
+                [class]="claseTab(activeTab() === 'resumen')">Resumen por Agente</button>
+        <button type="button" (click)="cambiarTab('asistencia')" [attr.aria-pressed]="activeTab() === 'asistencia'"
+                [class]="claseTab(activeTab() === 'asistencia')">Asistencia</button>
+      </div>
+
+      <!-- ============ TAB RESUMEN ============ -->
+      @if (activeTab() === 'resumen') {
+        @if (resumen()) {
+          <!-- Indicadores del equipo -->
+          @if (total(); as t) {
+          <div class="mb-3 grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-6">
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">Asesores</span>
+              <span [class]="claseKpiV">{{ agentesFiltrados().length }}</span>
+              <span [class]="claseKpiS">conectados en la fecha</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">Conectado</span>
+              <span [class]="claseKpiV">{{ formatSeg(t.totalSegundosConectado) }}</span>
+              <span [class]="claseKpiS">suma de la jornada</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">% Ocupación</span>
+              <span [class]="claseKpiV + ' ' + colorOcupacion(t.porcentajeOcupacion)">{{ t.porcentajeOcupacion }}%</span>
+              <span [class]="claseKpiS">Productivo / (Conectado − Pausas)</span>
+              <span [class]="claseMeter"><i [class]="fondoOcupacion(t.porcentajeOcupacion)"
+                    [style.width.%]="min100(t.porcentajeOcupacion)"></i></span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">% En cola</span>
+              <span [class]="claseKpiV">{{ t.porcentajeEnCola }}%</span>
+              <span [class]="claseKpiS">En cola / Conectado</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">% Ocioso</span>
+              <span [class]="claseKpiV + ' ' + colorOcioso(t.porcentajeOcioso)">{{ t.porcentajeOcioso }}%</span>
+              <span [class]="claseKpiS">Ocioso / En cola</span>
+              <span [class]="claseMeter"><i [class]="fondoOcioso(t.porcentajeOcioso)"
+                    [style.width.%]="min100(t.porcentajeOcioso)"></i></span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">% Pausas</span>
+              <span [class]="claseKpiV">{{ t.porcentajePausas }}%</span>
+              <span [class]="claseKpiS">Pausas / Conectado</span>
+            </div>
+          </div>
+          }
+
+          <!-- Vistas + leyenda -->
+          <div class="mb-2.5 flex flex-wrap items-center gap-3">
+            <div class="flex h-[38px] max-w-full overflow-x-auto rounded-lg border border-[#c5ccd6] bg-white p-[3px]
+                        dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="Vista de columnas">
+              @for (v of vistasDisponibles; track v.k) {
+                <button type="button" (click)="vista.set(v.k)" [attr.aria-pressed]="vista() === v.k"
+                        [class]="claseTab(vista() === v.k)">{{ v.l }}</button>
+              }
+            </div>
+            <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
+              <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ columnas().length }}</b> de 30 columnas ·
+              <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ agentesFiltrados().length }}</b> asesores
+            </span>
+            <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              @for (g of leyenda; track g.k) {
+                <span class="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#334155] dark:text-slate-300">
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-[3px]" [style.background]="g.color"></span>{{ g.l }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Tabla -->
+          <div class="max-h-[440px] overflow-auto rounded-xl border border-[#e6e9ee] bg-white
+                      dark:border-slate-800 dark:bg-slate-900">
+            <table class="w-full border-separate border-spacing-0 text-[12px] tabular-nums">
               <thead>
-                <!-- Fila de grupos -->
-                <tr class="text-[9px] uppercase tracking-wider">
-                  <th class="sticky left-0 z-20 bg-gray-50 dark:bg-gray-700 px-3 py-1.5"></th>
-                  <th colspan="3" class="bg-gray-50 dark:bg-gray-700"></th>
-                  <th colspan="4" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
-                      bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">En cola</th>
-                  <th colspan="2" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
-                      bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300">Fuera de la cola</th>
-                  <th colspan="5" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
-                      bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300">Otras tareas</th>
-                  <th colspan="3" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
-                      bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300">Reunion y capacitacion</th>
-                  <th colspan="6" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
-                      bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300">Pausas</th>
-                  <th colspan="6" class="px-3 py-1.5 border-l border-gray-300 dark:border-gray-600
-                      bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300">Indicadores</th>
+                <tr>
+                  <th [class]="claseThAgente + ' sticky top-0 z-[4] h-[26px]'"></th>
+                  @for (gr of gruposVisibles(); track gr.g) {
+                    <th [colSpan]="gr.n"
+                        [class]="'sticky top-0 z-[3] h-[26px] whitespace-nowrap border-b border-l border-[#e6e9ee] bg-[#f8fafc] px-2.5 text-[10px] font-extrabold uppercase tracking-[0.07em] dark:border-slate-800 dark:bg-slate-800 ' + colorGrupo(gr.g)">
+                      {{ etiquetaGrupo(gr.g) }}
+                    </th>
+                  }
                 </tr>
-                <!-- Fila de columnas -->
-                <tr class="bg-gray-50 dark:bg-gray-700 text-[10px] font-semibold
-                           text-gray-600 dark:text-gray-300 uppercase">
-                  <th class="sticky left-0 z-20 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-left
-                             border-r border-gray-300 dark:border-gray-600">Agente</th>
-                  <th class="px-3 py-2">Entrada</th>
-                  <th class="px-3 py-2">Salida</th>
-                  <th class="px-3 py-2 text-indigo-600 dark:text-indigo-400"
-                      title="Suma de todos los estados menos Desconectado">Conectado<br>(Jornada)</th>
-
-                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
-                      title="Ocioso + Interactuando + Tipificando">En cola</th>
-                  <th class="px-3 py-2">Interactuando</th>
-                  <th class="px-3 py-2">Tipificando</th>
-                  <th class="px-3 py-2" title="Tiempo en la cola sin recibir llamada">Ocioso</th>
-
-                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
-                      title="Conectado - En cola">Fuera de<br>la cola</th>
-                  <th class="px-3 py-2" title="Conectado fuera de la cola, sin otra actividad">En linea</th>
-
-                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
-                      title="Ocupado + Seguimiento + WhatsApp + Consulta de tiempos">Otras<br>tareas</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Ocupado</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Seguimiento</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">WhatsApp</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Consulta de<br>tiempos</th>
-
-                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600">Reunion y<br>capacitacion</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Reunion</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Capacitacion</th>
-
-                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
-                      title="BREAK + Comida + SSHH + Ausente + Soporte">Pausas</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">BREAK</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Comida</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">SSHH</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Ausente</th>
-                  <th class="px-3 py-2 font-normal text-gray-500 dark:text-gray-400">Soporte</th>
-
-                  <th class="px-3 py-2 border-l border-gray-300 dark:border-gray-600"
-                      title="Interactuando + Tipificando + Seguimiento. No incluye Ocupado ni WhatsApp.">Productivo</th>
-                  <th class="px-3 py-2" title="Productivo / (Conectado - Pausas)">% Ocupacion</th>
-                  <th class="px-3 py-2" title="En cola / Conectado">% En cola</th>
-                  <th class="px-3 py-2" title="Fuera de la cola / Conectado">% Fuera de<br>la cola</th>
-                  <th class="px-3 py-2" title="Ocioso / En cola. Mide al discador, no al asesor.">% Ocioso</th>
-                  <th class="px-3 py-2" title="Pausas / Conectado">% Pausas</th>
+                <tr>
+                  <th [class]="claseThAgente + ' sticky top-[26px] z-[4]'">Asesor</th>
+                  @for (c of columnas(); track c.k) {
+                    <th (click)="ordenarPor(c)" [attr.tabindex]="ordenable(c) ? 0 : null"
+                        (keydown.enter)="ordenarPor(c)"
+                        [class]="'sticky top-[26px] z-[3] whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] px-2.5 py-2 text-center text-[11.5px] font-bold text-[#334155] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 '
+                                 + (c.sep ? 'border-l border-l-[#e6e9ee] dark:border-l-slate-800 ' : '')
+                                 + (ordenable(c) ? 'cursor-pointer hover:text-[#2563eb]' : '')">
+                      {{ c.l }}
+                      @if (orden() === c.k) {
+                        <span class="ml-1 text-[9px] text-[#2563eb]">{{ ordenAsc() ? '▲' : '▼' }}</span>
+                      }
+                    </th>
+                  }
                 </tr>
               </thead>
 
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                @for (agente of resumen()!.agentes; track agente.idUsuario) {
-                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="sticky left-0 z-10 bg-white dark:bg-gray-800 px-3 py-2 text-left
-                               border-r border-gray-300 dark:border-gray-600">
-                      <div class="text-gray-900 dark:text-white font-medium">{{ agente.nombreAgente }}</div>
-                      <div class="text-[10px] text-gray-500 dark:text-gray-400">{{ agente.username }}</div>
-                    </td>
-                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400">{{ agente.horaEntrada || '-' }}</td>
-                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400">{{ agente.horaSalida || '-' }}</td>
-                    <td class="px-3 py-2 text-center font-semibold text-indigo-700 dark:text-indigo-300">{{ agente.tiempoConectadoFormateado }}</td>
-
-                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100">{{ agente.tiempoEnColaFormateado }}</td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['EN_LLAMADA']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['TIPIFICANDO']) }}</td>
-                    <td class="px-3 py-2 text-center font-medium text-amber-600 dark:text-amber-400">{{ agente.tiempoOciosoFormateado }}</td>
-
-                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100">{{ agente.tiempoFueraDeColaFormateado }}</td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.tiempoEnLineaFormateado }}</td>
-
-                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-teal-700 dark:text-teal-300">{{ agente.tiempoOtrasTareasFormateado }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['GESTION_MANUAL']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['SEGUIMIENTO']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['WHATSAPP']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['CONSULTA_TIEMPOS']) }}</td>
-
-                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-sky-700 dark:text-sky-300">{{ agente.tiempoReunionFormateado }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['EN_REUNION']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['CAPACITACION']) }}</td>
-
-                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-orange-700 dark:text-orange-300">{{ agente.tiempoPausaFormateado }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['REFRIGERIO']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['COMIDA']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['SSHH']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['AUSENTE']) }}</td>
-                    <td class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ formatSeg(agente.segundosPorEstado['SOPORTE']) }}</td>
-
-                    <td class="px-3 py-2 text-center font-semibold border-l border-gray-200 dark:border-gray-600 text-green-600 dark:text-green-400">{{ agente.tiempoProductivoFormateado }}</td>
-                    <td class="px-3 py-2 text-center">
-                      <div class="flex items-center justify-center gap-2">
-                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                          <div class="h-1.5 rounded-full"
-                               [style.width.%]="agente.porcentajeOcupacion"
-                               [style.background-color]="getOcupacionColor(agente.porcentajeOcupacion)"></div>
-                        </div>
-                        <span class="font-semibold" [style.color]="getOcupacionColor(agente.porcentajeOcupacion)">
-                          {{ agente.porcentajeOcupacion }}%
-                        </span>
-                      </div>
-                    </td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.porcentajeEnCola }}%</td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.porcentajeFueraDeCola }}%</td>
-                    <td class="px-3 py-2 text-center font-semibold"
-                        [style.color]="getOciosoColor(agente.porcentajeOcioso)">{{ agente.porcentajeOcioso }}%</td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ agente.porcentajePausas }}%</td>
-                  </tr>
-                }
-
-                @if (resumen()!.agentes.length === 0) {
-                  <tr>
-                    <td colspan="30" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
-                      <p>No hay datos para mostrar</p>
-                    </td>
-                  </tr>
+              <tbody>
+                @if (loading()) {
+                  <tr><td [attr.colspan]="columnas().length + 1" class="px-4 py-10 text-center text-[#5f6c80]">
+                    <lucide-angular name="loader-2" [size]="28" class="mx-auto mb-2 animate-spin"></lucide-angular>
+                    <p>Cargando reporte…</p>
+                  </td></tr>
+                } @else if (agentesFiltrados().length === 0) {
+                  <tr><td [attr.colspan]="columnas().length + 1" class="px-4 py-10 text-center text-[#5f6c80]">
+                    <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+                    <p>{{ (resumen()?.agentes?.length ?? 0) === 0
+                          ? 'Elegí la fecha y presioná Buscar'
+                          : 'Ningún asesor coincide con la búsqueda' }}</p>
+                  </td></tr>
                 } @else {
-                  <!-- Fila de totales: se suman los segundos y recien despues se divide -->
-                  <tr class="bg-gray-100 dark:bg-gray-900/50 font-bold text-gray-900 dark:text-white
-                             border-t-2 border-gray-300 dark:border-gray-600">
-                    <td class="sticky left-0 z-10 bg-gray-100 dark:bg-gray-900/50 px-3 py-2 text-left
-                               border-r border-gray-300 dark:border-gray-600">
-                      TOTAL
-                      <div class="text-[10px] font-normal text-gray-500 dark:text-gray-400">
-                        {{ resumen()!.agentes.length }} agentes
-                      </div>
-                    </td>
-                    <td class="px-3 py-2 text-center">&mdash;</td>
-                    <td class="px-3 py-2 text-center">&mdash;</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().conectado) }}</td>
-
-                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().enCola) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().interactuando) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().tipificando) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().ocioso) }}</td>
-
-                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().fueraDeCola) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().enLinea) }}</td>
-
-                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().otrasTareas) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().ocupado) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().seguimiento) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().whatsapp) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().consultaTiempos) }}</td>
-
-                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().reunionCap) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().reunion) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().capacitacion) }}</td>
-
-                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600">{{ formatSeg(totales().pausas) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().brk) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().comida) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().sshh) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().ausente) }}</td>
-                    <td class="px-3 py-2 text-center">{{ formatSeg(totales().soporte) }}</td>
-
-                    <td class="px-3 py-2 text-center border-l border-gray-300 dark:border-gray-600 text-green-700 dark:text-green-400">{{ formatSeg(totales().productivo) }}</td>
-                    <td class="px-3 py-2 text-center" [style.color]="getOcupacionColor(totales().pOcupacion)">{{ totales().pOcupacion }}%</td>
-                    <td class="px-3 py-2 text-center">{{ totales().pEnCola }}%</td>
-                    <td class="px-3 py-2 text-center">{{ totales().pFueraDeCola }}%</td>
-                    <td class="px-3 py-2 text-center" [style.color]="getOciosoColor(totales().pOcioso)">{{ totales().pOcioso }}%</td>
-                    <td class="px-3 py-2 text-center">{{ totales().pPausas }}%</td>
-                  </tr>
+                  @for (a of agentesFiltrados(); track a.idUsuario) {
+                    <tr (click)="seleccionar(a)" tabindex="0" (keydown.enter)="seleccionar(a)"
+                        [class]="'cursor-pointer ' + (seleccionado()?.idUsuario === a.idUsuario
+                                  ? 'bg-[#f5f9ff] dark:bg-slate-800'
+                                  : 'bg-white hover:bg-[#f4f6f9] dark:bg-slate-900 dark:hover:bg-slate-800/60')">
+                      <td [class]="claseTdAgente + (seleccionado()?.idUsuario === a.idUsuario
+                                   ? ' shadow-[inset_3px_0_0_#2563eb]' : '')">
+                        <span class="block text-[12.5px] font-bold tracking-[-0.01em]">{{ a.nombreAgente }}</span>
+                        <span class="text-[10.5px] font-semibold text-[#8491a3]">{{ a.username }}</span>
+                      </td>
+                      @for (c of columnas(); track c.k) {
+                        <td [class]="claseTd(c, a)">
+                          @switch (c.tipo) {
+                            @case ('comp') {
+                              <span class="inline-flex h-2.5 w-[150px] gap-[2px] overflow-hidden rounded-full
+                                           bg-[#e2e8f0] shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] dark:bg-slate-800"
+                                    role="img" [attr.aria-label]="'Composición de la jornada de ' + a.nombreAgente">
+                                @for (p of composicion(a); track p.k) {
+                                  <i class="block h-full" [style.width.%]="p.pct" [style.background]="p.color"
+                                     [title]="p.titulo"></i>
+                                }
+                              </span>
+                            }
+                            @case ('ind') {
+                              <span class="inline-flex min-w-[56px] flex-col gap-1">
+                                <b [class]="'text-[12px] font-extrabold ' + colorInd(c.k, num(a, c.k))">{{ num(a, c.k) }}%</b>
+                                <span class="h-1 overflow-hidden rounded-full bg-[#e2e8f0] dark:bg-slate-800">
+                                  <i class="block h-full rounded-full" [class]="fondoInd(c.k, num(a, c.k))"
+                                     [style.width.%]="min100(num(a, c.k))"></i>
+                                </span>
+                              </span>
+                            }
+                            @default { {{ texto(a, c) }} }
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
                 }
               </tbody>
+
+              @if (agentesFiltrados().length > 0) {
+                <tfoot>
+                  <tr class="bg-[#f4f6f9] dark:bg-slate-800">
+                    <td [class]="claseTdAgente + ' sticky bottom-0 z-[3] border-t border-[#d5dbe3]'">
+                      <span class="block text-[12.5px] font-extrabold">TOTAL</span>
+                      <span class="text-[10.5px] font-semibold text-[#8491a3]">{{ agentesFiltrados().length }} asesores</span>
+                    </td>
+                    @for (c of columnas(); track c.k) {
+                      <td [class]="'sticky bottom-0 z-[2] whitespace-nowrap border-t border-[#d5dbe3] bg-inherit px-2.5 py-2 text-center text-[12px] font-extrabold dark:border-slate-700 '
+                                   + (c.sep ? 'border-l border-l-[#e6e9ee] dark:border-l-slate-800' : '')">
+                        @if (c.tipo === 'ind' || c.tipo === 'pct') {
+                          {{ num(total()!, c.k) }}%
+                        } @else if (c.tipo === 'min') {
+                          {{ formatSeg(num(total()!, c.k)) }}
+                        }
+                      </td>
+                    }
+                  </tr>
+                </tfoot>
+              }
             </table>
           </div>
-        </div>
+
+          <!-- Detalle del asesor -->
+          @if (seleccionado(); as a) {
+            <section class="mt-3 flex flex-col gap-3 rounded-xl border border-[#e6e9ee] bg-white px-4 py-3.5
+                            dark:border-slate-800 dark:bg-slate-900">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h3 class="!m-0 text-[15px] font-extrabold tracking-[-0.01em]">{{ a.nombreAgente }}</h3>
+                <span class="rounded-md bg-[#f4f6f9] px-2 py-0.5 text-[11.5px] font-semibold tabular-nums
+                             text-[#334155] dark:bg-slate-800 dark:text-slate-300">
+                  {{ a.username }} · entrada {{ a.horaEntrada || '—' }} · salida {{ a.horaSalida || '—' }}
+                  · conectado {{ formatSeg(a.totalSegundosConectado) }}
+                </span>
+              </div>
+
+              <!-- Línea de tiempo del día -->
+              @if (tramosLoading()) {
+                <div class="flex h-12 items-center justify-center rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc]
+                            text-[12px] text-[#5f6c80] dark:border-slate-800 dark:bg-slate-950">
+                  <lucide-angular name="loader-2" [size]="16" class="mr-2 animate-spin"></lucide-angular>
+                  Cargando la jornada…
+                </div>
+              } @else if (lineaTiempo().length > 0) {
+                <div>
+                  <!-- Zoom: en 1x entra el día completo; hasta 8x para mirar una hora puntual -->
+                  <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                    <div class="flex h-8 items-center rounded-lg border border-[#d5dbe3] bg-white p-[3px]
+                                dark:border-slate-700 dark:bg-slate-900">
+                      <button type="button" (click)="cambiarZoom(-1, cajaTL)" [disabled]="zoom() === ZOOMS[0]"
+                              aria-label="Alejar"
+                              class="flex h-full w-7 items-center justify-center rounded-[5px] text-[#5f6c80]
+                                     hover:bg-[#f4f6f9] disabled:opacity-40 dark:hover:bg-slate-800">
+                        <lucide-angular name="minus" [size]="14"></lucide-angular>
+                      </button>
+                      <span class="w-9 text-center text-[11.5px] font-bold tabular-nums">{{ zoom() }}x</span>
+                      <button type="button" (click)="cambiarZoom(1, cajaTL)"
+                              [disabled]="zoom() === ZOOMS[ZOOMS.length - 1]" aria-label="Acercar"
+                              class="flex h-full w-7 items-center justify-center rounded-[5px] text-[#5f6c80]
+                                     hover:bg-[#f4f6f9] disabled:opacity-40 dark:hover:bg-slate-800">
+                        <lucide-angular name="plus" [size]="14"></lucide-angular>
+                      </button>
+                    </div>
+                    @if (zoom() > 1) {
+                      <button type="button" (click)="ajustarZoom(cajaTL)"
+                              class="h-8 rounded-lg border border-[#d5dbe3] bg-white px-3 text-[11.5px] font-bold
+                                     text-[#5f6c80] hover:border-[#8491a3] dark:border-slate-700 dark:bg-slate-900">
+                        Ver todo el día
+                      </button>
+                      <span class="text-[11.5px] text-[#8491a3]">Desplazá la barra para ir a la hora que quieras</span>
+                    }
+                    <span class="ml-auto flex items-center gap-1.5 text-[11.5px] font-semibold text-[#334155]
+                                 dark:text-slate-300">
+                      <span class="h-2.5 w-2.5 rounded-[3px] border border-[#d5dbe3]" [style.background]="RAYADO"></span>
+                      Fuera del sistema
+                    </span>
+                  </div>
+
+                  <div #cajaTL class="overflow-x-auto overflow-y-hidden rounded-[10px] border border-[#e6e9ee]
+                                      bg-[#f8fafc] pb-1.5 dark:border-slate-800 dark:bg-slate-950">
+                    <div [style.width.%]="zoom() * 100">
+                      <div class="relative h-[72px] overflow-hidden">
+                        @for (s of lineaTiempo(); track $index) {
+                          <!-- sin separador: en esta barra el blanco significa "sin actividad", asi que
+                                 una linea blanca entre tramos se leia como un microcorte -->
+                            <div class="absolute top-0 bottom-0 flex min-w-[2px] items-center justify-center overflow-hidden"
+                               [style.left.%]="s.left" [style.width.%]="s.width" [style.background]="s.color"
+                               [title]="s.titulo">
+                            @if (cabeEtiqueta(s.width)) {
+                              <span [class]="'whitespace-nowrap px-1 text-[10px] font-bold ' +
+                                             (s.claro ? 'text-[#3b2a00]' : 'text-white [text-shadow:0_1px_1px_rgba(15,23,42,.25)]')">
+                                {{ s.label }}@if (s.hueco) {<span class="font-semibold"> · {{ s.duracion }}</span>}
+                              </span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <div class="relative h-[18px]">
+                        @for (h of horasEje(); track h.left) {
+                          <i class="absolute top-0 block h-1.5 w-px bg-[#d5dbe3]" [style.left.%]="h.left"></i>
+                          <span class="absolute top-[7px] -translate-x-1/2 text-[10px] font-semibold tabular-nums
+                                       text-[#8491a3]" [style.left.%]="h.left">{{ h.l }}</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (tramosParciales()) {
+                    <p class="mt-1 text-[11.5px] text-[#b45309]">
+                      La jornada se dibuja con los primeros {{ tramosTotal() }} tramos del día: acotá por subcartera para verla completa.
+                    </p>
+                  }
+                </div>
+              } @else if (tramosError()) {
+                <p class="text-[12px] text-[#8491a3]">No se pudo cargar el detalle de la jornada.</p>
+              }
+
+              <!-- Desglose -->
+              <div class="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(196px,1fr))]">
+                @for (b of desglose(a); track b.g) {
+                  <div class="flex flex-col gap-1.5 rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc] px-3 py-2.5
+                              dark:border-slate-800 dark:bg-slate-950">
+                    <h4 class="!m-0 flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em]
+                               text-[#5f6c80] dark:text-slate-400">
+                      <span class="h-2.5 w-2.5 rounded-[3px]" [style.background]="b.color"></span>{{ b.l }}
+                    </h4>
+                    @for (f of b.filas; track f.l) {
+                      <div class="flex justify-between gap-2.5 text-[12px] font-medium text-[#5f6c80] dark:text-slate-400">
+                        <span>{{ f.l }}</span>
+                        <b [class]="'tabular-nums font-bold ' + (f.v ? 'text-[#0f172a] dark:text-slate-100' : 'font-medium text-[#8491a3]')">
+                          {{ f.v ? formatSeg(f.v) : '—' }}
+                        </b>
+                      </div>
+                    }
+                    <div class="mt-0.5 flex justify-between gap-2.5 border-t border-[#e6e9ee] pt-1.5 text-[12px]
+                                font-medium text-[#334155] dark:border-slate-800 dark:text-slate-300">
+                      <span>Total</span>
+                      <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ formatSeg(b.total) }}</b>
+                    </div>
+                  </div>
+                }
+                <div class="flex flex-col gap-1.5 rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc] px-3 py-2.5
+                            dark:border-slate-800 dark:bg-slate-950">
+                  <h4 class="!m-0 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[#5f6c80] dark:text-slate-400">
+                    Indicadores
+                  </h4>
+                  <div class="flex justify-between text-[12px] font-medium text-[#5f6c80] dark:text-slate-400">
+                    <span>Productivo</span><b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ formatSeg(a.totalSegundosProductivo) }}</b>
+                  </div>
+                  <div class="flex justify-between text-[12px] font-medium text-[#5f6c80] dark:text-slate-400">
+                    <span>% Ocupación</span><b [class]="'font-bold tabular-nums ' + colorOcupacion(a.porcentajeOcupacion)">{{ a.porcentajeOcupacion }}%</b>
+                  </div>
+                  <div class="flex justify-between text-[12px] font-medium text-[#5f6c80] dark:text-slate-400">
+                    <span>% En cola</span><b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ a.porcentajeEnCola }}%</b>
+                  </div>
+                  <div class="flex justify-between text-[12px] font-medium text-[#5f6c80] dark:text-slate-400">
+                    <span>% Ocioso</span><b [class]="'font-bold tabular-nums ' + colorOcioso(a.porcentajeOcioso)">{{ a.porcentajeOcioso }}%</b>
+                  </div>
+                  <div class="mt-0.5 flex justify-between border-t border-[#e6e9ee] pt-1.5 text-[12px] font-medium
+                              text-[#334155] dark:border-slate-800 dark:text-slate-300">
+                    <span>En línea</span><b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ formatSeg(a.totalSegundosEnLinea) }}</b>
+                  </div>
+                </div>
+              </div>
+            </section>
+          }
+        } @else if (!loading()) {
+          <div class="rounded-xl border border-dashed border-[#c5ccd6] bg-white px-6 py-12 text-center
+                      dark:border-slate-700 dark:bg-slate-900">
+            <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+            <p class="text-[13px] text-[#5f6c80]">Elegí la fecha y presioná Buscar</p>
+          </div>
+        } @else {
+          <div class="rounded-xl border border-[#e6e9ee] bg-white px-6 py-12 text-center dark:border-slate-800 dark:bg-slate-900">
+            <lucide-angular name="loader-2" [size]="28" class="mx-auto mb-2 animate-spin text-[#8491a3]"></lucide-angular>
+            <p class="text-[13px] text-[#5f6c80]">Cargando reporte…</p>
+          </div>
+        }
       }
 
-      <!-- Tab: Asistencia -->
+      <!-- ============ TAB ASISTENCIA ============ -->
       @if (activeTab() === 'asistencia') {
         @if (asistenciaResumen(); as ra) {
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <lucide-angular name="check-circle" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ ra.porcentajePuntualidad }}%</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">Puntualidad ({{ ra.totalPuntual | number }} dias)</p>
-                </div>
-              </div>
+          <div class="mb-3 grid grid-cols-2 gap-2.5 md:grid-cols-4">
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">Puntualidad</span>
+              <span [class]="claseKpiV + ' ' + colorPuntualidad(ra.porcentajePuntualidad)">{{ ra.porcentajePuntualidad }}%</span>
+              <span [class]="claseKpiS">{{ ra.totalPuntual | number }} días puntuales</span>
+              <span [class]="claseMeter"><i [class]="fondoPuntualidad(ra.porcentajePuntualidad)"
+                    [style.width.%]="min100(ra.porcentajePuntualidad)"></i></span>
             </div>
-
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <lucide-angular name="clock" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ ra.totalTarde | number }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">Tardanzas</p>
-                </div>
-              </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">Tardanzas</span>
+              <span [class]="claseKpiV + ' text-[#b45309]'">{{ ra.totalTarde | number }}</span>
+              <span [class]="claseKpiS">días con ingreso tarde</span>
             </div>
-
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                  <lucide-angular name="user-x" [size]="24" class="text-red-600 dark:text-red-400"></lucide-angular>
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ ra.totalFalta | number }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">Faltas</p>
-                </div>
-              </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">Faltas</span>
+              <span [class]="claseKpiV + ' text-[#b91c1c]'">{{ ra.totalFalta | number }}</span>
+              <span [class]="claseKpiS">días sin conexión</span>
             </div>
-
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                  <lucide-angular name="timer" [size]="24" class="text-indigo-600 dark:text-indigo-400"></lucide-angular>
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ ra.totalMinutosTardanza | number }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">Min. de tardanza ({{ ra.tardanzaAcumulada }})</p>
-                </div>
-              </div>
+            <div [class]="claseKpi">
+              <span [class]="claseKpiK">Minutos de tardanza</span>
+              <span [class]="claseKpiV">{{ ra.totalMinutosTardanza | number }}</span>
+              <span [class]="claseKpiS">acumulado {{ ra.tardanzaAcumulada }}</span>
             </div>
           </div>
         }
 
-        <!-- Sub-vista + filtro -->
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <div class="flex gap-2">
-            <button
-              (click)="asistenciaVista.set('diario')"
-              [class]="subTabClass('diario')"
-            >
-              Detalle diario
-            </button>
-            <button
-              (click)="asistenciaVista.set('agente')"
-              [class]="subTabClass('agente')"
-            >
-              Resumen por agente
-            </button>
+        <div class="mb-2.5 flex flex-wrap items-center gap-3">
+          <div class="flex h-[38px] rounded-lg border border-[#c5ccd6] bg-white p-[3px] dark:border-slate-600 dark:bg-slate-800">
+            <button type="button" (click)="asistenciaVista.set('diario')"
+                    [class]="claseTab(asistenciaVista() === 'diario')">Detalle diario</button>
+            <button type="button" (click)="asistenciaVista.set('agente')"
+                    [class]="claseTab(asistenciaVista() === 'agente')">Resumen por agente</button>
           </div>
-
-          <div class="relative">
-            <lucide-angular name="search" [size]="16"
-              class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></lucide-angular>
-            <input
-              type="text"
-              [ngModel]="asistenciaFilter()"
-              (ngModelChange)="asistenciaFilter.set($event)"
-              placeholder="Filtrar por agente o estado..."
-              class="w-full md:w-72 pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm
-                     focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                     placeholder:text-gray-400"
-            />
-          </div>
+          @if (asistenciaRegistros().length > 0) {
+            <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
+              <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ asistenciaResumen()?.totalAgentes }}</b> agentes ×
+              <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ asistenciaResumen()?.totalDias }}</b> días laborables =
+              <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ asistenciaRegistros().length | number }}</b> registros
+            </span>
+          }
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-          <div class="overflow-x-auto">
-            @if (asistenciaVista() === 'diario') {
-              <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fecha</th>
-                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Ingreso</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Salida</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tardanza</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase"
-                        title="Hora de la primera gestion tipificada del dia">1ra Gestion</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Conectado</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Jornada</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                  @if (asistenciaLoading()) {
-                    <tr>
-                      <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        <lucide-angular name="loader-2" [size]="32" class="animate-spin mx-auto mb-2"></lucide-angular>
-                        <p>Cargando asistencia...</p>
+        <div class="overflow-x-auto rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+          @if (asistenciaVista() === 'diario') {
+            <table class="w-full border-separate border-spacing-0 text-[12.5px] tabular-nums">
+              <thead>
+                <tr>
+                  <th [class]="claseThA + ' text-left'">Fecha</th>
+                  <th [class]="claseThA + ' text-left'">Agente</th>
+                  <th [class]="claseThA">Ingreso</th>
+                  <th [class]="claseThA">Salida</th>
+                  <th [class]="claseThA">Estado</th>
+                  <th [class]="claseThA">Tardanza</th>
+                  <th [class]="claseThA + ' text-[#2563eb]'" title="Hora de la primera gestión tipificada del día">1ra gestión</th>
+                  <th [class]="claseThA">Conectado</th>
+                  <th [class]="claseThA">Jornada</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (asistenciaLoading()) {
+                  <tr><td colspan="9" class="px-4 py-10 text-center text-[#5f6c80]">
+                    <lucide-angular name="loader-2" [size]="28" class="mx-auto mb-2 animate-spin"></lucide-angular>
+                    <p>Cargando asistencia…</p>
+                  </td></tr>
+                } @else if (filteredAsistencia().length === 0) {
+                  <tr><td colspan="9" class="px-4 py-10 text-center text-[#5f6c80]">
+                    <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+                    <p>{{ asistenciaRegistros().length === 0
+                          ? 'Elegí el rango y presioná Buscar'
+                          : 'Ningún registro coincide con el filtro' }}</p>
+                  </td></tr>
+                } @else {
+                  @for (reg of filteredAsistencia(); track reg.fecha + '-' + reg.idUsuario) {
+                    <tr class="hover:[&>td]:bg-[#f8fafc] dark:hover:[&>td]:bg-slate-800/60">
+                      <td [class]="claseTdA + ' text-left font-semibold'">{{ reg.fecha }}</td>
+                      <td [class]="claseTdA + ' text-left'">
+                        <span class="block font-bold text-[#0f172a] dark:text-slate-100">{{ reg.nombreAgente }}</span>
+                        <span class="text-[10.5px] font-semibold text-[#8491a3]">{{ reg.subcartera }}</span>
                       </td>
-                    </tr>
-                  } @else if (filteredAsistencia().length === 0) {
-                    <tr>
-                      <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
-                        <p>{{ asistenciaRegistros().length === 0
-                              ? 'Selecciona el rango y presiona "Buscar"'
-                              : 'Ningun registro coincide con el filtro' }}</p>
+                      <td [class]="claseTdA">{{ reg.horaIngreso || '—' }}</td>
+                      <td [class]="claseTdA">{{ reg.horaSalida || '—' }}</td>
+                      <td [class]="claseTdA"><span [class]="getAsistenciaClass(reg.estadoAsistencia)">{{ reg.estadoAsistencia }}</span></td>
+                      <td [class]="claseTdA + (reg.minutosTardanza > 0 ? ' font-bold text-[#b45309]' : ' text-[#8491a3]')">
+                        {{ reg.minutosTardanza > 0 ? reg.minutosTardanza + ' min' : '—' }}
                       </td>
+                      <td [class]="claseTdA + ' font-semibold text-[#2563eb]'">{{ reg.primeraGestionHora || '—' }}</td>
+                      <td [class]="claseTdA">{{ reg.estadoAsistencia === 'FALTA' ? '—' : reg.tiempoConectado }}</td>
+                      <td [class]="claseTdA">{{ reg.estadoAsistencia === 'FALTA' ? '—' : reg.jornada }}</td>
                     </tr>
-                  } @else {
-                    @for (reg of filteredAsistencia(); track reg.fecha + '-' + reg.idUsuario) {
-                      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-mono">{{ reg.fecha }}</td>
-                        <td class="px-3 py-2">
-                          <div class="text-gray-900 dark:text-white font-medium text-xs">{{ reg.nombreAgente }}</div>
-                          <div class="text-[10px] text-gray-500 dark:text-gray-400">{{ reg.subcartera }}</div>
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-mono">
-                          {{ reg.horaIngreso || '-' }}
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-mono">
-                          {{ reg.horaSalida || '-' }}
-                        </td>
-                        <td class="px-3 py-2 text-center">
-                          <span [class]="getAsistenciaClass(reg.estadoAsistencia)">{{ reg.estadoAsistencia }}</span>
-                        </td>
-                        <td class="px-3 py-2 text-center text-xs font-medium"
-                            [class.text-amber-600]="reg.minutosTardanza > 0"
-                            [class.dark:text-amber-400]="reg.minutosTardanza > 0"
-                            [class.text-gray-400]="reg.minutosTardanza === 0">
-                          {{ reg.minutosTardanza > 0 ? (reg.minutosTardanza + ' min') : '-' }}
-                        </td>
-                        <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400 text-xs font-mono font-medium">
-                          {{ reg.primeraGestionHora || '-' }}
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-mono">
-                          {{ reg.estadoAsistencia === 'FALTA' ? '-' : reg.tiempoConectado }}
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-mono">
-                          {{ reg.estadoAsistencia === 'FALTA' ? '-' : reg.jornada }}
-                        </td>
-                      </tr>
-                    }
                   }
-                </tbody>
-              </table>
-            } @else {
-              <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Dias Trab.</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-green-600 dark:text-green-400 uppercase">Puntual</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase">Tarde</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-red-600 dark:text-red-400 uppercase">Falta</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">% Puntualidad</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Min. Tardanza</th>
-                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Prom. Ingreso</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                  @if (filteredAsistenciaAgentes().length === 0) {
-                    <tr>
-                      <td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
-                        <p>No hay datos para mostrar</p>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <table class="w-full border-separate border-spacing-0 text-[12.5px] tabular-nums">
+              <thead>
+                <tr>
+                  <th [class]="claseThA + ' text-left'">Agente</th>
+                  <th [class]="claseThA">Días trabajados</th>
+                  <th [class]="claseThA + ' text-[#15803d]'">Puntual</th>
+                  <th [class]="claseThA + ' text-[#b45309]'">Tarde</th>
+                  <th [class]="claseThA + ' text-[#b91c1c]'">Falta</th>
+                  <th [class]="claseThA">% Puntualidad</th>
+                  <th [class]="claseThA">Min. tardanza</th>
+                  <th [class]="claseThA">Prom. ingreso</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (filteredAsistenciaAgentes().length === 0) {
+                  <tr><td colspan="8" class="px-4 py-10 text-center text-[#5f6c80]">
+                    <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+                    <p>No hay datos para mostrar</p>
+                  </td></tr>
+                } @else {
+                  @for (ag of filteredAsistenciaAgentes(); track ag.idUsuario) {
+                    <tr class="hover:[&>td]:bg-[#f8fafc] dark:hover:[&>td]:bg-slate-800/60">
+                      <td [class]="claseTdA + ' text-left'">
+                        <span class="block font-bold text-[#0f172a] dark:text-slate-100">{{ ag.nombreAgente }}</span>
+                        <span class="text-[10.5px] font-semibold text-[#8491a3]">{{ ag.username }}</span>
                       </td>
+                      <td [class]="claseTdA + ' font-bold text-[#0f172a] dark:text-slate-100'">{{ ag.diasTrabajados }}</td>
+                      <td [class]="claseTdA + ' font-bold text-[#15803d]'">{{ ag.diasPuntual }}</td>
+                      <td [class]="claseTdA + ' font-bold text-[#b45309]'">{{ ag.diasTarde }}</td>
+                      <td [class]="claseTdA + ' font-bold text-[#b91c1c]'">{{ ag.diasFalta }}</td>
+                      <td [class]="claseTdA">
+                        <span class="inline-flex min-w-[56px] flex-col gap-1">
+                          <b [class]="'text-[12px] font-extrabold ' + colorPuntualidad(ag.porcentajePuntualidad)">{{ ag.porcentajePuntualidad }}%</b>
+                          <span class="h-1 overflow-hidden rounded-full bg-[#e2e8f0] dark:bg-slate-800">
+                            <i class="block h-full rounded-full" [class]="fondoPuntualidad(ag.porcentajePuntualidad)"
+                               [style.width.%]="min100(ag.porcentajePuntualidad)"></i>
+                          </span>
+                        </span>
+                      </td>
+                      <td [class]="claseTdA">{{ ag.totalMinutosTardanza }}
+                        <span class="text-[10.5px] text-[#8491a3]">({{ ag.tardanzaAcumulada }})</span>
+                      </td>
+                      <td [class]="claseTdA">{{ ag.promedioHoraIngreso || '—' }}</td>
                     </tr>
-                  } @else {
-                    @for (ag of filteredAsistenciaAgentes(); track ag.idUsuario) {
-                      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        <td class="px-3 py-2">
-                          <div class="text-gray-900 dark:text-white font-medium">{{ ag.nombreAgente }}</div>
-                          <div class="text-xs text-gray-500 dark:text-gray-400">{{ ag.username }}</div>
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-900 dark:text-white font-medium">{{ ag.diasTrabajados }}</td>
-                        <td class="px-3 py-2 text-center text-green-600 dark:text-green-400 font-medium">{{ ag.diasPuntual }}</td>
-                        <td class="px-3 py-2 text-center text-amber-600 dark:text-amber-400 font-medium">{{ ag.diasTarde }}</td>
-                        <td class="px-3 py-2 text-center text-red-600 dark:text-red-400 font-medium">{{ ag.diasFalta }}</td>
-                        <td class="px-3 py-2 text-center">
-                          <div class="flex items-center justify-center gap-2">
-                            <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                              <div
-                                class="h-2 rounded-full"
-                                [style.width.%]="ag.porcentajePuntualidad"
-                                [style.background-color]="getPuntualidadColor(ag.porcentajePuntualidad)"
-                              ></div>
-                            </div>
-                            <span class="text-xs font-semibold" [style.color]="getPuntualidadColor(ag.porcentajePuntualidad)">
-                              {{ ag.porcentajePuntualidad }}%
-                            </span>
-                          </div>
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                          {{ ag.totalMinutosTardanza }} <span class="text-[10px]">({{ ag.tardanzaAcumulada }})</span>
-                        </td>
-                        <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-mono">
-                          {{ ag.promedioHoraIngreso || '-' }}
-                        </td>
-                      </tr>
-                    }
                   }
-                </tbody>
-              </table>
-            }
-          </div>
-
-          @if (asistenciaRegistros().length > 0) {
-            <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-semibold">{{ asistenciaResumen()?.totalAgentes }}</span> agentes x
-                <span class="font-semibold">{{ asistenciaResumen()?.totalDias }}</span> dias laborables =
-                <span class="font-semibold">{{ asistenciaRegistros().length | number }}</span> registros
-              </p>
-            </div>
+                }
+              </tbody>
+            </table>
           }
         </div>
       }
@@ -799,16 +687,92 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
   styles: []
 })
 export class EstadoAgentesReportComponent implements OnInit {
+
+  // ==================== SISTEMA VISUAL (tomado de /bot-voz) ====================
+  readonly claseInput =
+    'h-[38px] rounded-lg border border-[#d5dbe3] bg-white px-3 text-[13px] font-semibold text-[#0f172a] ' +
+    'outline-none focus:border-[#2563eb] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
+  readonly claseKpi =
+    'flex flex-col gap-0.5 rounded-xl border border-[#e6e9ee] bg-white px-3.5 py-3 dark:border-slate-800 dark:bg-slate-900';
+  readonly claseKpiK = 'text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400';
+  readonly claseKpiV = 'text-[24px] font-extrabold leading-tight tracking-[-0.025em] tabular-nums';
+  readonly claseKpiS = 'mt-auto text-[11px] font-medium text-[#8491a3]';
+  readonly claseMeter =
+    'mt-1.5 block h-1.5 overflow-hidden rounded-full bg-[#e2e8f0] shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] dark:bg-slate-800';
+  readonly claseThAgente =
+    'sticky left-0 min-w-[176px] whitespace-nowrap border-b border-r border-[#e6e9ee] bg-[#f8fafc] px-2.5 py-2 ' +
+    'text-left text-[11.5px] font-bold text-[#334155] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300';
+  /** El fondo lo hereda de la fila: asi la celda fija sigue al hover y a la seleccion. */
+  readonly claseTdAgente =
+    'sticky left-0 z-[1] min-w-[176px] whitespace-nowrap border-b border-r border-[#e6e9ee] bg-inherit px-2.5 py-2 ' +
+    'text-left dark:border-slate-800';
+  readonly claseThA =
+    'whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] px-3 py-2.5 text-center text-[11px] font-bold ' +
+    'uppercase tracking-[0.05em] text-[#5f6c80] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400';
+  readonly claseTdA =
+    'whitespace-nowrap border-b border-[#e6e9ee] px-3 py-2 text-center font-medium text-[#334155] ' +
+    'dark:border-slate-800 dark:text-slate-300';
+
+  claseTab(activo: boolean): string {
+    return 'shrink-0 rounded-[6px] px-3.5 text-[12.5px] font-bold transition-colors ' +
+      (activo ? 'bg-[#0f172a] text-white dark:bg-white dark:text-slate-900'
+              : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100');
+  }
+
+  // ==================== CATALOGO (compartido con /mis-tiempos) ====================
+  readonly GRUPOS = GRUPOS;
+  readonly ESTADOS = ESTADOS;
+  readonly RAYADO = RAYADO;
+  readonly COLS = COLS;
+  readonly etiquetaGrupo = etiquetaGrupo;
+  readonly colorGrupo = colorGrupo;
+  readonly num = numCol;
+  readonly texto = textoCol;
+  readonly formatSeg = formatSeg;
+  readonly composicion = composicion;
+  readonly desglose = desglose;
+  readonly colorOcupacion = colorOcupacion;
+  readonly fondoOcupacion = fondoOcupacion;
+  readonly colorOcioso = colorOcioso;
+  readonly fondoOcioso = fondoOcioso;
+
+  readonly leyenda = Object.entries(GRUPOS).map(([k, g]) => ({ k, l: g.l, color: g.color }));
+
+    readonly vistasDisponibles: { k: Vista; l: string }[] = [
+    { k: 'resumen', l: 'Resumen' },
+    { k: 'cola',    l: 'En cola' },
+    { k: 'fuera',   l: 'Fuera de la cola' },
+    { k: 'pausas',  l: 'Pausas' },
+    { k: 'todo',    l: 'Todo' }
+  ];
+
+  // ==================== ESTADO ====================
   loading = signal(false);
   resumen = signal<ResumenEstadoAgentes | null>(null);
   activeTab = signal<'resumen' | 'asistencia'>('resumen');
+
+  vista = signal<Vista>('resumen');
+  orden = signal<string | null>(null);
+  ordenAsc = signal(false);
+  buscarAgente = signal('');
+  seleccionado = signal<ResumenPorAgente | null>(null);
+
+  /** Zoom de la linea de tiempo: 1x entra completa, 8x deja ver minuto a minuto. */
+  zoom = signal(1);
+  readonly ZOOMS = [1, 2, 4, 8];
+
+  /** Tramos del dia para la linea de tiempo. Se piden recien al abrir un detalle. */
+  tramos = signal<RegistroEstadoDTO[]>([]);
+  tramosLoading = signal(false);
+  tramosError = signal(false);
+  tramosTotal = signal(0);
+  tramosParciales = signal(false);
 
   // ==================== ASISTENCIA ====================
   asistenciaLoading = signal(false);
   asistenciaRegistros = signal<RegistroAsistenciaDTO[]>([]);
   asistenciaResumen = signal<ResumenAsistencia | null>(null);
   asistenciaVista = signal<'diario' | 'agente'>('diario');
-  asistenciaFilter = signal('');
   agentesDisponibles = signal<AgenteOption[]>([]);
   agentesSeleccionados = signal<number[]>([]);
   showAgentePicker = signal(false);
@@ -822,7 +786,7 @@ export class EstadoAgentesReportComponent implements OnInit {
   };
 
   filteredAsistencia = computed(() => {
-    const filter = this.asistenciaFilter().toLowerCase().trim();
+    const filter = this.buscarAgente().toLowerCase().trim();
     const regs = this.asistenciaRegistros();
     if (!filter) return regs;
     return regs.filter(r =>
@@ -834,7 +798,7 @@ export class EstadoAgentesReportComponent implements OnInit {
   });
 
   filteredAsistenciaAgentes = computed(() => {
-    const filter = this.asistenciaFilter().toLowerCase().trim();
+    const filter = this.buscarAgente().toLowerCase().trim();
     const agentes = this.asistenciaResumen()?.agentes ?? [];
     if (!filter) return agentes;
     return agentes.filter(a =>
@@ -875,6 +839,192 @@ export class EstadoAgentesReportComponent implements OnInit {
       next: (data) => this.proveedores.set(data),
       error: (err) => console.error('Error cargando proveedores:', err)
     });
+  }
+
+  // ==================== COLUMNAS Y TABLA ====================
+  columnas = computed(() => this.COLS.filter(c => c.v.includes(this.vista())));
+
+  /** Los grupos de la cabecera salen de las columnas visibles, no de una lista aparte. */
+  gruposVisibles = computed(() => {
+    const out: { g: Grupo; n: number }[] = [];
+    for (const c of this.columnas()) {
+      const ultimo = out[out.length - 1];
+      if (ultimo && ultimo.g === c.g) ultimo.n++;
+      else out.push({ g: c.g, n: 1 });
+    }
+    return out;
+  });
+
+  agentesFiltrados = computed(() => {
+    const filtro = this.buscarAgente().toLowerCase().trim();
+    const orden = this.orden();
+    let lista = (this.resumen()?.agentes ?? []).slice();
+
+    if (filtro) {
+      lista = lista.filter(a =>
+        a.nombreAgente?.toLowerCase().includes(filtro) || a.username?.toLowerCase().includes(filtro));
+    }
+    if (orden) {
+      const asc = this.ordenAsc();
+      lista.sort((x, y) => asc ? this.num(x, orden) - this.num(y, orden) : this.num(y, orden) - this.num(x, orden));
+    }
+    return lista;
+  });
+
+  /**
+   * Fila TOTAL. Se suman los segundos y recien despues se divide: promediar los
+   * porcentajes de cada agente pesa igual al que estuvo 8 horas que al de 20 minutos.
+   */
+  total = computed<ResumenPorAgente | null>(() => {
+    const ags = this.agentesFiltrados();
+    if (!ags.length) return null;
+
+    const s = (f: (a: ResumenPorAgente) => number) => ags.reduce((t, a) => t + (f(a) || 0), 0);
+    const estados: { [k: string]: number } = {};
+    for (const a of ags) {
+      for (const [k, v] of Object.entries(a.segundosPorEstado ?? {})) estados[k] = (estados[k] || 0) + (v || 0);
+    }
+
+    const conectado = s(a => a.totalSegundosConectado);
+    const enCola = s(a => a.totalSegundosEnCola);
+    const pausas = s(a => a.totalSegundosPausa);
+    const productivo = s(a => a.totalSegundosProductivo);
+    const ocioso = s(a => a.totalSegundosOcioso);
+    const fuera = conectado - enCola;
+
+    return {
+      idUsuario: -1, nombreAgente: 'TOTAL', username: `${ags.length} asesores`,
+      segundosPorEstado: estados,
+      totalSegundosConectado: conectado,
+      totalSegundosEnCola: enCola,
+      totalSegundosFueraDeCola: fuera,
+      totalSegundosProductivo: productivo,
+      totalSegundosOcioso: ocioso,
+      totalSegundosEnLinea: s(a => a.totalSegundosEnLinea),
+      totalSegundosOtrasTareas: s(a => a.totalSegundosOtrasTareas),
+      totalSegundosReunion: s(a => a.totalSegundosReunion),
+      totalSegundosPausa: pausas,
+      tiempoConectadoFormateado: '', tiempoEnColaFormateado: '', tiempoFueraDeColaFormateado: '',
+      tiempoProductivoFormateado: '', tiempoOciosoFormateado: '', tiempoEnLineaFormateado: '',
+      tiempoOtrasTareasFormateado: '', tiempoReunionFormateado: '', tiempoPausaFormateado: '',
+      porcentajeOcupacion: this.pct(productivo, conectado - pausas),
+      porcentajeEnCola: this.pct(enCola, conectado),
+      porcentajeFueraDeCola: this.pct(fuera, conectado),
+      porcentajeOcioso: this.pct(ocioso, enCola),
+      porcentajePausas: this.pct(pausas, conectado),
+      horaEntrada: null, horaSalida: null, cantidadSesiones: 0
+    } as ResumenPorAgente;
+  });
+
+  claseTd(c: Col, a: ResumenPorAgente): string {
+    const base = 'whitespace-nowrap border-b border-[#e6e9ee] bg-inherit px-2.5 py-2 text-center font-medium ' +
+      'text-[#334155] dark:border-slate-800 dark:text-slate-300 ';
+    return base
+      + (c.sep ? 'border-l border-l-[#e6e9ee] dark:border-l-slate-800 ' : '')
+      + (c.fuerte ? 'font-extrabold text-[#0f172a] dark:text-slate-100 ' : '')
+      + (c.tipo === 'min' && !this.num(a, c.k) ? 'text-[#8491a3]' : '');
+  }
+
+  ordenable(c: Col): boolean {
+    return c.tipo !== 'comp' && c.tipo !== 'hora';
+  }
+
+  ordenarPor(c: Col): void {
+    if (!this.ordenable(c)) return;
+    if (this.orden() === c.k) this.ordenAsc.set(!this.ordenAsc());
+    else { this.orden.set(c.k); this.ordenAsc.set(false); }
+  }
+
+  // ==================== LINEA DE TIEMPO ====================
+  seleccionar(a: ResumenPorAgente): void {
+    this.seleccionado.set(a);
+    this.zoom.set(1);
+    if (this.tramos().length === 0 && !this.tramosLoading()) this.cargarTramos();
+  }
+
+  /**
+   * Los tramos ya vienen en el endpoint del reporte; el resumen no los usaba. Se piden
+   * una sola vez por busqueda, con un tope alto, y recien cuando se abre un detalle.
+   */
+  private cargarTramos(): void {
+    this.tramosLoading.set(true);
+    this.tramosError.set(false);
+
+    this.reporteService.getReporte(
+      this.filtros.fecha, this.filtros.fecha,
+      this.filtros.idProveedor || undefined,
+      this.filtros.idCartera || undefined,
+      this.filtros.idSubcartera || undefined,
+      0, 3000
+    ).subscribe({
+      next: (res) => {
+        this.tramos.set(res.registros ?? []);
+        this.tramosTotal.set(res.total ?? 0);
+        this.tramosParciales.set((res.total ?? 0) > (res.registros?.length ?? 0));
+        this.tramosLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error cargando los tramos del dia:', err);
+        this.tramosError.set(true);
+        this.tramosLoading.set(false);
+      }
+    });
+  }
+
+  private tramosDelAgente = computed(() => {
+    const a = this.seleccionado();
+    return a ? tramosDeAgente(this.tramos(), a.idUsuario, this.filtros.fecha) : [];
+  });
+
+  private ventana = computed(() => ventanaDe(this.tramosDelAgente()));
+
+  lineaTiempo = computed<TramoTL[]>(() =>
+    construirLinea(this.tramosDelAgente(), this.ventana().desde, this.ventana().hasta));
+
+  horasEje = computed(() => ejeHoras(this.ventana().desde, this.ventana().hasta, this.zoom()));
+
+    /** La etiqueta entra si el tramo, ya estirado por el zoom, tiene ancho suficiente. */
+  cabeEtiqueta(anchoPct: number): boolean {
+    return anchoPct * this.zoom() > 5;
+  }
+
+  /** Al acercar o alejar se conserva el centro de lo que se esta mirando. */
+  cambiarZoom(delta: number, caja: HTMLElement): void {
+    const actual = this.zoom();
+    const i = this.ZOOMS.indexOf(actual);
+    const nuevo = this.ZOOMS[Math.max(0, Math.min(this.ZOOMS.length - 1, i + delta))];
+    if (nuevo === actual) return;
+
+    const centro = (caja.scrollLeft + caja.clientWidth / 2) / (caja.clientWidth * actual);
+    this.zoom.set(nuevo);
+    requestAnimationFrame(() => {
+      caja.scrollLeft = centro * caja.clientWidth * nuevo - caja.clientWidth / 2;
+    });
+  }
+
+  ajustarZoom(caja: HTMLElement): void {
+    this.zoom.set(1);
+    requestAnimationFrame(() => { caja.scrollLeft = 0; });
+  }
+
+  private hhmm(m: number): string {
+    return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  }
+
+  // ==================== FILTROS ====================
+  subtitulo(): string {
+    const partes: string[] = [];
+    if (this.activeTab() === 'asistencia') {
+      partes.push(`${this.filtrosAsistencia.fechaDesde} al ${this.filtrosAsistencia.fechaHasta}`);
+    } else if (this.filtros.fecha) {
+      partes.push(this.filtros.fecha);
+    }
+    const sub = this.subcarteras().find(s => s.id === this.filtros.idSubcartera);
+    const car = this.carteras().find(c => c.id === this.filtros.idCartera);
+    const pro = this.proveedores().find(p => p.id === this.filtros.idProveedor);
+    [pro?.nombreInquilino, car?.nombreCartera, sub?.nombreSubcartera]
+      .forEach(n => { if (n) partes.push(n); });
+    return partes.join(' · ') || 'Elegí los filtros y presioná Buscar';
   }
 
   onProveedorChange(idProveedor: number | null): void {
@@ -929,6 +1079,9 @@ export class EstadoAgentesReportComponent implements OnInit {
 
   private loadData(): void {
     this.loading.set(true);
+    this.seleccionado.set(null);
+    this.tramos.set([]);
+    this.tramosParciales.set(false);
 
     this.reporteService.getReporte(
       this.filtros.fecha,
@@ -950,7 +1103,7 @@ export class EstadoAgentesReportComponent implements OnInit {
   }
 
   exportarExcel(): void {
-    if (!this.filtros.fecha || !this.filtros.fecha) return;
+    if (!this.filtros.fecha) return;
 
     this.loading.set(true);
 
@@ -962,14 +1115,7 @@ export class EstadoAgentesReportComponent implements OnInit {
       this.filtros.idSubcartera || undefined
     ).subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Reporte_Estados_Agentes_${this.filtros.fecha}_${this.filtros.fecha}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        this.descargar(blob, `Reporte_Estados_Agentes_${this.filtros.fecha}.xlsx`);
         this.loading.set(false);
       },
       error: (err) => {
@@ -980,102 +1126,43 @@ export class EstadoAgentesReportComponent implements OnInit {
     });
   }
 
-  // Helpers
-
-  /**
-   * Totales del equipo. Se suman los segundos y recien despues se divide: promediar
-   * los porcentajes de cada agente da un numero distinto, porque pesa igual al que
-   * estuvo 8 horas que al que estuvo 20 minutos.
-   */
-  totales = computed(() => {
-    const agentes = this.resumen()?.agentes ?? [];
-    const sum = (f: (a: ResumenPorAgente) => number) =>
-      agentes.reduce((t, a) => t + (f(a) || 0), 0);
-
-    // Los estados sueltos salen del mapa que manda el backend
-    const est = (clave: string) =>
-      agentes.reduce((t, a) => t + (a.segundosPorEstado?.[clave] || 0), 0);
-
-    const conectado = sum(a => a.totalSegundosConectado);
-    const enCola = sum(a => a.totalSegundosEnCola);
-    const pausas = sum(a => a.totalSegundosPausa);
-    const productivo = sum(a => a.totalSegundosProductivo);
-    const ocioso = sum(a => a.totalSegundosOcioso);
-    const fueraDeCola = conectado - enCola;
-
-    return {
-      conectado, enCola, fueraDeCola, pausas, productivo, ocioso,
-      enLinea: sum(a => a.totalSegundosEnLinea),
-      otrasTareas: sum(a => a.totalSegundosOtrasTareas),
-      reunionCap: sum(a => a.totalSegundosReunion),
-      interactuando: est('EN_LLAMADA'),
-      tipificando: est('TIPIFICANDO'),
-      ocupado: est('GESTION_MANUAL'),
-      seguimiento: est('SEGUIMIENTO'),
-      whatsapp: est('WHATSAPP'),
-      consultaTiempos: est('CONSULTA_TIEMPOS'),
-      reunion: est('EN_REUNION'),
-      capacitacion: est('CAPACITACION'),
-      brk: est('REFRIGERIO'),
-      comida: est('COMIDA'),
-      sshh: est('SSHH'),
-      ausente: est('AUSENTE'),
-      soporte: est('SOPORTE'),
-      pOcupacion: this.pct(productivo, conectado - pausas),
-      pEnCola: this.pct(enCola, conectado),
-      pFueraDeCola: this.pct(fueraDeCola, conectado),
-      pOcioso: this.pct(ocioso, enCola),
-      pPausas: this.pct(pausas, conectado)
-    };
-  });
-
-  /** Denominador 0 o negativo devuelve 0, no infinito. Misma regla que el backend. */
-  private pct(parte: number, total: number): number {
-    if (total <= 0) return 0;
-    return Math.round((parte / total) * 10000) / 100;
+  private descargar(blob: Blob, nombre: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   }
 
-  /** Misma regla que formatSegundos del backend, para que no convivan dos formatos. */
-  formatSeg(seg: number | undefined): string {
-    if (!seg) return '0s';
-    const h = Math.floor(seg / 3600);
-    const m = Math.floor((seg % 3600) / 60);
-    const s = seg % 60;
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s}s`;
+  // ==================== HELPERS ====================
+  private pct = pctSeguro;
+
+    min100(v: number): number {
+    return Math.max(0, Math.min(100, v));
   }
 
-  getOcupacionColor(porcentaje: number): string {
-    if (porcentaje >= 80) return '#10b981';
-    if (porcentaje >= 60) return '#f59e0b';
-    return '#ef4444';
+  colorInd(k: string, v: number): string {
+    return k === 'pOcup' ? this.colorOcupacion(v) : this.colorOcioso(v);
+  }
+  fondoInd(k: string, v: number): string {
+    return k === 'pOcup' ? this.fondoOcupacion(v) : this.fondoOcioso(v);
   }
 
-  /** Al reves que ocupacion: mucho ocioso es malo. */
-  getOciosoColor(porcentaje: number): string {
-    if (porcentaje > 40) return '#ef4444';
-    if (porcentaje > 25) return '#f59e0b';
-    return '#10b981';
+  colorPuntualidad(p: number): string {
+    return p >= 90 ? 'text-[#15803d]' : p >= 70 ? 'text-[#b45309]' : 'text-[#b91c1c]';
+  }
+  fondoPuntualidad(p: number): string {
+    return 'block h-full rounded-full ' + (p >= 90 ? 'bg-[#16a34a]' : p >= 70 ? 'bg-[#d97706]' : 'bg-[#dc2626]');
   }
 
   // ==================== ASISTENCIA ====================
-
   cambiarTab(tab: 'resumen' | 'asistencia'): void {
     this.activeTab.set(tab);
     this.showAgentePicker.set(false);
-  }
-
-  tabClass(tab: 'resumen' | 'asistencia'): string {
-    return this.activeTab() === tab
-      ? 'px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold'
-      : 'px-4 py-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700';
-  }
-
-  subTabClass(vista: 'diario' | 'agente'): string {
-    return this.asistenciaVista() === vista
-      ? 'px-3 py-1.5 text-sm bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-lg font-semibold'
-      : 'px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700';
+    this.buscarAgente.set('');
   }
 
   anyLoading(): boolean {
@@ -1095,19 +1182,13 @@ export class EstadoAgentesReportComponent implements OnInit {
   }
 
   onBuscar(): void {
-    if (this.activeTab() === 'asistencia') {
-      this.buscarAsistencia();
-    } else {
-      this.buscar();
-    }
+    if (this.activeTab() === 'asistencia') this.buscarAsistencia();
+    else this.buscar();
   }
 
   onExportar(): void {
-    if (this.activeTab() === 'asistencia') {
-      this.exportarAsistenciaExcel();
-    } else {
-      this.exportarExcel();
-    }
+    if (this.activeTab() === 'asistencia') this.exportarAsistenciaExcel();
+    else this.exportarExcel();
   }
 
   etiquetaAgentes(): string {
@@ -1160,14 +1241,8 @@ export class EstadoAgentesReportComponent implements OnInit {
 
     this.reporteService.exportarAsistenciaExcel(this.construirFiltrosAsistencia()).subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Reporte_Asistencia_${this.filtrosAsistencia.fechaDesde}_${this.filtrosAsistencia.fechaHasta}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        this.descargar(blob,
+          `Reporte_Asistencia_${this.filtrosAsistencia.fechaDesde}_${this.filtrosAsistencia.fechaHasta}.xlsx`);
         this.asistenciaLoading.set(false);
       },
       error: (err) => {
@@ -1200,22 +1275,12 @@ export class EstadoAgentesReportComponent implements OnInit {
   }
 
   getAsistenciaClass(estado: string): string {
-    const base = 'px-2 py-0.5 rounded-full text-[10px] font-semibold';
+    const base = 'inline-flex rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]';
     switch (estado) {
-      case 'PUNTUAL':
-        return `${base} bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400`;
-      case 'TARDE':
-        return `${base} bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400`;
-      case 'FALTA':
-        return `${base} bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400`;
-      default:
-        return `${base} bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400`;
+      case 'PUNTUAL': return `${base} bg-[#e4f2e9] text-[#15803d]`;
+      case 'TARDE':   return `${base} bg-[#fdf6e7] text-[#b45309]`;
+      case 'FALTA':   return `${base} bg-[#f9e6e4] text-[#b91c1c]`;
+      default:        return `${base} bg-[#f4f6f9] text-[#334155]`;
     }
-  }
-
-  getPuntualidadColor(porcentaje: number): string {
-    if (porcentaje >= 90) return '#10b981';
-    if (porcentaje >= 70) return '#f59e0b';
-    return '#ef4444';
   }
 }
