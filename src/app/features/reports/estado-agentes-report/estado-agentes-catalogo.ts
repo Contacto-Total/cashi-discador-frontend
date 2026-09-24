@@ -239,17 +239,30 @@ export function fondoOcioso(p: number): string {
 }
 
 // ==================== LINEA DE TIEMPO ====================
-export function hhmm(m: number): string {
+/** Segundos desde medianoche -> HH:mm. */
+export function hhmm(seg: number): string {
+  const m = Math.floor(seg / 60);
   return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 }
 
-/** "yyyy-MM-dd HH:mm:ss" -> minutos desde medianoche. Otro dia se recorta al borde. */
-function minutosDe(ts: string | null, dia: string): number | null {
-  if (!ts || ts.length < 16) return null;
+/** Con segundos: un tramo de 8s empieza y termina en el mismo minuto. */
+export function hhmmss(seg: number): string {
+  return hhmm(seg) + ':' + String(Math.floor(seg) % 60).padStart(2, '0');
+}
+
+/**
+ * "yyyy-MM-dd HH:mm:ss" -> segundos desde medianoche. Otro dia se recorta al borde.
+ *
+ * En segundos y no en minutos: probar un estado o un microcorte dura menos de un
+ * minuto, y al truncar esos tramos quedaban con inicio igual a fin y desaparecian
+ * del dibujo aunque el historial si los tuviera.
+ */
+function segundosDe(ts: string | null, dia: string): number | null {
+  if (!ts || ts.length < 19) return null;
   const fecha = ts.slice(0, 10);
   if (fecha < dia) return 0;
-  if (fecha > dia) return 24 * 60 - 1;
-  return +ts.slice(11, 13) * 60 + +ts.slice(14, 16);
+  if (fecha > dia) return 24 * 3600 - 1;
+  return +ts.slice(11, 13) * 3600 + +ts.slice(14, 16) * 60 + +ts.slice(17, 19);
 }
 
 export interface TramoCrudo { ini: number; fin: number; estado: string; }
@@ -258,19 +271,22 @@ export function tramosDeAgente(registros: RegistroEstadoDTO[], idUsuario: number
   return registros
     .filter(r => r.idUsuario === idUsuario)
     .map(r => ({
-      ini: minutosDe(r.timestampInicio, dia),
-      fin: minutosDe(r.timestampFin, dia),
+      ini: segundosDe(r.timestampInicio, dia),
+      fin: segundosDe(r.timestampFin, dia),
       estado: r.estadoNuevo
     }))
     .filter((r): r is TramoCrudo => r.ini !== null && r.fin !== null && r.fin > r.ini && !!ESTADOS[r.estado])
     .sort((x, y) => x.ini - y.ini);
 }
 
-/** Ventana del dibujo: de la hora en punto anterior a la entrada a la posterior a la salida. */
+/**
+ * Ventana del dibujo: del primer tramo al ultimo, exacta. Antes se redondeaba a la hora
+ * en punto y una jornada de 50 minutos se dibujaba dentro de dos horas, encogiendo todo.
+ */
 export function ventanaDe(tramos: TramoCrudo[]): { desde: number; hasta: number } {
   if (!tramos.length) return { desde: 0, hasta: 0 };
-  const desde = Math.floor(tramos[0].ini / 60) * 60;
-  const hasta = Math.ceil(Math.max(...tramos.map(x => x.fin)) / 60) * 60;
+  const desde = tramos[0].ini;
+  const hasta = Math.max(...tramos.map(x => x.fin));
   return { desde, hasta: Math.max(hasta, desde + 60) };
 }
 
@@ -290,8 +306,9 @@ export function construirLinea(tramos: TramoCrudo[], desde: number, hasta: numbe
     left: (ini - desde) / largo * 100,
     width: (fin - ini) / largo * 100,
     color, label, claro, hueco,
-    duracion: formatSeg((fin - ini) * 60),
-    titulo: `${label} · ${hhmm(ini)} – ${hhmm(fin)} · ${formatSeg((fin - ini) * 60)}${nota}`
+    duracion: formatSeg(fin - ini),
+    // Con segundos a la vista: un tramo corto empieza y termina en el mismo minuto
+    titulo: `${label} · ${hhmmss(ini)} – ${hhmmss(fin)} · ${formatSeg(fin - ini)}${nota}`
   });
 
   const out: TramoTL[] = [];
@@ -310,16 +327,23 @@ export function construirLinea(tramos: TramoCrudo[], desde: number, hasta: numbe
   return out;
 }
 
-/** Con mas zoom caben mas marcas: de 2 horas a 10 minutos. */
+/**
+ * Marcas del eje. El paso sale del largo real de la jornada y del zoom, apuntando a unas
+ * seis marcas por pantalla: sirve igual para un dia de 10 horas que para uno de 50 minutos.
+ */
+const ESCALA_EJE = [15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+
 export function ejeHoras(desde: number, hasta: number, zoom: number): { left: number; l: string }[] {
   const largo = hasta - desde;
   if (largo <= 0) return [];
 
-  const base = largo > 600 ? 120 : 60;
-  const paso = Math.max(10, Math.round(base / zoom));
+  const ideal = largo / (6 * zoom);
+  const paso = ESCALA_EJE.find(p => p >= ideal) ?? ESCALA_EJE[ESCALA_EJE.length - 1];
   const primero = Math.ceil(desde / paso) * paso;
 
   const out: { left: number; l: string }[] = [];
-  for (let m = primero; m <= hasta; m += paso) out.push({ left: (m - desde) / largo * 100, l: hhmm(m) });
+  for (let s = primero; s <= hasta; s += paso) {
+    out.push({ left: (s - desde) / largo * 100, l: paso < 60 ? hhmmss(s) : hhmm(s) });
+  }
   return out;
 }

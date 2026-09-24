@@ -437,8 +437,9 @@ import {
                     <div [style.width.%]="zoom() * 100">
                       <div class="relative h-[72px] overflow-hidden">
                         @for (s of lineaTiempo(); track $index) {
-                          <div class="absolute top-0 bottom-0 flex items-center justify-center overflow-hidden
-                                      border-r-2 border-white dark:border-slate-900"
+                          <!-- sin separador: en esta barra el blanco significa "sin actividad", asi que
+                                 una linea blanca entre tramos se leia como un microcorte -->
+                            <div class="absolute top-0 bottom-0 flex min-w-[2px] items-center justify-center overflow-hidden"
                                [style.left.%]="s.left" [style.width.%]="s.width" [style.background]="s.color"
                                [title]="s.titulo">
                             @if (cabeEtiqueta(s.width)) {
