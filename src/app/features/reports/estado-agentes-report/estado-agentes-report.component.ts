@@ -33,10 +33,15 @@ interface Col {
 interface TramoTL {
   left: number;
   width: number;
+  /** Color plano, o el rayado de los tramos sin actividad. */
   color: string;
   label: string;
   claro: boolean;
   titulo: string;
+  /** Tiempo fuera del sistema: registrado como DESCONECTADO o sin fila en el historial. */
+  hueco: boolean;
+  duracion: string;
+  rango: string;
 }
 
 const TODAS: Vista[] = ['resumen', 'cola', 'fuera', 'pausas', 'todo'];
@@ -420,29 +425,81 @@ const TODAS: Vista[] = ['resumen', 'cola', 'fuera', 'pausas', 'todo'];
                 </div>
               } @else if (lineaTiempo().length > 0) {
                 <div>
-                  <div class="relative h-12 overflow-hidden rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc]
-                              dark:border-slate-800 dark:bg-slate-950">
-                    @for (s of lineaTiempo(); track $index) {
-                      <div class="absolute top-0 bottom-0 flex items-center justify-center overflow-hidden
-                                  border-r-2 border-white dark:border-slate-900"
-                           [style.left.%]="s.left" [style.width.%]="s.width" [style.background]="s.color"
-                           [title]="s.titulo">
-                        @if (s.width > 6) {
-                          <span [class]="'whitespace-nowrap px-1 text-[10px] font-bold ' +
-                                         (s.claro ? 'text-[#3b2a00]' : 'text-white [text-shadow:0_1px_1px_rgba(15,23,42,.25)]')">
-                            {{ s.label }}
-                          </span>
+                  <!-- Zoom: en 1x entra el día completo; hasta 8x para mirar una hora puntual -->
+                  <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                    <div class="flex h-8 items-center rounded-lg border border-[#d5dbe3] bg-white p-[3px]
+                                dark:border-slate-700 dark:bg-slate-900">
+                      <button type="button" (click)="cambiarZoom(-1, cajaTL)" [disabled]="zoom() === ZOOMS[0]"
+                              aria-label="Alejar"
+                              class="flex h-full w-7 items-center justify-center rounded-[5px] text-[#5f6c80]
+                                     hover:bg-[#f4f6f9] disabled:opacity-40 dark:hover:bg-slate-800">
+                        <lucide-angular name="minus" [size]="14"></lucide-angular>
+                      </button>
+                      <span class="w-9 text-center text-[11.5px] font-bold tabular-nums">{{ zoom() }}x</span>
+                      <button type="button" (click)="cambiarZoom(1, cajaTL)"
+                              [disabled]="zoom() === ZOOMS[ZOOMS.length - 1]" aria-label="Acercar"
+                              class="flex h-full w-7 items-center justify-center rounded-[5px] text-[#5f6c80]
+                                     hover:bg-[#f4f6f9] disabled:opacity-40 dark:hover:bg-slate-800">
+                        <lucide-angular name="plus" [size]="14"></lucide-angular>
+                      </button>
+                    </div>
+                    @if (zoom() > 1) {
+                      <button type="button" (click)="ajustarZoom(cajaTL)"
+                              class="h-8 rounded-lg border border-[#d5dbe3] bg-white px-3 text-[11.5px] font-bold
+                                     text-[#5f6c80] hover:border-[#8491a3] dark:border-slate-700 dark:bg-slate-900">
+                        Ver todo el día
+                      </button>
+                      <span class="text-[11.5px] text-[#8491a3]">Desplazá la barra para ir a la hora que quieras</span>
+                    }
+                    <span class="ml-auto flex items-center gap-1.5 text-[11.5px] font-semibold text-[#334155]
+                                 dark:text-slate-300">
+                      <span class="h-2.5 w-2.5 rounded-[3px] border border-[#d5dbe3]" [style.background]="RAYADO"></span>
+                      Fuera del sistema
+                    </span>
+                  </div>
+
+                  <div #cajaTL class="overflow-x-auto rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc]
+                                      dark:border-slate-800 dark:bg-slate-950">
+                    <div [style.width.%]="zoom() * 100">
+                      <div class="relative h-12 overflow-hidden">
+                        @for (s of lineaTiempo(); track $index) {
+                          <div class="absolute top-0 bottom-0 flex items-center justify-center overflow-hidden
+                                      border-r-2 border-white dark:border-slate-900"
+                               [style.left.%]="s.left" [style.width.%]="s.width" [style.background]="s.color"
+                               [title]="s.titulo">
+                            @if (cabeEtiqueta(s.width)) {
+                              <span [class]="'whitespace-nowrap px-1 text-[10px] font-bold ' +
+                                             (s.claro ? 'text-[#3b2a00]' : 'text-white [text-shadow:0_1px_1px_rgba(15,23,42,.25)]')">
+                                {{ s.label }}@if (s.hueco) {<span class="font-semibold"> · {{ s.duracion }}</span>}
+                              </span>
+                            }
+                          </div>
                         }
                       </div>
-                    }
+                      <div class="relative h-4">
+                        @for (h of horasEje(); track h.left) {
+                          <i class="absolute top-0 block h-1 w-px bg-[#d5dbe3]" [style.left.%]="h.left"></i>
+                          <span class="absolute top-1 -translate-x-1/2 text-[10px] font-semibold tabular-nums
+                                       text-[#8491a3]" [style.left.%]="h.left">{{ h.l }}</span>
+                        }
+                      </div>
+                    </div>
                   </div>
-                  <div class="relative h-4">
-                    @for (h of horasEje(); track h.left) {
-                      <i class="absolute top-0 block h-1 w-px bg-[#d5dbe3]" [style.left.%]="h.left"></i>
-                      <span class="absolute top-1 -translate-x-1/2 text-[10px] font-semibold tabular-nums text-[#8491a3]"
-                            [style.left.%]="h.left">{{ h.l }}</span>
-                    }
-                  </div>
+
+                  @if (huecos().length > 0) {
+                    <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-[#5f6c80]
+                                dark:text-slate-400">
+                      <span class="font-bold text-[#334155] dark:text-slate-300">
+                        Fuera del sistema: {{ totalHuecos() }} en {{ huecos().length }}
+                        {{ huecos().length === 1 ? 'tramo' : 'tramos' }}
+                      </span>
+                      @for (h of huecos(); track $index) {
+                        <span class="rounded-md bg-[#f4f6f9] px-1.5 py-0.5 font-semibold tabular-nums text-[#334155]
+                                     dark:bg-slate-800 dark:text-slate-300" [title]="h.titulo">{{ h.rango }}</span>
+                      }
+                    </div>
+                  }
+
                   @if (tramosParciales()) {
                     <p class="mt-1 text-[11.5px] text-[#b45309]">
                       La jornada se dibuja con los primeros {{ tramosTotal() }} tramos del día: acotá por subcartera para verla completa.
@@ -727,8 +784,14 @@ export class EstadoAgentesReportComponent implements OnInit {
     COMIDA:           { l: 'Comida',              g: 'pausa',   c: '#b87a04' },
     SSHH:             { l: 'SSHH',                g: 'pausa',   c: '#f6cf74', claro: true },
     AUSENTE:          { l: 'Ausente',             g: 'pausa',   c: '#8a5c05' },
-    SOPORTE:          { l: 'Soporte',             g: 'pausa',   c: '#fae4ae', claro: true }
+    SOPORTE:          { l: 'Soporte',             g: 'pausa',   c: '#fae4ae', claro: true },
+    // No suma a Conectado y no tiene grupo en el reporte, pero en la linea de tiempo
+    // tiene que verse: es el rato que el asesor estuvo fuera del sistema.
+    DESCONECTADO:     { l: 'Desconectado',       g: 'desc',    c: '#d8dde3', claro: true }
   };
+
+  /** Rayado para lo que no es actividad: desconexion registrada o tramo sin registro. */
+  readonly RAYADO = 'repeating-linear-gradient(45deg,#d8dde3,#d8dde3 5px,#f1f3f6 5px,#f1f3f6 10px)';
 
   readonly leyenda = Object.entries(this.GRUPOS).map(([k, g]) => ({ k, l: g.l, color: g.color }));
 
@@ -789,6 +852,10 @@ export class EstadoAgentesReportComponent implements OnInit {
   ordenAsc = signal(false);
   buscarAgente = signal('');
   seleccionado = signal<ResumenPorAgente | null>(null);
+
+  /** Zoom de la linea de tiempo: 1x entra completa, 8x deja ver minuto a minuto. */
+  zoom = signal(1);
+  readonly ZOOMS = [1, 2, 4, 8];
 
   /** Tramos del dia para la linea de tiempo. Se piden recien al abrir un detalle. */
   tramos = signal<RegistroEstadoDTO[]>([]);
@@ -1058,6 +1125,7 @@ export class EstadoAgentesReportComponent implements OnInit {
   // ==================== LINEA DE TIEMPO ====================
   seleccionar(a: ResumenPorAgente): void {
     this.seleccionado.set(a);
+    this.zoom.set(1);
     if (this.tramos().length === 0 && !this.tramosLoading()) this.cargarTramos();
   }
 
@@ -1125,34 +1193,92 @@ export class EstadoAgentesReportComponent implements OnInit {
     return { desde, hasta: Math.max(hasta, desde + 60) };
   });
 
+  /**
+   * Dibujo de la jornada. Ademas de los tramos, marca lo que NO tiene actividad:
+   *   - DESCONECTADO: el asesor salio y volvio, y el sistema lo registro con inicio y fin.
+   *   - Sin registro: no hay fila en el historial. Pasa con el tramo que sigue abierto
+   *     (no se escribe hasta que cambie de estado) o si el historial quedo incompleto.
+   * Antes los dos quedaban en blanco y no se distinguian de un error de dibujo.
+   */
   lineaTiempo = computed<TramoTL[]>(() => {
     const { desde, hasta } = this.ventana();
     const largo = hasta - desde;
     if (largo <= 0) return [];
 
-    return this.tramosDelAgente().map(s => {
-      const e = this.ESTADOS[s.estado];
-      const mins = s.fin - s.ini;
-      return {
-        left: (s.ini - desde) / largo * 100,
-        width: mins / largo * 100,
-        color: e.c,
-        label: e.l,
-        claro: !!e.claro,
-        titulo: `${e.l} · ${this.hhmm(s.ini)} – ${this.hhmm(s.fin)} · ${this.formatSeg(mins * 60)}`
-      };
+    const pieza = (ini: number, fin: number, label: string, color: string,
+                   claro: boolean, hueco: boolean, nota = ''): TramoTL => ({
+      left: (ini - desde) / largo * 100,
+      width: (fin - ini) / largo * 100,
+      color, label, claro, hueco,
+      duracion: this.formatSeg((fin - ini) * 60),
+      rango: `${this.hhmm(ini)} – ${this.hhmm(fin)} (${this.formatSeg((fin - ini) * 60)})`,
+      titulo: `${label} · ${this.hhmm(ini)} – ${this.hhmm(fin)} · ${this.formatSeg((fin - ini) * 60)}${nota}`
     });
+
+    const out: TramoTL[] = [];
+    let cursor: number | null = null;
+
+    for (const s of this.tramosDelAgente()) {
+      if (cursor !== null && s.ini > cursor) {
+        out.push(pieza(cursor, s.ini, 'Sin registro', this.RAYADO, true, true,
+          ' · el historial no tiene ninguna fila en ese rango'));
+      }
+      const e = this.ESTADOS[s.estado];
+      const esDesc = s.estado === 'DESCONECTADO';
+      out.push(pieza(s.ini, s.fin, e.l, esDesc ? this.RAYADO : e.c, !!e.claro, esDesc));
+      cursor = Math.max(cursor ?? 0, s.fin);
+    }
+    return out;
   });
 
+  /** Los tramos fuera del sistema, listados aparte con su hora y su duracion. */
+  huecos = computed<TramoTL[]>(() => this.lineaTiempo().filter(s => s.hueco));
+
+  totalHuecos = computed(() => {
+    const { desde, hasta } = this.ventana();
+    const largo = hasta - desde;
+    const mins = this.huecos().reduce((acc, s) => acc + s.width / 100 * largo, 0);
+    return this.formatSeg(Math.round(mins) * 60);
+  });
+
+  /** Con mas zoom caben mas marcas: de 2 horas a 10 minutos. */
   horasEje = computed(() => {
     const { desde, hasta } = this.ventana();
     const largo = hasta - desde;
     if (largo <= 0) return [] as { left: number; l: string }[];
+
+    const base = largo > 600 ? 120 : 60;
+    const paso = Math.max(10, Math.round(base / this.zoom()));
+    const primero = Math.ceil(desde / paso) * paso;
+
     const out: { left: number; l: string }[] = [];
-    const paso = largo > 600 ? 120 : 60;
-    for (let m = desde; m <= hasta; m += paso) out.push({ left: (m - desde) / largo * 100, l: this.hhmm(m) });
+    for (let m = primero; m <= hasta; m += paso) out.push({ left: (m - desde) / largo * 100, l: this.hhmm(m) });
     return out;
   });
+
+  /** La etiqueta entra si el tramo, ya estirado por el zoom, tiene ancho suficiente. */
+  cabeEtiqueta(anchoPct: number): boolean {
+    return anchoPct * this.zoom() > 5;
+  }
+
+  /** Al acercar o alejar se conserva el centro de lo que se esta mirando. */
+  cambiarZoom(delta: number, caja: HTMLElement): void {
+    const actual = this.zoom();
+    const i = this.ZOOMS.indexOf(actual);
+    const nuevo = this.ZOOMS[Math.max(0, Math.min(this.ZOOMS.length - 1, i + delta))];
+    if (nuevo === actual) return;
+
+    const centro = (caja.scrollLeft + caja.clientWidth / 2) / (caja.clientWidth * actual);
+    this.zoom.set(nuevo);
+    requestAnimationFrame(() => {
+      caja.scrollLeft = centro * caja.clientWidth * nuevo - caja.clientWidth / 2;
+    });
+  }
+
+  ajustarZoom(caja: HTMLElement): void {
+    this.zoom.set(1);
+    requestAnimationFrame(() => { caja.scrollLeft = 0; });
+  }
 
   private hhmm(m: number): string {
     return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
