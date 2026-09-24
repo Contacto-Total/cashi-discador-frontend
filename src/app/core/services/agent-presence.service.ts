@@ -39,7 +39,9 @@ export class AgentPresenceService {
     '/manual-management',
     '/seguimiento',
     '/whatsapp',
-    '/wsp2'
+    '/wsp2',
+    // pone CONSULTA_TIEMPOS al entrar y vuelve a EN_LINEA al salir
+    '/mis-tiempos'
   ];
 
   private sub?: Subscription;
