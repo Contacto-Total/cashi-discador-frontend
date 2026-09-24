@@ -41,7 +41,6 @@ interface TramoTL {
   /** Tiempo fuera del sistema: registrado como DESCONECTADO o sin fila en el historial. */
   hueco: boolean;
   duracion: string;
-  rango: string;
 }
 
 const TODAS: Vista[] = ['resumen', 'cola', 'fuera', 'pausas', 'todo'];
@@ -413,7 +412,6 @@ const TODAS: Vista[] = ['resumen', 'cola', 'fuera', 'pausas', 'todo'];
                   {{ a.username }} · entrada {{ a.horaEntrada || '—' }} · salida {{ a.horaSalida || '—' }}
                   · conectado {{ formatSeg(a.totalSegundosConectado) }}
                 </span>
-                <span class="ml-auto text-[11.5px] text-[#8491a3]">Clic en otra fila para ver su jornada</span>
               </div>
 
               <!-- Línea de tiempo del día -->
@@ -458,10 +456,10 @@ const TODAS: Vista[] = ['resumen', 'cola', 'fuera', 'pausas', 'todo'];
                     </span>
                   </div>
 
-                  <div #cajaTL class="overflow-x-auto rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc]
-                                      dark:border-slate-800 dark:bg-slate-950">
+                  <div #cajaTL class="overflow-x-auto overflow-y-hidden rounded-[10px] border border-[#e6e9ee]
+                                      bg-[#f8fafc] pb-1.5 dark:border-slate-800 dark:bg-slate-950">
                     <div [style.width.%]="zoom() * 100">
-                      <div class="relative h-12 overflow-hidden">
+                      <div class="relative h-[72px] overflow-hidden">
                         @for (s of lineaTiempo(); track $index) {
                           <div class="absolute top-0 bottom-0 flex items-center justify-center overflow-hidden
                                       border-r-2 border-white dark:border-slate-900"
@@ -476,29 +474,15 @@ const TODAS: Vista[] = ['resumen', 'cola', 'fuera', 'pausas', 'todo'];
                           </div>
                         }
                       </div>
-                      <div class="relative h-4">
+                      <div class="relative h-[18px]">
                         @for (h of horasEje(); track h.left) {
-                          <i class="absolute top-0 block h-1 w-px bg-[#d5dbe3]" [style.left.%]="h.left"></i>
-                          <span class="absolute top-1 -translate-x-1/2 text-[10px] font-semibold tabular-nums
+                          <i class="absolute top-0 block h-1.5 w-px bg-[#d5dbe3]" [style.left.%]="h.left"></i>
+                          <span class="absolute top-[7px] -translate-x-1/2 text-[10px] font-semibold tabular-nums
                                        text-[#8491a3]" [style.left.%]="h.left">{{ h.l }}</span>
                         }
                       </div>
                     </div>
                   </div>
-
-                  @if (huecos().length > 0) {
-                    <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-[#5f6c80]
-                                dark:text-slate-400">
-                      <span class="font-bold text-[#334155] dark:text-slate-300">
-                        Fuera del sistema: {{ totalHuecos() }} en {{ huecos().length }}
-                        {{ huecos().length === 1 ? 'tramo' : 'tramos' }}
-                      </span>
-                      @for (h of huecos(); track $index) {
-                        <span class="rounded-md bg-[#f4f6f9] px-1.5 py-0.5 font-semibold tabular-nums text-[#334155]
-                                     dark:bg-slate-800 dark:text-slate-300" [title]="h.titulo">{{ h.rango }}</span>
-                      }
-                    </div>
-                  }
 
                   @if (tramosParciales()) {
                     <p class="mt-1 text-[11.5px] text-[#b45309]">
@@ -1211,7 +1195,6 @@ export class EstadoAgentesReportComponent implements OnInit {
       width: (fin - ini) / largo * 100,
       color, label, claro, hueco,
       duracion: this.formatSeg((fin - ini) * 60),
-      rango: `${this.hhmm(ini)} – ${this.hhmm(fin)} (${this.formatSeg((fin - ini) * 60)})`,
       titulo: `${label} · ${this.hhmm(ini)} – ${this.hhmm(fin)} · ${this.formatSeg((fin - ini) * 60)}${nota}`
     });
 
@@ -1229,16 +1212,6 @@ export class EstadoAgentesReportComponent implements OnInit {
       cursor = Math.max(cursor ?? 0, s.fin);
     }
     return out;
-  });
-
-  /** Los tramos fuera del sistema, listados aparte con su hora y su duracion. */
-  huecos = computed<TramoTL[]>(() => this.lineaTiempo().filter(s => s.hueco));
-
-  totalHuecos = computed(() => {
-    const { desde, hasta } = this.ventana();
-    const largo = hasta - desde;
-    const mins = this.huecos().reduce((acc, s) => acc + s.width / 100 * largo, 0);
-    return this.formatSeg(Math.round(mins) * 60);
   });
 
   /** Con mas zoom caben mas marcas: de 2 horas a 10 minutos. */
