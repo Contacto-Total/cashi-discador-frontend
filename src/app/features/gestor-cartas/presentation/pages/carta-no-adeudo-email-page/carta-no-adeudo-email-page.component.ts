@@ -293,39 +293,105 @@ type OrigenEnvio = 'pagos' | 'fallidos';
               (seleccionadosCambiaron)="seleccionadosPagos.set($event)">
               @if (clientePagos(); as cliente) {
                 <div detalleDerecho class="space-y-3">
-                  <section class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-900/40">
-                    <div class="flex items-center justify-between gap-2">
-                      <h2 class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rechazar solicitud</h2>
-                      <span class="truncate text-[11px] text-slate-500">{{ cliente.nombreCliente }}</span>
-                    </div>
-                    <div class="mt-1.5 flex gap-1.5">
-                      <textarea #justificacion rows="2" placeholder="Justificación del rechazo" maxlength="300" class="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 p-1.5 text-xs outline-none focus:border-rose-500 dark:border-slate-600 dark:bg-slate-700" (input)="justificacionRechazo.set(justificacion.value.trim())"></textarea>
-                      <button type="button" [disabled]="!cliente.idSolicitud || !justificacionRechazo()" (click)="rechazarCliente(cliente)" class="self-start rounded-lg bg-rose-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Rechazar</button>
-                    </div>
-                  </section>
-                  <app-cliente-resumen-conciliacion-lectura
-                    mode="inline"
-                    [open]="true"
-                    [loading]="cargandoResumenPagos()"
-                    [error]="errorResumenPagos()"
-                    [documento]="cliente.documento"
-                    [resumen]="resumenPagos()"
-                    [tenantId]="cliente.idTenant"
-                    [carteraId]="cliente.idCartera"
-                    [subcarteraId]="cliente.idSubcartera">
-                  </app-cliente-resumen-conciliacion-lectura>
-                  @if (observacionesDe(cliente); as observaciones) {
-                    @if (observaciones.length > 0) {
-                      <div class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-700/60 dark:bg-amber-900/20">
-                        <h3 class="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Historial de observaciones</h3>
-                        <div class="mt-1.5 max-h-[9rem] space-y-1.5 overflow-y-auto pr-1">
-                          @for (observacion of observaciones; track $index) {
-                            <div class="rounded-md border border-amber-200 bg-white px-2 py-1.5 dark:border-amber-700/60 dark:bg-slate-800">
-                              <p class="text-xs text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
-                              <p class="mt-0.5 text-[10px] text-slate-500">{{ observacion.fecha }}</p>
-                            </div>
-                          }
+                  <div class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors"
+                      [class.bg-blue-600]="vistaDetallePagos() === 'pagos'"
+                      [class.text-white]="vistaDetallePagos() === 'pagos'"
+                      [class.text-slate-500]="vistaDetallePagos() !== 'pagos'"
+                      (click)="vistaDetallePagos.set('pagos')">
+                      <lucide-angular name="badge-check" [size]="14"></lucide-angular>
+                      Pagos
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors"
+                      [class.bg-blue-600]="vistaDetallePagos() === 'correo'"
+                      [class.text-white]="vistaDetallePagos() === 'correo'"
+                      [class.text-slate-500]="vistaDetallePagos() !== 'correo'"
+                      (click)="vistaDetallePagos.set('correo')">
+                      <lucide-angular name="mail" [size]="14"></lucide-angular>
+                      Correo
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors"
+                      [class.bg-blue-600]="vistaDetallePagos() === 'pdf'"
+                      [class.text-white]="vistaDetallePagos() === 'pdf'"
+                      [class.text-slate-500]="vistaDetallePagos() !== 'pdf'"
+                      (click)="vistaDetallePagos.set('pdf')">
+                      <lucide-angular name="file-text" [size]="14"></lucide-angular>
+                      PDF
+                    </button>
+                  </div>
+
+                  @if (vistaDetallePagos() === 'pagos') {
+                    <section class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-900/40">
+                      <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rechazar solicitud</h2>
+                        <span class="truncate text-[11px] text-slate-500">{{ cliente.nombreCliente }}</span>
+                      </div>
+                      <div class="mt-1.5 flex gap-1.5">
+                        <textarea #justificacion rows="2" placeholder="Justificación del rechazo" maxlength="300" class="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 p-1.5 text-xs outline-none focus:border-rose-500 dark:border-slate-600 dark:bg-slate-700" (input)="justificacionRechazo.set(justificacion.value.trim())"></textarea>
+                        <button type="button" [disabled]="!cliente.idSolicitud || !justificacionRechazo()" (click)="rechazarCliente(cliente)" class="self-start rounded-lg bg-rose-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Rechazar</button>
+                      </div>
+                    </section>
+                    <app-cliente-resumen-conciliacion-lectura
+                      mode="inline"
+                      [open]="true"
+                      [loading]="cargandoResumenPagos()"
+                      [error]="errorResumenPagos()"
+                      [documento]="cliente.documento"
+                      [resumen]="resumenPagos()"
+                      [tenantId]="cliente.idTenant"
+                      [carteraId]="cliente.idCartera"
+                      [subcarteraId]="cliente.idSubcartera">
+                    </app-cliente-resumen-conciliacion-lectura>
+                    @if (observacionesDe(cliente); as observaciones) {
+                      @if (observaciones.length > 0) {
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-700/60 dark:bg-amber-900/20">
+                          <h3 class="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Historial de observaciones</h3>
+                          <div class="mt-1.5 max-h-[9rem] space-y-1.5 overflow-y-auto pr-1">
+                            @for (observacion of observaciones; track $index) {
+                              <div class="rounded-md border border-amber-200 bg-white px-2 py-1.5 dark:border-amber-700/60 dark:bg-slate-800">
+                                <p class="text-xs text-slate-700 dark:text-slate-200">{{ observacion.justificacion }}</p>
+                                <p class="mt-0.5 text-[10px] text-slate-500">{{ observacion.fecha }}</p>
+                              </div>
+                            }
+                          </div>
                         </div>
+                      }
+                    }
+                  } @else if (vistaDetallePagos() === 'correo') {
+                    <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                      <div class="border-b border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900/40">
+                        <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ correoAsuntoRender() }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">De:</span> {{ remitenteCorreo }}</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">Para:</span> {{ clienteCorreo()?.correo || 'Sin correo registrado' }}</p>
+                      </div>
+                      @if (correoSeguroHtml(); as html) {
+                        <iframe [srcdoc]="html" title="Cuerpo del correo" class="h-[28rem] w-full border-0 bg-white"></iframe>
+                        @if (correoAdjuntoRender()) {
+                          <div class="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+                            <lucide-angular name="file-text" [size]="14"></lucide-angular>
+                            {{ correoAdjuntoRender() }}
+                          </div>
+                        }
+                      }
+                    </div>
+                  } @else {
+                    @if (cargandoVistaPrevia()) {
+                      <div class="flex h-[28rem] flex-col items-center justify-center text-slate-500 dark:text-slate-400">
+                        <div class="h-7 w-7 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                        <p class="mt-3 text-sm">Generando carta...</p>
+                      </div>
+                    } @else if (vistaPreviaUrl(); as url) {
+                      <iframe [src]="url" title="Carta de no adeudo" class="h-[28rem] w-full rounded border-0 bg-white"></iframe>
+                    } @else {
+                      <div class="flex h-[28rem] flex-col items-center justify-center text-center text-slate-400">
+                        <lucide-angular name="file-text" [size]="32"></lucide-angular>
+                        <p class="mt-2 text-sm">No se pudo cargar la carta.</p>
                       </div>
                     }
                   }
@@ -618,6 +684,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly totalPaginasPagos = signal(0);
   readonly totalPagos = signal(0);
   readonly clientePagos = signal<CartaNoAdeudoClienteCorreo | null>(null);
+  readonly vistaDetallePagos = signal<'pagos' | 'correo' | 'pdf'>('pagos');
   readonly resumenPagos = signal<ResumenConciliacionCliente | null>(null);
   readonly cargandoResumenPagos = signal(false);
   readonly errorResumenPagos = signal<string | null>(null);
@@ -739,8 +806,19 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     this.modoCorreo.set(modo);
     this.todosCorreo.set(false);
     this.todosRechazados.set(false);
+    this.limpiarDetalle();
+  }
+
+  private limpiarDetalle(): void {
     this.clienteCorreo.set(null);
     this.correos.set([]);
+    this.clientePagos.set(null);
+    this.resumenPagos.set(null);
+    this.errorResumenPagos.set(null);
+    this.cargandoResumenPagos.set(false);
+    this.vistaDetallePagos.set('pagos');
+    this.justificacionRechazo.set('');
+    this.solicitudVistaPrevia++;
     this.limpiarVistaPrevia();
     this.vistaPreviaUrl.set(null);
     this.cargandoVistaPrevia.set(false);
@@ -779,6 +857,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     this.activeTab.set(tab);
     this.seleccionadosPagos.set([]);
     this.seleccionadosFallidos.set([]);
+    this.limpiarDetalle();
     if (tab === 'pagos' && !this.pagosCargados) {
       this.cargarValidacionPagos(0);
     }
@@ -791,6 +870,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     this.subTabPagos.set(subTab);
     this.seleccionadosPagos.set([]);
     this.seleccionadosFallidos.set([]);
+    this.limpiarDetalle();
     if (subTab === 'fallidos' && !this.fallidosCargados) {
       this.cargarFallidos(0);
     }
@@ -800,6 +880,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   cargarValidacionPagos(page = 0): void {
+    this.limpiarDetalle();
     this.cartaNoAdeudoService.listarValidacionPagos(page, 20).subscribe({
       next: response => {
         this.clientesEnPagos.set(response.content.map(validacion => this.aClientePago(validacion)));
@@ -830,6 +911,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   cargarCandidatos(documento?: string, page = 0): void {
+    this.limpiarDetalle();
     this.documentoBusqueda = documento?.trim() || undefined;
     this.cartaNoAdeudoService.listarCandidatos(this.documentoBusqueda, page, 20).subscribe({
       next: response => {
@@ -885,6 +967,8 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
 
   cargarPagosCliente(cliente: CartaNoAdeudoClienteCorreo): void {
     this.clientePagos.set(cliente);
+    this.vistaDetallePagos.set('pagos');
+    this.generarVistaPrevia(cliente);
     this.resumenPagos.set(null);
     this.errorResumenPagos.set(null);
     this.cargandoResumenPagos.set(true);
@@ -965,6 +1049,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   cargarFallidos(page = 0): void {
+    this.limpiarDetalle();
     this.cartaNoAdeudoService.listarFallidos(page, 20).subscribe({
       next: response => {
         this.fallidos.set(response.content);

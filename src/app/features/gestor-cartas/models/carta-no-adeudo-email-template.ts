@@ -29,7 +29,7 @@ export const CARTA_NO_ADEUDO_CUERPO = `<!DOCTYPE html>
           </tr>
           <tr>
             <td style="padding:32px;">
-              <p style="margin:0 0 16px;font-size:15px;line-height:22px;">Estimado(a) <strong>{nombre}</strong>,</p>
+              <p style="margin:0 0 16px;font-size:15px;line-height:22px;">Estimulado(a) <strong>{nombre}</strong>,</p>
               <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
                 Le hacemos llegar su <strong>carta de no adeudo</strong> correspondiente al documento
                 <strong>{documento}</strong>. La encontrara adjunta a este correo en formato PDF.

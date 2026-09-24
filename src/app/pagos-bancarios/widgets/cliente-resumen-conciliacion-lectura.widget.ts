@@ -126,18 +126,18 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
         } @else if (error) {
           <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
         } @else if (resumen) {
-          <div class="mb-3 grid grid-cols-3 gap-2">
-            <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              <p class="text-[10px] text-slate-500 dark:text-slate-400">Tiene carta</p>
-              <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
+          <div class="mb-3 space-y-1">
+            <div class="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-2 py-1 dark:border-slate-700">
+              <span class="text-[10px] text-slate-500 dark:text-slate-400">Carta de no adeudo disponible</span>
+              <span class="text-xs font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</span>
             </div>
-            <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              <p class="text-[10px] text-slate-500 dark:text-slate-400">Promesas</p>
-              <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ resumen.promesas.length }}</p>
+            <div class="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-2 py-1 dark:border-slate-700">
+              <span class="text-[10px] text-slate-500 dark:text-slate-400">Promesas</span>
+              <span class="text-xs font-bold text-slate-900 dark:text-white">{{ resumen.promesas.length }}</span>
             </div>
-            <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              <p class="text-[10px] text-slate-500 dark:text-slate-400">Intentos cancelación</p>
-              <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ getIntentosCancelacion().length }}</p>
+            <div class="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-2 py-1 dark:border-slate-700">
+              <span class="text-[10px] text-slate-500 dark:text-slate-400">Intentos cancelación</span>
+              <span class="text-xs font-bold text-slate-900 dark:text-white">{{ getIntentosCancelacion().length }}</span>
             </div>
           </div>
 
