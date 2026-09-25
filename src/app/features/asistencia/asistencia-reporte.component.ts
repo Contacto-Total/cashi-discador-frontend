@@ -129,21 +129,32 @@ const COLOR_DIA: Record<string, string> = {
                   <h3 [class]="estilos.rotulo">Puntualidad</h3>
                 </div>
                 <div [class]="estilos.cifra">{{ puntualidad() }}<small [class]="estilos.unidad">%</small></div>
+                <!-- Una semana: un cuadro por día, con su letra. Más de una: cuadritos
+                     del mismo alto, para que un rango largo no los vuelva barras. -->
                 <div [class]="estilos.banda">
-                  <div class="flex w-full gap-[5px]">
-                    @for (d of dias(); track d.fecha) {
-                      <span class="flex h-[26px] flex-1 items-center justify-center rounded-md text-[11px] font-bold text-white"
-                            [class]="COLOR_DIA[estadoVisible(d)]"
-                            [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[estadoVisible(d)].texto)">
-                        {{ d.nombreDia.slice(0, 2) }}
-                      </span>
-                    }
-                  </div>
+                  @if (cintaCompacta()) {
+                    <div class="flex w-full flex-wrap gap-[2px]">
+                      @for (d of diasCinta(); track d.fecha) {
+                        <span class="h-2.5 w-2.5 rounded-[2px]" [class]="COLOR_DIA[estadoVisible(d)]"
+                              [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[estadoVisible(d)].texto)"></span>
+                      }
+                    </div>
+                  } @else {
+                    <div class="flex w-full gap-[5px]">
+                      @for (d of diasCinta(); track d.fecha) {
+                        <span class="flex h-[26px] flex-1 items-center justify-center rounded-md text-[11px] font-bold text-white"
+                              [class]="COLOR_DIA[estadoVisible(d)]"
+                              [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[estadoVisible(d)].texto)">
+                          {{ d.nombreDia.slice(0, 2) }}
+                        </span>
+                      }
+                    </div>
+                  }
                 </div>
                 <p [class]="estilos.pie">
-                  {{ semana()?.diasPuntual ?? 0 }} de {{ diasLaborables() }}
+                  {{ diasPuntuales() }} de {{ diasLaborables() }}
                   {{ diasLaborables() === 1 ? 'día' : 'días' }} ·
-                  {{ semana()?.diasFalta ?? 0 }} {{ (semana()?.diasFalta ?? 0) === 1 ? 'falta' : 'faltas' }}
+                  {{ diasFalta() }} {{ diasFalta() === 1 ? 'falta' : 'faltas' }}
                 </p>
               </div>
 
@@ -152,7 +163,7 @@ const COLOR_DIA: Record<string, string> = {
                   <span [class]="estilos.icono">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
                   </span>
-                  <h3 [class]="estilos.rotulo">Tardanza de la semana</h3>
+                  <h3 [class]="estilos.rotulo">{{ variasSemanas() ? 'Tardanza del período' : 'Tardanza de la semana' }}</h3>
                 </div>
                 <div [class]="estilos.cifra">
                   {{ duracionCorta(minutosTardanza()) }}<small [class]="estilos.unidad">{{ unidadDe(minutosTardanza()) }}</small>
@@ -162,13 +173,13 @@ const COLOR_DIA: Record<string, string> = {
                     <div class="barra-tope" role="img"
                          [style.--valor]="porcentajeTardanza() + '%'"
                          [style.--color]="pasaTope() ? '#dc2626' : '#16a34a'"
-                         [attr.aria-label]="'Tardanza ' + enDuracion(minutosTardanza()) + ', tope ' + enDuracion(TOPE_SEMANA_MIN())"></div>
+                         [attr.aria-label]="'Tardanza ' + enDuracion(minutosTardanza()) + ', tope ' + enDuracion(tope())"></div>
                     <span class="absolute left-1/2 top-[20px] -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-[#5f6c80] dark:text-slate-400">
-                      tope {{ enDuracion(TOPE_SEMANA_MIN()) }}
+                      tope {{ enDuracion(tope()) }}
                     </span>
                   </div>
                 </div>
-                <p [class]="estilos.pie">{{ semana() ? textoLimite(semana()!) : '' }}</p>
+                <p [class]="estilos.pie">{{ limiteTexto() }}</p>
               </div>
 
               <div [class]="estilos.tarjeta">
@@ -261,14 +272,15 @@ const COLOR_DIA: Record<string, string> = {
                 </tbody>
                 <ng-template #hora let-valor let-manual="manual">@if (valor) {<span [class.manual]="manual" [attr.title]="manual ? 'Completada a mano' : null">{{ valor }}</span>} @else {<span class="sin-marca">—</span>}</ng-template>
                 <!-- El corte semanal cierra la tabla: es donde se mira, y evita una pestaña aparte. -->
-                @if (semana(); as s) {
+                @if (semanas().length) {
                   <tfoot>
+                    @for (s of semanas(); track s.lunes) {
                     <tr class="border-t border-[#e6e9ee] bg-[#f4f6f9] font-bold dark:border-slate-800 dark:bg-slate-800/60">
                       <td [class]="estilos.td" colspan="5">
-                        Semana {{ rangoTexto() }}
+                        Semana {{ rangoDeSemana(s) }}
                         <span class="secundario">
                           {{ s.diasTrabajados }} {{ s.diasTrabajados === 1 ? 'día trabajado' : 'días trabajados' }}
-                          · {{ s.diasFalta }} {{ s.diasFalta === 1 ? 'falta' : 'faltas' }}@if (justificados()) { · {{ justificados() }} {{ justificados() === 1 ? 'justificado' : 'justificados' }}}
+                          · {{ s.diasFalta }} {{ s.diasFalta === 1 ? 'falta' : 'faltas' }}@if (justificadosDe(s)) { · {{ justificadosDe(s) }} {{ justificadosDe(s) === 1 ? 'justificado' : 'justificados' }}}
                         </span>
                       </td>
                       <td [class]="estilos.td + (s.minutosTardanza > 0 ? ' con-tardanza' : '')">{{ s.tardanza }}</td>
@@ -286,6 +298,7 @@ const COLOR_DIA: Record<string, string> = {
                         </span>
                       </td>
                     </tr>
+                    }
                   </tfoot>
                 }
               </table>
@@ -358,35 +371,68 @@ export class AsistenciaReporteComponent {
     return p ? (this.reporte()?.dias ?? []).filter(d => d.idUsuario === p.idUsuario) : [];
   });
 
-  readonly semana = computed<SemanaAgente | null>(() => {
+  /**
+   * Las semanas de la persona en el rango. Con una sola, las tarjetas son las
+   * de esa semana; con varias, suman el período y el pie de la tabla lleva una
+   * fila por semana.
+   */
+  readonly semanas = computed<SemanaAgente[]>(() => {
     const p = this.persona();
-    return p ? (this.reporte()?.semanas ?? []).find(s => s.idUsuario === p.idUsuario) ?? null : null;
+    return p ? (this.reporte()?.semanas ?? []).filter(s => s.idUsuario === p.idUsuario)
+      .sort((a, b) => a.lunes.localeCompare(b.lunes)) : [];
   });
+  readonly variasSemanas = computed(() => this.semanas().length > 1);
 
   readonly rangoTexto = computed(() => {
     const d = this.dias();
     return d.length ? `${this.corta(d[0].fecha)} – ${this.corta(d[d.length - 1].fecha)}` : '';
   });
 
-  /** Los días del rango que tocaba trabajar: el domingo no cuenta en contra. */
-  readonly diasLaborables = computed(() =>
-    this.dias().filter(d => d.estado !== 'NO_LABORABLE').length);
+  /**
+   * Los días de la cinta: de lunes a viernes, y el sábado o el domingo solo si
+   * se trabajó. Un fin de semana vacío no dice nada de la puntualidad.
+   */
+  readonly diasCinta = computed(() => this.dias().filter(d => {
+    const dia = new Date(d.fecha + 'T00:00:00').getDay();
+    return (dia !== 0 && dia !== 6) || !!d.entrada;
+  }));
+  /** Más de una semana: cuadritos sin letra, del mismo alto. */
+  readonly cintaCompacta = computed(() => this.diasCinta().length > 7);
+
+  /** Los días que tocaba trabajar, los puntuales y las faltas: los mismos que se ven en la cinta. */
+  readonly diasLaborables = computed(() => this.diasCinta().filter(d => d.estado !== 'NO_LABORABLE').length);
+  readonly diasPuntuales = computed(() => this.diasCinta().filter(d => estadoVisible(d) === 'PUNTUAL').length);
+  readonly diasFalta = computed(() => this.diasCinta().filter(d => estadoVisible(d) === 'FALTA').length);
 
   readonly puntualidad = computed(() => {
-    const s = this.semana();
     const base = this.diasLaborables();
-    return s && base ? Math.round((s.diasPuntual / base) * 100) : 0;
+    return base ? Math.round((this.diasPuntuales() / base) * 100) : 0;
   });
 
-  readonly minutosTardanza = computed(() => this.semana()?.minutosTardanza ?? 0);
-  readonly minutosTrabajados = computed(() => this.semana()?.minutosTrabajados ?? 0);
-  readonly minutosJornada = computed(() => this.semana()?.minutosJornada ?? 0);
+  private sumar(campo: (s: SemanaAgente) => number): number {
+    return this.semanas().reduce((total, s) => total + (campo(s) ?? 0), 0);
+  }
+  readonly minutosTardanza = computed(() => this.sumar(s => s.minutosTardanza));
+  readonly minutosTrabajados = computed(() => this.sumar(s => s.minutosTrabajados));
+  readonly minutosJornada = computed(() => this.sumar(s => s.minutosJornada));
 
-  readonly pasaTope = computed(() => this.minutosTardanza() > this.TOPE_SEMANA_MIN());
+  /** El tope de la barra: el de la semana, o la suma de los de cada semana del período. */
+  readonly tope = computed(() => this.TOPE_SEMANA_MIN() * Math.max(1, this.semanas().length));
+  readonly pasaTope = computed(() => this.minutosTardanza() > this.tope());
 
   /** La escala llega al doble del tope, así el tope cae justo a la mitad. */
   readonly porcentajeTardanza = computed(() =>
-    Math.min(100, (this.minutosTardanza() / (this.TOPE_SEMANA_MIN() * 2)) * 100));
+    Math.min(100, (this.minutosTardanza() / (this.tope() * 2)) * 100));
+
+  /** El límite es de cada semana: con varias, en cuántas se pasó. */
+  readonly limiteTexto = computed(() => {
+    const semanas = this.semanas();
+    if (semanas.length <= 1) {
+      return semanas.length ? textoLimite(semanas[0]) : '';
+    }
+    const fuera = semanas.filter(s => s.pierdeBono).length;
+    return fuera ? `Fuera del límite en ${fuera} de ${semanas.length} semanas` : 'Dentro del límite';
+  });
 
   readonly porcentajeJornada = computed(() => {
     const jornada = this.minutosJornada();
@@ -408,8 +454,25 @@ export class AsistenciaReporteComponent {
     this.dias().reduce((total, d) => total + (d.excesoBreakMin ?? 0), 0));
   readonly excesoTotal = computed(() => this.excesoAlmuerzo() + this.excesoBreak());
 
-  /** Los días con una ausencia aprobada: el pie de la semana los cuenta aparte. */
-  readonly justificados = computed(() => this.dias().filter(d => d.estado === 'JUSTIFICADO').length);
+  /** Los días de una semana del rango (del lunes al domingo). */
+  private diasDe(s: SemanaAgente): AsistenciaDia[] {
+    const domingo = new Date(s.lunes + 'T00:00:00');
+    domingo.setDate(domingo.getDate() + 6);
+    const hasta = `${domingo.getFullYear()}-${String(domingo.getMonth() + 1).padStart(2, '0')}-${String(domingo.getDate()).padStart(2, '0')}`;
+    return this.dias().filter(d => d.fecha >= s.lunes && d.fecha <= hasta);
+  }
+
+  /** «14/09 – 19/09»: los días de esa semana que caen en el rango (sin el fin de semana que no se trabajó). */
+  rangoDeSemana(s: SemanaAgente): string {
+    const cinta = new Set(this.diasCinta().map(d => d.fecha));
+    const dias = this.diasDe(s).filter(d => cinta.has(d.fecha));
+    return dias.length ? `${this.corta(dias[0].fecha)} – ${this.corta(dias[dias.length - 1].fecha)}` : this.corta(s.lunes);
+  }
+
+  /** Los días con una ausencia aprobada: el pie de cada semana los cuenta aparte. */
+  justificadosDe(s: SemanaAgente): number {
+    return this.diasDe(s).filter(d => d.estado === 'JUSTIFICADO').length;
+  }
 
   constructor() {
     // Vuelve a pedir cuando cambia el ámbito o el rango: son los tres valores

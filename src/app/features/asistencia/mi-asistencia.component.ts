@@ -260,7 +260,8 @@ const ESTILOS = {
                 <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="m9 14.5 2 2 4-4"/></svg>Días registrados</h3>
                 <div class="cifra">{{ diasCompletos() }} de {{ diasCompletos() + diasIncompletos().length }}</div>
                 <div class="banda">
-                  <div class="dias-kpi" role="img" aria-label="Días de la semana; en verde los que tienen todas sus marcaciones">
+                  <div class="dias-kpi" [style.grid-template-columns]="'repeat(' + celdasSemana().length + ', minmax(0, 1fr))'"
+                       role="img" aria-label="Días de la semana; en verde los que tienen todas sus marcaciones">
                     @for (c of celdasSemana(); track c.fecha) {
                       <span [class]="c.clase" [title]="c.titulo">{{ c.letra }}</span>
                     }
@@ -761,8 +762,18 @@ export class MiAsistenciaComponent implements OnInit {
 
   protected readonly piso = Math.floor;
 
-  /** De lunes a sábado: verde completo, ámbar con marcaciones pendientes, rojo falta, gris sin trabajo. */
-  readonly celdasSemana = computed(() => [0, 1, 2, 3, 4, 5].map(i => {
+  /**
+   * De lunes a viernes: verde completo, ámbar con marcaciones pendientes, rojo
+   * falta, gris sin trabajo. El sábado solo si lo trabajó, lo tenía en su
+   * horario o le toca recuperar ese día; el domingo nunca.
+   */
+  private readonly conSabado = computed(() => {
+    const sabado = this.sumarDias(this.lunes(), 5);
+    const d = this.dias().find(x => x.fecha === sabado);
+    return !!d?.entrada || (!!d && d.estado !== 'NO_LABORABLE')
+      || (this.miPlan()?.bloques ?? []).some(b => b.fecha === sabado);
+  });
+  readonly celdasSemana = computed(() => (this.conSabado() ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4]).map(i => {
     const fecha = this.sumarDias(this.lunes(), i);
     const d = this.dias().find(x => x.fecha === fecha);
     const nombre = DIAS_LARGOS[new Date(fecha + 'T00:00:00').getDay()];
