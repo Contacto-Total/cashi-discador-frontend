@@ -11,6 +11,8 @@
  * celular no puede esconder cambiando a «modo PC»: la pantalla táctil sin
  * puntero fino. Y el iPad, que desde iPadOS 13 se presenta como una Mac.
  */
+import { MASCOTA_CSS, mascotaHtml } from './mascota-cashi';
+
 const MOVIL = /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle|BlackBerry|Opera Mini|IEMobile|webOS/i;
 
 export function esDispositivoPermitido(): boolean {
@@ -34,17 +36,15 @@ export function esDispositivoPermitido(): boolean {
   return true;
 }
 
-/** En lugar de la aplicación, el aviso: sin Angular, sin estilos de la app. */
+/** En lugar de la aplicación, el aviso con la mascota de Cashi: sin Angular, sin estilos de la app. */
 export function pintarDispositivoNoPermitido(): void {
   document.title = 'Cashi · Dispositivo no permitido';
   document.body.innerHTML = `
+    <style>${MASCOTA_CSS}</style>
     <main style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
                  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f6f7f9;color:#0f172a">
       <div style="max-width:420px;text-align:center">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#5f6c80" stroke-width="1.6"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;margin:0 auto 14px">
-          <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>
-        </svg>
+        <div style="margin:0 auto 26px">${mascotaHtml('¡Desde el celular no puedo!')}</div>
         <h1 style="margin:0 0 8px;font-size:20px;font-weight:800">Cashi solo se abre desde una computadora</h1>
         <p style="margin:0;font-size:14px;line-height:1.5;color:#5f6c80">
           Por seguridad, el sistema solo funciona en computadoras y laptops.
