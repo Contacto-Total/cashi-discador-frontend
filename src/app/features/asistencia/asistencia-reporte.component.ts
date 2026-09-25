@@ -1,6 +1,5 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
@@ -11,17 +10,7 @@ import {
   SemanaAgente,
   TipoMarcacion
 } from './asistencia.models';
-import { ESTADOS, ESTILOS, textoLimite } from './asistencia.estilos';
-
-/** Las seis marcas, en el orden en que ocurren: el break va después del almuerzo. */
-const MARCAS: { tipo: TipoMarcacion; etiqueta: string; campo: keyof AsistenciaDia }[] = [
-  { tipo: 'ENTRADA', etiqueta: 'Entrada', campo: 'entrada' },
-  { tipo: 'ALMUERZO_INICIO', etiqueta: 'Inicio almuerzo', campo: 'almuerzoInicio' },
-  { tipo: 'ALMUERZO_FIN', etiqueta: 'Fin almuerzo', campo: 'almuerzoFin' },
-  { tipo: 'BREAK_INICIO', etiqueta: 'Inicio break', campo: 'breakInicio' },
-  { tipo: 'BREAK_FIN', etiqueta: 'Fin break', campo: 'breakFin' },
-  { tipo: 'SALIDA', etiqueta: 'Salida', campo: 'salida' }
-];
+import { ESTADOS, ESTILOS, estadoVisible, textoLimite } from './asistencia.estilos';
 
 /** El cuadro de cada día en la cinta: color pleno, el mismo de los gráficos. */
 const COLOR_DIA: Record<string, string> = {
@@ -45,15 +34,15 @@ const COLOR_DIA: Record<string, string> = {
  * para el resumen. El campo de agente busca y elige a la vez, y las flechas
  * caminan el roster.
  *
- * Una celda vacía significa que NO hay marca, y se completa desde el modal de
- * corrección, que exige un motivo. Una celda con punto ámbar es una marca
+ * Una raya gris significa que NO hay marca; se completa en «Corregir
+ * marcaciones», que exige un motivo. Una celda con punto ámbar es una marca
  * escrita a mano: la hoja actual no distingue lo uno de lo otro más que por el
  * color, y no guarda quién la escribió.
  */
 @Component({
   selector: 'app-asistencia-reporte',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule],
   styles: [`
     :host { display: block; }
     .aparecer { animation: aparecer .18s ease-out }
@@ -71,11 +60,14 @@ const COLOR_DIA: Record<string, string> = {
     :host-context(.dark) .barra-tope { background: #1e293b }
     :host-context(.dark) .barra-tope::before { background: #e2e8f0 }
     /* La marca escrita a mano: el amarillo de la hoja, dicho con un punto. */
-    .manual { position: relative; padding-right: 14px }
+    .manual { position: relative; padding-right: 16px }
     .manual::after {
-      content: ""; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      content: ""; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
       width: 6px; height: 6px; border-radius: 999px; background: #d97706;
     }
+    /* La raya de «sin marca», en gris: no es un dato. */
+    .sin-marca { color: #8491a3 }
+    :host-context(.dark) .sin-marca { color: #64748b }
   `],
   template: `
     <div class="px-7 py-5">
@@ -101,7 +93,7 @@ const COLOR_DIA: Record<string, string> = {
             <!-- Quién se está viendo y por dónde va del roster -->
             <div class="mb-3 flex flex-wrap items-center justify-between gap-3 px-0.5">
               <div>
-                <h2 class="!m-0 flex flex-wrap items-center gap-[9px] text-xl font-extrabold tracking-[-0.01em]">
+                <h2 class="!m-0 flex flex-wrap items-center gap-[9px] text-[20px] font-extrabold tracking-[-0.01em]">
                   {{ p.nombreAgente }}
                   @if (p.rol) {
                     <span [class]="p.rol === 'Supervisor' ? estilos.rolSupervisor : estilos.rolAsesor">
@@ -130,19 +122,19 @@ const COLOR_DIA: Record<string, string> = {
             <div class="mb-3.5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
               <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-2.5">
+                <div class="mb-2 flex items-center gap-[9px]">
                   <span [class]="estilos.icono">
-                    <lucide-angular name="calendar-days" [size]="15" class="block"></lucide-angular>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/></svg>
                   </span>
                   <h3 [class]="estilos.rotulo">Puntualidad</h3>
                 </div>
                 <div [class]="estilos.cifra">{{ puntualidad() }}<small [class]="estilos.unidad">%</small></div>
                 <div [class]="estilos.banda">
-                  <div class="flex w-full gap-1.5">
+                  <div class="flex w-full gap-[5px]">
                     @for (d of dias(); track d.fecha) {
                       <span class="flex h-[26px] flex-1 items-center justify-center rounded-md text-[11px] font-bold text-white"
-                            [class]="COLOR_DIA[d.estado]"
-                            [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[d.estado].texto)">
+                            [class]="COLOR_DIA[estadoVisible(d)]"
+                            [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[estadoVisible(d)].texto)">
                         {{ d.nombreDia.slice(0, 2) }}
                       </span>
                     }
@@ -156,9 +148,9 @@ const COLOR_DIA: Record<string, string> = {
               </div>
 
               <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-2.5">
+                <div class="mb-2 flex items-center gap-[9px]">
                   <span [class]="estilos.icono">
-                    <lucide-angular name="clock" [size]="15" class="block"></lucide-angular>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
                   </span>
                   <h3 [class]="estilos.rotulo">Tardanza de la semana</h3>
                 </div>
@@ -171,18 +163,18 @@ const COLOR_DIA: Record<string, string> = {
                          [style.--valor]="porcentajeTardanza() + '%'"
                          [style.--color]="pasaTope() ? '#dc2626' : '#16a34a'"
                          [attr.aria-label]="'Tardanza ' + enDuracion(minutosTardanza()) + ', tope ' + enDuracion(TOPE_SEMANA_MIN())"></div>
-                    <span class="absolute left-1/2 top-[18px] -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-[#5f6c80] dark:text-slate-400">
+                    <span class="absolute left-1/2 top-[20px] -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-[#5f6c80] dark:text-slate-400">
                       tope {{ enDuracion(TOPE_SEMANA_MIN()) }}
                     </span>
                   </div>
                 </div>
-                <p [class]="estilos.pie">{{ semana()?.pierdeBono ? 'Pierde el bono' : 'Mantiene el bono' }}</p>
+                <p [class]="estilos.pie">{{ semana() ? textoLimite(semana()!) : '' }}</p>
               </div>
 
               <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-2.5">
+                <div class="mb-2 flex items-center gap-[9px]">
                   <span [class]="estilos.icono">
-                    <lucide-angular name="bar-chart-2" [size]="15" class="block"></lucide-angular>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><rect x="5" y="11" width="3.5" height="6" rx="1"/><rect x="10.2" y="7" width="3.5" height="10" rx="1"/><rect x="15.4" y="4" width="3.5" height="13" rx="1"/></svg>
                   </span>
                   <h3 [class]="estilos.rotulo">Horas trabajadas</h3>
                 </div>
@@ -201,9 +193,9 @@ const COLOR_DIA: Record<string, string> = {
               </div>
 
               <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-2.5">
+                <div class="mb-2 flex items-center gap-[9px]">
                   <span [class]="estilos.icono">
-                    <lucide-angular name="coffee" [size]="15" class="block"></lucide-angular>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h13v4.5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8.5z"/><path d="M17 10h1.5a2 2 0 0 1 0 4H17"/><path d="M7 3v2.5M11 3v2.5"/></svg>
                   </span>
                   <h3 [class]="estilos.rotulo">Exceso de pausas</h3>
                 </div>
@@ -211,14 +203,14 @@ const COLOR_DIA: Record<string, string> = {
                   {{ excesoTotal() > 0 ? '+' + excesoTotal() : '0' }}<small [class]="estilos.unidad">min</small>
                 </div>
                 <div [class]="estilos.banda + ' h-auto min-h-[26px]'">
-                  <div class="flex w-full flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                  <div class="mb-1 mt-2.5 flex w-full flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
                     <span class="inline-flex items-center gap-[5px]">
-                      <lucide-angular name="utensils" [size]="13" class="block text-[#8491a3]"></lucide-angular>
-                      Almuerzo <strong class="tabular-nums text-[#0f172a] dark:text-slate-100">+{{ excesoAlmuerzo() }}</strong>
+                      <svg width="15" height="15" class="shrink-0 text-[#8491a3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v6a2.5 2.5 0 0 0 5 0V3"/><path d="M7.5 9v12"/><path d="M17.5 3c-1.4 1.8-2 3.6-2 5.6 0 1.6.7 2.4 2 2.4h1V3z"/><path d="M18.5 11v10"/></svg>
+                      Almuerzo <strong class="tabular-nums !text-[#0f172a] dark:!text-slate-100">+{{ excesoAlmuerzo() }}</strong>
                     </span>
                     <span class="inline-flex items-center gap-[5px]">
-                      <lucide-angular name="coffee" [size]="13" class="block text-[#8491a3]"></lucide-angular>
-                      Break <strong class="tabular-nums text-[#0f172a] dark:text-slate-100">+{{ excesoBreak() }}</strong>
+                      <svg width="15" height="15" class="shrink-0 text-[#8491a3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h13v4.5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8.5z"/><path d="M17 10h1.5a2 2 0 0 1 0 4H17"/><path d="M7 3v2.5M11 3v2.5"/></svg>
+                      Break <strong class="tabular-nums !text-[#0f172a] dark:!text-slate-100">+{{ excesoBreak() }}</strong>
                     </span>
                   </div>
                 </div>
@@ -238,69 +230,55 @@ const COLOR_DIA: Record<string, string> = {
                     <th scope="col" [class]="estilos.th">Break</th>
                     <th scope="col" [class]="estilos.th">Salida</th>
                     <th scope="col" [class]="estilos.th">Tardanza</th>
-                    <th scope="col" [class]="estilos.th">Mañana</th>
-                    <th scope="col" [class]="estilos.th">Tarde</th>
-                    <th scope="col" [class]="estilos.th">Trabajadas</th>
+                    <th scope="col" [class]="estilos.th">Horas mañana</th>
+                    <th scope="col" [class]="estilos.th">Horas tarde</th>
+                    <th scope="col" [class]="estilos.th">Horas trabajadas</th>
                     <th scope="col" [class]="estilos.th">Estado</th>
-                    <th scope="col" [class]="estilos.th"><span class="sr-only">Corregir</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (dia of dias(); track dia.fecha) {
                     <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#fafbfc] dark:border-slate-800 dark:hover:bg-slate-800/40">
                       <td [class]="estilos.td">
-                        <span class="font-semibold">{{ dia.fecha | date: 'dd/MM' }}</span>
-                        <span class="ml-1.5 text-[#8491a3] dark:text-slate-500">{{ dia.nombreDia.slice(0, 3) }}</span>
+                        <strong>{{ dia.fecha | date: 'dd/MM' }}</strong><span class="ml-[5px] text-[#8491a3] dark:text-slate-500">{{ dia.nombreDia.slice(0, 3) }}</span>
                       </td>
-                      <td [class]="estilos.td">
-                        <span [class.manual]="esManual(dia, 'ENTRADA')">{{ dia.entrada ?? '—' }}</span>
-                      </td>
-                      <td [class]="estilos.td">{{ rango(dia.almuerzoInicio, dia.almuerzoFin) }}</td>
-                      <td [class]="estilos.td">{{ rango(dia.breakInicio, dia.breakFin) }}</td>
-                      <td [class]="estilos.td">
-                        <span [class.manual]="esManual(dia, 'SALIDA')">{{ dia.salida ?? '—' }}</span>
-                      </td>
+                      <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.entrada, manual: esManual(dia, 'ENTRADA') }" /></td>
+                      <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.almuerzoInicio, manual: esManual(dia, 'ALMUERZO_INICIO') }" /> – <ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.almuerzoFin, manual: esManual(dia, 'ALMUERZO_FIN') }" /></td>
+                      <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.breakInicio, manual: esManual(dia, 'BREAK_INICIO') }" /> – <ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.breakFin, manual: esManual(dia, 'BREAK_FIN') }" /></td>
+                      <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.salida, manual: esManual(dia, 'SALIDA') }" /></td>
                       <td [class]="estilos.td + ((dia.minutosTardanza ?? 0) > 0 ? ' con-tardanza' : '')">
-                        {{ dia.tardanza ?? '—' }}
+                        @if (dia.tardanza) { {{ dia.tardanza }} } @else { <span class="sin-marca">—</span> }
                       </td>
-                      <td [class]="estilos.td">{{ dia.horasManana ?? '—' }}</td>
-                      <td [class]="estilos.td">{{ dia.horasTarde ?? '—' }}</td>
-                      <td [class]="estilos.td + ' font-bold'">{{ dia.horasTrabajadas ?? '—' }}</td>
+                      <td [class]="estilos.td">@if (dia.horasManana) { {{ dia.horasManana }} } @else { <span class="sin-marca">—</span> }</td>
+                      <td [class]="estilos.td">@if (dia.horasTarde) { {{ dia.horasTarde }} } @else { <span class="sin-marca">—</span> }</td>
+                      <td [class]="estilos.td + ' font-bold'">@if (dia.horasTrabajadas) { {{ dia.horasTrabajadas }} } @else { <span class="sin-marca">—</span> }</td>
                       <td [class]="estilos.td">
-                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold"
-                              [class]="ESTADOS[dia.estado].clase">{{ dia.tipoDia ?? ESTADOS[dia.estado].texto }}</span>
-                      </td>
-                      <td [class]="estilos.td + ' text-right'">
-                        @if (dia.estado !== 'NO_LABORABLE' && dia.estado !== 'JUSTIFICADO') {
-                          <button type="button" [class]="estilos.botonIcono" (click)="abrirPanel(dia)"
-                                  [attr.aria-label]="'Corregir las horas del ' + dia.fecha" title="Corregir">
-                            <lucide-angular name="pencil" [size]="13" class="block"></lucide-angular>
-                          </button>
-                        }
+                        <span class="inline-flex items-center rounded-full px-[9px] py-0.5 text-[11.5px] font-bold"
+                              [class]="ESTADOS[estadoVisible(dia)].clase">{{ dia.tipoDia ?? ESTADOS[estadoVisible(dia)].texto }}</span>
                       </td>
                     </tr>
                   }
                 </tbody>
+                <ng-template #hora let-valor let-manual="manual">@if (valor) {<span [class.manual]="manual" [attr.title]="manual ? 'Completada a mano' : null">{{ valor }}</span>} @else {<span class="sin-marca">—</span>}</ng-template>
                 <!-- El corte semanal cierra la tabla: es donde se mira, y evita una pestaña aparte. -->
                 @if (semana(); as s) {
                   <tfoot>
                     <tr class="border-t border-[#e6e9ee] bg-[#f4f6f9] font-bold dark:border-slate-800 dark:bg-slate-800/60">
                       <td [class]="estilos.td" colspan="5">
                         Semana {{ rangoTexto() }}
-                        <span class="ml-2 text-[11.5px] font-normal text-[#5f6c80] dark:text-slate-400">
+                        <span class="secundario">
                           {{ s.diasTrabajados }} {{ s.diasTrabajados === 1 ? 'día trabajado' : 'días trabajados' }}
-                          · {{ s.diasFalta }} {{ s.diasFalta === 1 ? 'falta' : 'faltas' }}
+                          · {{ s.diasFalta }} {{ s.diasFalta === 1 ? 'falta' : 'faltas' }}@if (justificados()) { · {{ justificados() }} {{ justificados() === 1 ? 'justificado' : 'justificados' }}}
                         </span>
                       </td>
                       <td [class]="estilos.td + (s.minutosTardanza > 0 ? ' con-tardanza' : '')">{{ s.tardanza }}</td>
-                      <td [class]="estilos.td">—</td>
-                      <td [class]="estilos.td">—</td>
+                      <td [class]="estilos.td"><span class="sin-marca">—</span></td>
+                      <td [class]="estilos.td"><span class="sin-marca">—</span></td>
                       <td [class]="estilos.td">
-                        {{ s.horasTrabajadas }}
-                        <span class="text-[11.5px] font-normal text-[#5f6c80] dark:text-slate-400">de {{ s.jornada }}</span>
+                        {{ s.horasTrabajadas }} <span class="secundario">de {{ s.jornada }}</span>
                       </td>
-                      <td [class]="estilos.td" colspan="2">
-                        <span class="inline-flex items-center gap-1.5 text-[11.5px] font-bold"
+                      <td [class]="estilos.td">
+                        <span class="inline-flex items-center gap-[7px] font-semibold"
                               [class]="s.pierdeBono ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#166534] dark:text-green-300'">
                           <span class="h-2 w-2 rounded-full"
                                 [class]="s.pierdeBono ? 'bg-[#dc2626]' : 'bg-[#16a34a]'"></span>
@@ -315,65 +293,6 @@ const COLOR_DIA: Record<string, string> = {
           </div>
         }
 
-      <!-- Corrección de un día. Modal y no panel lateral: es un formulario corto
-           que se rellena de una vez. -->
-      @if (panel(); as dia) {
-        <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarPanel()"></div>
-        <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,480px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-               role="dialog" aria-modal="true" aria-labelledby="titulo-correccion">
-            <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-              <div>
-                <h2 id="titulo-correccion" class="!m-0 text-[15px] font-extrabold">Motivo de la corrección</h2>
-                <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                  {{ dia.nombreAgente }} · {{ dia.fecha | date: 'dd/MM/yyyy' }}
-                </p>
-              </div>
-              <button type="button" [class]="estilos.botonIcono" (click)="cerrarPanel()" aria-label="Cerrar">
-                <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
-              </button>
-            </header>
-
-            <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-              @for (m of MARCAS; track m.tipo) {
-                <div class="flex flex-col gap-1.5">
-                  <label [class]="estilos.etiqueta" [for]="'marca-' + m.tipo">
-                    {{ m.etiqueta }}
-                    @if (!valorDe(dia, m.campo)) {
-                      <span class="ml-1.5 font-normal normal-case tracking-normal text-[#b91c1c]">sin marcación</span>
-                    } @else if (esManual(dia, m.tipo)) {
-                      <span class="ml-1.5 font-normal normal-case tracking-normal text-[#d97706]">completada a mano</span>
-                    }
-                  </label>
-                  <input [id]="'marca-' + m.tipo" type="time" [class]="estilos.campo"
-                         [ngModel]="edicion()[m.tipo] ?? valorDe(dia, m.campo)"
-                         (ngModelChange)="editar(m.tipo, $event)">
-                </div>
-              }
-
-              <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="motivo-correccion">Qué pasó</label>
-                <textarea id="motivo-correccion" rows="2"
-                          class="w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] py-2 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100"
-                          placeholder="Ej.: olvidó marcar el regreso del almuerzo"
-                          [ngModel]="motivo()" (ngModelChange)="alEscribirMotivo($event)"></textarea>
-                @if (errorMotivo()) {
-                  <p class="!m-0 text-xs text-[#b91c1c]">{{ errorMotivo() }}</p>
-                }
-              </div>
-            </div>
-
-            <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-              <button type="button" [class]="estilos.botonSecundario" (click)="cerrarPanel()">Cancelar</button>
-              <button type="button" [class]="estilos.botonPrimario" (click)="guardar()"
-                      [disabled]="guardando() || !hayCambios()">
-                <lucide-angular name="save" [size]="15" class="block"></lucide-angular>
-                {{ guardando() ? 'Guardando…' : 'Aceptar' }}
-              </button>
-            </footer>
-          </div>
-        </div>
-      }
     </div>
   `
 })
@@ -384,7 +303,7 @@ export class AsistenciaReporteComponent {
   protected readonly estilos = ESTILOS;
   protected readonly ESTADOS = ESTADOS;
   protected readonly COLOR_DIA = COLOR_DIA;
-  protected readonly MARCAS = MARCAS;
+  protected readonly estadoVisible = estadoVisible;
 
   /**
    * El tope semanal de tardanza, tal como vino en el reporte: es por
@@ -408,12 +327,6 @@ export class AsistenciaReporteComponent {
   /** Lo que eligieron las flechas; manda sobre lo escrito en la cabecera. */
   readonly agenteElegido = signal('');
   readonly cargando = signal(false);
-  readonly guardando = signal(false);
-
-  readonly panel = signal<AsistenciaDia | null>(null);
-  readonly edicion = signal<Partial<Record<TipoMarcacion, string>>>({});
-  readonly motivo = signal('');
-  readonly errorMotivo = signal('');
 
   /** El roster del reporte: por donde caminan las flechas. */
   readonly roster = computed<ResumenAgente[]>(() => this.reporte()?.agentes ?? []);
@@ -495,6 +408,9 @@ export class AsistenciaReporteComponent {
     this.dias().reduce((total, d) => total + (d.excesoBreakMin ?? 0), 0));
   readonly excesoTotal = computed(() => this.excesoAlmuerzo() + this.excesoBreak());
 
+  /** Los días con una ausencia aprobada: el pie de la semana los cuenta aparte. */
+  readonly justificados = computed(() => this.dias().filter(d => d.estado === 'JUSTIFICADO').length);
+
   constructor() {
     // Vuelve a pedir cuando cambia el ámbito o el rango: son los tres valores
     // que definen la consulta y no hay más de donde venga el cambio. Cambiar de
@@ -509,13 +425,6 @@ export class AsistenciaReporteComponent {
       }
       this.pedir(desde, hasta, ambito);
     });
-  }
-
-  cargar(): void {
-    const ambito = this.idSubcartera();
-    if (ambito) {
-      this.pedir(this.desde(), this.hasta(), ambito);
-    }
   }
 
   private pedir(desde: string, hasta: string, idSubcartera: number): void {
@@ -543,110 +452,10 @@ export class AsistenciaReporteComponent {
   }
 
 
-  // ==================== CORRECCIÓN ====================
-
-  abrirPanel(dia: AsistenciaDia): void {
-    this.panel.set(dia);
-    this.edicion.set({});
-    this.motivo.set('');
-    this.errorMotivo.set('');
-  }
-
-  cerrarPanel(): void {
-    this.panel.set(null);
-  }
-
-  editar(tipo: TipoMarcacion, valor: string): void {
-    this.edicion.update(actual => ({ ...actual, [tipo]: valor }));
-  }
-
-  alEscribirMotivo(texto: string): void {
-    this.motivo.set(texto);
-    this.errorMotivo.set('');
-  }
-
-  hayCambios(): boolean {
-    const dia = this.panel();
-    if (!dia) {
-      return false;
-    }
-    return MARCAS.some(m => {
-      const nuevo = this.edicion()[m.tipo];
-      return nuevo != null && nuevo !== '' && nuevo !== this.valorDe(dia, m.campo);
-    });
-  }
-
-  /**
-   * Manda una corrección por cada marca cambiada. Van de una en una porque cada
-   * marcación es una fila propia en el backend, con su origen y su motivo.
-   */
-  guardar(): void {
-    const dia = this.panel();
-    if (!dia) {
-      return;
-    }
-    if (!this.motivo().trim()) {
-      this.errorMotivo.set('Escribe por qué se corrige: queda en la auditoría');
-      return;
-    }
-
-    const cambios = MARCAS
-      .filter(m => {
-        const nuevo = this.edicion()[m.tipo];
-        return nuevo != null && nuevo !== '' && nuevo !== this.valorDe(dia, m.campo);
-      })
-      .map(m => ({
-        idUsuario: dia.idUsuario,
-        fecha: dia.fecha,
-        tipo: m.tipo,
-        hora: this.conSegundos(this.edicion()[m.tipo]!),
-        motivo: this.motivo().trim()
-      }));
-
-    this.guardando.set(true);
-    let pendientes = cambios.length;
-    let fallo = false;
-
-    cambios.forEach(cambio => {
-      this.servicio.completarMarcacion(cambio).subscribe({
-        next: () => this.alTerminar(--pendientes, fallo),
-        error: () => {
-          fallo = true;
-          this.alTerminar(--pendientes, fallo);
-        }
-      });
-    });
-  }
-
-  private alTerminar(pendientes: number, fallo: boolean): void {
-    if (pendientes > 0) {
-      return;
-    }
-    this.guardando.set(false);
-    if (fallo) {
-      this.toast.error('Alguna corrección no se pudo guardar');
-    } else {
-      this.toast.success('Marcaciones corregidas');
-      this.cerrarPanel();
-      this.cargar();
-    }
-  }
-
   // ==================== PRESENTACIÓN ====================
-
-  rango(inicio: string | null, fin: string | null): string {
-    if (!inicio && !fin) {
-      return '—';
-    }
-    return `${inicio ?? '—'} – ${fin ?? '—'}`;
-  }
 
   esManual(dia: AsistenciaDia, tipo: TipoMarcacion): boolean {
     return (dia.marcasManuales ?? []).includes(tipo);
-  }
-
-  valorDe(dia: AsistenciaDia, campo: keyof AsistenciaDia): string {
-    return (dia[campo] as string | null) ?? '';
   }
 
   textoLimite(s: SemanaAgente): string {
@@ -676,10 +485,5 @@ export class AsistenciaReporteComponent {
   private corta(fecha: string): string {
     const [, mes, dia] = fecha.split('-');
     return `${dia}/${mes}`;
-  }
-
-  /** El input de tipo time devuelve HH:mm cuando los segundos son cero. */
-  private conSegundos(hora: string): string {
-    return hora.length === 5 ? `${hora}:00` : hora;
   }
 }

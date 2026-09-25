@@ -183,6 +183,8 @@ export interface Justificacion {
   resueltaPor: string | null;
   resueltaEn: string | null;
   motivoResolucion: string | null;
+  /** Alguno de sus días es de una semana cerrada: ya no se revisa ni se aprueba. */
+  semanaCerrada?: boolean | null;
 }
 
 // ==================== CALENDARIO ====================
@@ -281,6 +283,8 @@ export interface AgenteCerrado {
   /** Lo que cambió después del cierre. 0 = nada que compensar. */
   ajusteTardanzaMin: number;
   ajusteTrabajadasMin: number;
+  /** Lo que devolvió esa semana de sus horas por recuperar. */
+  minutosRecuperados?: number | null;
 }
 
 export interface CierreSemana {
@@ -300,17 +304,29 @@ export interface CierreSemana {
 
 // ==================== AUDITORÍA Y DASHBOARD ====================
 
-export interface CorreccionMarcacion {
-  id: number;
-  cuando: string;
-  idUsuario: number;
-  nombreAgente: string | null;
+/**
+ * Una fila de la Auditoría: cualquier cambio del módulo —marca, recuperación,
+ * solicitud, regla, feriado o cierre— con su valor anterior, el nuevo, el
+ * motivo y quién lo hizo.
+ */
+export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE';
+
+export interface CambioAsistencia {
+  /** «M-12» para una marca corregida, «A-7» para el resto. */
+  id: string;
   fecha: string;
-  marca: string;
-  antes: string | null;
-  despues: string | null;
+  tipo: TipoCambio;
+  /** El asesor. NULL si el cambio es de un ámbito. */
+  idUsuario: number | null;
+  asesor: string | null;
+  /** «CASTIGO», «Toda la empresa». Solo en los cambios de un ámbito. */
+  ambito: string | null;
+  detalle: string;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
   motivo: string | null;
-  corrigio: string | null;
+  /** Quién lo hizo; «Automático» si lo hizo el sistema. */
+  usuario: string;
 }
 
 export interface PuntoDia {
@@ -400,12 +416,105 @@ export interface PoliticaAsistencia {
   avisoPrevioMin: number;
   vigenteDesde?: string;
   vigenteHasta?: string | null;
-  motivo: string;
+  /** Opcional: en la Auditoría queda desde cuándo rige. */
+  motivo?: string | null;
   /** TRUE si la que se ve es la de la empresa y no la de esta subcartera. */
   heredada?: boolean;
+  /** La que ya se cambió y rige desde el lunes; NULL si no hay ninguna esperando. */
+  programada?: PoliticaAsistencia | null;
 }
 
 // ==================== RECUPERACIONES ====================
+
+/**
+ * La pestaña Horario: la semana de una subcartera como calendario. Las horas
+ * llegan como «18:30:00».
+ */
+export type EstadoSemanaPlan = 'CERRADA' | 'POR_CERRAR' | 'EN_CURSO' | 'PROXIMA' | 'PLANIFICADA';
+
+export interface PlanSemana {
+  lunes: string;
+  sabado: string;
+  estadoSemana: EstadoSemanaPlan;
+  asesores: number;
+  minutosSemana: number;
+  dias: DiaPlan[];
+  ausencias: AusenciaPlan[];
+  /** Las de la semana, también las de días pasados con lo que de verdad se quedó. */
+  bloques: BloquePlan[];
+  /** Todas las de hoy en adelante de la gente del ámbito: el plan que se confirma entero. */
+  futuros: BloquePlan[];
+  deudas: DeudaPlan[];
+}
+
+/** Un día del equipo. `abierto` = sábado sin horario fijo; `noLaborable` = feriado o sin asignación. */
+export interface DiaPlan {
+  fecha: string;
+  entrada: string;
+  salida: string;
+  abierto: boolean;
+  noLaborable: string | null;
+  horaAlmuerzo: string | null;
+  minutosAlmuerzo: number | null;
+  horaBreak: string | null;
+  minutosBreak: number | null;
+}
+
+export interface AusenciaPlan {
+  idUsuario: number;
+  nombre: string;
+  tipo: string;
+  desde: string;
+  hasta: string;
+  porAprobar: boolean;
+}
+
+/** Una recuperación de un día: sale `minutos` después de su `salida` fija. */
+export interface BloquePlan {
+  id: number | null;
+  idUsuario: number;
+  nombre: string;
+  fecha: string;
+  minutos: number;
+  salida: string;
+  confirmado: boolean;
+  /** Lo que de verdad se quedó, en los días que ya pasaron. */
+  hecho: number | null;
+}
+
+export interface DeudaPlan {
+  idUsuario: number;
+  nombre: string;
+  origen: string;
+  total: number;
+  recuperado: number;
+  vence: string;
+}
+
+export interface ValidacionPlan {
+  motivo: string | null;
+  salida: string | null;
+}
+
+/** Lo del propio asesor: su plan de recuperación y las pausas de su horario. */
+export interface MiPlan {
+  /** «Permiso del 15/09»; NULL si no debe horas. */
+  origen: string | null;
+  total: number;
+  recuperado: number;
+  vence: string | null;
+  bloques: BloquePlan[];
+  horaAlmuerzo: string | null;
+  minutosAlmuerzo: number | null;
+  horaBreak: string | null;
+  minutosBreak: number | null;
+}
+
+export interface PropuestaPlan {
+  bloques: BloquePlan[];
+  falta: number;
+  mensaje: string;
+}
 
 /**
  * Horas que alguien debe por un día recuperable.
@@ -492,6 +601,37 @@ export interface Horario {
   subcartera?: string | null;
   persona?: string | null;
   registradoPor?: string | null;
+}
+
+/** Un día del horario base: entrada, salida y la jornada sin el almuerzo. */
+export interface DiaBase {
+  /** 1 = lunes … 5 = viernes. */
+  diaSemana: number;
+  nombre: string;
+  entrada: string;
+  salida: string;
+  minutosJornada: number;
+}
+
+/**
+ * El horario base de un ámbito (null = la empresa): de lunes a viernes; el
+ * sábado no tiene horario fijo. Un cambio rige desde el lunes siguiente y,
+ * mientras no llega, viene en `programado`.
+ */
+export interface HorarioBase {
+  idSubcartera: number | null;
+  /** La subcartera no tiene horario propio y usa el de la empresa. */
+  heredado: boolean;
+  dias: DiaBase[];
+  minutosSemana: number;
+  programado: { desde: string; dias: DiaBase[]; minutosSemana: number; motivo: string | null } | null;
+}
+
+/** Lo que se manda al cambiarlo: los cinco días y el motivo, que es obligatorio. */
+export interface CambioHorarioBase {
+  idSubcartera: number | null;
+  dias: { diaSemana: number; entrada: string; salida: string }[];
+  motivo: string;
 }
 
 /** Lo que se manda al completar una marca a mano. El motivo es obligatorio. */
