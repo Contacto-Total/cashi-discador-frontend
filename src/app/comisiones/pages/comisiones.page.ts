@@ -1,1629 +1,334 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
-import { FormatService } from '@/shared/services/format.service';
-import { AppNumberPipe } from '@/shared/pipes/format.pipes';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AppDateTimePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
-import {
-  ComisionMeta,
-  ComisionMetaEscala,
-  ComisionBono,
-  ComisionBonoEscala,
-  ComisionReporte,
-  ComisionAgente,
-  Inquilino,
-  Cartera,
-  Subcartera
-} from '../models/comision.model';
+import { EstadoPeriodo, PeriodoComision, ReportePeriodo } from '../models/comision.model';
+import { ESTADO_INFO, METRICA_INFO, mensajeError, nombreMes } from '../comisiones.util';
+import { CmxIconComponent } from '../components/cmx-icon.component';
+import { CrearPeriodoPanelComponent } from '../components/crear-periodo-panel.component';
+import { PeriodoDetalleComponent } from '../components/periodo-detalle.component';
+import { BaseAjusteComponent } from '../components/base-ajuste.component';
 
+type Seccion = 'periodos' | 'base-ajuste';
+
+/**
+ * Módulo de comisiones (solo administradores).
+ * Un período por subcartera y mes: meta interna del reporte de producción, tramos, roles que
+ * comisionan, cálculo sobre pagos conciliados, revisión y cierre.
+ * Mes, período abierto y sección viven en la URL para poder enlazarlos.
+ */
 @Component({
   selector: 'app-comisiones',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppNumberPipe],
+  imports: [
+    AppNumberPipe,
+    AppDateTimePipe,
+    CmxIconComponent,
+    CrearPeriodoPanelComponent,
+    PeriodoDetalleComponent,
+    BaseAjusteComponent
+  ],
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './comisiones.page.css',
   template: `
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
-      <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">
-          Comisiones
-        </h1>
-        <p class="text-slate-600 dark:text-slate-400">
-          Configuración de metas, bonos y cálculo de comisiones por agente
-        </p>
-      </div>
-
-      <!-- Tabs -->
-      <div class="mb-6">
-        <div class="border-b border-slate-200 dark:border-slate-700">
-          <nav class="-mb-px flex space-x-8">
-            <button
-              (click)="activeTab.set('metas')"
-              [class]="activeTab() === 'metas'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-              </svg>
-              Metas
-            </button>
-            <button
-              (click)="activeTab.set('bonos'); cargarBonos()"
-              [class]="activeTab() === 'bonos'
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Bonos
-            </button>
-            <button
-              (click)="activeTab.set('reporte')"
-              [class]="activeTab() === 'reporte'
-                ? 'border-purple-500 text-purple-600 dark:text-purple-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              Reporte
-            </button>
-            <button
-              (click)="activeTab.set('baseAjuste'); cargarEstadisticasBaseAjuste()"
-              [class]="activeTab() === 'baseAjuste'
-                ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              Base de Ajuste
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      <!-- ==================== TAB: METAS ==================== -->
-      @if (activeTab() === 'metas') {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-          <!-- Selector de período -->
-          <div class="flex flex-wrap gap-4 items-end mb-6">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año</label>
-              <select [(ngModel)]="filtroAnio" (change)="cargarMetas()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (a of aniosDisponibles; track a) {
-                  <option [value]="a">{{ a }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes</label>
-              <select [(ngModel)]="filtroMes" (change)="cargarMetas()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (m of mesesDisponibles; track m.value) {
-                  <option [value]="m.value">{{ m.label }}</option>
-                }
-              </select>
-            </div>
-            <button (click)="nuevaMeta()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-              </svg>
-              Nueva Meta
-            </button>
+    <div class="cmx">
+      <div class="cmx-wrap">
+        <!-- ============ CABECERA ============ -->
+        <header class="flex flex-wrap items-end gap-x-10 gap-y-6 mb-10">
+          <div class="flex-1 min-w-[18rem] cmx-enter">
+            <span class="cmx-eyebrow">Administración</span>
+            <h1 class="cmx-title mt-4">Comisiones</h1>
+            <p class="cmx-soft-text mt-3 max-w-[60ch] text-[0.95rem]">
+              Metas del reporte de producción, pagos conciliados y la tabla de tramos de cada subcartera,
+              con el sustento de cada monto.
+            </p>
           </div>
 
-          <!-- Formulario de meta -->
-          @if (mostrarFormMeta()) {
-            <div class="mb-6 p-4 border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-                {{ metaEditando()?.id ? 'Editar Meta' : 'Nueva Meta' }}
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
-                  <select [(ngModel)]="selectedInquilino" (change)="onInquilinoChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                    <option [value]="0">Seleccionar...</option>
-                    @for (inq of inquilinos(); track inq.id) {
-                      <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
-                  <select [(ngModel)]="selectedCartera" (change)="onCarteraChange()" [disabled]="!selectedInquilino" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                    <option [value]="0">Seleccionar...</option>
-                    @for (car of carteras(); track car.id) {
-                      <option [value]="car.id">{{ car.nombreCartera }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
-                  <select [(ngModel)]="metaEditando()!.idSubcartera" (change)="onSubcarteraChange()" [disabled]="!selectedCartera" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                    <option [value]="0">Seleccionar...</option>
-                    @for (sub of subcarteras(); track sub.id) {
-                      <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Meta Grupal (S/)</label>
-                  <input type="number" [(ngModel)]="metaEditando()!.metaGrupal" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="0.00">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Metrica</label>
-                  <select [(ngModel)]="metaEditando()!.tipoMetrica" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                    @for (tipo of tiposMetrica; track tipo.value) {
-                      <option [value]="tipo.value">{{ tipo.label }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-
-              <!-- Escalas de comisión -->
-              <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Escalas de Comisión (por % de cumplimiento)
-                  </label>
-                  <button (click)="agregarEscalaMeta()" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Agregar escala
-                  </button>
-                </div>
-                <div class="space-y-2">
-                  @for (escala of metaEditando()!.escalas; track $index; let i = $index) {
-                    <div class="flex gap-2 items-center flex-wrap">
-                      <span class="text-slate-500 text-sm">Desde</span>
-                      <input type="number" [(ngModel)]="escala.porcentajeDesde" class="w-20 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm" placeholder="0">
-                      <span class="text-slate-500 text-sm">% hasta</span>
-                      <input type="number" [(ngModel)]="escala.porcentajeHasta" class="w-20 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm" placeholder="100">
-                      <span class="text-slate-500 text-sm">% =</span>
-                      <span class="text-slate-500 text-sm">S/</span>
-                      <input type="number" step="0.01" [(ngModel)]="escala.montoComision" class="w-24 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm" placeholder="0.00">
-                      <button (click)="eliminarEscalaMeta(i)" class="text-red-500 hover:text-red-700 p-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                      </button>
-                    </div>
-                  }
-                  @if (metaEditando()!.escalas.length === 0) {
-                    <p class="text-sm text-slate-400 italic">No hay escalas configuradas. Agrega al menos una escala.</p>
-                  }
-                </div>
-              </div>
-
-              <div class="flex gap-2">
-                <button (click)="guardarMeta()" [disabled]="isLoading()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-400 transition-colors">
-                  {{ isLoading() ? 'Guardando...' : 'Guardar' }}
-                </button>
-                <button (click)="cancelarMeta()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                  Cancelar
-                </button>
-              </div>
+          <div class="flex flex-wrap items-center gap-3 cmx-enter" style="--i:1">
+            <div class="cmx-seg" role="tablist" aria-label="Sección">
+              <button type="button" role="tab" [attr.aria-selected]="seccion() === 'periodos'" (click)="irSeccion('periodos')">Períodos</button>
+              <button type="button" role="tab" [attr.aria-selected]="seccion() === 'base-ajuste'" (click)="irSeccion('base-ajuste')">Base de ajuste</button>
             </div>
+
+            <div class="flex items-center gap-1 rounded-full pl-1 pr-1 py-1" style="background: var(--cmx-surface); box-shadow: inset 0 0 0 1px var(--cmx-line-strong)"
+                 role="group" aria-label="Mes">
+              <button type="button" class="cmx-icon-btn !w-9 !h-9" (click)="moverMes(-1)" aria-label="Mes anterior">
+                <cmx-icon name="chevron-left" />
+              </button>
+              <span class="min-w-[9.5rem] text-center font-semibold text-[0.9rem] cmx-num" aria-live="polite">
+                {{ nombreMes(mes()) }} {{ anio() }}
+              </span>
+              <button type="button" class="cmx-icon-btn !w-9 !h-9" (click)="moverMes(1)" aria-label="Mes siguiente">
+                <cmx-icon name="chevron-right" />
+              </button>
+            </div>
+            @if (!esMesActual()) {
+              <button type="button" class="cmx-btn cmx-btn-link cmx-btn-sm" (click)="irMesActual()">Mes actual</button>
+            }
+          </div>
+        </header>
+
+        @if (seccion() === 'base-ajuste') {
+          <cmx-base-ajuste [anio]="anio()" [mes]="mes()" />
+        } @else if (idPeriodo() != null) {
+          <cmx-periodo-detalle [idPeriodo]="idPeriodo()!" [reporteInicial]="reporteCreado()"
+                               (volver)="cerrarPeriodo()" (cambiado)="alCambiarPeriodo($event)" />
+        } @else {
+          <!-- ============ PERÍODOS DEL MES ============ -->
+          @if (!cargando() && periodos().length) {
+            <p class="cmx-muted text-[0.84rem] mb-4 cmx-enter">
+              {{ periodos().length }} {{ periodos().length === 1 ? 'período' : 'períodos' }} en {{ nombreMes(mes()).toLowerCase() }}
+              @for (e of resumenEstados(); track e.estado) {
+                · <span class="cmx-soft-text">{{ e.cantidad }} {{ estadoInfo[e.estado].etiqueta.toLowerCase() }}</span>
+              }
+            </p>
           }
 
-          <!-- Lista de metas -->
-          @if (metas().length > 0) {
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead class="bg-slate-50 dark:bg-slate-700/50">
-                  <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Subcartera</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Meta Grupal</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Tipo</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Escalas de Comisión</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                  @for (meta of metas(); track meta.id) {
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                      <td class="px-4 py-3 text-sm text-slate-800 dark:text-white font-medium">
-                        {{ meta.nombreSubcartera || 'Subcartera ' + meta.idSubcartera }}
-                      </td>
-                      <td class="px-4 py-3 text-sm text-right text-green-600 font-semibold">
-                        S/ {{ formatMonto(meta.metaGrupal) }}
-                      </td>
-                      <td class="px-4 py-3 text-sm text-center">
-                        <span [class]="meta.tipoMetrica === 'CAPITAL_LIBERADO'
-                          ? 'px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full text-xs font-medium'
-                          : 'px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs font-medium'">
-                          {{ meta.tipoMetrica === 'CAPITAL_LIBERADO' ? 'Capital' : 'Recaudo' }}
-                        </span>
-                      </td>
-                      <td class="px-4 py-3 text-sm">
-                        <div class="flex flex-wrap gap-1">
-                          @for (escala of meta.escalas || []; track escala.id) {
-                            <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300">
-                              {{ escala.porcentajeDesde }}-{{ escala.porcentajeHasta || '100+' }}% = S/{{ escala.montoComision }}
-                            </span>
-                          }
-                          @if (!meta.escalas || meta.escalas.length === 0) {
-                            <span class="text-slate-400 italic text-xs">Sin escalas</span>
-                          }
-                        </div>
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        <span [class]="meta.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400'" class="px-2 py-1 rounded-full text-xs font-medium">
-                          {{ meta.activo ? 'Activo' : 'Inactivo' }}
-                        </span>
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        <button (click)="editarMeta(meta)" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-2">
-                          <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                          </svg>
-                        </button>
-                        <button (click)="eliminarMeta(meta)" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
-                          <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+          @if (cargando()) {
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              @for (i of [1, 2, 3]; track i) { <div class="cmx-skeleton h-56 rounded-[1.5rem]"></div> }
+            </div>
+          } @else if (error()) {
+            <div class="cmx-shell">
+              <div class="cmx-core">
+                <div class="cmx-empty">
+                  <span class="cmx-empty-mark"><cmx-icon name="alert" [size]="22" /></span>
+                  <p class="font-semibold" style="color: var(--cmx-ink)">No se pudieron cargar los períodos</p>
+                  <p class="text-[0.86rem] max-w-[46ch]">{{ error() }}</p>
+                  <button type="button" class="cmx-btn cmx-btn-ghost" (click)="cargarPeriodos()">Reintentar</button>
+                </div>
+              </div>
+            </div>
+          } @else if (!periodos().length) {
+            <div class="cmx-shell cmx-enter">
+              <div class="cmx-core">
+                <div class="cmx-empty py-16">
+                  <span class="cmx-empty-mark"><cmx-icon name="calendar" [size]="22" /></span>
+                  <p class="font-semibold text-[1.05rem]" style="color: var(--cmx-ink)">
+                    Aún no hay comisiones de {{ nombreMes(mes()).toLowerCase() }} {{ anio() }}
+                  </p>
+                  <p class="text-[0.88rem] max-w-[52ch]">
+                    Abre un período por subcartera. La meta se toma del reporte de producción y, si la subcartera ya tuvo
+                    un período, se copian sus tramos y roles.
+                  </p>
+                  <button type="button" class="cmx-btn cmx-btn-primary mt-2" (click)="creando.set(true)">
+                    Abrir el primer período
+                    <span class="cmx-orb"><cmx-icon name="plus" [size]="15" /></span>
+                  </button>
+                </div>
+              </div>
             </div>
           } @else {
-            <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-              No hay metas configuradas para este período
-            </div>
-          }
-        </div>
-      }
-
-      <!-- ==================== TAB: BONOS ==================== -->
-      @if (activeTab() === 'bonos') {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-          <!-- Selector de período y acciones -->
-          <div class="flex flex-wrap gap-4 items-end mb-6">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año</label>
-              <select [(ngModel)]="bonoFiltroAnio" (change)="cargarBonos()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (a of aniosDisponibles; track a) {
-                  <option [value]="a">{{ a }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes</label>
-              <select [(ngModel)]="bonoFiltroMes" (change)="cargarBonos()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (m of mesesDisponibles; track m.value) {
-                  <option [value]="m.value">{{ m.label }}</option>
-                }
-              </select>
-            </div>
-            <button (click)="nuevoBono()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-              </svg>
-              Nuevo Bono
-            </button>
-            <button (click)="abrirModalCopiarBonos()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copiar de Otro Mes
-            </button>
-          </div>
-
-          <!-- Modal copiar bonos -->
-          @if (mostrarModalCopiarBonos()) {
-            <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
-                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Copiar Bonos de Otro Período</h3>
-                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                  Se copiarán todos los bonos del período origen al período actual ({{ comisionesService.getNombreMes(bonoFiltroMes) }} {{ bonoFiltroAnio }}).
-                </p>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año Origen</label>
-                    <select [(ngModel)]="copiarBonosAnioOrigen" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                      @for (a of aniosDisponibles; track a) {
-                        <option [value]="a">{{ a }}</option>
-                      }
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes Origen</label>
-                    <select [(ngModel)]="copiarBonosMesOrigen" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                      @for (m of mesesDisponibles; track m.value) {
-                        <option [value]="m.value">{{ m.label }}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                  <button (click)="cerrarModalCopiarBonos()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                    Cancelar
-                  </button>
-                  <button (click)="copiarBonos()" [disabled]="isLoading()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-400 transition-colors">
-                    {{ isLoading() ? 'Copiando...' : 'Copiar Bonos' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- Formulario de bono -->
-          @if (mostrarFormBono()) {
-            <div class="mb-6 p-4 border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-                {{ bonoEditando()?.id ? 'Editar Bono' : 'Nuevo Bono' }}
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Bono</label>
-                  <input type="text" [(ngModel)]="bonoEditando()!.nombre" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Ej: Bono LTD T5">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
-                  <input type="text" [(ngModel)]="bonoEditando()!.descripcion" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Descripción opcional">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
-                  <select [(ngModel)]="bonoSelectedInquilino" (change)="onBonoInquilinoChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                    <option [value]="0">Todos (aplica a todas)</option>
-                    @for (inq of inquilinos(); track inq.id) {
-                      <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
-                  <select [(ngModel)]="bonoSelectedCartera" (change)="onBonoCarteraChange()" [disabled]="!bonoSelectedInquilino" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                    <option [value]="0">Seleccionar...</option>
-                    @for (car of bonoCarteras(); track car.id) {
-                      <option [value]="car.id">{{ car.nombreCartera }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
-                  <select [(ngModel)]="bonoEditando()!.idSubcartera" (change)="onBonoSubcarteraChange()" [disabled]="!bonoSelectedCartera" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                    <option [value]="0">Todas (aplica a todas)</option>
-                    @for (sub of bonoSubcarteras(); track sub.id) {
-                      <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Campo a Evaluar</label>
-                  <select [(ngModel)]="bonoEditando()!.campoEvaluar" (change)="onCampoEvaluarChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                    <option value="">Seleccionar campo...</option>
-                    @for (campo of camposDisponibles(); track campo) {
-                      <option [value]="campo">{{ comisionesService.getNombreCampo(campo) }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor a Buscar</label>
-                  <select [(ngModel)]="bonoEditando()!.valorBuscar" [disabled]="!bonoEditando()!.campoEvaluar || cargandoValores()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                    @if (cargandoValores()) {
-                      <option value="">Cargando valores...</option>
-                    } @else if (!bonoEditando()!.campoEvaluar) {
-                      <option value="">Primero seleccione un campo</option>
-                    } @else {
-                      <option value="">Seleccionar valor...</option>
-                      @for (valor of valoresCampo(); track valor) {
-                        <option [value]="valor">{{ valor }}</option>
-                      }
-                    }
-                  </select>
-                </div>
-              </div>
-
-              <!-- Escalas -->
-              <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Escalas</label>
-                  <button (click)="agregarEscala()" class="text-sm text-green-600 hover:text-green-800 dark:text-green-400 flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Agregar escala
-                  </button>
-                </div>
-                <div class="space-y-2">
-                  @for (escala of bonoEditando()!.escalas; track $index; let i = $index) {
-                    <div class="flex gap-2 items-center">
-                      <input type="number" [(ngModel)]="escala.cantidadMinima" class="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Cantidad">
-                      <span class="text-slate-500">pagos =</span>
-                      <input type="number" step="0.01" [(ngModel)]="escala.monto" class="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Monto">
-                      <span class="text-slate-500">S/</span>
-                      <button (click)="eliminarEscala(i)" class="text-red-500 hover:text-red-700">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <div class="flex gap-2">
-                <button (click)="guardarBono()" [disabled]="isLoading()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-400 transition-colors">
-                  {{ isLoading() ? 'Guardando...' : 'Guardar' }}
-                </button>
-                <button (click)="cancelarBono()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          }
-
-          <!-- Lista de bonos -->
-          @if (bonos().length > 0) {
-            <div class="space-y-4">
-              @for (bono of bonos(); track bono.id) {
-                <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-                  <div class="flex justify-between items-start">
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <h4 class="font-semibold text-slate-800 dark:text-white">{{ bono.nombre }}</h4>
-                        @if (bono.nombreSubcartera) {
-                          <span class="px-2 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded text-xs">
-                            {{ bono.nombreSubcartera }}
-                          </span>
-                        } @else {
-                          <span class="px-2 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 rounded text-xs">
-                            Todas las subcarteras
-                          </span>
-                        }
-                      </div>
-                      <p class="text-sm text-slate-600 dark:text-slate-400">
-                        {{ comisionesService.getNombreCampo(bono.campoEvaluar) }} = "{{ bono.valorBuscar }}"
-                      </p>
-                      @if (bono.descripcion) {
-                        <p class="text-sm text-slate-500 dark:text-slate-500 mt-1">{{ bono.descripcion }}</p>
-                      }
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span [class]="bono.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400'" class="px-2 py-1 rounded-full text-xs font-medium">
-                        {{ bono.activo ? 'Activo' : 'Inactivo' }}
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              @for (p of periodos(); track p.id; let i = $index) {
+                <button type="button" class="cmx-period-card cmx-enter" [style.--i]="i" (click)="abrirPeriodo(p.id)"
+                        [attr.aria-label]="'Abrir comisiones de ' + p.nombreSubcartera + ', ' + estadoInfo[p.estado].etiqueta">
+                  <span class="cmx-shell block h-full">
+                    <span class="cmx-core flex flex-col h-full p-5">
+                      <span class="flex items-center justify-between gap-3">
+                        <span class="cmx-tag" [class.cmx-tag-brand]="p.estado === 'EN_CURSO'"
+                              [class.cmx-tag-amber]="p.estado === 'REVISADO'" [class.cmx-tag-ink]="p.estado === 'CERRADO'">
+                          @if (p.estado === 'CERRADO') { <cmx-icon name="lock" [size]="11" [stroke]="2" /> } @else { <span class="cmx-dot"></span> }
+                          {{ estadoInfo[p.estado].etiqueta }}
+                        </span>
+                        <span class="cmx-muted text-[0.74rem]">{{ metricaInfo[p.tipoMetrica].etiqueta }}</span>
                       </span>
-                      <button (click)="editarBono(bono)" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                      </button>
-                      <button (click)="eliminarBono(bono)" class="text-red-600 hover:text-red-800 dark:text-red-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  <!-- Escalas del bono -->
-                  @if (bono.escalas && bono.escalas.length > 0) {
-                    <div class="mt-3 flex flex-wrap gap-2">
-                      @for (escala of bono.escalas; track escala.id) {
-                        <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-sm text-slate-700 dark:text-slate-300">
-                          {{ escala.cantidadMinima }}+ pagos = S/ {{ escala.monto }}
+
+                      <span class="block text-[1.3rem] font-bold tracking-tight leading-tight mt-5">{{ p.nombreSubcartera }}</span>
+
+                      <span class="block mt-4">
+                        <span class="cmx-label block">Meta del mes</span>
+                        <span class="block cmx-num font-bold text-[1.35rem] tracking-tight">
+                          <span class="text-[0.8rem] cmx-muted mr-1">S/</span>{{ p.metaGrupal | appNumber:'1.2-2' }}
                         </span>
-                      }
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-              No hay bonos configurados
-            </div>
-          }
-        </div>
-      }
+                      </span>
 
-      <!-- ==================== TAB: REPORTE ==================== -->
-      @if (activeTab() === 'reporte') {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-          <!-- Filtros -->
-          <div class="flex flex-wrap gap-4 items-end mb-6">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año</label>
-              <select [(ngModel)]="filtroAnio" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (a of aniosDisponibles; track a) {
-                  <option [value]="a">{{ a }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes</label>
-              <select [(ngModel)]="filtroMes" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (m of mesesDisponibles; track m.value) {
-                  <option [value]="m.value">{{ m.label }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
-              <select [(ngModel)]="reporteInquilino" (change)="onReporteInquilinoChange()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                <option [value]="0">Todos</option>
-                @for (inq of inquilinos(); track inq.id) {
-                  <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
-              <select [(ngModel)]="reporteCartera" (change)="onReporteCarteraChange()" [disabled]="!reporteInquilino" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                <option [value]="0">Todas</option>
-                @for (car of reporteCarteras(); track car.id) {
-                  <option [value]="car.id">{{ car.nombreCartera }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
-              <select [(ngModel)]="reporteSubcartera" [disabled]="!reporteCartera" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                <option [value]="0">Todas</option>
-                @for (sub of reporteSubcarteras(); track sub.id) {
-                  <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
-                }
-              </select>
-            </div>
-            <button (click)="calcularComisiones()" [disabled]="isLoading()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-slate-400 transition-colors flex items-center gap-2">
-              @if (isLoading()) {
-                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                </svg>
-                Calculando...
-              } @else {
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-                Calcular Comisiones
-              }
-            </button>
-          </div>
-
-          <!-- Resumen -->
-          @if (reporte()) {
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Recaudo</p>
-                <p class="text-2xl font-bold text-blue-800 dark:text-blue-300">S/ {{ formatMonto(reporte()!.totalRecaudo) }}</p>
-              </div>
-              <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                <p class="text-sm text-green-600 dark:text-green-400 font-medium">Total Comisiones</p>
-                <p class="text-2xl font-bold text-green-800 dark:text-green-300">S/ {{ formatMonto(reporte()!.totalComisiones) }}</p>
-              </div>
-              <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
-                <p class="text-sm text-amber-600 dark:text-amber-400 font-medium">Total Bonos</p>
-                <p class="text-2xl font-bold text-amber-800 dark:text-amber-300">S/ {{ formatMonto(reporte()!.totalBonos) }}</p>
-              </div>
-              <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-                <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Asesores</p>
-                <p class="text-2xl font-bold text-purple-800 dark:text-purple-300">{{ reporte()!.totalAgentes }}</p>
-              </div>
-            </div>
-
-            <!-- Botones de exportación -->
-            <div class="flex gap-2 mb-4">
-              <button (click)="exportarExcelDetallado()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                Exportar Excel
-              </button>
-              <button (click)="exportarPdf()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-                Exportar PDF
-              </button>
-            </div>
-
-            <!-- Tabla de agentes -->
-            @if (reporte()!.agentes && reporte()!.agentes.length > 0) {
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-slate-50 dark:bg-slate-700/50">
-                    <tr>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Asesor</th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Subcartera</th>
-                      <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Recaudo</th>
-                      <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Meta</th>
-                      <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">% Cumpl.</th>
-                      <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Comisión</th>
-                      <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Bonos</th>
-                      <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (agente of reporte()!.agentes; track agente.idAgente) {
-                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-4 py-3 text-sm font-medium text-slate-800 dark:text-white">
-                          {{ agente.nombreAgente || 'Asesor ' + agente.idAgente }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                          {{ agente.nombreSubcartera }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right text-green-600 font-semibold">
-                          S/ {{ formatMonto(agente.recaudoTotal) }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-400">
-                          S/ {{ formatMonto(agente.metaIndividual) }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right">
-                          <span [class]="agente.metaAlcanzada ? 'text-green-600 font-semibold' : 'text-amber-600'">
-                            {{ agente.porcentajeCumplimiento | appNumber:'1.1-1' }}%
-                          </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right text-blue-600">
-                          S/ {{ formatMonto(agente.comisionBase) }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right text-amber-600">
-                          S/ {{ formatMonto(agente.totalBonos) }}
-                          @if (agente.bonosGanados && agente.bonosGanados.length > 0) {
-                            <button (click)="toggleDetalleBonos(agente)" class="ml-1 text-slate-400 hover:text-slate-600">
-                              <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                              </svg>
-                            </button>
+                      <span class="flex items-end justify-between gap-3 mt-auto pt-5 border-t border-dashed" style="border-color: var(--cmx-line-strong)">
+                        <span class="text-[0.76rem] cmx-muted leading-snug">
+                          @if (p.cerradoPorNombre) {
+                            Cerrado por {{ p.cerradoPorNombre }}
+                          } @else if (p.revisadoPorNombre) {
+                            Revisado por {{ p.revisadoPorNombre }}
+                          } @else if (p.fechaCalculo) {
+                            Calculado {{ p.fechaCalculo | appDateTime }}
+                          } @else {
+                            <span style="color: var(--cmx-amber)">Sin cálculo vigente</span>
                           }
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right font-bold text-purple-600">
-                          S/ {{ formatMonto(agente.totalComision) }}
-                        </td>
-                      </tr>
-                      <!-- Detalle de bonos expandible -->
-                      @if (agenteExpandido() === agente.idAgente && agente.bonosGanados && agente.bonosGanados.length > 0) {
-                        <tr class="bg-amber-50 dark:bg-amber-900/10">
-                          <td colspan="8" class="px-4 py-2">
-                            <div class="text-sm">
-                              <span class="font-medium text-amber-700 dark:text-amber-400">Bonos ganados:</span>
-                              @for (bono of agente.bonosGanados; track bono.bonoId) {
-                                <span class="ml-2 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded text-amber-800 dark:text-amber-300">
-                                  {{ bono.nombreBono }}: {{ bono.cantidadPagos }} pagos = S/ {{ bono.montoGanado }}
-                                </span>
-                              }
-                            </div>
-                          </td>
-                        </tr>
-                      }
-                    }
-                  </tbody>
-                </table>
-              </div>
-            } @else {
-              <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-                No hay datos para mostrar
-              </div>
-            }
-          } @else {
-            <div class="text-center py-12 text-slate-500 dark:text-slate-400">
-              <svg class="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              <p>Selecciona un período y haz clic en "Calcular Comisiones"</p>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- ==================== TAB: BASE DE AJUSTE ==================== -->
-      @if (activeTab() === 'baseAjuste') {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Base de Ajuste</h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Reporte de promesas pagadas con fecha de envío para control de ajustes
-              </p>
-            </div>
-          </div>
-
-          <!-- Filtros y acciones -->
-          <div class="flex flex-wrap gap-4 items-end mb-6">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año</label>
-              <select [(ngModel)]="filtroAnio" (change)="cargarEstadisticasBaseAjuste()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (a of aniosDisponibles; track a) {
-                  <option [value]="a">{{ a }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes</label>
-              <select [(ngModel)]="filtroMes" (change)="cargarEstadisticasBaseAjuste()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                @for (m of mesesDisponibles; track m.value) {
-                  <option [value]="m.value">{{ m.label }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
-              <select [(ngModel)]="baseAjusteInquilino" (change)="onBaseAjusteInquilinoChange()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                <option [value]="0">Todos</option>
-                @for (inq of inquilinos(); track inq.id) {
-                  <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
-              <select [(ngModel)]="baseAjusteCartera" (change)="onBaseAjusteCarteraChange()" [disabled]="!baseAjusteInquilino" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                <option [value]="0">Todas</option>
-                @for (car of baseAjusteCarteras(); track car.id) {
-                  <option [value]="car.id">{{ car.nombreCartera }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
-              <select [(ngModel)]="baseAjusteSubcartera" (change)="onBaseAjusteSubcarteraChange()" [disabled]="!baseAjusteCartera" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
-                <option [value]="0">Todas</option>
-                @for (sub of baseAjusteSubcarteras(); track sub.id) {
-                  <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
-                }
-              </select>
-            </div>
-            <button
-              (click)="agregarEnvioBaseAjuste()"
-              [disabled]="isLoading()"
-              class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-slate-400 transition-colors flex items-center gap-2"
-            >
-              @if (isLoading()) {
-                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                </svg>
-              } @else {
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
+                          <span class="block">{{ p.roles.length }} {{ p.roles.length === 1 ? 'rol' : 'roles' }} · {{ p.escalas.length }} tramos</span>
+                        </span>
+                        <span class="cmx-orb !w-9 !h-9" style="background: var(--cmx-sunken); color: var(--cmx-ink)">
+                          <cmx-icon name="arrow-up-right" [size]="16" />
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                </button>
               }
-              Agregar al Envío
-            </button>
-            <button
-              (click)="exportarBaseAjusteExcel()"
-              [disabled]="isLoading() || !estadisticasBaseAjuste() || estadisticasBaseAjuste()!.total_registros === 0"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-400 transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              Exportar Excel
-            </button>
-          </div>
 
-          <!-- Estadísticas -->
-          @if (estadisticasBaseAjuste()) {
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
-                <p class="text-sm text-orange-600 dark:text-orange-400 font-medium">Total Registros</p>
-                <p class="text-2xl font-bold text-orange-800 dark:text-orange-300">{{ estadisticasBaseAjuste()!.total_registros }}</p>
-              </div>
-              <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Envíos</p>
-                <p class="text-2xl font-bold text-blue-800 dark:text-blue-300">{{ estadisticasBaseAjuste()!.total_envios }}</p>
-              </div>
-              <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-                <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Asesores</p>
-                <p class="text-2xl font-bold text-purple-800 dark:text-purple-300">{{ estadisticasBaseAjuste()!.total_asesores }}</p>
-              </div>
-              <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                <p class="text-sm text-green-600 dark:text-green-400 font-medium">Monto Total</p>
-                <p class="text-2xl font-bold text-green-800 dark:text-green-300">S/ {{ formatMonto(estadisticasBaseAjuste()!.monto_total) }}</p>
-              </div>
-            </div>
-
-            @if (estadisticasBaseAjuste()!.primer_envio) {
-              <div class="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 mb-4">
-                <div class="flex flex-wrap gap-6">
-                  <div>
-                    <span class="text-sm text-slate-500 dark:text-slate-400">Primer envío:</span>
-                    <span class="ml-2 font-medium text-slate-700 dark:text-slate-300">{{ estadisticasBaseAjuste()!.primer_envio }}</span>
-                  </div>
-                  <div>
-                    <span class="text-sm text-slate-500 dark:text-slate-400">Último envío:</span>
-                    <span class="ml-2 font-medium text-slate-700 dark:text-slate-300">{{ estadisticasBaseAjuste()!.ultimo_envio }}</span>
-                  </div>
-                </div>
-              </div>
-            }
-          } @else {
-            <div class="text-center py-12 text-slate-500 dark:text-slate-400">
-              <svg class="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              <p>No hay envíos registrados para este período</p>
-              <p class="text-sm mt-2">Haz clic en "Agregar al Envío" para incluir las promesas pagadas del mes</p>
+              <button type="button" class="cmx-new-card cmx-enter" [style.--i]="periodos().length" (click)="creando.set(true)">
+                <span class="cmx-empty-mark"><cmx-icon name="plus" [size]="22" /></span>
+                <span>
+                  <span class="block font-bold text-[1.05rem]" style="color: var(--cmx-ink)">Nuevo período</span>
+                  <span class="block text-[0.82rem] mt-1 max-w-[30ch]">Otra subcartera para {{ nombreMes(mes()).toLowerCase() }}.</span>
+                </span>
+              </button>
             </div>
           }
+        }
+      </div>
 
-          <!-- Información -->
-          <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <div class="flex gap-3">
-              <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              <div class="text-sm text-amber-700 dark:text-amber-300">
-                <p class="font-medium mb-1">¿Cómo funciona?</p>
-                <ul class="list-disc list-inside space-y-1 text-amber-600 dark:text-amber-400">
-                  <li>Al hacer clic en "Agregar al Envío", se buscan promesas con estado PAGADA del mes seleccionado</li>
-                  <li>Los nuevos registros se marcan con la fecha de hoy como "Fecha de Envío"</li>
-                  <li>Los registros ya agregados mantienen su fecha de envío original</li>
-                  <li>El Excel incluye: Asesor, Fecha Envío, DNI, Fecha Pago, Monto, Concepto, Capital, Deuda Total, Período, Tramo y Canal de Pago</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Mensajes -->
-      @if (mensaje()) {
-        <div [class]="mensajeError() ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'"
-             class="fixed bottom-4 right-4 p-4 border rounded-lg shadow-lg max-w-md">
-          <p [class]="mensajeError() ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'">
-            {{ mensaje() }}
-          </p>
-        </div>
+      @if (creando()) {
+        <cmx-crear-periodo-panel [anioInicial]="anio()" [mesInicial]="mes()" [subcarterasConPeriodo]="subcarterasConPeriodo()"
+                                 (cerrar)="creando.set(false)" (creado)="alCrear($event)" />
       }
     </div>
   `
 })
 export class ComisionesPage implements OnInit {
+  private readonly service = inject(ComisionesService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
-  activeTab = signal<'metas' | 'bonos' | 'reporte' | 'baseAjuste'>('metas');
-  isLoading = signal(false);
-  mensaje = signal('');
-  mensajeError = signal(false);
+  readonly estadoInfo = ESTADO_INFO;
+  readonly metricaInfo = METRICA_INFO;
+  readonly nombreMes = nombreMes;
 
-  // Base de Ajuste
-  estadisticasBaseAjuste = signal<{
-    total_registros: number;
-    total_envios: number;
-    total_asesores: number;
-    monto_total: number;
-    primer_envio: string;
-    ultimo_envio: string;
-  } | null>(null);
-  baseAjusteInquilino = 0;
-  baseAjusteCartera = 0;
-  baseAjusteSubcartera = 0;
-  baseAjusteCarteras = signal<Cartera[]>([]);
-  baseAjusteSubcarteras = signal<Subcartera[]>([]);
+  private readonly hoy = new Date();
+  readonly anio = signal(this.hoy.getFullYear());
+  readonly mes = signal(this.hoy.getMonth() + 1);
+  readonly seccion = signal<Seccion>('periodos');
+  readonly idPeriodo = signal<number | null>(null);
 
-  // Inquilinos / Carteras / Subcarteras
-  inquilinos = signal<Inquilino[]>([]);
-  carteras = signal<Cartera[]>([]);
-  subcarteras = signal<Subcartera[]>([]);
-  selectedInquilino = 0;
-  selectedCartera = 0;
+  readonly periodos = signal<PeriodoComision[]>([]);
+  readonly cargando = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly creando = signal(false);
+  /** Reporte recién creado, para abrir el detalle sin volver a pedirlo */
+  readonly reporteCreado = signal<ReportePeriodo | null>(null);
 
-  // Metas
-  metas = signal<ComisionMeta[]>([]);
-  mostrarFormMeta = signal(false);
-  metaEditando = signal<ComisionMeta | null>(null);
+  readonly esMesActual = computed(() =>
+    this.anio() === this.hoy.getFullYear() && this.mes() === this.hoy.getMonth() + 1
+  );
 
-  // Bonos
-  bonos = signal<ComisionBono[]>([]);
-  mostrarFormBono = signal(false);
-  bonoEditando = signal<ComisionBono | null>(null);
-  camposDisponibles = signal<string[]>([]);
-  valoresCampo = signal<string[]>([]);
-  cargandoValores = signal(false);
-  bonoSelectedInquilino = 0;
-  bonoSelectedCartera = 0;
-  bonoCarteras = signal<Cartera[]>([]);
-  bonoSubcarteras = signal<Subcartera[]>([]);
-  bonoFiltroAnio = new Date().getFullYear();
-  bonoFiltroMes = new Date().getMonth() + 1;
-  mostrarModalCopiarBonos = signal(false);
-  copiarBonosAnioOrigen = new Date().getFullYear();
-  copiarBonosMesOrigen = new Date().getMonth();
+  readonly subcarterasConPeriodo = computed(() => this.periodos().map(p => p.idSubcartera));
 
-  // Reporte
-  reporte = signal<ComisionReporte | null>(null);
-  agenteExpandido = signal<number | null>(null);
-  reporteInquilino = 0;
-  reporteCartera = 0;
-  reporteSubcartera = 0;
-  reporteCarteras = signal<Cartera[]>([]);
-  reporteSubcarteras = signal<Subcartera[]>([]);
+  readonly resumenEstados = computed(() => {
+    const orden: EstadoPeriodo[] = ['EN_CURSO', 'REVISADO', 'CERRADO'];
+    return orden
+      .map(estado => ({ estado, cantidad: this.periodos().filter(p => p.estado === estado).length }))
+      .filter(e => e.cantidad > 0);
+  });
 
-  // Filtros
-  filtroAnio = new Date().getFullYear();
-  filtroMes = new Date().getMonth() + 1;
-
-  aniosDisponibles = [2024, 2025, 2026];
-  tiposMetrica = [
-    { value: 'RECAUDO', label: 'Recaudo (Pagos Validados)' },
-    { value: 'CAPITAL_LIBERADO', label: 'Capital Liberado (PDP Pagadas)' }
-  ];
-  mesesDisponibles = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Septiembre' },
-    { value: 10, label: 'Octubre' },
-    { value: 11, label: 'Noviembre' },
-    { value: 12, label: 'Diciembre' }
-  ];
-
-  private fmt = inject(FormatService);
-
-  constructor(public comisionesService: ComisionesService) {}
-
-  ngOnInit() {
-    this.cargarInquilinos();
-    this.cargarMetas();
-    this.cargarCamposDisponibles();
-  }
-
-  // ==================== INQUILINOS / CARTERAS / SUBCARTERAS ====================
-
-  cargarInquilinos() {
-    this.comisionesService.obtenerInquilinos().subscribe({
-      next: (data) => this.inquilinos.set(data),
-      error: (err) => console.error('Error al cargar inquilinos:', err)
-    });
-  }
-
-  onInquilinoChange() {
-    this.carteras.set([]);
-    this.subcarteras.set([]);
-    this.selectedCartera = 0;
-    if (this.metaEditando()) {
-      this.metaEditando.set({ ...this.metaEditando()!, idSubcartera: 0, nombreSubcartera: '' });
+  ngOnInit(): void {
+    const q = this.route.snapshot.queryParamMap;
+    const anio = Number(q.get('anio'));
+    const mes = Number(q.get('mes'));
+    const periodo = Number(q.get('periodo'));
+    if (anio >= 2020 && anio <= 2100) {
+      this.anio.set(anio);
     }
-
-    if (this.selectedInquilino) {
-      this.comisionesService.obtenerCarteras(this.selectedInquilino).subscribe({
-        next: (data) => this.carteras.set(data),
-        error: (err) => console.error('Error al cargar carteras:', err)
-      });
+    if (mes >= 1 && mes <= 12) {
+      this.mes.set(mes);
     }
-  }
-
-  onCarteraChange() {
-    this.subcarteras.set([]);
-    if (this.metaEditando()) {
-      this.metaEditando.set({ ...this.metaEditando()!, idSubcartera: 0, nombreSubcartera: '' });
+    if (q.get('seccion') === 'base-ajuste') {
+      this.seccion.set('base-ajuste');
     }
-
-    if (this.selectedCartera) {
-      this.comisionesService.obtenerSubcarteras(this.selectedCartera).subscribe({
-        next: (data) => this.subcarteras.set(data),
-        error: (err) => console.error('Error al cargar subcarteras:', err)
-      });
+    if (periodo > 0) {
+      this.idPeriodo.set(periodo);
     }
+    this.cargarPeriodos();
   }
 
-  // ==================== REPORTE FILTROS ====================
-
-  onReporteInquilinoChange() {
-    this.reporteCarteras.set([]);
-    this.reporteSubcarteras.set([]);
-    this.reporteCartera = 0;
-    this.reporteSubcartera = 0;
-
-    if (this.reporteInquilino) {
-      this.comisionesService.obtenerCarteras(this.reporteInquilino).subscribe({
-        next: (data) => this.reporteCarteras.set(data),
-        error: (err) => console.error('Error al cargar carteras:', err)
-      });
-    }
-  }
-
-  onReporteCarteraChange() {
-    this.reporteSubcarteras.set([]);
-    this.reporteSubcartera = 0;
-
-    if (this.reporteCartera) {
-      this.comisionesService.obtenerSubcarteras(this.reporteCartera).subscribe({
-        next: (data) => this.reporteSubcarteras.set(data),
-        error: (err) => console.error('Error al cargar subcarteras:', err)
-      });
-    }
-  }
-
-  // ==================== METAS ====================
-
-  cargarMetas() {
-    this.comisionesService.obtenerMetas(this.filtroAnio, this.filtroMes).subscribe({
-      next: (data) => this.metas.set(data),
-      error: (err) => this.mostrarMensaje('Error al cargar metas: ' + err.message, true)
-    });
-  }
-
-  nuevaMeta() {
-    this.selectedInquilino = 0;
-    this.selectedCartera = 0;
-    this.carteras.set([]);
-    this.subcarteras.set([]);
-    this.metaEditando.set({
-      idSubcartera: 0,
-      nombreSubcartera: '',
-      anio: this.filtroAnio,
-      mes: this.filtroMes,
-      metaGrupal: 0,
-      tipoMetrica: 'RECAUDO',
-      escalas: [],
-      activo: true
-    });
-    this.mostrarFormMeta.set(true);
-  }
-
-  editarMeta(meta: ComisionMeta) {
-    this.metaEditando.set({
-      ...meta,
-      escalas: meta.escalas ? [...meta.escalas] : []
-    });
-    this.mostrarFormMeta.set(true);
-
-    // Cargar jerarquía para pre-seleccionar inquilino/cartera
-    if (meta.idSubcartera) {
-      this.comisionesService.obtenerJerarquiaSubcartera(meta.idSubcartera).subscribe({
-        next: (jerarquia) => {
-          this.selectedInquilino = jerarquia.idInquilino;
-          this.selectedCartera = jerarquia.idCartera;
-
-          // Cargar carteras del inquilino
-          this.comisionesService.obtenerCarteras(jerarquia.idInquilino).subscribe({
-            next: (carteras) => {
-              this.carteras.set(carteras);
-
-              // Cargar subcarteras de la cartera
-              this.comisionesService.obtenerSubcarteras(jerarquia.idCartera).subscribe({
-                next: (subcarteras) => this.subcarteras.set(subcarteras),
-                error: (err) => console.error('Error al cargar subcarteras:', err)
-              });
-            },
-            error: (err) => console.error('Error al cargar carteras:', err)
-          });
-        },
-        error: (err) => console.error('Error al cargar jerarquía:', err)
-      });
-    }
-  }
-
-  onSubcarteraChange() {
-    if (!this.metaEditando()) return;
-    const subcartera = this.subcarteras().find(s => s.id == this.metaEditando()!.idSubcartera);
-    if (subcartera) {
-      this.metaEditando.set({
-        ...this.metaEditando()!,
-        nombreSubcartera: subcartera.nombreSubcartera
-      });
-    }
-  }
-
-  agregarEscalaMeta() {
-    if (!this.metaEditando()) return;
-    const escalas = [...this.metaEditando()!.escalas, {
-      porcentajeDesde: 0,
-      porcentajeHasta: undefined,
-      montoComision: 0
-    }];
-    this.metaEditando.set({ ...this.metaEditando()!, escalas });
-  }
-
-  eliminarEscalaMeta(index: number) {
-    if (!this.metaEditando()) return;
-    const escalas = this.metaEditando()!.escalas.filter((_, i) => i !== index);
-    this.metaEditando.set({ ...this.metaEditando()!, escalas });
-  }
-
-  guardarMeta() {
-    if (!this.metaEditando()) return;
-
-    // Asegurar que idSubcartera sea número (select devuelve string)
-    const meta = {
-      ...this.metaEditando()!,
-      idSubcartera: Number(this.metaEditando()!.idSubcartera)
-    };
-
-    this.isLoading.set(true);
-    this.comisionesService.guardarMeta(meta).subscribe({
-      next: () => {
-        this.mostrarMensaje('Meta guardada correctamente', false);
-        this.cargarMetas();
-        this.cancelarMeta();
+  cargarPeriodos(): void {
+    this.cargando.set(true);
+    this.error.set(null);
+    this.service.listarPeriodos(this.anio(), this.mes()).subscribe({
+      next: data => {
+        this.periodos.set(data);
+        this.cargando.set(false);
       },
-      error: (err) => this.mostrarMensaje('Error: ' + err.error?.message || err.message, true),
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  eliminarMeta(meta: ComisionMeta) {
-    if (!confirm('¿Eliminar esta meta?')) return;
-
-    this.comisionesService.eliminarMeta(meta.id!).subscribe({
-      next: () => {
-        this.mostrarMensaje('Meta eliminada', false);
-        this.cargarMetas();
-      },
-      error: (err) => this.mostrarMensaje('Error: ' + err.message, true)
-    });
-  }
-
-  cancelarMeta() {
-    this.metaEditando.set(null);
-    this.mostrarFormMeta.set(false);
-    this.selectedInquilino = 0;
-    this.selectedCartera = 0;
-    this.carteras.set([]);
-    this.subcarteras.set([]);
-  }
-
-  // ==================== BONOS ====================
-
-  cargarBonos() {
-    this.comisionesService.obtenerBonos(this.bonoFiltroAnio, this.bonoFiltroMes).subscribe({
-      next: (data) => this.bonos.set(data),
-      error: (err) => this.mostrarMensaje('Error al cargar bonos: ' + err.message, true)
-    });
-  }
-
-  abrirModalCopiarBonos() {
-    // Por defecto, mes anterior al actual
-    const mesAnterior = this.bonoFiltroMes === 1 ? 12 : this.bonoFiltroMes - 1;
-    const anioAnterior = this.bonoFiltroMes === 1 ? this.bonoFiltroAnio - 1 : this.bonoFiltroAnio;
-    this.copiarBonosMesOrigen = mesAnterior;
-    this.copiarBonosAnioOrigen = anioAnterior;
-    this.mostrarModalCopiarBonos.set(true);
-  }
-
-  cerrarModalCopiarBonos() {
-    this.mostrarModalCopiarBonos.set(false);
-  }
-
-  copiarBonos() {
-    this.isLoading.set(true);
-    this.comisionesService.copiarBonos(
-      this.copiarBonosAnioOrigen,
-      this.copiarBonosMesOrigen,
-      this.bonoFiltroAnio,
-      this.bonoFiltroMes
-    ).subscribe({
-      next: (result) => {
-        this.mostrarMensaje(`Se copiaron ${result.cantidadCopiada} bonos correctamente`, false);
-        this.cerrarModalCopiarBonos();
-        this.cargarBonos();
-      },
-      error: (err) => {
-        const errorMsg = err.error?.error || err.message || 'Error desconocido';
-        this.mostrarMensaje('Error: ' + errorMsg, true);
-      },
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  cargarCamposDisponibles() {
-    this.comisionesService.obtenerCamposDisponibles().subscribe({
-      next: (data) => this.camposDisponibles.set(data),
-      error: () => {}
-    });
-  }
-
-  nuevoBono() {
-    this.bonoSelectedInquilino = 0;
-    this.bonoSelectedCartera = 0;
-    this.bonoCarteras.set([]);
-    this.bonoSubcarteras.set([]);
-    this.valoresCampo.set([]);
-    this.bonoEditando.set({
-      nombre: '',
-      descripcion: '',
-      campoEvaluar: '',
-      valorBuscar: '',
-      idSubcartera: undefined,
-      nombreSubcartera: undefined,
-      anio: this.bonoFiltroAnio,
-      mes: this.bonoFiltroMes,
-      activo: true,
-      escalas: []
-    });
-    this.mostrarFormBono.set(true);
-  }
-
-  editarBono(bono: ComisionBono) {
-    this.bonoEditando.set({
-      ...bono,
-      escalas: bono.escalas ? [...bono.escalas] : []
-    });
-    this.mostrarFormBono.set(true);
-
-    // Cargar valores del campo si existe
-    if (bono.campoEvaluar) {
-      this.cargandoValores.set(true);
-      this.comisionesService.obtenerValoresCampo(bono.campoEvaluar).subscribe({
-        next: (valores) => {
-          this.valoresCampo.set(valores);
-          this.cargandoValores.set(false);
-        },
-        error: (err) => {
-          console.error('Error al cargar valores del campo:', err);
-          this.cargandoValores.set(false);
-        }
-      });
-    } else {
-      this.valoresCampo.set([]);
-    }
-
-    // Cargar jerarquía para pre-seleccionar inquilino/cartera
-    if (bono.idSubcartera) {
-      this.comisionesService.obtenerJerarquiaSubcartera(bono.idSubcartera).subscribe({
-        next: (jerarquia) => {
-          this.bonoSelectedInquilino = jerarquia.idInquilino;
-          this.bonoSelectedCartera = jerarquia.idCartera;
-
-          // Cargar carteras del inquilino
-          this.comisionesService.obtenerCarteras(jerarquia.idInquilino).subscribe({
-            next: (carteras) => {
-              this.bonoCarteras.set(carteras);
-
-              // Cargar subcarteras de la cartera
-              this.comisionesService.obtenerSubcarteras(jerarquia.idCartera).subscribe({
-                next: (subcarteras) => this.bonoSubcarteras.set(subcarteras),
-                error: (err) => console.error('Error al cargar subcarteras:', err)
-              });
-            },
-            error: (err) => console.error('Error al cargar carteras:', err)
-          });
-        },
-        error: (err) => console.error('Error al cargar jerarquía:', err)
-      });
-    } else {
-      this.bonoSelectedInquilino = 0;
-      this.bonoSelectedCartera = 0;
-      this.bonoCarteras.set([]);
-      this.bonoSubcarteras.set([]);
-    }
-  }
-
-  agregarEscala() {
-    if (!this.bonoEditando()) return;
-    const escalas = [...this.bonoEditando()!.escalas, { cantidadMinima: 0, monto: 0 }];
-    this.bonoEditando.set({ ...this.bonoEditando()!, escalas });
-  }
-
-  eliminarEscala(index: number) {
-    if (!this.bonoEditando()) return;
-    const escalas = this.bonoEditando()!.escalas.filter((_, i) => i !== index);
-    this.bonoEditando.set({ ...this.bonoEditando()!, escalas });
-  }
-
-  guardarBono() {
-    if (!this.bonoEditando()) return;
-
-    // Convertir idSubcartera 0 a undefined para que aplique a todas
-    const bono = {
-      ...this.bonoEditando()!,
-      idSubcartera: this.bonoEditando()!.idSubcartera ? Number(this.bonoEditando()!.idSubcartera) : undefined,
-      nombreSubcartera: this.bonoEditando()!.idSubcartera ? this.bonoEditando()!.nombreSubcartera : undefined
-    };
-
-    this.isLoading.set(true);
-    this.comisionesService.guardarBono(bono).subscribe({
-      next: () => {
-        this.mostrarMensaje('Bono guardado correctamente', false);
-        this.cargarBonos();
-        this.cancelarBono();
-      },
-      error: (err) => this.mostrarMensaje('Error: ' + err.error?.message || err.message, true),
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  eliminarBono(bono: ComisionBono) {
-    if (!confirm('¿Eliminar este bono?')) return;
-
-    this.comisionesService.eliminarBono(bono.id!).subscribe({
-      next: () => {
-        this.mostrarMensaje('Bono eliminado', false);
-        this.cargarBonos();
-      },
-      error: (err) => this.mostrarMensaje('Error: ' + err.message, true)
-    });
-  }
-
-  cancelarBono() {
-    this.bonoEditando.set(null);
-    this.mostrarFormBono.set(false);
-    this.bonoSelectedInquilino = 0;
-    this.bonoSelectedCartera = 0;
-    this.bonoCarteras.set([]);
-    this.bonoSubcarteras.set([]);
-    this.valoresCampo.set([]);
-  }
-
-  onBonoInquilinoChange() {
-    this.bonoCarteras.set([]);
-    this.bonoSubcarteras.set([]);
-    this.bonoSelectedCartera = 0;
-    if (this.bonoEditando()) {
-      this.bonoEditando.set({ ...this.bonoEditando()!, idSubcartera: undefined, nombreSubcartera: undefined });
-    }
-
-    if (this.bonoSelectedInquilino) {
-      this.comisionesService.obtenerCarteras(this.bonoSelectedInquilino).subscribe({
-        next: (data) => this.bonoCarteras.set(data),
-        error: (err) => console.error('Error al cargar carteras:', err)
-      });
-    }
-  }
-
-  onBonoCarteraChange() {
-    this.bonoSubcarteras.set([]);
-    if (this.bonoEditando()) {
-      this.bonoEditando.set({ ...this.bonoEditando()!, idSubcartera: undefined, nombreSubcartera: undefined });
-    }
-
-    if (this.bonoSelectedCartera) {
-      this.comisionesService.obtenerSubcarteras(this.bonoSelectedCartera).subscribe({
-        next: (data) => this.bonoSubcarteras.set(data),
-        error: (err) => console.error('Error al cargar subcarteras:', err)
-      });
-    }
-  }
-
-  onBonoSubcarteraChange() {
-    if (!this.bonoEditando()) return;
-    const subcartera = this.bonoSubcarteras().find(s => s.id == this.bonoEditando()!.idSubcartera);
-    if (subcartera) {
-      this.bonoEditando.set({
-        ...this.bonoEditando()!,
-        nombreSubcartera: subcartera.nombreSubcartera
-      });
-    } else {
-      this.bonoEditando.set({
-        ...this.bonoEditando()!,
-        idSubcartera: undefined,
-        nombreSubcartera: undefined
-      });
-    }
-  }
-
-  onCampoEvaluarChange() {
-    if (!this.bonoEditando()) return;
-
-    const campo = this.bonoEditando()!.campoEvaluar;
-
-    // Limpiar valor anterior y lista de valores
-    this.bonoEditando.set({ ...this.bonoEditando()!, valorBuscar: '' });
-    this.valoresCampo.set([]);
-
-    if (campo) {
-      this.cargandoValores.set(true);
-      this.comisionesService.obtenerValoresCampo(campo).subscribe({
-        next: (valores) => {
-          this.valoresCampo.set(valores);
-          this.cargandoValores.set(false);
-        },
-        error: (err) => {
-          console.error('Error al cargar valores del campo:', err);
-          this.cargandoValores.set(false);
-        }
-      });
-    }
-  }
-
-  // ==================== REPORTE ====================
-
-  calcularComisiones() {
-    this.isLoading.set(true);
-    this.reporte.set(null);
-
-    const idSubcartera = this.reporteSubcartera || undefined;
-    this.comisionesService.calcularComisiones(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (data) => {
-        this.reporte.set(data);
-        if (data.agentes.length === 0) {
-          this.mostrarMensaje('No hay datos para el período seleccionado', false);
-        }
-      },
-      error: (err) => this.mostrarMensaje('Error al calcular: ' + err.message, true),
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  toggleDetalleBonos(agente: ComisionAgente) {
-    if (this.agenteExpandido() === agente.idAgente) {
-      this.agenteExpandido.set(null);
-    } else {
-      this.agenteExpandido.set(agente.idAgente);
-    }
-  }
-
-  // ==================== UTILIDADES ====================
-
-  formatMonto(monto: number | undefined): string {
-    if (monto === undefined || monto === null) return '0.00';
-    return this.fmt.number(monto, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  mostrarMensaje(msg: string, error: boolean) {
-    this.mensaje.set(msg);
-    this.mensajeError.set(error);
-    setTimeout(() => this.mensaje.set(''), 4000);
-  }
-
-  // ==================== EXPORTACIÓN ====================
-
-  exportarExcel() {
-    if (!this.reporte()) return;
-
-    this.isLoading.set(true);
-    const idSubcartera = this.reporteSubcartera || undefined;
-
-    this.comisionesService.exportarExcel(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Comisiones_${this.filtroAnio}_${this.filtroMes}.xlsx`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-
-        this.mostrarMensaje('Excel exportado correctamente', false);
-      },
-      error: (err) => {
-        console.error('Error al exportar Excel:', err);
-        this.mostrarMensaje('Error al exportar Excel', true);
-      },
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  exportarExcelDetallado() {
-    if (!this.reporte()) return;
-
-    this.isLoading.set(true);
-    const idSubcartera = this.reporteSubcartera || undefined;
-
-    this.comisionesService.exportarExcelDetallado(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Comisiones_Detallado_${this.filtroAnio}_${this.filtroMes}.xlsx`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-
-        this.mostrarMensaje('Excel detallado exportado correctamente', false);
-      },
-      error: (err) => {
-        console.error('Error al exportar Excel detallado:', err);
-        this.mostrarMensaje('Error al exportar Excel detallado', true);
-      },
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  exportarPdf() {
-    if (!this.reporte()) return;
-
-    this.isLoading.set(true);
-    const idSubcartera = this.reporteSubcartera || undefined;
-
-    this.comisionesService.exportarPdf(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (blob) => {
-        // Crear URL del blob y descargar
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Comisiones_${this.filtroAnio}_${this.filtroMes}.pdf`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-
-        this.mostrarMensaje('PDF exportado correctamente', false);
-      },
-      error: (err) => {
-        console.error('Error al exportar PDF:', err);
-        this.mostrarMensaje('Error al exportar PDF', true);
-      },
-      complete: () => this.isLoading.set(false)
-    });
-  }
-
-  // ==================== BASE DE AJUSTE ====================
-
-  onBaseAjusteInquilinoChange() {
-    this.baseAjusteCarteras.set([]);
-    this.baseAjusteSubcarteras.set([]);
-    this.baseAjusteCartera = 0;
-    this.baseAjusteSubcartera = 0;
-
-    if (this.baseAjusteInquilino) {
-      this.comisionesService.obtenerCarteras(this.baseAjusteInquilino).subscribe({
-        next: (data) => this.baseAjusteCarteras.set(data),
-        error: (err) => console.error('Error al cargar carteras:', err)
-      });
-    }
-    this.cargarEstadisticasBaseAjuste();
-  }
-
-  onBaseAjusteCarteraChange() {
-    this.baseAjusteSubcarteras.set([]);
-    this.baseAjusteSubcartera = 0;
-
-    if (this.baseAjusteCartera) {
-      this.comisionesService.obtenerSubcarteras(this.baseAjusteCartera).subscribe({
-        next: (data) => this.baseAjusteSubcarteras.set(data),
-        error: (err) => console.error('Error al cargar subcarteras:', err)
-      });
-    }
-    this.cargarEstadisticasBaseAjuste();
-  }
-
-  onBaseAjusteSubcarteraChange() {
-    this.cargarEstadisticasBaseAjuste();
-  }
-
-  cargarEstadisticasBaseAjuste() {
-    const idSubcartera = this.baseAjusteSubcartera || undefined;
-    this.comisionesService.obtenerEstadisticasBaseAjuste(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (data) => {
-        this.estadisticasBaseAjuste.set(data);
-      },
-      error: (err) => {
-        console.error('Error al cargar estadísticas:', err);
-        this.estadisticasBaseAjuste.set(null);
+      error: e => {
+        this.cargando.set(false);
+        this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
       }
     });
   }
 
-  agregarEnvioBaseAjuste() {
-    this.isLoading.set(true);
-    const idSubcartera = this.baseAjusteSubcartera || undefined;
-
-    this.comisionesService.agregarEnvioBaseAjuste(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (resultado) => {
-        this.mostrarMensaje(resultado.mensaje, false);
-        this.cargarEstadisticasBaseAjuste();
-      },
-      error: (err) => {
-        console.error('Error al agregar envío:', err);
-        this.mostrarMensaje('Error al agregar envío: ' + (err.error?.error || err.message), true);
-      },
-      complete: () => this.isLoading.set(false)
-    });
+  moverMes(delta: number): void {
+    let mes = this.mes() + delta;
+    let anio = this.anio();
+    if (mes < 1) {
+      mes = 12;
+      anio--;
+    } else if (mes > 12) {
+      mes = 1;
+      anio++;
+    }
+    this.cambiarMes(anio, mes);
   }
 
-  exportarBaseAjusteExcel() {
-    this.isLoading.set(true);
-    const idSubcartera = this.baseAjusteSubcartera || undefined;
+  irMesActual(): void {
+    this.cambiarMes(this.hoy.getFullYear(), this.hoy.getMonth() + 1);
+  }
 
-    this.comisionesService.exportarBaseAjusteExcel(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Base_Ajuste_${this.filtroAnio}_${String(this.filtroMes).padStart(2, '0')}.xlsx`;
-        link.click();
-        window.URL.revokeObjectURL(url);
+  private cambiarMes(anio: number, mes: number): void {
+    this.anio.set(anio);
+    this.mes.set(mes);
+    this.idPeriodo.set(null);
+    this.reporteCreado.set(null);
+    this.sincronizarUrl();
+    this.cargarPeriodos();
+  }
 
-        this.mostrarMensaje('Excel exportado correctamente', false);
-      },
-      error: (err) => {
-        console.error('Error al exportar Excel:', err);
-        this.mostrarMensaje('Error al exportar Excel', true);
-      },
-      complete: () => this.isLoading.set(false)
+  irSeccion(seccion: Seccion): void {
+    this.seccion.set(seccion);
+    this.sincronizarUrl();
+  }
+
+  abrirPeriodo(id: number): void {
+    this.reporteCreado.set(null);
+    this.idPeriodo.set(id);
+    this.sincronizarUrl();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  cerrarPeriodo(): void {
+    this.idPeriodo.set(null);
+    this.reporteCreado.set(null);
+    this.sincronizarUrl();
+  }
+
+  alCrear(reporte: ReportePeriodo): void {
+    this.creando.set(false);
+    const p = reporte.periodo;
+    if (p.anio !== this.anio() || p.mes !== this.mes()) {
+      this.anio.set(p.anio);
+      this.mes.set(p.mes);
+    }
+    this.cargarPeriodos();
+    this.reporteCreado.set(reporte);
+    this.idPeriodo.set(p.id);
+    this.sincronizarUrl();
+  }
+
+  alCambiarPeriodo(evento: { eliminado: boolean }): void {
+    if (evento.eliminado) {
+      this.cerrarPeriodo();
+    }
+    this.cargarPeriodos();
+  }
+
+  private sincronizarUrl(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      replaceUrl: true,
+      queryParams: {
+        anio: this.anio(),
+        mes: this.mes(),
+        periodo: this.seccion() === 'periodos' ? this.idPeriodo() : null,
+        seccion: this.seccion() === 'base-ajuste' ? 'base-ajuste' : null
+      }
     });
   }
 }

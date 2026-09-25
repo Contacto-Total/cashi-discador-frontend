@@ -1,15 +1,22 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  ComisionMeta,
-  ComisionBono,
-  ComisionReporte,
-  ComisionConfigResumen,
-  Inquilino,
+  AuditoriaComision,
   Cartera,
-  Subcartera
+  CrearPeriodoRequest,
+  EnvioBaseAjuste,
+  EscalaComision,
+  EstadisticasBaseAjuste,
+  EstadoPeriodo,
+  Inquilino,
+  PeriodoComision,
+  ReportePeriodo,
+  RolCashi,
+  RolElegido,
+  Subcartera,
+  SustentoPeriodo
 } from '../models/comision.model';
 
 @Injectable({
@@ -17,327 +24,120 @@ import {
 })
 export class ComisionesService {
 
+  private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.gatewayUrl}/comisiones`;
 
-  constructor(private http: HttpClient) {}
+  // ==================== CATÁLOGOS (los usan también otros módulos) ====================
 
-  // ==================== INQUILINOS / CARTERAS / SUBCARTERAS ====================
-
-  /**
-   * Obtener inquilinos disponibles
-   */
   obtenerInquilinos(): Observable<Inquilino[]> {
     return this.http.get<Inquilino[]>(`${this.baseUrl}/inquilinos`);
   }
 
-  /**
-   * Obtener carteras de un inquilino
-   */
   obtenerCarteras(idInquilino: number): Observable<Cartera[]> {
-    const params = new HttpParams().set('idInquilino', idInquilino.toString());
+    const params = new HttpParams().set('idInquilino', idInquilino);
     return this.http.get<Cartera[]>(`${this.baseUrl}/carteras`, { params });
   }
 
-  /**
-   * Obtener subcarteras de una cartera
-   */
   obtenerSubcarteras(idCartera: number): Observable<Subcartera[]> {
-    const params = new HttpParams().set('idCartera', idCartera.toString());
+    const params = new HttpParams().set('idCartera', idCartera);
     return this.http.get<Subcartera[]>(`${this.baseUrl}/subcarteras`, { params });
   }
 
-  /**
-   * Obtener jerarquía de una subcartera (inquilino y cartera padre)
-   */
   obtenerJerarquiaSubcartera(idSubcartera: number): Observable<{ idInquilino: number; idCartera: number }> {
     return this.http.get<{ idInquilino: number; idCartera: number }>(`${this.baseUrl}/subcarteras/${idSubcartera}/jerarquia`);
   }
 
-  // ==================== METAS ====================
+  // ==================== PERÍODOS ====================
 
-  /**
-   * Obtener metas de un período
-   */
-  obtenerMetas(anio: number, mes: number): Observable<ComisionMeta[]> {
-    const params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-    return this.http.get<ComisionMeta[]>(`${this.baseUrl}/metas`, { params });
+  listarPeriodos(anio: number, mes: number): Observable<PeriodoComision[]> {
+    const params = new HttpParams().set('anio', anio).set('mes', mes);
+    return this.http.get<PeriodoComision[]>(`${this.baseUrl}/periodos`, { params });
   }
 
-  /**
-   * Obtener una meta por ID
-   */
-  obtenerMeta(id: number): Observable<ComisionMeta> {
-    return this.http.get<ComisionMeta>(`${this.baseUrl}/metas/${id}`);
+  crearPeriodo(request: CrearPeriodoRequest): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos`, request);
   }
 
-  /**
-   * Crear o actualizar una meta
-   */
-  guardarMeta(meta: ComisionMeta): Observable<ComisionMeta> {
-    console.log('[COMISIONES] Guardando meta:', meta);
-    return this.http.post<ComisionMeta>(`${this.baseUrl}/metas`, meta);
+  obtenerPeriodo(id: number): Observable<ReportePeriodo> {
+    return this.http.get<ReportePeriodo>(`${this.baseUrl}/periodos/${id}`);
   }
 
-  /**
-   * Eliminar una meta
-   */
-  eliminarMeta(id: number): Observable<{ mensaje: string }> {
-    console.log('[COMISIONES] Eliminando meta ID:', id);
-    return this.http.delete<{ mensaje: string }>(`${this.baseUrl}/metas/${id}`);
+  eliminarPeriodo(id: number): Observable<{ mensaje: string }> {
+    return this.http.delete<{ mensaje: string }>(`${this.baseUrl}/periodos/${id}`);
   }
 
-  // ==================== BONOS ====================
-
-  /**
-   * Obtener bonos por período
-   */
-  obtenerBonos(anio: number, mes: number): Observable<ComisionBono[]> {
-    const params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-    return this.http.get<ComisionBono[]>(`${this.baseUrl}/bonos`, { params });
+  guardarTramos(id: number, tramos: EscalaComision[]): Observable<ReportePeriodo> {
+    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/tramos`, tramos);
   }
 
-  /**
-   * Obtener bonos activos por período
-   */
-  obtenerBonosActivos(anio: number, mes: number): Observable<ComisionBono[]> {
-    const params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-    return this.http.get<ComisionBono[]>(`${this.baseUrl}/bonos/activos`, { params });
+  listarRolesDisponibles(id: number): Observable<RolCashi[]> {
+    return this.http.get<RolCashi[]>(`${this.baseUrl}/periodos/${id}/roles-disponibles`);
   }
 
-  /**
-   * Copiar bonos de un período a otro
-   */
-  copiarBonos(anioOrigen: number, mesOrigen: number, anioDestino: number, mesDestino: number): Observable<{ mensaje: string; cantidadCopiada: number; bonos: ComisionBono[] }> {
-    const params = new HttpParams()
-      .set('anioOrigen', anioOrigen.toString())
-      .set('mesOrigen', mesOrigen.toString())
-      .set('anioDestino', anioDestino.toString())
-      .set('mesDestino', mesDestino.toString());
-    return this.http.post<{ mensaje: string; cantidadCopiada: number; bonos: ComisionBono[] }>(
-      `${this.baseUrl}/bonos/copiar`, null, { params }
-    );
+  guardarRoles(id: number, roles: RolElegido[]): Observable<ReportePeriodo> {
+    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/roles`, roles);
   }
 
-  /**
-   * Obtener un bono por ID
-   */
-  obtenerBono(id: number): Observable<ComisionBono> {
-    return this.http.get<ComisionBono>(`${this.baseUrl}/bonos/${id}`);
+  cambiarQuitado(id: number, idResultado: number, quitado: boolean): Observable<ReportePeriodo> {
+    const params = new HttpParams().set('quitado', quitado);
+    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/quitado`, null, { params });
   }
 
-  /**
-   * Crear o actualizar un bono
-   */
-  guardarBono(bono: ComisionBono): Observable<ComisionBono> {
-    console.log('[COMISIONES] Guardando bono:', bono);
-    return this.http.post<ComisionBono>(`${this.baseUrl}/bonos`, bono);
+  calcular(id: number): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/calcular`, null);
   }
 
-  /**
-   * Eliminar un bono
-   */
-  eliminarBono(id: number): Observable<{ mensaje: string }> {
-    console.log('[COMISIONES] Eliminando bono ID:', id);
-    return this.http.delete<{ mensaje: string }>(`${this.baseUrl}/bonos/${id}`);
+  cambiarEstado(id: number, estado: EstadoPeriodo): Observable<ReportePeriodo> {
+    const params = new HttpParams().set('estado', estado);
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/estado`, null, { params });
   }
 
-  /**
-   * Obtener campos disponibles para bonos
-   */
-  obtenerCamposDisponibles(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.baseUrl}/bonos/campos-disponibles`);
-  }
-
-  /**
-   * Obtener valores únicos de un campo para el dropdown de bonos
-   */
-  obtenerValoresCampo(campo: string): Observable<string[]> {
-    const params = new HttpParams().set('campo', campo);
-    return this.http.get<string[]>(`${this.baseUrl}/bonos/valores-campo`, { params });
-  }
-
-  // ==================== CÁLCULO ====================
-
-  /**
-   * Calcular comisiones para un período
-   */
-  calcularComisiones(anio: number, mes: number, idSubcartera?: number): Observable<ComisionReporte> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
+  obtenerSustento(id: number, idResultado?: number): Observable<SustentoPeriodo> {
+    let params = new HttpParams();
+    if (idResultado != null) {
+      params = params.set('idResultado', idResultado);
     }
-
-    console.log('[COMISIONES] Calculando comisiones:', { anio, mes, idSubcartera });
-    return this.http.get<ComisionReporte>(`${this.baseUrl}/calcular`, { params });
+    return this.http.get<SustentoPeriodo>(`${this.baseUrl}/periodos/${id}/sustento`, { params });
   }
 
-  // ==================== UTILIDADES ====================
-
-  /**
-   * Obtener resumen de configuración
-   */
-  obtenerResumenConfig(anio: number, mes: number): Observable<ComisionConfigResumen> {
-    const params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-    return this.http.get<ComisionConfigResumen>(`${this.baseUrl}/resumen-config`, { params });
+  historial(id: number): Observable<AuditoriaComision[]> {
+    return this.http.get<AuditoriaComision[]>(`${this.baseUrl}/periodos/${id}/historial`);
   }
 
-  /**
-   * Obtener nombre legible de un campo
-   */
-  getNombreCampo(campo: string): string {
-    const nombres: Record<string, string> = {
-      'campo_monto_origen': 'Campo Monto Origen',
-      'ruta_nivel_1': 'Tipificación Nivel 1',
-      'ruta_nivel_2': 'Tipificación Nivel 2',
-      'ruta_nivel_3': 'Tipificación Nivel 3',
-      'ruta_nivel_4': 'Tipificación Nivel 4',
-      'nombre_subcartera': 'Subcartera',
-      'nombre_cartera': 'Cartera',
-      'estado_gestion': 'Estado Gestión',
-      'metodo_contacto': 'Método Contacto',
-      'canal_contacto': 'Canal Contacto'
-    };
-    return nombres[campo] || campo;
+  exportarExcelPeriodo(id: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/periodos/${id}/excel`, { responseType: 'blob' });
   }
 
-  /**
-   * Obtener nombre del mes
-   */
-  getNombreMes(mes: number): string {
-    const meses = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return meses[mes - 1] || '';
-  }
-
-  // ==================== EXPORTAR ====================
-
-  /**
-   * Exportar reporte de comisiones en PDF
-   */
-  exportarPdf(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
-    }
-
-    return this.http.get(`${this.baseUrl}/exportar-pdf`, {
-      params,
-      responseType: 'blob'
-    });
-  }
-
-  /**
-   * Exportar reporte de comisiones en Excel
-   */
-  exportarExcel(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
-    }
-
-    return this.http.get(`${this.baseUrl}/exportar-excel`, {
-      params,
-      responseType: 'blob'
-    });
-  }
-
-  /**
-   * Exportar reporte DETALLADO de comisiones en Excel
-   * Incluye: Resumen, Detalle Pagos, Escalas, Detalle Bonos
-   */
-  exportarExcelDetallado(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
-    }
-
-    return this.http.get(`${this.baseUrl}/exportar-excel-detallado`, {
-      params,
-      responseType: 'blob'
-    });
+  exportarExcelParticipante(id: number, idResultado: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/excel`, { responseType: 'blob' });
   }
 
   // ==================== BASE DE AJUSTE ====================
 
-  /**
-   * Agregar promesas pagadas al envío del período
-   */
-  agregarEnvioBaseAjuste(anio: number, mes: number, idSubcartera?: number): Observable<{ registrosAgregados: number; fechaEnvio: string; mensaje: string }> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
-    }
-
-    console.log('[COMISIONES] Agregando envío Base Ajuste:', { anio, mes, idSubcartera });
-    return this.http.post<{ registrosAgregados: number; fechaEnvio: string; mensaje: string }>(
-      `${this.baseUrl}/base-ajuste/agregar-envio`,
-      null,
-      { params }
-    );
+  obtenerEstadisticasBaseAjuste(anio: number, mes: number, idSubcartera?: number | null): Observable<EstadisticasBaseAjuste> {
+    return this.http.get<EstadisticasBaseAjuste>(`${this.baseUrl}/base-ajuste/estadisticas`, {
+      params: this.paramsPeriodo(anio, mes, idSubcartera)
+    });
   }
 
-  /**
-   * Obtener estadísticas de Base de Ajuste
-   */
-  obtenerEstadisticasBaseAjuste(anio: number, mes: number, idSubcartera?: number): Observable<{
-    total_registros: number;
-    total_envios: number;
-    total_asesores: number;
-    monto_total: number;
-    primer_envio: string;
-    ultimo_envio: string;
-  }> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
-    }
-
-    return this.http.get<any>(`${this.baseUrl}/base-ajuste/estadisticas`, { params });
+  agregarEnvioBaseAjuste(anio: number, mes: number, idSubcartera?: number | null): Observable<EnvioBaseAjuste> {
+    return this.http.post<EnvioBaseAjuste>(`${this.baseUrl}/base-ajuste/agregar-envio`, null, {
+      params: this.paramsPeriodo(anio, mes, idSubcartera)
+    });
   }
 
-  /**
-   * Exportar Base de Ajuste en Excel
-   */
-  exportarBaseAjusteExcel(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
-    let params = new HttpParams()
-      .set('anio', anio.toString())
-      .set('mes', mes.toString());
-
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera.toString());
-    }
-
+  exportarBaseAjusteExcel(anio: number, mes: number, idSubcartera?: number | null): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/base-ajuste/exportar-excel`, {
-      params,
+      params: this.paramsPeriodo(anio, mes, idSubcartera),
       responseType: 'blob'
     });
+  }
+
+  private paramsPeriodo(anio: number, mes: number, idSubcartera?: number | null): HttpParams {
+    let params = new HttpParams().set('anio', anio).set('mes', mes);
+    if (idSubcartera != null) {
+      params = params.set('idSubcartera', idSubcartera);
+    }
+    return params;
   }
 }

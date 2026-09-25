@@ -393,7 +393,7 @@ export const routes: Routes = [
   {
     path: 'comisiones',
     loadComponent: () => import('./comisiones/pages/comisiones.page').then(m => m.ComisionesPage),
-    canActivate: [authGuard, adminOrSupervisorGuard]
+    canActivate: [authGuard, adminGuard]
   },
   {
     path: 'dashboard/payments',
