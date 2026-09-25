@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaDia, AsistenciaReporte, ResumenAgente, TipoMarcacion } from './asistencia.models';
+import { AsistenciaDia, AsistenciaReporte, CierreSemana, ResumenAgente, TipoMarcacion } from './asistencia.models';
 import { ESTADOS, ESTILOS } from './asistencia.estilos';
 
 /** Las seis marcas, con el nombre que se lee en el aviso de accesibilidad. */
@@ -17,6 +17,15 @@ const MARCAS: Record<TipoMarcacion, { etiqueta: string; campo: keyof AsistenciaD
   SALIDA: { etiqueta: 'Salida', campo: 'salida' }
 };
 
+/** Un día que no se vino (falta, justificado o no laborable) no tiene marcas que falten. */
+const SIN_MARCAS = ['FALTA', 'JUSTIFICADO', 'NO_LABORABLE'];
+/** El nombre corto de cada marca en el aviso de faltantes: «falta almuerzo y break». */
+const NOMBRE_CORTO: Record<TipoMarcacion, string> = {
+  ENTRADA: 'entrada', ALMUERZO_INICIO: 'almuerzo', ALMUERZO_FIN: 'almuerzo',
+  BREAK_INICIO: 'break', BREAK_FIN: 'break', SALIDA: 'salida'
+};
+const TODAS: TipoMarcacion[] = ['ENTRADA', 'ALMUERZO_INICIO', 'ALMUERZO_FIN', 'BREAK_INICIO', 'BREAK_FIN', 'SALIDA'];
+
 /** Una hora cambiada, esperando su motivo. */
 interface Cambio {
   fecha: string;
@@ -25,7 +34,7 @@ interface Cambio {
 }
 
 /**
- * Editar horas: corregir la semana entera de una persona de una vez.
+ * Corregir marcaciones: la semana entera de un asesor de una vez.
  *
  * Existe aparte del reporte porque es otra tarea. En el reporte se mira y se
  * corrige un día suelto desde su fila; aquí se entra cuando hay que repasar
@@ -38,6 +47,10 @@ interface Cambio {
  * El motivo NO es una columna: es un chip que aparece en el día en cuanto se
  * le toca una hora. Una columna de texto por fila deja seis cajas vacías
  * pidiendo algo que casi nunca hace falta.
+ *
+ * Lo que falta se ve: arriba, un aviso con cada día incompleto y un atajo a su
+ * celda; en la tabla, la celda vacía en ámbar. Una semana cerrada ya no se
+ * corrige: se ve, pero no se toca.
  */
 @Component({
   selector: 'app-asistencia-edicion',
@@ -51,21 +64,44 @@ interface Cambio {
     /* Las dos horas de una pausa, juntas. */
     .par-edit { display: flex; gap: 4px }
 
-    /* Se cualifica con input y no solo con la clase: la regla global de este
-       proyecto para input[type=time] pesa más que una clase sola y estiraba
-       la celda al 100 %. */
-    input.celda-edit {
+    /* :host y !important: el tema claro fuerza con !important el borde, el
+       fondo y el color de todo input (styles.css, «Inputs y selects»), y con
+       una clase sola además la regla de input[type=time] estiraba la celda. */
+    :host input.celda-edit {
       width: 116px; height: 32px; padding: 0 8px; border-radius: 6px;
-      border: 1px solid #8491a3; background: #fff; color: #0f172a;
+      border: 1px solid #8491a3 !important; background: #fff !important; color: #0f172a !important;
       font: inherit; font-size: 12.5px; font-variant-numeric: tabular-nums;
     }
-    input.celda-edit:focus-visible {
-      outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.2);
+    :host input.celda-edit:focus-visible {
+      outline: none; border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,.2);
     }
-    input.celda-edit.cambiada { border-color: #d97706; background: #fffbeb }
-    input.celda-edit.vacia { border-style: dashed; border-color: #f5a3a3 }
-    :host-context(.dark) input.celda-edit { border-color: #475569; background: #0f172a; color: #f1f5f9 }
-    :host-context(.dark) input.celda-edit.cambiada { border-color: #b45309; background: rgba(120,53,15,.35) }
+    :host input.celda-edit.cambiada { border-color: #d97706 !important; background: color-mix(in srgb, #d97706 10%, #fff) !important }
+    :host input.celda-edit.vacia { border-style: dashed; border-color: #f5a3a3 !important }
+    :host input.celda-edit.falta { border-color: #f59e0b !important; background: #fef6e0 !important; box-shadow: inset 0 0 0 1px #f59e0b }
+    :host-context(.dark) input.celda-edit { border-color: #475569 !important; background: #0f172a !important; color: #f1f5f9 !important }
+    :host-context(.dark) input.celda-edit.cambiada { border-color: #b45309 !important; background: rgba(120,53,15,.35) !important }
+    :host-context(.dark) input.celda-edit.falta { border-color: #f59e0b !important; background: rgba(69,26,3,.6) !important }
+    input.celda-edit:disabled { opacity: .6; cursor: default }
+    tr.con-faltas td:first-child { box-shadow: inset 3px 0 0 #f59e0b }
+    .no-aplica { font-size: 12px; color: #8491a3 }
+
+    /* Arriba de la tabla: qué falta completar, con atajos; o que ya está todo, o que está cerrada. */
+    .aviso-huecos {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 12px; padding: 10px 14px;
+      border-radius: 10px; border: 1px solid color-mix(in srgb, #f59e0b 45%, #fff);
+      background: #fef6e0; color: #92400e; font-size: 12.5px;
+    }
+    .aviso-huecos.cerrada { border-color: #e6e9ee; background: #f1f3f6; color: #334155 }
+    .aviso-huecos.ok { border-color: color-mix(in srgb, #16a34a 40%, #fff); background: #e8f5ec; color: #166534 }
+    :host-context(.dark) .aviso-huecos { border-color: #92400e; background: rgba(69,26,3,.6); color: #fcd34d }
+    :host-context(.dark) .aviso-huecos.cerrada { border-color: #1e293b; background: #1e293b; color: #e2e8f0 }
+    :host-context(.dark) .aviso-huecos.ok { border-color: #166534; background: rgba(5,46,22,.6); color: #86efac }
+    .chip-hueco {
+      border: 1px solid #f59e0b; background: #fff; color: #92400e; border-radius: 999px;
+      padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .chip-hueco:hover { background: #f4f6f9 }
+    :host-context(.dark) .chip-hueco { background: #0f172a; color: #fcd34d }
 
     /* El motivo vive en la fila de su día y solo aparece cuando hay algo que
        explicar. */
@@ -88,9 +124,9 @@ interface Cambio {
     <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Editar horas</h1>
+          <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Corregir marcaciones</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Se corrige a una persona a la vez
+            Corrección de marcaciones por asesor
           </p>
         </div>
         <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
@@ -102,7 +138,7 @@ interface Cambio {
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="agente-edicion">Agente</label>
-          <select id="agente-edicion" [class]="estilos.campo + ' w-[260px]'"
+          <select id="agente-edicion" [class]="estilos.campo + ' !w-[210px]'"
                   [ngModel]="idElegido()" (ngModelChange)="elegir($event)">
             @for (a of roster(); track a.idUsuario) {
               <option [ngValue]="a.idUsuario">{{ a.nombreAgente }}</option>
@@ -127,7 +163,7 @@ interface Cambio {
 
           <div class="mb-3 flex flex-wrap items-center justify-between gap-3 px-0.5">
             <div>
-              <h2 class="!m-0 flex flex-wrap items-center gap-[9px] text-xl font-extrabold tracking-[-0.01em]">
+              <h2 class="!m-0 flex flex-wrap items-center gap-[9px] text-[20px] font-extrabold tracking-[-0.01em]">
                 {{ p.nombreAgente }}
                 @if (p.rol) {
                   <span [class]="p.rol === 'Supervisor' ? estilos.rolSupervisor : estilos.rolAsesor">
@@ -138,6 +174,28 @@ interface Cambio {
               <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ rangoTexto() }}</p>
             </div>
           </div>
+
+          @if (semanaCerrada()) {
+            <div class="aviso-huecos cerrada" role="note">
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/></svg>
+              <strong>Semana cerrada: ya no se corrige</strong>
+            </div>
+          } @else if (conHuecos().length) {
+            <div class="aviso-huecos" role="note">
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              <strong>{{ conHuecos().length }} {{ conHuecos().length === 1 ? 'día con marcas faltantes' : 'días con marcas faltantes' }}</strong>
+              @for (h of conHuecos(); track h.dia.fecha) {
+                <button type="button" class="chip-hueco" (click)="irAlHueco(h.dia, h.primera)">
+                  {{ h.dia.nombreDia.slice(0, 3) }} {{ h.dia.fecha | date: 'dd/MM' }} · falta {{ h.texto }}
+                </button>
+              }
+            </div>
+          } @else if (dias().length) {
+            <div class="aviso-huecos ok" role="note">
+              <span class="inline-flex font-extrabold leading-none" aria-hidden="true">✓</span>
+              <strong>Marcas completas esta semana</strong>
+            </div>
+          }
 
           <div [class]="estilos.panel">
             <table class="w-full border-collapse">
@@ -155,10 +213,11 @@ interface Cambio {
               <tbody>
                 @for (dia of dias(); track dia.fecha) {
                   <tr class="border-b border-[#f1f3f6] last:border-0 dark:border-slate-800"
-                      [class.opacity-50]="dia.estado === 'NO_LABORABLE'">
+                      [class.opacity-50]="dia.estado === 'NO_LABORABLE'"
+                      [class.con-faltas]="faltantes(dia).length > 0">
                     <td [class]="estilos.td">
                       <strong>{{ dia.fecha | date: 'dd/MM' }}</strong>
-                      <span class="ml-1.5 text-[#8491a3] dark:text-slate-500">{{ dia.nombreDia.slice(0, 3) }}</span>
+                      <span class="ml-[5px] text-[#8491a3] dark:text-slate-500">{{ dia.nombreDia.slice(0, 3) }}</span>
                       @if (tieneCambios(dia.fecha)) {
                         <button type="button" class="chip-motivo"
                                 [class.puesto]="!!(motivos()[dia.fecha] ?? '').trim()"
@@ -174,20 +233,28 @@ interface Cambio {
                         [ngTemplateOutletContext]="{ dia: dia, tipo: 'ENTRADA' }"></ng-container>
                     </td>
                     <td [class]="estilos.td">
-                      <div class="par-edit">
-                        <ng-container [ngTemplateOutlet]="celda"
-                          [ngTemplateOutletContext]="{ dia: dia, tipo: 'ALMUERZO_INICIO' }"></ng-container>
-                        <ng-container [ngTemplateOutlet]="celda"
-                          [ngTemplateOutletContext]="{ dia: dia, tipo: 'ALMUERZO_FIN' }"></ng-container>
-                      </div>
+                      @if (noAplica(dia, 'ALMUERZO_INICIO', 'ALMUERZO_FIN')) {
+                        <span class="no-aplica">No aplica</span>
+                      } @else {
+                        <div class="par-edit">
+                          <ng-container [ngTemplateOutlet]="celda"
+                            [ngTemplateOutletContext]="{ dia: dia, tipo: 'ALMUERZO_INICIO' }"></ng-container>
+                          <ng-container [ngTemplateOutlet]="celda"
+                            [ngTemplateOutletContext]="{ dia: dia, tipo: 'ALMUERZO_FIN' }"></ng-container>
+                        </div>
+                      }
                     </td>
                     <td [class]="estilos.td">
-                      <div class="par-edit">
-                        <ng-container [ngTemplateOutlet]="celda"
-                          [ngTemplateOutletContext]="{ dia: dia, tipo: 'BREAK_INICIO' }"></ng-container>
-                        <ng-container [ngTemplateOutlet]="celda"
-                          [ngTemplateOutletContext]="{ dia: dia, tipo: 'BREAK_FIN' }"></ng-container>
-                      </div>
+                      @if (noAplica(dia, 'BREAK_INICIO', 'BREAK_FIN')) {
+                        <span class="no-aplica">No aplica</span>
+                      } @else {
+                        <div class="par-edit">
+                          <ng-container [ngTemplateOutlet]="celda"
+                            [ngTemplateOutletContext]="{ dia: dia, tipo: 'BREAK_INICIO' }"></ng-container>
+                          <ng-container [ngTemplateOutlet]="celda"
+                            [ngTemplateOutletContext]="{ dia: dia, tipo: 'BREAK_FIN' }"></ng-container>
+                        </div>
+                      }
                     </td>
                     <td [class]="estilos.td">
                       <ng-container [ngTemplateOutlet]="celda"
@@ -195,7 +262,7 @@ interface Cambio {
                     </td>
 
                     <td [class]="estilos.td">
-                      <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold"
+                      <span class="inline-flex items-center rounded-full px-[9px] py-0.5 text-[11.5px] font-bold"
                             [class]="ESTADOS[dia.estado].clase">
                         {{ dia.tipoDia ?? ESTADOS[dia.estado].texto }}
                       </span>
@@ -215,24 +282,29 @@ interface Cambio {
             </table>
           </div>
 
+          <!-- Solo con algo cambiado, como en la maqueta: sin cambios no hay nada que guardar. -->
+          @if (!semanaCerrada() && cambios().length) {
           <div class="barra-edicion">
-            <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
+            <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+              {{ diasCorregidos() }} día(s) corregido(s)@if (diasSinMotivo().length) { · <strong class="!text-[#b91c1c] dark:!text-red-300">{{ diasSinMotivo().length }} sin motivo</strong>} @else {, todos con su motivo}
+            </p>
             <div class="flex gap-2">
-              <button type="button" [class]="estilos.botonSecundario + ' !h-[34px] !text-[12.5px]'"
-                      (click)="descartar()" [disabled]="!cambios().length">
-                <lucide-angular name="rotate-ccw" [size]="13" class="block"></lucide-angular>
+              <button type="button" [class]="estilos.botonSecundario + ' !h-[34px] !gap-[5px] !px-[13px] !text-[12.5px]'"
+                      (click)="descartar()">
+                <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
                 Descartar
               </button>
-              <button type="button" [class]="estilos.botonPrimario + ' !h-[34px] !text-[12.5px]'"
-                      (click)="guardar()" [disabled]="!cambios().length || guardando()">
-                <lucide-angular name="save" [size]="13" class="block"></lucide-angular>
+              <button type="button" [class]="estilos.botonPrimario + ' !h-[34px] !gap-[5px] !px-[13px] !text-[12.5px]'"
+                      (click)="guardar()" [disabled]="diasSinMotivo().length > 0 || guardando()">
+                <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
                 {{ guardando() ? 'Guardando…' : 'Guardar' }}
               </button>
             </div>
           </div>
+          }
 
           @if (error()) {
-            <p class="mt-2 text-xs text-[#b91c1c]">{{ error() }}</p>
+            <p class="mt-2 text-[12px] text-[#b91c1c]">{{ error() }}</p>
           }
         </div>
       }
@@ -254,16 +326,16 @@ interface Cambio {
               </p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarMotivo()" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
           <div class="flex flex-col gap-1.5 px-5 py-4">
             <label [class]="estilos.etiqueta" for="texto-motivo">Qué pasó</label>
-            <textarea id="texto-motivo" rows="2" [class]="estilos.area"
+            <textarea id="texto-motivo" rows="2" maxlength="200" [class]="estilos.area"
                       placeholder="Ej.: olvidó marcar el regreso del almuerzo"
                       [ngModel]="borrador()" (ngModelChange)="borrador.set($event)"></textarea>
             @if (errorMotivo()) {
-              <p class="!m-0 text-xs text-[#b91c1c]">{{ errorMotivo() }}</p>
+              <p class="!m-0 text-[12px] text-[#b91c1c]">{{ errorMotivo() }}</p>
             }
           </div>
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
@@ -276,13 +348,15 @@ interface Cambio {
 
     <!-- Una celda de hora: se nota si está tocada y se nota si está vacía. -->
     <ng-template #celda let-dia="dia" let-tipo="tipo">
-      <input type="time" class="celda-edit"
+      <input type="time" class="celda-edit" [id]="'celda-' + dia.fecha + '-' + tipo"
              [class.cambiada]="estaTocada(dia.fecha, tipo)"
-             [class.vacia]="!valorDe(dia, tipo) && !estaTocada(dia.fecha, tipo)"
-             [disabled]="dia.estado === 'NO_LABORABLE'"
+             [class.falta]="falta(dia, tipo)"
+             [class.vacia]="!valorDe(dia, tipo) && !estaTocada(dia.fecha, tipo) && !falta(dia, tipo)"
+             [disabled]="dia.estado === 'NO_LABORABLE' || diaCerrado(dia.fecha)"
              [ngModel]="valorActual(dia, tipo)"
              (ngModelChange)="cambiar(dia, tipo, $event)"
-             [attr.aria-label]="nombreDe(tipo) + ' del ' + dia.fecha">
+             [title]="falta(dia, tipo) ? 'Falta esta marca' : ''"
+             [attr.aria-label]="nombreDe(tipo) + ' del ' + dia.fecha + (falta(dia, tipo) ? ', falta' : '')">
     </ng-template>
   `
 })
@@ -330,20 +404,73 @@ export class AsistenciaEdicionComponent {
     return d.length ? `${this.corta(d[0].fecha)} – ${this.corta(d[d.length - 1].fecha)}` : '';
   });
 
-  /** Lo que falta para poder guardar, dicho en la propia barra. */
-  readonly resumen = computed(() => {
-    const cuantas = this.cambios().length;
-    if (!cuantas) {
-      return 'Sin cambios';
-    }
-    const sinMotivo = this.diasSinMotivo();
-    const horas = `${cuantas} ${cuantas === 1 ? 'hora cambiada' : 'horas cambiadas'}`;
-    return sinMotivo.length
-      ? `${horas} · falta el motivo de ${sinMotivo.map(f => this.corta(f)).join(', ')}`
-      : `${horas} · listo para guardar`;
+  /** Las semanas cerradas: lo que cae en ellas ya no se corrige. */
+  readonly cierres = signal<CierreSemana[]>([]);
+
+  /** Si ese día es de una semana cerrada del ámbito o de toda la empresa. */
+  diaCerrado(fecha: string): boolean {
+    const sub = this.idSubcartera();
+    return this.cierres().some(c => fecha >= c.lunes && fecha <= c.ultimoDia
+      && (c.idSubcartera === null || c.idSubcartera === sub));
+  }
+
+  readonly semanaCerrada = computed(() => {
+    const d = this.dias();
+    return d.length > 0 && d.every(x => this.diaCerrado(x.fecha));
   });
 
+  /** Las marcas que faltan en un día, contando lo que ya se tecleó. */
+  faltantes(dia: AsistenciaDia): TipoMarcacion[] {
+    return TODAS.filter(tipo => this.falta(dia, tipo));
+  }
+
+  /** Una marca falta si el día la pide, está vacía y nadie la ha escrito todavía. */
+  falta(dia: AsistenciaDia, tipo: TipoMarcacion): boolean {
+    if (SIN_MARCAS.includes(dia.estado)) {
+      return false;
+    }
+    const sabado = dia.nombreDia.toLowerCase().startsWith('s');
+    if (sabado && tipo !== 'ENTRADA' && tipo !== 'SALIDA') {
+      return false;
+    }
+    return !this.valorActual(dia, tipo);
+  }
+
+  /** El sábado no lleva almuerzo ni break: si no hay marca, se dice en vez de dejar el hueco. */
+  noAplica(dia: AsistenciaDia, a: TipoMarcacion, b: TipoMarcacion): boolean {
+    return dia.nombreDia.toLowerCase().startsWith('s')
+      && !this.valorActual(dia, a) && !this.valorActual(dia, b);
+  }
+
+  /** Los días con huecos, para el aviso de arriba: «Mié 16/09 · falta almuerzo y break». */
+  readonly conHuecos = computed(() => {
+    this.cambios();
+    return this.dias()
+      .map(dia => ({ dia, faltan: this.faltantes(dia) }))
+      .filter(x => x.faltan.length)
+      .map(x => {
+        const nombres = [...new Set(x.faltan.map(t => NOMBRE_CORTO[t]))];
+        const texto = nombres.length < 2 ? nombres.join('')
+          : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
+        return { dia: x.dia, primera: x.faltan[0], texto };
+      });
+  });
+
+  /** El atajo del aviso: lleva a la primera celda que falta de ese día. */
+  irAlHueco(dia: AsistenciaDia, tipo: TipoMarcacion): void {
+    const celda = document.getElementById(`celda-${dia.fecha}-${tipo}`) as HTMLInputElement | null;
+    celda?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    celda?.focus();
+  }
+
+  /** Los días con alguna hora cambiada: la barra los cuenta, como la maqueta. */
+  readonly diasCorregidos = computed(() => new Set(this.cambios().map(c => c.fecha)).size);
+
   constructor() {
+    this.servicio.cierres().subscribe({
+      next: c => this.cierres.set(c),
+      error: () => this.cierres.set([])
+    });
     effect(() => {
       const ambito = this.idSubcartera();
       const desde = this.desde();
@@ -443,7 +570,7 @@ export class AsistenciaEdicionComponent {
     this.error.set('');
   }
 
-  private diasSinMotivo(): string[] {
+  protected diasSinMotivo(): string[] {
     return [...new Set(this.cambios().map(c => c.fecha))]
       .filter(f => !(this.motivos()[f] ?? '').trim());
   }

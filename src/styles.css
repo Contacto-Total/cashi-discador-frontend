@@ -5656,6 +5656,19 @@ body .cashi-asistencia.cashi-asistencia {
      .main-content, estiran la página y al bajar queda un espacio en blanco
      debajo de la última tabla. */
   position: relative;
+  /* El body toma la tipografía de Material («400 14px/20px»): un interlineado
+     fijo de 20 px que heredaba todo el módulo. La maqueta usa 1.5 del tamaño
+     de cada texto; sin esto rótulos, pastillas y cabeceras salían más altos. */
+  line-height: 1.5;
+  /* La letra y el tamaño base de la maqueta. Sin esto, lo que no lleva tamaño
+     propio salía en Roboto de 14 px (la tipografía de Material del body). */
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #0f172a;
+  /* Como la maqueta: sin esto el texto claro sobre fondo oscuro (el botón
+     principal) se ve más grueso. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   --tabla-texto: #0f172a;
   --tabla-apagado: #5f6c80;
   --tabla-borde: #e6e9ee;
@@ -5664,8 +5677,40 @@ body .cashi-asistencia.cashi-asistencia {
   --tabla-falta: #b91c1c;
   --tabla-fondo: #ffffff;
 }
+/* El tema claro fuerza con !important el color de listas y negritas («List
+   items», «Strong/bold text»): una negrita dentro del aviso ámbar salía gris
+   oscuro. En el módulo heredan el color de su caja, como en la maqueta; donde
+   un componente pone el suyo, lo pone con ! (Tailwind) o con !important. */
+body.light-theme :where(.cashi-asistencia) :is(strong, b, li, ul, ol) {
+  /* :where() deja el peso en el del tema (0,1,2): le gana por ir después, y un
+     color propio del componente (.clase[_ngcontent], 0,2,0, con !important) le
+     gana a esta. */
+  color: inherit !important;
+}
+
+/* Tailwind (preflight) pone <small> al 80 %; el navegador, y con él la maqueta,
+   lo deja en «smaller» (un 83 %). Va en la capa base: cualquier tamaño que un
+   componente o una utilidad le dé a un <small> le sigue ganando. */
+@layer base {
+  .cashi-asistencia small { font-size: smaller; }
+}
+
+/* Más arriba este archivo define .mt-1…3, .mb-1…3 y .p-1…3 con 8/16/24 px. Van
+   sin capa y les ganan a las de Tailwind, que están en @layer utilities: un
+   `mt-1` del módulo daba 8 px en vez de 4. Aquí valen las de Tailwind. */
+body .cashi-asistencia.cashi-asistencia .mt-1 { margin-top: 4px; }
+body .cashi-asistencia.cashi-asistencia .mt-2 { margin-top: 8px; }
+body .cashi-asistencia.cashi-asistencia .mt-3 { margin-top: 12px; }
+body .cashi-asistencia.cashi-asistencia .mb-1 { margin-bottom: 4px; }
+body .cashi-asistencia.cashi-asistencia .mb-2 { margin-bottom: 8px; }
+body .cashi-asistencia.cashi-asistencia .mb-3 { margin-bottom: 12px; }
+body .cashi-asistencia.cashi-asistencia .p-1 { padding: 4px; }
+body .cashi-asistencia.cashi-asistencia .p-2 { padding: 8px; }
+body .cashi-asistencia.cashi-asistencia .p-3 { padding: 12px; }
+
 body.dark-theme .cashi-asistencia.cashi-asistencia,
 html.dark body .cashi-asistencia.cashi-asistencia {
+  color: #f1f5f9;
   --tabla-texto: #f1f5f9;
   --tabla-apagado: #94a3b8;
   --tabla-borde: #1e293b;

@@ -9,9 +9,9 @@ import { ControlAcceso, EquipoAutorizado } from './asistencia.models';
 
 const ESTILOS = {
   etiqueta: 'text-xs font-semibold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
-  campo: 'h-[38px] w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] text-[13px] !text-[#0f172a] placeholder:text-[#8491a3] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100',
+  campo: 'h-[38px] w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] text-[13px] !text-[#0f172a] placeholder:!text-[#757575] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100',
   botonSecundario: 'inline-flex h-[38px] items-center gap-[7px] rounded-lg border border-[#8491a3] bg-white px-3.5 text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
-  botonPrimario: 'inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#0f172a] px-3.5 text-[13px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:!text-[#0f172a] dark:hover:bg-slate-200',
+  botonPrimario: 'inline-flex h-[38px] items-center gap-[7px] rounded-lg border border-[#0f172a] bg-[#0f172a] px-3.5 text-[13px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white dark:bg-white dark:!text-[#0f172a] dark:hover:bg-slate-200',
   botonIcono: 'inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[7px] border border-[#e6e9ee] bg-white !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-default disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200',
   th: 'whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   td: 'whitespace-nowrap px-3 py-2 text-[12.5px]',
@@ -51,7 +51,7 @@ const ESTILOS = {
       <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="flex flex-col gap-[3px]">
-            <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Control de Acceso</h1>
+            <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Control de Acceso</h1>
             <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
               Solo las computadoras con pase instalado pueden abrir Cashi
             </p>
@@ -67,7 +67,7 @@ const ESTILOS = {
         <div class="flex flex-wrap items-end gap-3">
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="ubicacion">Ubicación</label>
-            <select id="ubicacion" [class]="estilos.campo + ' w-[180px]'"
+            <select id="ubicacion" [class]="estilos.campo + ' !w-[180px]'"
                     [ngModel]="filtroUbicacion()" (ngModelChange)="filtroUbicacion.set($event)">
               <option value="">Todas</option>
               <option value="OFICINA">Oficina</option>
@@ -76,7 +76,7 @@ const ESTILOS = {
           </div>
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="estado-eq">Estado</label>
-            <select id="estado-eq" [class]="estilos.campo + ' w-[180px]'"
+            <select id="estado-eq" [class]="estilos.campo + ' !w-[180px]'"
                     [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
               <option value="ACTIVOS">Activos</option>
               <option value="BAJA">De baja</option>
@@ -86,7 +86,7 @@ const ESTILOS = {
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="buscar-eq">Buscar</label>
             <input id="buscar-eq" type="search" placeholder="Equipo o persona"
-                   [class]="estilos.campo + ' w-[210px]'"
+                   [class]="estilos.campo + ' !w-[210px]'"
                    [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)">
           </div>
         </div>
@@ -281,7 +281,7 @@ const ESTILOS = {
                 </p>
               </div>
               <button type="button" [class]="estilos.botonIcono" (click)="cerrarAlta()" aria-label="Cerrar">
-                <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
             </header>
 
@@ -311,7 +311,7 @@ const ESTILOS = {
                 </select>
               </div>
               @if (error()) {
-                <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
+                <p class="!m-0 text-[12px] text-[#b91c1c]">{{ error() }}</p>
               }
             </div>
 
@@ -343,7 +343,7 @@ const ESTILOS = {
               <input id="motivo-baja" type="text" placeholder="Ej.: se devolvió a sistemas"
                      [class]="estilos.campo" [(ngModel)]="motivoBaja">
               @if (error()) {
-                <p class="!m-0 mt-1 text-xs text-[#b91c1c]">{{ error() }}</p>
+                <p class="!m-0 mt-1 text-[12px] text-[#b91c1c]">{{ error() }}</p>
               }
             </div>
             <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">

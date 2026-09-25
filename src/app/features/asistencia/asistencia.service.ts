@@ -1,13 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AsistenciaReporte,
   AvisoAsistencia,
   CierreSemana,
   ControlAcceso,
-  CorreccionMarcacion,
+  CambioAsistencia,
+  TipoCambio,
   DashboardAsistencia,
   DiaCalendario,
   ImportacionFeriados,
@@ -15,12 +16,19 @@ import {
   HorarioDeSemana,
   EquipoAutorizado,
   Horario,
+  HorarioBase,
+  CambioHorarioBase,
   Justificacion,
   MarcacionManual,
+  MiPlan,
+  PlanSemana,
   PoliticaAsistencia,
+  PropuestaPlan,
   Recuperacion,
+  ValidacionPlan,
   TipoDia
 } from './asistencia.models';
+import { conTipo } from './asistencia.estilos';
 
 /**
  * Cliente de /api/asistencia.
@@ -128,13 +136,19 @@ export class AsistenciaService {
     return this.http.get<DashboardAsistencia>(`${this.url}/dashboard`, { params });
   }
 
-  /** Las marcas escritas a mano, con su motivo y quién las escribió. */
-  auditoria(desde: string, hasta: string, idUsuario?: number | null): Observable<CorreccionMarcacion[]> {
+  /**
+   * La Auditoría: todo cambio del módulo en un rango de fecha del cambio.
+   * Con subcartera, los de su gente y los de su ámbito o de toda la empresa.
+   */
+  auditoria(desde: string, hasta: string, idSubcartera?: number | null, tipo?: TipoCambio | null): Observable<CambioAsistencia[]> {
     let params = new HttpParams().set('desde', desde).set('hasta', hasta);
-    if (idUsuario) {
-      params = params.set('idUsuario', idUsuario);
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera);
     }
-    return this.http.get<CorreccionMarcacion[]>(`${this.url}/auditoria`, { params });
+    if (tipo) {
+      params = params.set('tipo', tipo);
+    }
+    return this.http.get<CambioAsistencia[]>(`${this.url}/auditoria`, { params });
   }
 
   // ==================== HORARIOS Y POLÍTICA ====================
@@ -146,6 +160,20 @@ export class AsistenciaService {
       params = params.set('idSubcartera', idSubcartera);
     }
     return this.http.get<Horario[]>(`${this.url}/horarios/historial`, { params });
+  }
+
+  /** El horario base de lunes a viernes y el cambio que rige desde el lunes, si hay. */
+  horarioBase(idSubcartera?: number | null): Observable<HorarioBase> {
+    let params = new HttpParams();
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera);
+    }
+    return this.http.get<HorarioBase>(`${this.url}/horarios/base`, { params });
+  }
+
+  /** Lo cambia RR.HH.: rige desde el lunes siguiente y queda en la Auditoría. */
+  cambiarHorarioBase(cambio: CambioHorarioBase): Observable<HorarioBase> {
+    return this.http.post<HorarioBase>(`${this.url}/horarios/base`, cambio);
   }
 
   politica(idSubcartera?: number | null): Observable<PoliticaAsistencia> {
@@ -275,14 +303,48 @@ export class AsistenciaService {
     return this.http.post<void>(`${this.url}/justificaciones/${id}/resolver`, { aprobada, motivo });
   }
 
-  certificado(id: number): Observable<Blob> {
-    return this.http.get(`${this.url}/justificaciones/${id}/certificado`, { responseType: 'blob' });
+  /** El certificado con su tipo (imagen o PDF), para verlo o bajarlo con su nombre. */
+  certificado(id: number, nombre?: string | null): Observable<Blob> {
+    return this.http.get(`${this.url}/justificaciones/${id}/certificado`, { responseType: 'blob' })
+      .pipe(map(blob => conTipo(blob, nombre)));
   }
 
   // ==================== CIERRE SEMANAL ====================
 
   cierres(): Observable<CierreSemana[]> {
     return this.http.get<CierreSemana[]>(`${this.url}/cierres`);
+  }
+
+  /** Lo que cada asesor lleva recuperado en una semana abierta, en minutos, por id. */
+  /** Por asesor: lo que recuperó en una semana abierta y lo que tenía que recuperar. Sin recuperaciones, no viene. */
+  recuperadoEnSemana(lunes: string, idSubcartera?: number | null): Observable<Record<number, { recuperado: number; pedido: number }>> {
+    let params = new HttpParams().set('lunes', lunes);
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera);
+    }
+    return this.http.get<Record<number, { recuperado: number; pedido: number }>>(`${this.url}/cierres/recuperado`, { params });
+  }
+
+  // ==================== HORARIO (PLAN DE RECUPERACIÓN) ====================
+
+  planSemana(lunes: string, idSubcartera: number): Observable<PlanSemana> {
+    const params = new HttpParams().set('lunes', lunes).set('idSubcartera', idSubcartera);
+    return this.http.get<PlanSemana>(`${this.url}/recuperaciones/plan`, { params });
+  }
+
+  /** Confirma el plan de una persona de hoy en adelante: llega entero y reemplaza lo que había. */
+  guardarPlan(idUsuario: number, bloques: { fecha: string; minutos: number }[]): Observable<void> {
+    return this.http.put<void>(`${this.url}/recuperaciones/plan/${idUsuario}`, bloques);
+  }
+
+  /** Lo que propone el sistema a partir del plan que se ve. No guarda nada. */
+  proponerPlan(idUsuario: number, actual: { fecha: string; minutos: number }[]): Observable<PropuestaPlan> {
+    return this.http.post<PropuestaPlan>(`${this.url}/recuperaciones/plan/${idUsuario}/propuesta`, actual);
+  }
+
+  validarBloque(idUsuario: number, fecha: string, minutos: number): Observable<ValidacionPlan> {
+    const params = new HttpParams().set('fecha', fecha).set('minutos', minutos);
+    return this.http.get<ValidacionPlan>(`${this.url}/recuperaciones/plan/${idUsuario}/validar`, { params });
   }
 
   cierre(id: number): Observable<CierreSemana> {
@@ -298,11 +360,6 @@ export class AsistenciaService {
       params = params.set('nota', nota);
     }
     return this.http.post<{ id: number }>(`${this.url}/cierres`, null, { params });
-  }
-
-  /** Reabrir descongela lo que se pagó: solo administración. */
-  reabrirSemana(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/cierres/${id}`);
   }
 
   // ==================== CONTROL DE ACCESO ====================
@@ -326,6 +383,11 @@ export class AsistenciaService {
   // ==================== RECUPERACIONES ====================
 
   /** Las horas que uno debe. Se abren solas al aprobar una justificación. */
+  /** Mi Asistencia: su plan de recuperación de hoy en adelante y las pausas de su horario. */
+  miPlan(): Observable<MiPlan> {
+    return this.http.get<MiPlan>(`${this.url}/recuperaciones/mi-plan`);
+  }
+
   misRecuperaciones(): Observable<Recuperacion[]> {
     return this.http.get<Recuperacion[]>(`${this.url}/recuperaciones/mias`);
   }

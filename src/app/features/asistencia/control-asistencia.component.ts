@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -9,12 +9,13 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte } from './asistencia.models';
-import { ESTILOS, semanaPorDefecto, sumarDias } from './asistencia.estilos';
+import { ESTILOS, estadoVisible, hoy, semanaPorDefecto, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
 import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
 import { AsistenciaCierreComponent } from './asistencia-cierre.component';
 import { AsistenciaAuditoriaComponent } from './asistencia-auditoria.component';
+import { AsistenciaHorarioComponent } from './asistencia-horario.component';
 import { AsistenciaConfiguracionComponent } from './asistencia-configuracion.component';
 import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
 
@@ -31,7 +32,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
  * hace lenta la pantalla que más se abre, y nadie revisa la asistencia de una
  * empresa entera a la vez.
  *
- * Configuración y Editar horas son BOTONES y no pestañas: no son otra vista de
+ * Configuración y Corregir marcaciones son BOTONES y no pestañas: no son otra vista de
  * los mismos datos, son otra tarea. Al entrar en ellas desaparecen los filtros
  * y las pestañas, porque ahí no se usan.
  */
@@ -49,6 +50,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
     AsistenciaJustificacionesComponent,
     AsistenciaCierreComponent,
     AsistenciaAuditoriaComponent,
+    AsistenciaHorarioComponent,
     AsistenciaConfiguracionComponent,
     AsistenciaEdicionComponent
   ],
@@ -63,24 +65,24 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
       <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
+            <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
             <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" (click)="pantalla.set('configuracion')"
-                    [class]="estilos.botonSecundario + (pantalla() === 'configuracion' ? ' !bg-[#f4f6f9] dark:!bg-slate-700' : '')"
+                    [class]="pantalla() === 'configuracion' ? botonActivo : estilos.botonSecundario"
                     [attr.aria-current]="pantalla() === 'configuracion' ? 'page' : null">
-              <lucide-angular name="settings" [size]="15" class="block"></lucide-angular>
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
               Configuración
             </button>
             <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('edicion')"
                     [attr.aria-current]="pantalla() === 'edicion' ? 'page' : null">
-              <lucide-angular name="pencil" [size]="15" class="block"></lucide-angular>
-              Editar horas
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              Corregir marcaciones
             </button>
             <button type="button" [class]="estilos.botonPrimario" (click)="exportar()"
                     [disabled]="!idSubcartera()">
-              <lucide-angular name="download" [size]="15" class="block"></lucide-angular>
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Descargar Excel
             </button>
           </div>
@@ -90,7 +92,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
         <div class="flex flex-wrap items-end gap-3">
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="cliente">Cliente</label>
-            <select id="cliente" [class]="estilos.campo + ' w-[178px]'"
+            <select id="cliente" [class]="estilos.campo + ' !w-[178px]'"
                     [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
               <option [ngValue]="null">Todos</option>
               @for (c of clientes(); track c.id) {
@@ -102,7 +104,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
 
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="cartera">Cartera</label>
-            <select id="cartera" [class]="estilos.campo + ' w-[178px]'"
+            <select id="cartera" [class]="estilos.campo + ' !w-[178px]'"
                     [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
                     [disabled]="!idCliente()">
               <option [ngValue]="null">Todas</option>
@@ -115,7 +117,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
 
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="subcartera">Subcartera</label>
-            <select id="subcartera" [class]="estilos.campo + ' w-[178px]'"
+            <select id="subcartera" [class]="estilos.campo + ' !w-[178px]'"
                     [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)"
                     [disabled]="!idCartera()">
               <option [ngValue]="null">Elige una</option>
@@ -127,12 +129,12 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
 
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="desde">Desde</label>
-            <input id="desde" type="date" [class]="estilos.campo + ' w-[148px]'"
+            <input id="desde" type="date" [class]="estilos.campo"
                    [ngModel]="desde()" (ngModelChange)="desde.set($event)">
           </div>
           <div class="flex flex-col gap-1.5">
             <label [class]="estilos.etiqueta" for="hasta">Hasta</label>
-            <input id="hasta" type="date" [class]="estilos.campo + ' w-[148px]'"
+            <input id="hasta" type="date" [class]="estilos.campo"
                    [ngModel]="hasta()" (ngModelChange)="hasta.set($event)">
           </div>
 
@@ -149,7 +151,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
         </div>
       </div>
 
-      <!-- Editar horas y Configuración se entran desde la cabecera y salen con
+      <!-- Corregir marcaciones y Configuración se entran desde la cabecera y salen con
            «Volver al reporte»: ahí el selector de pantallas no pinta nada. -->
       @if (!esPantallaAparte()) {
         <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
@@ -161,11 +163,11 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
                       [disabled]="t.pronto"
                       [attr.aria-current]="pantalla() === t.clave ? 'page' : null"
                       [attr.aria-label]="t.clave === 'justificaciones' && sinResolver()
-                        ? 'Justificaciones, ' + sinResolver() + ' sin resolver' : null"
+                        ? 'Solicitudes, ' + sinResolver() + ' sin resolver' : null"
                       (click)="pantalla.set(t.clave)">
                 {{ t.texto }}
                 @if (t.pronto) {
-                  <span class="rounded-full bg-[#eef2ff] px-1.5 py-px text-[10.5px] font-bold text-[#4338ca] dark:bg-indigo-950/60 dark:text-indigo-300">
+                  <span class="ml-1.5 rounded-full bg-[#eff5ff] px-1.5 py-px text-[10.5px] font-bold text-[#2563eb] dark:bg-slate-800 dark:text-[#60a5fa]">
                     Pronto
                   </span>
                 }
@@ -199,18 +201,23 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           }
           @case ('justificaciones') {
             <app-asistencia-justificaciones
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
+              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" [agente]="agente()"
               (sinResolverCambia)="sinResolver.set($event)" />
           }
           @case ('cierre') {
             <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              (modificarHorario)="pantalla.set('configuracion')" />
+              (irA)="pantalla.set($event)" />
+          }
+          @case ('horario') {
+            <app-asistencia-horario [idSubcartera]="idSubcartera()" [subcartera]="nombreSubcartera()"
+              [agente]="agente()" />
           }
           @case ('auditoria') {
-            <app-asistencia-auditoria [desde]="desde()" [hasta]="hasta()" />
+            <app-asistencia-auditoria [desde]="desde()" [hasta]="hasta()"
+              [idSubcartera]="idSubcartera()" [agente]="agente()" />
           }
           @case ('configuracion') {
-            <app-asistencia-configuracion [idSubcartera]="idSubcartera()"
+            <app-asistencia-configuracion [idSubcartera]="idSubcartera()" [subcartera]="nombreSubcartera()"
               (volver)="pantalla.set('asistencia')" />
           }
           @case ('edicion') {
@@ -230,6 +237,8 @@ export class ControlAsistenciaComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   protected readonly estilos = ESTILOS;
+  /** «Configuración» mientras se está en ella: fondo suave y texto oscuro, como la maqueta. */
+  protected readonly botonActivo = ESTILOS.botonSecundario.replace('!text-[#334155]', '!text-[#0f172a]') + ' !bg-[#f4f6f9] dark:!bg-slate-700';
 
   /**
    * `pronto`: la pantalla existe pero todavía no se abre. El Dashboard queda
@@ -238,9 +247,12 @@ export class ControlAsistenciaComponent implements OnInit {
   protected readonly TABS = [
     { clave: 'asistencia', texto: 'Reporte', pronto: false },
     { clave: 'dashboard', texto: 'Dashboard', pronto: true },
-    { clave: 'justificaciones', texto: 'Justificaciones', pronto: false },
-    { clave: 'cierre', texto: 'Cierre semanal', pronto: false },
-    { clave: 'auditoria', texto: 'Auditoría', pronto: false }
+    { clave: 'justificaciones', texto: 'Solicitudes', pronto: false },
+    // El horario de la semana con las recuperaciones: el fijo no se edita.
+    { clave: 'horario', texto: 'Horario', pronto: false },
+    { clave: 'auditoria', texto: 'Auditoría', pronto: false },
+    // El cierre es el último paso de la semana: va al final.
+    { clave: 'cierre', texto: 'Cierre semanal', pronto: false }
   ] as const;
 
   readonly pantalla = signal<string>('asistencia');
@@ -261,7 +273,11 @@ export class ControlAsistenciaComponent implements OnInit {
   readonly reporte = signal<AsistenciaReporte | null>(null);
   readonly sinResolver = signal(0);
 
-  /** Configuración y Editar horas no comparten filtros con el resto. */
+  /** El nombre de la subcartera elegida: Configuración lo usa para decir a quién alcanza un cambio. */
+  readonly nombreSubcartera = computed(() =>
+    this.subcarteras().find(s => s.id === this.idSubcartera())?.subPortfolioName ?? null);
+
+  /** Configuración y Corregir marcaciones no comparten filtros con el resto. */
   readonly esPantallaAparte = computed(() =>
     this.pantalla() === 'configuracion' || this.pantalla() === 'edicion');
 
@@ -272,7 +288,7 @@ export class ControlAsistenciaComponent implements OnInit {
       return 'Ingreso y salida según el inicio y cierre de sesión en Cashi';
     }
     const faltas = r.dias.filter(d => d.estado === 'FALTA').length;
-    const incompletos = r.dias.filter(d => d.estado === 'INCOMPLETO').length;
+    const incompletos = r.dias.filter(d => estadoVisible(d) === 'INCOMPLETO').length;
     const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
     return `${plural(r.agentes.length, 'persona', 'personas')} en el ámbito · `
       + `${plural(faltas, 'falta', 'faltas')} · `
@@ -281,14 +297,12 @@ export class ControlAsistenciaComponent implements OnInit {
 
   constructor() {
     // El número de la pestaña de justificaciones tiene que estar aunque no se
-    // haya abierto: es lo que avisa de que hay algo esperando.
-    effect(() => {
-      const desde = this.desde();
-      const hasta = this.hasta();
-      this.servicio.justificaciones(desde, hasta, ['PENDIENTE', 'REVISADA']).subscribe({
-        next: j => this.sinResolver.set(j.length),
-        error: () => this.sinResolver.set(0)
-      });
+    // haya abierto: es lo que avisa de que hay algo esperando. Cuenta solo lo
+    // que le toca a RR.HH. (lo que ya revisó la supervisora), de tres meses
+    // atrás a dos adelante, lo mismo que lista la pestaña.
+    this.servicio.justificaciones(sumarDias(hoy(), -90), sumarDias(hoy(), 60), ['REVISADA']).subscribe({
+      next: j => this.sinResolver.set(j.length),
+      error: () => this.sinResolver.set(0)
     });
   }
 

@@ -10,8 +10,8 @@ import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.mode
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte, Justificacion, PerfilAsistencia, TipoDia } from './asistencia.models';
 import {
-  ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, detalleRecuperacion, errorDeRecuperacion,
-  fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
+  ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, abrirArchivo, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
+  errorDeRecuperacion, fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
 } from './asistencia.estilos';
 
 type TipoAlerta = 'MARCA' | 'PAUSA' | 'TARDANZA';
@@ -25,6 +25,8 @@ interface Alerta {
   tipo: TipoAlerta;
   alerta: string;
   detalle: string;
+  /** En un exceso de pausa: cuántos minutos se pasó. */
+  minutos?: number;
 }
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -62,12 +64,69 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
     .ficha dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5f6c80; padding-top: 2px }
     .ficha dd { margin: 0 }
     :host-context(.dark) .ficha dt { color: #94a3b8 }
+
+    /* Los cuatro indicadores miden lo mismo: cada dibujo cabe en unas dos líneas. */
+    .kpis { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)) }
+    @media (max-width: 980px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+    @media (max-width: 640px) { .kpis { grid-template-columns: minmax(0, 1fr) } }
+    .kpi { display: flex; flex-direction: column; padding: 14px 16px; background: #fff; border: 1px solid #e6e9ee; border-radius: 12px; box-shadow: 0 1px 2px rgba(15,23,42,.04) }
+    .cabeza-kpi { display: flex; align-items: center; gap: 9px; margin-bottom: 8px }
+    .cabeza-kpi h3 { margin: 0; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5f6c80 !important }
+    :host-context(.dark) .cabeza-kpi h3 { color: #94a3b8 !important }
+    .icono-kpi { width: 28px; height: 28px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; background: #f1f3f6; color: #0f172a }
+    .cifra { font-size: 24px; font-weight: 800; line-height: 1.3; letter-spacing: -.02em; font-variant-numeric: tabular-nums }
+    .cifra small { margin-left: 6px; font-size: 12px; font-weight: 600; letter-spacing: normal; color: #5f6c80 }
+    .vacio-kpi { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 12.5px; font-weight: 600; color: #5f6c80 }
+    .vacio-kpi.ok { color: #166534 }
+    /* Asesores con alertas: dos columnas parejas; cada persona con su número de alertas. */
+    .nombres-kpi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 10px }
+    .nombre-kpi { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; height: 26px; padding: 0 4px 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #fdecec; color: #b91c1c }
+    .nombre-kpi span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+    .nombre-kpi b { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; font-size: 11px; background: color-mix(in srgb, #dc2626 16%, transparent); font-variant-numeric: tabular-nums }
+    .nombre-kpi.resto { justify-content: center; padding: 0 10px; background: #f1f3f6; color: #5f6c80 }
+    /* Marcas sin registrar: la semana, en ámbar los días con marcas sin registrar, y quiénes. */
+    .tira-kpi { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 10px }
+    .dia-kpi { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 6px; background: #e8f5ec; color: #166534; font-size: 10.5px; line-height: 1.2 }
+    .dia-kpi b { font-weight: 700 }
+    .dia-kpi.falta { background: #fef6e0; color: #92400e; box-shadow: inset 0 0 0 1px #f59e0b }
+    .quienes-kpi { margin: 10px 0 0; font-size: 12.5px; color: #5f6c80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+    .quienes-kpi strong { font-weight: 600; color: #0f172a !important }
+    /* Excesos de pausa: los dos más grandes. */
+    .barras-pausa { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px }
+    .barras-pausa li { display: grid; grid-template-columns: 88px minmax(0, 1fr) 52px; align-items: center; gap: 8px; min-height: 26px }
+    .barras-pausa li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+    .barras-pausa li i { display: block; height: 8px; border-radius: 999px; background: #f59e0b }
+    .barras-pausa li em { font-style: normal; font-weight: 600; color: #92400e; text-align: right }
+    /* Solicitudes por revisar: nombre y tipo en una línea; dos como máximo. */
+    .lista-kpi { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px }
+    .lista-kpi li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; min-height: 26px }
+    .lista-kpi li > strong { font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+    .p-sol { display: inline-flex; flex: none; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: #eef2ff; color: #2563eb }
+
+    /* Alertas a la izquierda y solicitudes a la derecha. */
+    /* 14 px: en la maqueta el margen de las tarjetas (14) y el de los paneles (10) se funden. */
+    .paneles-equipo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 14px }
+    @media (max-width: 1100px) { .paneles-equipo { grid-template-columns: minmax(0, 1fr) } }
+    .linea-dos { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: #5f6c80 }
+
+    :host-context(.dark) .kpi { background: #0f172a; border-color: #1e293b }
+    :host-context(.dark) .icono-kpi { background: #1e293b; color: #f1f5f9 }
+    :host-context(.dark) .cabeza-kpi h3, :host-context(.dark) .cifra small, :host-context(.dark) .vacio-kpi,
+    :host-context(.dark) .quienes-kpi, :host-context(.dark) .linea-dos { color: #94a3b8 }
+    :host-context(.dark) .quienes-kpi strong { color: #f1f5f9 !important }
+    :host-context(.dark) .vacio-kpi.ok { color: #86efac }
+    :host-context(.dark) .nombre-kpi { background: #450a0a; color: #fca5a5 }
+    :host-context(.dark) .nombre-kpi.resto { background: #1e293b; color: #94a3b8 }
+    :host-context(.dark) .dia-kpi { background: #052e16; color: #86efac }
+    :host-context(.dark) .dia-kpi.falta { background: #451a03; color: #fcd34d }
+    :host-context(.dark) .barras-pausa li em { color: #fcd34d }
+    :host-context(.dark) .p-sol { background: #1e293b; color: #60a5fa }
   `],
   template: `
     <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Asistencia del Equipo</h1>
+          <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Asistencia del Equipo</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
         </div>
         <button type="button" [class]="estilos.botonPrimario" (click)="abrirRegistro()" [disabled]="!gente().length">
@@ -79,7 +138,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="eq-cliente">Cliente</label>
-          <select id="eq-cliente" [class]="estilos.campo + ' w-[178px]'"
+          <select id="eq-cliente" [class]="estilos.campo + ' !w-[178px]'"
                   [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
             <option [ngValue]="null">Elige uno</option>
             @for (c of clientes(); track c.id) {
@@ -90,7 +149,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
         <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
         <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="eq-cartera">Cartera</label>
-          <select id="eq-cartera" [class]="estilos.campo + ' w-[178px]'"
+          <select id="eq-cartera" [class]="estilos.campo + ' !w-[178px]'"
                   [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)" [disabled]="!idCliente()">
             <option [ngValue]="null">Elige una</option>
             @for (c of carteras(); track c.id) {
@@ -101,7 +160,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
         <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
         <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="eq-subcartera">Subcartera</label>
-          <select id="eq-subcartera" [class]="estilos.campo + ' w-[178px]'"
+          <select id="eq-subcartera" [class]="estilos.campo + ' !w-[178px]'"
                   [ngModel]="idSubcartera()" (ngModelChange)="cambiarSubcartera($event)" [disabled]="!idCartera()">
             <option [ngValue]="null">Elige una</option>
             @for (s of subcarteras(); track s.id) {
@@ -113,20 +172,22 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
           <label [class]="estilos.etiqueta" for="eq-semana-antes">Semana</label>
           <div class="flex h-[38px] items-center gap-2" role="group" aria-label="Semana">
             <button type="button" id="eq-semana-antes" [class]="estilos.botonIcono" (click)="moverSemana(-1)"
-                    aria-label="Semana anterior">
-              <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
-            </button>
+                    aria-label="Semana anterior">‹</button>
             <strong class="min-w-[150px] text-center text-[13px] tabular-nums">{{ textoSemana() }}</strong>
             <button type="button" [class]="estilos.botonIcono" (click)="moverSemana(1)"
-                    [disabled]="esSemanaActual()" aria-label="Semana siguiente">
-              <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
-            </button>
+                    [disabled]="esSemanaActual()" aria-label="Semana siguiente">›</button>
           </div>
         </div>
       </div>
     </div>
 
     <div class="px-7 py-5">
+      <!-- El plazo del cierre: a la vista, no escondido en el formulario -->
+      <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-[#fbd391] bg-[#fef6e0] px-4 py-3 text-[12.5px] leading-normal text-[#92400e] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+           role="note">
+        <svg class="mt-px shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <p class="!m-0"><strong class="font-extrabold">{{ aviso.titulo }}:</strong> {{ aviso.texto }}@if (aviso.fecha) {<strong class="font-extrabold">{{ aviso.fecha }}</strong>}{{ aviso.resto }}</p>
+      </div>
       @if (cargando()) {
         <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando tu equipo…</p>
       } @else if (sinAsignar()) {
@@ -140,39 +201,124 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
         <div [class]="estilos.vacio">
           <strong class="block text-[13.5px]">Elige una subcartera</strong>
           <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Las alertas y las justificaciones son de los asesores de esa subcartera.
+            Las alertas y las solicitudes son de los asesores de esa subcartera.
           </span>
         </div>
       } @else {
         <div class="aparecer">
-          <!-- Resumen de la semana -->
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            @for (k of kpis(); track k.titulo) {
-              <div [class]="estilos.tarjeta + ' !px-4 !py-3.5'">
-                <div class="mb-2 flex items-center gap-2.5">
-                  <span [class]="estilos.icono">
-                    <lucide-angular [name]="k.icono" [size]="15" class="block"></lucide-angular>
-                  </span>
-                  <h3 [class]="estilos.rotulo">{{ k.titulo }}</h3>
-                </div>
-                <div [class]="estilos.cifra">
-                  {{ k.cifra }}
-                  @if (k.de !== null) {
-                    <small [class]="estilos.unidad">de {{ k.de }}</small>
-                  }
-                </div>
-                <p [class]="estilos.pie">{{ k.pie }}</p>
+          <!-- Cada indicador con su dibujo: quién tiene alertas, en qué día faltan
+               marcas, cuánto se pasó cada pausa y qué solicitudes esperan. -->
+          <div class="kpis">
+            <div class="kpi">
+              <div class="cabeza-kpi">
+                <span class="icono-kpi"><lucide-angular name="bell" [size]="15" class="block"></lucide-angular></span>
+                <h3>Asesores con alertas</h3>
               </div>
-            }
+              @if (!gente().length) {
+                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
+              } @else {
+                <div class="cifra">{{ conAlerta().length }}<small>de {{ gente().length }}</small></div>
+                @if (conAlerta().length) {
+                  <div class="nombres-kpi">
+                    @for (p of conNombre(); track p.idUsuario) {
+                      <span class="nombre-kpi" [title]="p.nombre + ': ' + p.cuantas + (p.cuantas === 1 ? ' alerta' : ' alertas')">
+                        <span>{{ corto(p.nombre) }}</span><b>{{ p.cuantas }}</b>
+                      </span>
+                    }
+                    @if (sinNombre().length) {
+                      <span class="nombre-kpi resto" [title]="nombresDe(sinNombre())">y {{ sinNombre().length }} más</span>
+                    }
+                  </div>
+                } @else {
+                  <p class="vacio-kpi ok"><lucide-angular name="check-circle" [size]="18" class="block"></lucide-angular>Sin alertas esta semana</p>
+                }
+              }
+            </div>
+
+            <div class="kpi">
+              <div class="cabeza-kpi">
+                <span class="icono-kpi"><lucide-angular name="pencil" [size]="15" class="block"></lucide-angular></span>
+                <h3>Marcas sin registrar</h3>
+              </div>
+              @if (!gente().length) {
+                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
+              } @else {
+                <div class="cifra">{{ cuenta('MARCA') }}</div>
+                @if (cuenta('MARCA')) {
+                  <div class="tira-kpi" role="img" aria-label="Días de la semana; en ámbar los que tienen marcas sin registrar">
+                    @for (d of tira(); track d.fecha) {
+                      <span class="dia-kpi" [class.falta]="d.n > 0" [title]="d.titulo"><b>{{ d.letra }}</b><small>{{ d.numero }}</small></span>
+                    }
+                  </div>
+                  <p class="quienes-kpi" [title]="nombresSinMarcar()">
+                    @for (n of sinMarcarPartes(); track $index) {
+                      <strong>{{ n.nombre }}</strong>{{ n.sep }}
+                    }
+                    @if (sinMarcarResto()) { y {{ sinMarcarResto() }} más }
+                  </p>
+                } @else {
+                  <p class="vacio-kpi ok"><lucide-angular name="check-circle" [size]="18" class="block"></lucide-angular>Todas las marcas registradas</p>
+                }
+              }
+            </div>
+
+            <div class="kpi">
+              <div class="cabeza-kpi">
+                <span class="icono-kpi"><lucide-angular name="coffee" [size]="15" class="block"></lucide-angular></span>
+                <h3>Excesos de pausa</h3>
+              </div>
+              @if (!gente().length) {
+                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
+              } @else {
+                <div class="cifra">{{ cuenta('PAUSA') }}</div>
+                @if (pausas().length) {
+                  <ul class="barras-pausa">
+                    @for (x of pausas(); track $index) {
+                      <li>
+                        <span>{{ corto(x.nombre) }}</span>
+                        <i [style.width.%]="x.ancho"></i>
+                        <em>+{{ x.minutos }} min</em>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="vacio-kpi ok"><lucide-angular name="check-circle" [size]="18" class="block"></lucide-angular>Pausas dentro de lo permitido</p>
+                }
+              }
+            </div>
+
+            <div class="kpi">
+              <div class="cabeza-kpi">
+                <span class="icono-kpi"><lucide-angular name="file-text" [size]="15" class="block"></lucide-angular></span>
+                <h3>Solicitudes por revisar</h3>
+              </div>
+              @if (!gente().length) {
+                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
+              } @else {
+                <div class="cifra">{{ porRevisar().length }}</div>
+                @if (porRevisar().length) {
+                  <ul class="lista-kpi">
+                    @for (j of porRevisar().slice(0, 2); track j.id) {
+                      <li [title]="(j.nombreAgente ?? '') + ': ' + diasDe(j)">
+                        <strong>{{ corto(j.nombreAgente ?? '') }}</strong><span class="p-sol">{{ j.tipo }}</span>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="vacio-kpi"><lucide-angular name="inbox" [size]="18" class="block"></lucide-angular>Sin solicitudes por revisar</p>
+                }
+              }
+            </div>
           </div>
 
-          <!-- Alertas para llamado de atención -->
-          <section class="mt-6" aria-labelledby="titulo-alertas">
+          <div class="paneles-equipo">
+          <!-- Alertas del equipo -->
+          <section aria-labelledby="titulo-alertas">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
               <div>
-                <h2 id="titulo-alertas" [class]="estilos.titulo + ' !mb-0'">Alertas para llamado de atención</h2>
+                <h2 id="titulo-alertas" [class]="estilos.titulo + ' !mb-0'">Alertas del equipo</h2>
                 <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                  Marcas sin registrar, pausas más largas de lo permitido y límites de tardanza excedidos
+                  Marcas sin registrar, excesos de pausa y tardanzas
                 </p>
               </div>
               <nav [class]="estilos.segmentos" aria-label="Filtrar alertas">
@@ -192,7 +338,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 <thead>
                   <tr>
                     <th scope="col" [class]="estilos.th">Asesor</th>
-                    <th scope="col" [class]="estilos.th">Día</th>
+                    <th scope="col" [class]="estilos.th">Fecha</th>
                     <th scope="col" [class]="estilos.th">Alerta</th>
                     <th scope="col" [class]="estilos.th">Detalle</th>
                   </tr>
@@ -210,11 +356,12 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="4" class="!px-3 !py-10 text-center">
-                        <strong class="block text-[13.5px]">Sin alertas</strong>
-                        <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                          Nadie de tu equipo tiene alertas de este tipo en la semana.
-                        </span>
+                      <td colspan="4" class="!px-3 !py-8 text-center">
+                        <lucide-angular [name]="!gente().length ? 'users' : 'check-circle'" [size]="26"
+                                        class="mx-auto mb-2 block text-[#8491a3] dark:text-slate-500"></lucide-angular>
+                        <strong class="block text-[13.5px]">
+                          {{ !gente().length ? 'Sin asesores asignados' : alertas().length ? 'Sin alertas para este filtro' : 'Sin alertas esta semana' }}
+                        </strong>
                       </td>
                     </tr>
                   }
@@ -224,11 +371,11 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
           </section>
 
           <!-- Solicitudes por revisar -->
-          <section class="mt-6" aria-labelledby="titulo-just">
+          <section aria-labelledby="titulo-just">
             <div class="mb-3">
               <h2 id="titulo-just" [class]="estilos.titulo + ' !mb-0'">Solicitudes por revisar</h2>
               <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                Confirma lo que pasó; la aprobación es de RR.HH.
+                Revisión de la supervisora antes de la aprobación de RR.HH.
               </p>
             </div>
             <div [class]="estilos.panel">
@@ -236,46 +383,50 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 <caption class="sr-only">Solicitudes que esperan tu revisión</caption>
                 <thead>
                   <tr>
-                    <th scope="col" [class]="estilos.th">Solicitada</th>
                     <th scope="col" [class]="estilos.th">Asesor</th>
                     <th scope="col" [class]="estilos.th">Tipo</th>
-                    <th scope="col" [class]="estilos.th">Días</th>
-                    <th scope="col" [class]="estilos.th">Adjunto</th>
+                    <th scope="col" [class]="estilos.th">Certificado</th>
                     <th scope="col" [class]="estilos.th"><span class="sr-only">Acción</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (j of porRevisar(); track j.id) {
+                  <!-- Al final, las de una semana cerrada: no se revisaron y ya no se revisan. -->
+                  @for (j of bandeja(); track j.id) {
                     <tr>
-                      <td [class]="estilos.td + ' secundario'">{{ j.solicitadaEn | date: 'dd/MM HH:mm' }}</td>
-                      <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold'">{{ j.nombreAgente }}</td>
-                      <td [class]="estilos.td">
+                      <!-- La bandeja es angosta: a 1440 px el texto baja de línea antes que cortar el botón. -->
+                      <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold !whitespace-normal'">
+                        {{ j.nombreAgente }}
+                        <span class="linea-dos">Solicitud del {{ j.solicitadaEn | date: 'dd/MM HH:mm' }}</span>
+                      </td>
+                      <td [class]="estilos.td + ' !whitespace-normal'">
                         {{ j.tipo }}
+                        <span class="linea-dos">{{ diasDe(j) }}{{ j.semanaCerrada ? ' · semana cerrada' : '' }}</span>
                         @if (detalleRecuperacion(j); as d) {
                           <span class="block text-[11px] text-[#92400e] dark:text-amber-300">{{ d }}</span>
                         }
                       </td>
-                      <td [class]="estilos.td">{{ diasDe(j) }}</td>
-                      <td [class]="estilos.td">
+                      <td [class]="estilos.td + ' !whitespace-normal'">
                         @if (j.tieneArchivo) {
-                          <button type="button" [class]="estilos.botonChico" (click)="verCertificado(j)">
-                            {{ j.archivoNombre ?? 'Ver adjunto' }}
+                          <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)">
+                            {{ j.archivoNombre ?? 'Ver' }}
                           </button>
                         } @else {
                           <span class="text-[#8491a3] dark:text-slate-500">—</span>
                         }
                       </td>
                       <td [class]="estilos.td + ' text-right'">
-                        <button type="button" [class]="estilos.botonChico" (click)="abrirRevision(j)">Revisar</button>
+                        <button type="button" [class]="estilos.botonChico" (click)="abrirRevision(j)">
+                          <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                          {{ j.semanaCerrada ? 'Ver' : 'Revisar' }}
+                        </button>
                       </td>
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="6" class="!px-3 !py-10 text-center">
-                        <strong class="block text-[13.5px]">Nada por revisar</strong>
-                        <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                          Las solicitudes nuevas de tu equipo aparecen aquí.
-                        </span>
+                      <td colspan="4" class="!px-3 !py-8 text-center">
+                        <lucide-angular [name]="!gente().length ? 'users' : 'inbox'" [size]="26"
+                                        class="mx-auto mb-2 block text-[#8491a3] dark:text-slate-500"></lucide-angular>
+                        <strong class="block text-[13.5px]">{{ !gente().length ? 'Sin asesores asignados' : 'Sin solicitudes por revisar' }}</strong>
                       </td>
                     </tr>
                   }
@@ -283,6 +434,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
               </table>
             </div>
           </section>
+          </div>
         </div>
       }
     </div>
@@ -295,13 +447,13 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
              role="dialog" aria-modal="true" aria-labelledby="titulo-revisar">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-revisar" class="!m-0 text-[15px] font-extrabold">Revisar solicitud</h2>
+              <h2 id="titulo-revisar" class="!m-0 text-[15px] font-extrabold">{{ j.semanaCerrada ? 'Solicitud sin revisar' : 'Revisar solicitud' }}</h2>
               <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                 {{ j.nombreAgente }} · solicitada el {{ j.solicitadaEn | date: 'dd/MM HH:mm' }}
               </p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarRevision()" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
@@ -316,7 +468,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
               <dt>Adjunto</dt>
               <dd>
                 @if (j.tieneArchivo) {
-                  <button type="button" [class]="estilos.botonChico" (click)="verCertificado(j)">
+                  <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)">
                     {{ j.archivoNombre ?? 'Ver adjunto' }}
                   </button>
                 } @else {
@@ -328,24 +480,30 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             @if (rechazando()) {
               <div class="flex flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="eq-motivo">Por qué se rechaza</label>
-                <textarea id="eq-motivo" rows="3" [class]="estilos.area" placeholder="Ej.: no avisó y no trajo constancia"
+                <textarea id="eq-motivo" rows="3" maxlength="300" [class]="estilos.area" placeholder="Ej.: no avisó y no trajo constancia"
                           [ngModel]="motivo()" (ngModelChange)="motivo.set($event); faltaMotivo.set(false)"></textarea>
                 @if (faltaMotivo()) {
-                  <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">Escribe el motivo: es lo que verá el asesor.</p>
+                  <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">Escribe el motivo: es lo que verá el asesor.</p>
                 }
               </div>
             }
           </div>
 
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario + ' mr-auto'" (click)="rechazar(j)"
-                    [disabled]="guardando()">
-              {{ rechazando() ? 'Confirmar rechazo' : 'Rechazar' }}
-            </button>
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRevision()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="conforme(j)" [disabled]="guardando()">
-              Conforme, enviar a RR.HH.
-            </button>
+            <!-- De una semana cerrada solo se mira: el backend ya no deja revisarla. -->
+            @if (j.semanaCerrada) {
+              <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Sus días son de una semana cerrada: ya no se revisa</span>
+              <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRevision()">Cerrar</button>
+            } @else {
+              <button type="button" [class]="estilos.botonSecundario + ' mr-auto'" (click)="rechazar(j)"
+                      [disabled]="guardando()">
+                {{ rechazando() ? 'Confirmar rechazo' : 'Rechazar' }}
+              </button>
+              <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRevision()">Cancelar</button>
+              <button type="button" [class]="estilos.botonPrimario" (click)="conforme(j)" [disabled]="guardando()">
+                Conforme, enviar a RR.HH.
+              </button>
+            }
           </footer>
         </div>
       </div>
@@ -365,7 +523,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
               </p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="registrando.set(false)" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
@@ -417,13 +575,13 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             }
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-comentario">Comentario</label>
-              <textarea id="eq-comentario" rows="3" [class]="estilos.area" placeholder="Qué pasó, en una línea"
+              <textarea id="eq-comentario" rows="3" maxlength="500" [class]="estilos.area" placeholder="Qué pasó, en una línea"
                         [(ngModel)]="nueva.comentario"></textarea>
             </div>
             @if (!esRecuperacion()) {
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-adjunto">Certificado o constancia</label>
-              <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="text-[12.5px]"
+              <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="!bg-transparent [font:revert] file:[all:revert]"
                      (change)="elegirArchivo($event)">
               <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
                 {{ tipoElegido()?.exigeCertificado ? 'Obligatorio para este tipo' : 'Opcional' }} · hasta 10 MB
@@ -431,7 +589,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             </div>
             }
             @if (error()) {
-              <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
             }
           </div>
 
@@ -485,6 +643,7 @@ export class AsistenciaEquipoComponent implements OnInit {
             fechaOrigen: hoy(), minutosExtra: null as number | null };
   protected readonly hoyTexto = hoy();
   protected readonly detalleRecuperacion = detalleRecuperacion;
+  protected readonly aviso = avisoDeCierre('supervisora');
 
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
@@ -560,11 +719,11 @@ export class AsistenciaEquipoComponent implements OnInit {
         this.faltanteDePausa(salida, base, d.marcasFaltantes, 'BREAK', 'break', d.breakInicio, d.breakFin);
       }
       if ((d.excesoAlmuerzoMin ?? 0) > 0) {
-        salida.push({ ...base, tipo: 'PAUSA', alerta: 'Exceso de almuerzo',
+        salida.push({ ...base, tipo: 'PAUSA', alerta: 'Exceso de almuerzo', minutos: d.excesoAlmuerzoMin!,
           detalle: this.detalleExceso(d.almuerzoInicio, d.almuerzoFin, d.excesoAlmuerzoMin!) });
       }
       if ((d.excesoBreakMin ?? 0) > 0) {
-        salida.push({ ...base, tipo: 'PAUSA', alerta: 'Exceso de break',
+        salida.push({ ...base, tipo: 'PAUSA', alerta: 'Exceso de break', minutos: d.excesoBreakMin!,
           detalle: this.detalleExceso(d.breakInicio, d.breakFin, d.excesoBreakMin!) });
       }
       if ((d.minutosTardanza ?? 0) > tolDia) {
@@ -588,25 +747,84 @@ export class AsistenciaEquipoComponent implements OnInit {
     this.alertas().filter(a => this.filtro() === 'todas' || a.tipo === this.filtro()));
 
   /** Solo las de su gente: la bandeja es de toda la empresa. */
-  readonly porRevisar = computed(() => {
+  private readonly deSuGente = computed(() => {
     const suyos = new Set(this.gente().map(p => p.idUsuario));
     return this.pendientes().filter(j => suyos.has(j.idUsuario));
   });
+  /**
+   * Las que puede revisar. Las de una semana cerrada no: RR.HH. cerró sin que
+   * se revisaran, se quedan «Por revisar» y el cierre lo anotó en la Auditoría.
+   */
+  readonly porRevisar = computed(() => this.deSuGente().filter(j => !j.semanaCerrada));
+  /** La bandeja: primero lo que se puede revisar y al final lo que quedó sin revisar. */
+  readonly bandeja = computed(() => [
+    ...this.porRevisar(), ...this.deSuGente().filter(j => j.semanaCerrada)
+  ]);
 
-  readonly kpis = computed(() => {
-    const a = this.alertas();
-    const cuenta = (t: TipoAlerta) => a.filter(x => x.tipo === t).length;
-    return [
-      { titulo: 'Por llamar la atención', icono: 'bell', cifra: new Set(a.map(x => x.idUsuario)).size,
-        de: this.gente().length as number | null, pie: 'Asesores con alguna alerta esta semana' },
-      { titulo: 'Marcas sin registrar', icono: 'pencil', cifra: cuenta('MARCA'), de: null,
-        pie: 'Break o almuerzo sin marcar' },
-      { titulo: 'Excesos de pausa', icono: 'coffee', cifra: cuenta('PAUSA'), de: null,
-        pie: 'Break o almuerzo más largo de lo permitido' },
-      { titulo: 'Solicitudes por revisar', icono: 'file-text', cifra: this.porRevisar().length, de: null,
-        pie: 'Esperan tu revisión para pasar a RR.HH.' }
-    ];
+  cuenta(tipo: TipoAlerta): number {
+    return this.alertas().filter(x => x.tipo === tipo).length;
+  }
+
+  /** Quién tiene alertas, con más alertas primero. */
+  readonly conAlerta = computed(() => {
+    const porPersona = new Map<number, { idUsuario: number; nombre: string; cuantas: number }>();
+    for (const a of this.alertas()) {
+      const p = porPersona.get(a.idUsuario) ?? { idUsuario: a.idUsuario, nombre: a.nombre, cuantas: 0 };
+      p.cuantas++;
+      porPersona.set(a.idUsuario, p);
+    }
+    return [...porPersona.values()].sort((a, b) => b.cuantas - a.cuantas);
   });
+  /** Dos por fila y dos filas; con más de cuatro, tres nombres y el resto en la cuarta casilla. */
+  readonly conNombre = computed(() => this.conAlerta().length > 4 ? this.conAlerta().slice(0, 3) : this.conAlerta());
+  readonly sinNombre = computed(() => this.conAlerta().slice(this.conNombre().length));
+
+  /** La semana, con cuántas marcas sin registrar hubo cada día. */
+  readonly tira = computed(() => [0, 1, 2, 3, 4, 5].map(i => {
+    const fecha = sumarDias(this.lunes(), i);
+    const n = this.alertas().filter(a => a.tipo === 'MARCA' && a.orden === fecha).length;
+    const dia = DIAS_CORTOS[new Date(fecha + 'T00:00:00').getDay()];
+    return { fecha, letra: dia[0], numero: Number(fecha.slice(8, 10)), n, titulo: `${dia}: ${n ? `${n} sin marcar` : 'completo'}` };
+  }));
+
+  /** Quiénes no marcaron: el nombre de pila (dos que se llaman igual, con apellido); hasta tres. */
+  private readonly sinMarcar = computed(() => [...new Set(this.alertas().filter(a => a.tipo === 'MARCA').map(a => a.nombre))]);
+  readonly sinMarcarCorto = computed(() => {
+    const lista = this.sinMarcar();
+    const pila = (n: string) => n.split(' ')[0];
+    const repetido = (n: string) => lista.filter(x => pila(x) === pila(n)).length > 1;
+    return lista.slice(0, lista.length > 3 ? 3 : lista.length)
+      .map(n => (repetido(n) ? n.split(' ').slice(0, 2).join(' ') : pila(n)));
+  });
+  readonly sinMarcarResto = computed(() => Math.max(0, this.sinMarcar().length - 3));
+  /** Cada nombre con lo que va después: «, » entre ellos e « y » antes del último (si no hay resto). */
+  readonly sinMarcarPartes = computed(() => {
+    const nombres = this.sinMarcarCorto();
+    const resto = this.sinMarcarResto();
+    return nombres.map((nombre, i) => ({
+      nombre,
+      sep: i === nombres.length - 1 ? '' : i === nombres.length - 2 && !resto ? ' y ' : ', '
+    }));
+  });
+  readonly nombresSinMarcar = computed(() => this.sinMarcar().join(', '));
+
+  /** Los dos excesos de pausa más grandes, con su barra contra el mayor. */
+  readonly pausas = computed(() => {
+    const lista = this.alertas().filter(a => a.tipo === 'PAUSA' && a.minutos);
+    const mayor = Math.max(1, ...lista.map(a => a.minutos ?? 0));
+    return [...lista].sort((a, b) => (b.minutos ?? 0) - (a.minutos ?? 0)).slice(0, 2)
+      .map(a => ({ nombre: a.nombre, minutos: a.minutos ?? 0, ancho: Math.max(8, ((a.minutos ?? 0) / mayor) * 100) }));
+  });
+
+  nombresDe(lista: { nombre: string }[]): string {
+    return lista.map(x => x.nombre).join(', ');
+  }
+
+  /** «Leydi M.»: el nombre y la inicial del apellido. */
+  corto(nombre: string): string {
+    const [a, b] = nombre.split(' ');
+    return b ? `${a} ${b[0]}.` : a;
+  }
 
   ngOnInit(): void {
     this.servicio.perfil().subscribe({
@@ -778,11 +996,10 @@ export class AsistenciaEquipoComponent implements OnInit {
     });
   }
 
+  /** Abre el adjunto en otra pestaña: la foto o el PDF se ven, no se bajan con un nombre al azar. */
   verCertificado(j: Justificacion): void {
-    this.servicio.certificado(j.id).subscribe({
-      next: blob => window.open(URL.createObjectURL(blob), '_blank'),
-      error: () => this.toast.error('No se pudo abrir el adjunto')
-    });
+    abrirArchivo(this.servicio.certificado(j.id, j.archivoNombre), j.archivoNombre,
+      () => this.toast.error('No se pudo abrir el adjunto'));
   }
 
   // ==================== REGISTRAR ====================

@@ -79,11 +79,11 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       list-style: none; margin: 0; padding: 0; flex: none; min-width: 132px;
       display: flex; flex-direction: column; gap: 8px;
     }
-    .leyenda-lado li { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5f6c80 }
+    .leyenda-lado li { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5f6c80 !important }
     .leyenda-lado .cuadro { width: 10px; height: 10px; border-radius: 3px; flex: none }
-    .leyenda-lado strong { margin-left: auto; color: #0f172a; font-variant-numeric: tabular-nums }
-    :host-context(.dark) .leyenda-lado li { color: #94a3b8 }
-    :host-context(.dark) .leyenda-lado strong { color: #f1f5f9 }
+    .leyenda-lado strong { margin-left: auto; color: #0f172a !important; font-variant-numeric: tabular-nums }
+    :host-context(.dark) .leyenda-lado li { color: #94a3b8 !important }
+    :host-context(.dark) .leyenda-lado strong { color: #f1f5f9 !important }
 
     /* Los tres pasos del cierre: un círculo con su icono y una línea entre pasos. */
     .avance { display: flex; align-items: center; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid #f1f3f6 }
@@ -113,7 +113,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     }
     .lista-pendientes li {
       display: flex; align-items: center; justify-content: space-between; gap: 11px;
-      padding: 11px 13px; border-radius: 10px; background: var(--fila-fondo); color: var(--fila-texto);
+      padding: 11px 13px; border-radius: 10px; background: var(--fila-fondo); color: var(--fila-texto) !important;
     }
     .lista-pendientes .ir {
       flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 0;
@@ -149,15 +149,15 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px;
       border: 1px solid #e6e9ee; background: #fff; font-size: 12px; color: #334155;
     }
-    .chip-exceso strong { color: #0f172a; font-variant-numeric: tabular-nums }
+    .chip-exceso strong { color: #0f172a !important; font-variant-numeric: tabular-nums }
     .chip-exceso.fuerte { border-color: #f59e0b; background: #fef6e0; color: #92400e }
-    .chip-exceso.fuerte strong { color: #92400e }
+    .chip-exceso.fuerte strong { color: #92400e !important }
     :host-context(.dark) .total-avisos { border-color: #1e293b }
     :host-context(.dark) .bloque-pausa { border-color: #1e293b }
     :host-context(.dark) .chip-exceso { border-color: #1e293b; background: #0f172a; color: #e2e8f0 }
-    :host-context(.dark) .chip-exceso strong { color: #f1f5f9 }
+    :host-context(.dark) .chip-exceso strong { color: #f1f5f9 !important }
     :host-context(.dark) .chip-exceso.fuerte { border-color: #f59e0b; background: #451a03; color: #fcd34d }
-    :host-context(.dark) .chip-exceso.fuerte strong { color: #fcd34d }
+    :host-context(.dark) .chip-exceso.fuerte strong { color: #fcd34d !important }
 
     /* La tira de la puntualidad: diez segmentos, uno por cada 10 %. */
     .tira { display: flex; gap: 3px; width: 100% }
@@ -195,7 +195,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Dashboard de Asistencia</h1>
+        <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Dashboard de Asistencia</h1>
         <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subtitulo() }}</p>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -647,7 +647,7 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     const listo = !incompletos && !porAprobar;
     return [
       { etiqueta: 'Marcaciones', estado: incompletos ? 'falta' : 'hecho', cuantos: incompletos },
-      { etiqueta: 'Justificaciones', estado: porAprobar ? 'falta' : 'hecho', cuantos: porAprobar },
+      { etiqueta: 'Solicitudes', estado: porAprobar ? 'falta' : 'hecho', cuantos: porAprobar },
       { etiqueta: 'Cierre', estado: listo ? 'listo' : 'espera', cuantos: 0 }
     ];
   });
@@ -666,9 +666,9 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
       },
       {
         ir: 'justificaciones', icono: 'file-text', tono: porAprobar.length ? 'falta' : 'ok',
-        titulo: 'Justificaciones por aprobar',
+        titulo: 'Solicitudes por aprobar',
         pie: porAprobar.length
-          ? porAprobar.map(j => `${(j.tipo ?? 'justificación').toLowerCase()} de ${this.primerNombre(j.nombreAgente)}`).join(', ')
+          ? porAprobar.map(j => `${(j.tipo ?? 'solicitud').toLowerCase()} de ${this.primerNombre(j.nombreAgente)}`).join(', ')
           : porRevisar.length ? `${porRevisar.length} esperando a la supervisora` : 'Nada pendiente',
         estadoTexto: porAprobar.length ? `${porAprobar.length} por aprobar` : 'Al día'
       },

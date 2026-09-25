@@ -6,10 +6,10 @@ import { forkJoin, of, switchMap } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import {
-  DiaCalendario, Horario, ImportacionFeriados, PoliticaAsistencia, ResumenAgente, TipoDia
+  DiaBase, DiaCalendario, Horario, HorarioBase, ImportacionFeriados, PoliticaAsistencia, TipoDia
 } from './asistencia.models';
 import {
-  ESTILOS, TIPOS_DE_CALENDARIO, aMinutos, enDuracion, finDeSemanaDe, hoy, lunesDe, sumarDias
+  ESTILOS, TIPOS_DE_CALENDARIO, aMinutos, enDuracion, hoy, sumarDias
 } from './asistencia.estilos';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -26,45 +26,49 @@ interface Regla {
   minutos: number;
   hora: string | null;
   conHora: boolean;
-}
-
-/** Un cambio del historial: los días que cambiaron igual, juntos en una línea. */
-interface CambioHorario {
-  clave: string;
-  desde: string;
-  hasta: string | null;
-  vigente: boolean;
-  alcance: string;
-  dias: string;
-  horario: string;
-  motivo: string;
-  registradoPor: string | null;
+  /** «Desde el lunes 28/09: 15 min»: lo que ya se cambió y todavía no rige. */
+  programada: string | null;
 }
 
 const CABECERAS = DIAS_CORTOS;
-/** 48 horas semanales: es la regla de la empresa y contra eso se compara. */
-const MINUTOS_SEMANA = 48 * 60;
-/** Cuántos cambios caben en una página; los huecos mantienen el alto del panel. */
-const CAMBIOS_POR_PAGINA = 5;
-
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
                'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 
-/** Minutos a «hh:mm», como se lee una jornada: «09:30», «53:00». */
-function enHoras(minutos: number): string {
+/** Todos trabajan 48 horas a la semana: el horario base tiene que sumarlas justas. */
+const MINUTOS_SEMANA = 48 * 60;
+const CORTO_BASE: Record<number, string> = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie' };
+
+/** «9 h 30», «10 h», «45 min»: la jornada como se lee en el horario. */
+function duracionBase(minutos: number): string {
   const h = Math.floor(minutos / 60);
   const m = minutos % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  return h && m ? `${h} h ${String(m).padStart(2, '0')}` : h ? `${h} h` : `${m} min`;
+}
+
+/** «Lun 08:00–19:00 · Mar a Vie 08:00–18:30»: los días seguidos con el mismo horario, juntos. */
+function textoHorario(dias: DiaBase[]): string {
+  const grupos: { desde: number; hasta: number; entrada: string; salida: string }[] = [];
+  for (const d of dias) {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.entrada === d.entrada && ultimo.salida === d.salida) {
+      ultimo.hasta = d.diaSemana;
+    } else {
+      grupos.push({ desde: d.diaSemana, hasta: d.diaSemana, entrada: d.entrada, salida: d.salida });
+    }
+  }
+  return grupos.map(g => `${CORTO_BASE[g.desde]}${g.hasta !== g.desde ? ` a ${CORTO_BASE[g.hasta]}` : ''} ${g.entrada}–${g.salida}`)
+    .join(' · ');
 }
 
 /**
- * Configuración del módulo: el horario, las pausas y el calendario.
+ * Configuración del módulo: las reglas (tolerancias y pausas), el horario base
+ * de la subcartera y el calendario.
  *
- * Nada de esto se edita con un UPDATE. El reporte se consulta sobre el pasado;
- * si una fila se sobrescribiera, cambiar el horario en noviembre recalcularía
- * las tardanzas de octubre que ya se usaron para pagar. Cambiar cierra la fila
- * vigente y abre otra, y por eso el motivo es obligatorio.
+ * El horario base es el de lunes a viernes y suma 48 horas; cada subcartera
+ * puede tener el suyo. Un cambio de regla o de horario base rige desde el lunes
+ * siguiente, para no cambiar la semana que ya empezó, y queda en la Auditoría.
+ * Lo que cambia el horario de una persona en una semana son sus recuperaciones.
  */
 @Component({
   selector: 'app-asistencia-configuracion',
@@ -77,7 +81,7 @@ function enHoras(minutos: number): string {
 
     /* Título de sección y su fila: el título a la izquierda y lo que acompaña
        a la derecha, con el mismo alto en las dos columnas. */
-    .titulo-seccion { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -.01em }
+    .titulo-seccion { margin: 0; font-size: 15px; font-weight: 800 }
     .fila-seccion {
       display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
       gap: 10px; min-height: 38px; margin-bottom: 12px;
@@ -88,47 +92,9 @@ function enHoras(minutos: number): string {
     :host-context(.dark) .leyenda-cal span { color: #94a3b8 }
     :host-context(.dark) .leyenda-cal i { border-color: #1e293b }
 
-    /* El reloj de la semana. La pista es la escala del día; el turno, la barra
-       de ese horario, con el mismo grosor y las puntas de las del dashboard. */
-    .tabla-horario .col-reloj { width: 42%; min-width: 320px }
-    .tabla-horario .marcas {
-      display: flex; justify-content: space-between;
-      font-size: 10.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
-      color: #8491a3; font-variant-numeric: tabular-nums;
-    }
-    .pista {
-      position: relative; display: block; height: 14px; border-radius: 999px;
-      /* Mezclada con el texto y no con el borde: sobre blanco, el gris suave
-         casi no se distinguía del fondo de la tabla. */
-      background-color: color-mix(in srgb, #0f172a 9%, #fff);
-    }
-    .pista .turno {
-      position: absolute; top: 0; height: 100%; overflow: hidden;
-      /* Recta donde empieza y curva donde acaba, como las barras del dashboard. */
-      border-radius: 0 999px 999px 0;
-      background: color-mix(in srgb, #0f172a 72%, #fff);
-    }
-    .pista .corte { position: absolute; top: 0; height: 100% }
-    .pista .corte.almuerzo { background: color-mix(in srgb, #f59e0b 88%, #fff) }
-    .pista .corte.break { background: color-mix(in srgb, #ea580c 82%, #fff) }
-    :host-context(.dark) .pista { background-color: color-mix(in srgb, #f1f5f9 12%, #0f172a) }
-    :host-context(.dark) .pista .turno { background: color-mix(in srgb, #f1f5f9 72%, #0f172a) }
-    /* Un día cambiado y aún sin guardar: la fila lleva una marca al borde. */
-    tr.pendiente td:first-child { box-shadow: inset 3px 0 0 #f59e0b }
-    /* El aviso de las 48 horas, al pie de la tabla, con su punto de color. */
-    .aviso-semana { display: inline-flex; align-items: center; gap: 7px; font-weight: 600 }
-    .aviso-semana::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: currentColor }
-    .aviso-semana.ok { color: #166534 }
-    .aviso-semana.mal { color: #b91c1c }
-    :host-context(.dark) .aviso-semana.ok { color: #86efac }
-    :host-context(.dark) .aviso-semana.mal { color: #fca5a5 }
-
-    /* Bento de reglas: dos columnas; las filas se reparten el alto del panel
-       de cambios que tiene al lado. */
-    .bento {
-      flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-auto-rows: minmax(104px, 1fr); gap: 12px;
-    }
+    /* Reglas: cuatro tarjetas en fila; dos en pantallas medianas y una en el móvil. */
+    .bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(104px, auto); gap: 12px }
+    @media (max-width: 1100px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
     .regla {
       display: flex; flex-direction: column; gap: 3px; padding: 14px 16px;
       background: #fff; border: 1px solid #e6e9ee; border-radius: 12px;
@@ -146,14 +112,59 @@ function enHoras(minutos: number): string {
       background: #f1f3f6; color: #334155;
     }
     .regla .cifra { font-size: 22px; font-weight: 800; line-height: 1.2; letter-spacing: -.02em; font-variant-numeric: tabular-nums }
-    .regla .cifra small { margin-left: 5px; font-size: 12.5px; font-weight: 600; color: #5f6c80 }
-    .regla .pie-cifra { margin: 0; padding-top: 4px; font-size: 11.5px; color: #5f6c80 }
+    .regla .cifra small { margin-left: 5px; font-size: 12.5px; font-weight: 600; letter-spacing: normal; color: #5f6c80 }
+    .regla .pie-cifra { margin: 2px 0 0; padding-top: 4px; font-size: 11.5px; color: #5f6c80 }
     .regla .pie-tarjeta { margin-top: auto; padding-top: 10px }
     :host-context(.dark) .regla { background: #0f172a; border-color: #1e293b }
     :host-context(.dark) .regla .icono { background: #1e293b; color: #e2e8f0 }
     :host-context(.dark) .regla .cifra small,
     :host-context(.dark) .regla .pie-cifra { color: #94a3b8 }
     @media (max-width: 640px) { .bento { grid-template-columns: 1fr } }
+    /* El cambio que ya se guardó y rige el lunes, debajo del valor de hoy. */
+    .regla .programada { margin: 6px 0 0; font-size: 12px; font-weight: 600; color: #2563eb }
+    :host-context(.dark) .regla .programada { color: #60a5fa }
+
+    /* Horario base: la semana del equipo en seis días; el sábado, sin horario fijo. */
+    .horario-base {
+      display: flex; flex-direction: column; gap: 12px; padding: 14px 16px;
+      background: #fff; border: 1px solid #e6e9ee; border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    }
+    .dias-base { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px }
+    @media (max-width: 760px) { .dias-base { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+    .dia-base { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid #e6e9ee; border-radius: 10px }
+    .dia-base b { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5f6c80 !important }
+    .dia-base strong { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums }
+    .dia-base small { font-size: 11.5px; color: #5f6c80 }
+    .dia-base.libre { border-style: dashed; background: #f6f7f9 }
+    .dia-base.libre strong { font-size: 12.5px; font-weight: 600; color: #5f6c80 !important }
+    .horario-base .programada { margin: 0; font-size: 12px; font-weight: 600; color: #2563eb }
+    .pie-base { display: flex; align-items: center; justify-content: space-between; gap: 12px }
+    .pie-base p { margin: 0; font-size: 11.5px; color: #5f6c80 }
+    :host-context(.dark) .horario-base { background: #0f172a; border-color: #1e293b; box-shadow: 0 1px 2px rgba(0, 0, 0, .3) }
+    :host-context(.dark) .dia-base { border-color: #1e293b }
+    :host-context(.dark) .dia-base b,
+    :host-context(.dark) .dia-base.libre strong { color: #94a3b8 !important }
+    :host-context(.dark) .dia-base small,
+    :host-context(.dark) .pie-base p { color: #94a3b8 }
+    :host-context(.dark) .dia-base.libre { background: #020617 }
+    :host-context(.dark) .horario-base .programada { color: #60a5fa }
+    /* En el formulario: la entrada y la salida de cada día, como en Corregir. */
+    .tabla-base td { vertical-align: middle }
+    :host input.celda-edit {
+      width: 116px; height: 32px; padding: 0 8px; border-radius: 6px;
+      border: 1px solid #8491a3 !important; background: #fff !important; color: #0f172a !important;
+      font: inherit; font-size: 12.5px; font-variant-numeric: tabular-nums;
+    }
+    :host input.celda-edit:focus-visible {
+      outline: none; border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,.2);
+    }
+    :host-context(.dark) input.celda-edit { border-color: #475569 !important; background: #0f172a !important; color: #f1f5f9 !important }
+    .suma-base { margin: 0; font-size: 12.5px; font-weight: 600 }
+    .suma-base.ok { color: #166534 }
+    .suma-base.mal { color: #b91c1c }
+    :host-context(.dark) .suma-base.ok { color: #86efac }
+    :host-context(.dark) .suma-base.mal { color: #fca5a5 }
 
     /* Las listas dentro de un panel respiran igual que las celdas de la tabla. */
     .lista-panel { list-style: none; margin: 0; padding: 0 12px }
@@ -231,9 +242,9 @@ function enHoras(minutos: number): string {
     <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.01em]">Configuración</h1>
+          <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Configuración</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Horarios y calendario. Se toca de vez en cuando, no a diario
+            Reglas de asistencia y calendario laboral
           </p>
         </div>
         <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
@@ -243,287 +254,98 @@ function enHoras(minutos: number): string {
       </div>
     </div>
 
-    <div class="flex min-h-[54px] items-center border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
-      <nav [class]="estilos.segmentos" role="tablist">
-        @for (t of TABS; track t.clave) {
-          <button type="button" role="tab" [attr.aria-selected]="tab() === t.clave"
-                  [attr.aria-label]="t.clave === 'calendario'
-                    ? 'Calendario, ' + diasDelAnio().length + ' días registrados en ' + anio() : null"
-                  [class]="estilos.tab + ' ' + (tab() === t.clave ? estilos.tabActiva : estilos.tabApagada)"
-                  (click)="tab.set(t.clave)">
-            {{ t.texto }}
-            @if (t.clave === 'calendario') {
-              <span aria-hidden="true"
-                    [class]="estilos.cuenta + ' ' + (tab() === t.clave ? estilos.cuentaActiva : estilos.cuentaApagada)">
-                {{ diasDelAnio().length }}
-              </span>
-            }
-          </button>
+    <!-- REGLAS Y HORARIO BASE. Un cambio rige desde el lunes siguiente. -->
+    <div class="px-7 pb-2 pt-5">
+    <div class="aparecer">
+      <div class="fila-seccion">
+        <h2 class="titulo-seccion !m-0">Reglas</h2>
+        @if (politica()?.heredada) {
+          <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400"
+                title="Al cambiar una regla se crea una propia de esta subcartera">
+            De la empresa
+          </span>
         }
-      </nav>
+      </div>
+      <div class="bento">
+        @for (r of reglas(); track r.clave) {
+          <div class="regla">
+            <div class="cabeza">
+              <span class="icono">@switch (r.clave) {@case ('dia') {<svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>} @case ('semana') {<svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/></svg>} @case ('almuerzo') {<svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v6a2.5 2.5 0 0 0 5 0V3"/><path d="M7.5 9v12"/><path d="M17.5 3c-1.4 1.8-2 3.6-2 5.6 0 1.6.7 2.4 2 2.4h1V3z"/><path d="M18.5 11v10"/></svg>} @default {<svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h13v4.5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8.5z"/><path d="M17 10h1.5a2 2 0 0 1 0 4H17"/><path d="M7 3v2.5M11 3v2.5"/></svg>}}</span>
+            </div>
+            <h3 [class]="estilos.rotulo + ' !mb-0.5'">{{ r.nombre }}</h3>
+            <div class="cifra">{{ r.cifra }}@if (r.unidad) {<small>{{ r.unidad }}</small>}</div>
+            <p class="pie-cifra">{{ r.pie }}</p>
+            @if (r.programada) {
+              <p class="programada">{{ r.programada }}</p>
+            }
+            <div class="pie-tarjeta">
+              <button type="button" [class]="estilos.botonChico" (click)="abrirRegla(r)"
+                      [attr.aria-label]="'Editar ' + r.nombre.toLowerCase()">
+                <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                Editar
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- El horario base de la subcartera: de lunes a viernes, 48 h. -->
+      <div class="fila-seccion mt-[22px]">
+        <div class="flex items-baseline gap-2.5">
+          <h2 class="titulo-seccion !m-0">Horario base</h2>
+          <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaBase() }}</span>
+        </div>
+      </div>
+      <div class="horario-base">
+        <div class="dias-base">
+          @for (d of base()?.dias ?? []; track d.diaSemana) {
+            <div class="dia-base">
+              <b>{{ d.nombre }}</b><strong>{{ hhmm(d.entrada) }} – {{ hhmm(d.salida) }}</strong><small>{{ duracionBase(d.minutosJornada) }}</small>
+            </div>
+          }
+          <div class="dia-base libre"><b>Sábado</b><strong>Sin horario fijo</strong><small>opcional</small></div>
+        </div>
+        @if (baseProgramada(); as prog) {
+          <p class="programada">{{ prog }}</p>
+        }
+        <div class="pie-base">
+          <p>El almuerzo no cuenta como trabajado. El sábado no tiene horario fijo: se usa para completar o recuperar.</p>
+          <button type="button" [class]="estilos.botonChico" (click)="abrirBase()" [disabled]="!base()">
+            <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            Editar
+          </button>
+        </div>
+      </div>
+    </div>
     </div>
 
-    @if (tab() === 'horarios') {
-      <!-- El horario que se ve es el de la subcartera, salvo que se pida el
-           de alguien en concreto: hay asesores con excepción. -->
-      <div class="flex flex-wrap items-end gap-3 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="persona-h">Excepción por persona</label>
-          <select id="persona-h" [class]="estilos.campo + ' w-[210px]'"
-                  [ngModel]="idPersona()" (ngModelChange)="elegirPersona($event)">
-            <option [ngValue]="null">Ninguna (horario de la subcartera)</option>
-            @for (p of personas(); track p.idUsuario) {
-              <option [ngValue]="p.idUsuario">{{ p.nombreAgente }}</option>
-            }
-          </select>
-        </div>
-        @if (idPersona()) {
-          <p class="!m-0 pb-[11px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-            Lo que se guarde aquí vale solo para esta persona.
-          </p>
-        }
-        <button type="button" [class]="estilos.botonSecundario + ' ml-auto'" (click)="abrirHorario()">
-          <lucide-angular name="clock" [size]="15" class="block"></lucide-angular>
-          Nuevo horario
-        </button>
-      </div>
-
-      <div class="px-7 py-5">
+    <!-- CALENDARIO -->
+    <div class="px-7 pb-12 pt-3">
       <div class="aparecer">
-
-        <!-- El horario de la semana, con el turno dibujado sobre el eje de horas -->
         <div class="fila-seccion">
-          <h2 class="titulo-seccion !m-0">Horario fijo</h2>
-          <div class="flex flex-wrap items-center gap-2.5">
-            <div class="leyenda-cal">
-              @for (l of LEYENDA_RELOJ; track l.texto) {
-                <span><i [style.background]="l.color" [style.border-color]="l.color"></i>{{ l.texto }}</span>
-              }
-            </div>
-            <span class="whitespace-nowrap text-[11.5px]"
-                  [class]="guardado()
-                    ? 'font-bold text-[#166534] dark:text-green-300'
-                    : 'text-[#5f6c80] dark:text-slate-400'">
-              {{ estadoHorario() }}
-            </span>
-            <!-- Guardar solo aparece cuando hay algo que guardar. -->
-            @if (borrador().size) {
-              <button type="button" [class]="estilos.botonPrimario"
-                      [disabled]="!cuadraLaSemana() || guardando()"
-                      [title]="cuadraLaSemana() ? '' : 'No se puede guardar hasta que la semana sume 48 horas'"
-                      (click)="guardarHorarios()">
-                <lucide-angular name="save" [size]="14" class="block"></lucide-angular>
-                {{ guardando() ? 'Guardando…' : 'Guardar' }}
-              </button>
-            }
+          <div class="flex items-baseline gap-2.5">
+            <h2 class="titulo-seccion !m-0">Calendario</h2>
+            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaDelAnio() }}</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" [class]="estilos.botonSecundario" (click)="abrirImportar()">
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="16"/></svg>
+              Importar feriados
+            </button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="abrirDia(hoyISO(), null)">
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar día
+            </button>
           </div>
         </div>
-
-        <div [class]="estilos.panel">
-          <table class="tabla-horario w-full border-collapse">
-            <caption class="sr-only">
-              Horario por día de la semana, con el turno dibujado sobre el eje de horas
-            </caption>
-            <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
-              <tr>
-                <th scope="col" [class]="estilos.th">Día</th>
-                <th scope="col" [class]="estilos.th">Entrada</th>
-                <th scope="col" [class]="estilos.th">Salida</th>
-                <th scope="col" [class]="estilos.th">Jornada</th>
-                <th scope="col" [class]="estilos.th + ' col-reloj'">
-                  <!-- El eje de horas vive en la cabecera de su columna. -->
-                  <div class="marcas">
-                    @for (m of marcasDelEje(); track m) { <span>{{ m }}</span> }
-                  </div>
-                </th>
-                <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (d of semana(); track d.diaSemana) {
-                <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#f4f6f9] dark:border-slate-800 dark:hover:bg-slate-800/40"
-                    [class.pendiente]="d.pendiente">
-                  <td [class]="estilos.td">
-                    <strong>{{ DIAS[d.diaSemana - 1] }}</strong>
-                    @if (d.remoto) {
-                      <span [class]="PASTILLA.neutro + ' ml-2.5'">Remoto</span>
-                    }
-                    @if (d.pendiente) {
-                      <span [class]="PASTILLA.tarde + ' ml-2.5'">Sin guardar</span>
-                    }
-                  </td>
-                  <td [class]="estilos.td">{{ d.horaEntrada }}</td>
-                  <td [class]="estilos.td">{{ d.horaSalida }}</td>
-                  <td [class]="estilos.td + ' secundario'">{{ d.jornada }}</td>
-                  <td [class]="estilos.td + ' col-reloj'">
-                    <span class="pista" [title]="d.horaEntrada + ' – ' + d.horaSalida">
-                      <span class="turno" [style.left.%]="d.izquierda" [style.width.%]="d.ancho">
-                        @for (c of d.cortes; track c.tipo) {
-                          <span class="corte" [class]="c.tipo"
-                                [style.left.%]="c.izquierda" [style.width.%]="c.ancho"></span>
-                        }
-                      </span>
-                    </span>
-                  </td>
-                  <td [class]="estilos.td + ' text-right'">
-                    <div class="flex justify-end gap-1.5">
-                      <button type="button" [class]="estilos.botonIcono" (click)="deshacer(d.diaSemana)"
-                              [disabled]="!d.pendiente"
-                              [attr.aria-label]="'Deshacer el cambio del ' + DIAS[d.diaSemana - 1].toLowerCase()"
-                              title="Deshacer">
-                        <lucide-angular name="rotate-ccw" [size]="14" class="block"></lucide-angular>
-                      </button>
-                      <button type="button" [class]="estilos.botonIcono" (click)="abrirHorario(d.diaSemana)"
-                              [attr.aria-label]="'Cambiar horario del ' + DIAS[d.diaSemana - 1].toLowerCase()"
-                              title="Cambiar">
-                        <lucide-angular name="pencil" [size]="14" class="block"></lucide-angular>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="6" class="!px-3 !py-10 text-center">
-                    <strong class="block text-[13.5px]">Sin horario</strong>
-                    <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                      Ni este ámbito ni la empresa tienen un horario vigente. Créalo con «Nuevo horario».
-                    </span>
-                  </td>
-                </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr class="border-t border-[#e6e9ee] bg-[#f4f6f9] font-bold dark:border-slate-800 dark:bg-slate-800/60">
-                <td [class]="estilos.td" colspan="3">Total semanal</td>
-                <td [class]="estilos.td">{{ totalSemana() }}</td>
-                <td [class]="estilos.td" colspan="2">
-                  <span class="aviso-semana" [class.ok]="cuadraLaSemana()" [class.mal]="!cuadraLaSemana()">
-                    {{ avisoSemana() }}
-                  </span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="mt-6 grid gap-4 sm:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
-          <!-- Tolerancias y pausas: cada regla se cambia por separado,
-               que es como se piensan y como se explican. -->
-          <div class="flex flex-col">
-            <div class="fila-seccion">
-              <h2 class="titulo-seccion !m-0">Tolerancias y pausas</h2>
-              @if (politica()?.heredada) {
-                <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400"
-                      title="Al cambiar una regla se crea una propia de esta subcartera">
-                  De la empresa
-                </span>
-              }
-            </div>
-            <div class="bento">
-              @for (r of reglas(); track r.clave) {
-                <div class="regla">
-                  <div class="cabeza">
-                    <span class="icono"><lucide-angular [name]="r.icono" [size]="15" class="block"></lucide-angular></span>
-                  </div>
-                  <h3 [class]="estilos.rotulo + ' !m-0'">{{ r.nombre }}</h3>
-                  <div class="cifra">{{ r.cifra }}@if (r.unidad) {<small>{{ r.unidad }}</small>}</div>
-                  <p class="pie-cifra">{{ r.pie }}</p>
-                  <div class="pie-tarjeta">
-                    <button type="button" [class]="estilos.botonChico" (click)="abrirRegla(r)"
-                            [attr.aria-label]="'Editar ' + r.nombre.toLowerCase()">
-                      <lucide-angular name="pencil" [size]="13" class="block"></lucide-angular>
-                      Editar
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- El registro de cambios -->
-          <div class="flex flex-col">
-            <div class="fila-seccion">
-              <h2 class="titulo-seccion !m-0">Cambios de horario</h2>
-              <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                {{ cambios().length }} {{ cambios().length === 1 ? 'registro' : 'registros' }}
-              </span>
-            </div>
-            <div [class]="estilos.panel + ' flex flex-1 flex-col !overflow-hidden'">
-              <ul class="lista-panel flex-1">
-                @for (c of paginaCambios(); track c.clave) {
-                  <li>
-                    <div class="min-w-0 flex-1">
-                      <span class="dia-reg">
-                        <i class="punto-tipo" [style.background]="c.vigente ? '#16a34a' : '#8491a3'"></i>
-                        <strong>{{ c.desde }}{{ c.hasta ? ' – ' + c.hasta : '' }}</strong>
-                        @if (c.vigente) { <span [class]="PASTILLA.ok">Vigente</span> }
-                      </span>
-                      <div class="pie-reg">{{ c.alcance }} · {{ c.dias }} · {{ c.horario }}</div>
-                    </div>
-                    <button type="button" [class]="estilos.botonChico" (click)="cambio.set(c)">
-                      <lucide-angular name="eye" [size]="13" class="block"></lucide-angular>
-                      Ver detalle
-                    </button>
-                  </li>
-                } @empty {
-                  <li class="!justify-center !py-10 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                    Todavía no se ha cambiado ningún horario
-                  </li>
-                }
-                @for (h of huecosCambios(); track $index) {
-                  <li class="hueco" aria-hidden="true">
-                    <div><strong class="text-[12.5px]">&nbsp;</strong><div class="pie-reg">&nbsp;</div></div>
-                  </li>
-                }
-              </ul>
-              @if (cambios().length) {
-                <div class="flex items-center justify-between gap-3 border-t border-[#f1f3f6] px-3 py-2.5 dark:border-slate-800">
-                  <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ textoPagina() }}</span>
-                  <div class="flex gap-1.5">
-                    <button type="button" [class]="estilos.botonIcono" (click)="pagina.set(pagina() - 1)"
-                            [disabled]="pagina() === 0" aria-label="Página anterior">
-                      <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
-                    </button>
-                    <button type="button" [class]="estilos.botonIcono" (click)="pagina.set(pagina() + 1)"
-                            [disabled]="!hayMas()" aria-label="Página siguiente">
-                      <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-    }
-
-    @if (tab() === 'calendario') {
-      <!-- La barra del mes, con lo que se hace desde aquí -->
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex items-center gap-2">
-          <button type="button" [class]="estilos.botonIcono + ' text-[15px]'" (click)="moverMes(-1)"
+        <div class="mb-3.5 mt-0.5 flex items-center gap-2">
+          <button type="button" [class]="estilos.botonIcono" (click)="moverMes(-1)"
                   aria-label="Mes anterior">‹</button>
           <strong class="min-w-[138px] text-center text-[14.5px] capitalize">{{ tituloMes() }}</strong>
-          <button type="button" [class]="estilos.botonIcono + ' text-[15px]'" (click)="moverMes(1)"
+          <button type="button" [class]="estilos.botonIcono" (click)="moverMes(1)"
                   aria-label="Mes siguiente">›</button>
           <button type="button" [class]="estilos.botonChico" (click)="irAHoy()">Hoy</button>
         </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button type="button" [class]="estilos.botonSecundario" (click)="abrirImportar()">
-            <lucide-angular name="upload" [size]="15" class="block"></lucide-angular>
-            Importar feriados
-          </button>
-          <button type="button" [class]="estilos.botonPrimario" (click)="abrirDia(hoyISO(), null)">
-            <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-            Agregar día
-          </button>
-        </div>
-      </div>
-
-      <div class="px-7 py-5">
-      <div class="aparecer">
         <div class="grid items-start gap-4 min-[1060px]:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
           <div>
             <!-- Qué significa cada fondo, antes de la rejilla -->
@@ -593,91 +415,7 @@ function enHoras(minutos: number): string {
           </div>
         </div>
       </div>
-      </div>
-    }
-
-    <!-- Editar el horario de un día -->
-    @if (formHorario()) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarHorario()"></div>
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,460px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-horario">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-horario" class="!m-0 text-[15px] font-extrabold">
-                {{ horarioNuevo ? 'Nuevo horario' : 'Cambiar horario' }}
-              </h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                {{ aplicarSemana ? 'De lunes a viernes' : DIAS[nuevoHorario.diaSemana - 1] }}
-              </p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrarHorario()" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
-            </button>
-          </header>
-
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            <div class="flex flex-col gap-1">
-              <span [class]="estilos.etiqueta">Alcance</span>
-              <p class="!m-0 text-[13px]">{{ alcance() }}</p>
-            </div>
-            @if (horarioNuevo && !aplicarSemana) {
-              <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="h-dia">Día</label>
-                <select id="h-dia" [class]="estilos.campo" [(ngModel)]="nuevoHorario.diaSemana">
-                  @for (d of DIAS; track $index) {
-                    <option [ngValue]="$index + 1">{{ d }}</option>
-                  }
-                </select>
-              </div>
-            }
-            <div class="flex gap-3">
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="h-entrada">Entrada</label>
-                <input id="h-entrada" type="time" [class]="estilos.campo" [(ngModel)]="nuevoHorario.horaEntrada">
-              </div>
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="h-salida">Salida</label>
-                <input id="h-salida" type="time" [class]="estilos.campo" [(ngModel)]="nuevoHorario.horaSalida">
-              </div>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="h-desde">Rige desde</label>
-              <input id="h-desde" type="date" [class]="estilos.campo" [(ngModel)]="nuevoHorario.vigenteDesde">
-            </div>
-            <!-- Casi siempre el cambio es para toda la semana laboral: hacerlo
-                 día a día son cinco formularios iguales. -->
-            <label class="flex cursor-pointer items-center gap-2.5 text-[13px]" for="h-semana">
-              <input id="h-semana" type="checkbox" class="h-4 w-4 accent-[#0f172a]"
-                     [(ngModel)]="aplicarSemana">
-              Aplicar el mismo horario de lunes a viernes
-            </label>
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="h-motivo">Motivo del cambio</label>
-              <input id="h-motivo" type="text" [class]="estilos.campo"
-                     placeholder="Ej.: cierre de mes, se extiende media hora"
-                     [(ngModel)]="nuevoHorario.motivo">
-            </div>
-            <div class="flex flex-col gap-1">
-              <span [class]="estilos.etiqueta">Jornada resultante</span>
-              <p class="!m-0 text-[13px]"
-                 [class]="jornadaResultante().error ? 'text-[#b91c1c] dark:text-red-300' : ''">
-                {{ jornadaResultante().texto }}
-              </p>
-            </div>
-            @if (error()) {
-              <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
-            }
-          </div>
-
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarHorario()">Cancelar</button>
-            <!-- Aplicar deja el cambio en la tabla; se guarda con el Guardar de arriba. -->
-            <button type="button" [class]="estilos.botonPrimario" (click)="guardarHorario()">Aplicar</button>
-          </footer>
-        </div>
-      </div>
-    }
+    </div>
 
     <!-- Cambiar una regla. Una sola: es como se piensan y como se explican,
          y un formulario con las ocho a la vez invita a tocar de más. -->
@@ -689,16 +427,16 @@ function enHoras(minutos: number): string {
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
               <h2 id="titulo-regla" class="!m-0 text-[15px] font-extrabold">Cambiar regla</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ r.nombre }}</p>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ r.nombre }} · rige desde el lunes {{ proximoLunesCorto() }}</p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarRegla()" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
           <div class="flex flex-col gap-3.5 px-5 py-4">
-            <div class="flex flex-col gap-1">
-              <span [class]="estilos.etiqueta">Alcance</span>
+            <div class="flex flex-col gap-1.5">
+              <span class="text-[13px]">Alcance</span>
               <p class="!m-0 text-[13px]">{{ alcance() }}</p>
             </div>
 
@@ -723,57 +461,89 @@ function enHoras(minutos: number): string {
               </p>
             }
 
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="r-motivo">Motivo</label>
-              <input id="r-motivo" type="text" [class]="estilos.campo"
-                     placeholder="Un tope que cambia sin explicación es una discusión garantizada"
-                     [(ngModel)]="reglaMotivo">
-            </div>
-
             @if (error()) {
-              <p class="!m-0 text-xs text-[#b91c1c]">{{ error() }}</p>
+              <p class="!m-0 text-[12px] text-[#b91c1c]">{{ error() }}</p>
             }
           </div>
 
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
             <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRegla()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="guardarRegla()" [disabled]="guardando()">
-              <lucide-angular name="save" [size]="15" class="block"></lucide-angular>
-              Guardar
-            </button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="guardarRegla()" [disabled]="guardando()">Guardar</button>
           </footer>
         </div>
       </div>
     }
 
-    <!-- El detalle de un cambio de horario del historial -->
-    @if (cambio(); as c) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cambio.set(null)"></div>
+    <!-- Cambiar el horario base: los cinco días, que sumen 48 h, con su motivo -->
+    @if (formBase()) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarBase()"></div>
       <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto w-[min(100%,520px)] overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-cambio">
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,520px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-horario-base">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-cambio" class="!m-0 text-[15px] font-extrabold">Cambio de horario</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                {{ c.desde }}{{ c.hasta ? ' – ' + c.hasta : ' · vigente' }}
-              </p>
+              <h2 id="titulo-horario-base" class="!m-0 text-[15px] font-extrabold">Cambiar horario base</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ nombreAmbito() }} · rige desde el lunes {{ proximoLunesCorto() }}</p>
             </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cambio.set(null)" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+            <button type="button" [class]="estilos.botonIcono" (click)="cerrarBase()" aria-label="Cerrar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
-          <div class="px-5 py-4">
-            <dl class="ficha">
-              <dt>Alcance</dt><dd>{{ c.alcance }}</dd>
-              <dt>Día</dt><dd>{{ c.dias }}</dd>
-              <dt>Horario</dt><dd class="tabular-nums">{{ c.horario }}</dd>
-              <dt>Motivo</dt><dd>{{ c.motivo }}</dd>
-              <dt>Registrado por</dt><dd>{{ c.registradoPor ?? '—' }}</dd>
-            </dl>
+
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div [class]="estilos.panel">
+              <table class="tabla-base w-full border-collapse">
+                <caption class="sr-only">Entrada y salida de cada día</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" [class]="estilos.th">Día</th>
+                    <th scope="col" [class]="estilos.th">Entrada</th>
+                    <th scope="col" [class]="estilos.th">Salida</th>
+                    <th scope="col" [class]="estilos.th">Jornada</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (f of filasBase(); track f.diaSemana; let i = $index) {
+                    <tr>
+                      <td [class]="estilos.td"><strong>{{ f.nombre }}</strong></td>
+                      <td [class]="estilos.td">
+                        <input class="celda-edit" type="time" [ngModel]="f.entrada" (ngModelChange)="cambiarFilaBase(i, 'entrada', $event)"
+                               [attr.aria-label]="'Entrada del ' + f.nombre.toLowerCase()">
+                      </td>
+                      <td [class]="estilos.td">
+                        <input class="celda-edit" type="time" [ngModel]="f.salida" (ngModelChange)="cambiarFilaBase(i, 'salida', $event)"
+                               [attr.aria-label]="'Salida del ' + f.nombre.toLowerCase()">
+                      </td>
+                      <td [class]="estilos.td + ' font-bold'">{{ sumaBase().jornadas[i] === null ? '—' : duracionBase(sumaBase().jornadas[i] ?? 0) }}</td>
+                    </tr>
+                  }
+                  <tr>
+                    <td [class]="estilos.td"><strong>Sábado</strong></td>
+                    <td [class]="estilos.td + ' secundario'" colspan="3">Sin horario fijo</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="suma-base" [class.ok]="sumaBase().ok" [class.mal]="!sumaBase().ok">{{ sumaBase().texto }}</p>
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="motivo-horario-base">Motivo</label>
+              <input id="motivo-horario-base" type="text" maxlength="200" [class]="estilos.campo"
+                     placeholder="Ej.: el equipo entra media hora antes desde octubre"
+                     aria-describedby="error-horario-base"
+                     [ngModel]="motivoBase()" (ngModelChange)="motivoBase.set($event); faltaMotivoBase.set(false)">
+              @if (faltaMotivoBase()) {
+                <p id="error-horario-base" class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">Escribe el motivo: queda en la Auditoría</p>
+              }
+            </div>
+            @if (errorBase()) {
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ errorBase() }}</p>
+            }
           </div>
-          <footer class="flex justify-end border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cambio.set(null)">Cerrar</button>
+
+          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarBase()">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="guardarBase()"
+                    [disabled]="guardando() || !sumaBase().ok">Guardar</button>
           </footer>
         </div>
       </div>
@@ -799,7 +569,7 @@ function enHoras(minutos: number): string {
               </p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarDia()" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
@@ -836,36 +606,34 @@ function enHoras(minutos: number): string {
             </div>
 
             <div class="flex flex-col gap-1.5">
-              <span [class]="estilos.etiqueta">Recuperación</span>
+              <span class="text-[13px]">Recuperación</span>
               @let r = recuperacion();
               @if (r.tipo === 'invalido') {
                 <p class="!m-0 text-[13px]">—</p>
               } @else {
-                <div class="rounded-lg border border-[#e6e9ee] bg-[#f6f7f9] px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
+                <div class="rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/60">
                   @if (r.tipo === 'no') {
-                    <p class="!m-0 text-[12.5px] leading-normal">
-                      <strong class="font-semibold">No se recupera.</strong>
-                      <span class="text-[#5f6c80] dark:text-slate-400">El día se paga y nadie devuelve horas.</span>
-                    </p>
+                    <div class="text-[19px] font-extrabold tracking-[-0.02em] tabular-nums">No se recupera</div>
+                    <p class="!mb-0 !mt-0.5 text-[11.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">El día se paga y nadie devuelve horas</p>
                   } @else if (r.tipo === 'nada') {
-                    <p class="!m-0 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
+                    <p class="!m-0 text-[11.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
                       Ese rango no tiene días laborables {{ r.enAlcance }}: no hay nada que recuperar.
                     </p>
                   } @else {
-                    <div class="text-[15px] font-bold tabular-nums">
-                      {{ enDuracion(r.minutos) }}<small [class]="estilos.unidad">por recuperar</small>
+                    <div class="text-[19px] font-extrabold tracking-[-0.02em] tabular-nums">
+                      {{ enDuracion(r.minutos) }}<small class="ml-[5px] text-[12px] font-semibold tracking-normal text-[#5f6c80] dark:text-slate-400">por recuperar</small>
                     </div>
-                    <p class="!m-0 mt-0.5 text-[11.5px] leading-normal text-[#5f6c80] dark:text-slate-400">
+                    <p class="!mb-0 !mt-0.5 text-[11.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
                       {{ r.dias }} {{ r.dias === 1 ? 'día no trabajado' : 'días no trabajados' }} {{ r.deAlcance }}.
                       @if (!r.quedan) {
                         <span [class]="avisoMal">No quedan días laborables de {{ r.mes }} para recuperarlo</span>
                       } @else if (r.conMediaHora <= r.quedan) {
                         Se devuelve dentro de {{ r.mes }}:
-                        <strong class="text-[#0f172a] dark:text-slate-100">media hora extra durante {{ r.conMediaHora }} {{ r.conMediaHora === 1 ? 'día' : 'días' }}</strong>,
+                        <strong class="!text-[#0f172a] dark:!text-slate-100">media hora extra durante {{ r.conMediaHora }} {{ r.conMediaHora === 1 ? 'día' : 'días' }}</strong>,
                         de los {{ r.quedan }} que quedan.
                       } @else {
                         <span [class]="avisoMal">Con media hora extra no alcanza antes de fin de {{ r.mes }}</span><br>
-                        Harían falta <strong class="text-[#0f172a] dark:text-slate-100">{{ r.porDia }} min por día</strong>
+                        Harían falta <strong class="!text-[#0f172a] dark:!text-slate-100">{{ r.porDia }} min por día</strong>
                         en los {{ r.quedan }} días que quedan.
                       }
                     </p>
@@ -877,7 +645,7 @@ function enHoras(minutos: number): string {
             <!-- Un feriado se llama por su nombre; un día sin asignación pide el motivo. -->
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="d-motivo">{{ esFeriado() ? 'Nombre del feriado' : 'Motivo' }}</label>
-              <input id="d-motivo" type="text" list="lista-feriados" autocomplete="off" [class]="estilos.campo"
+              <input id="d-motivo" type="text" list="lista-feriados" autocomplete="off" [attr.maxlength]="esFeriado() ? 120 : 200" [class]="estilos.campo"
                      [placeholder]="esFeriado() ? 'Ej.: Combate de Angamos' : 'Ej.: sin carga de asignación del estudio'"
                      aria-describedby="error-d-motivo"
                      [ngModel]="diaTexto()" (ngModelChange)="diaTexto.set($event); faltaTexto.set(false)">
@@ -888,14 +656,14 @@ function enHoras(minutos: number): string {
                 }
               </datalist>
               @if (faltaTexto()) {
-                <p id="error-d-motivo" class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">
+                <p id="error-d-motivo" class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">
                   Hace falta: es lo que se lee en el calendario
                 </p>
               }
             </div>
 
             @if (error()) {
-              <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
             }
           </div>
 
@@ -916,7 +684,7 @@ function enHoras(minutos: number): string {
     @if (formImportar()) {
       <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarImportar()"></div>
       <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,620px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,600px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
              role="dialog" aria-modal="true" aria-labelledby="titulo-importar">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
@@ -926,7 +694,7 @@ function enHoras(minutos: number): string {
               </p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarImportar()" aria-label="Cerrar">
-              <lucide-angular name="x" [size]="15" class="block"></lucide-angular>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
@@ -935,14 +703,14 @@ function enHoras(minutos: number): string {
               <input id="archivo-feriados" type="file" accept=".xlsx,.xls,.csv" class="sr-only"
                      (change)="elegirArchivo($event)">
               <label for="archivo-feriados" [class]="estilos.botonSecundario + ' cursor-pointer'">
-                <lucide-angular name="upload" [size]="15" class="block"></lucide-angular>
+                <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/></svg>
                 {{ archivoFeriados() ? 'Elegir otro archivo' : 'Elegir archivo' }}
               </label>
               @if (archivoFeriados(); as a) {
-                <span class="min-w-0 truncate text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ a.name }}</span>
+                <span class="min-w-0 truncate text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ a.name }}</span>
               }
-              <button type="button" [class]="estilos.botonChico + ' ml-auto'" (click)="descargarPlantilla()">
-                <lucide-angular name="download" [size]="13" class="block"></lucide-angular>
+              <button type="button" [class]="estilos.botonSecundario + ' ml-auto'" (click)="descargarPlantilla()">
+                <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
                 Descargar plantilla
               </button>
             </div>
@@ -954,7 +722,9 @@ function enHoras(minutos: number): string {
             @if (vistaImportacion(); as v) {
               <div class="flex flex-wrap gap-2">
                 <span [class]="PASTILLA.ok">{{ v.nuevos }} {{ v.nuevos === 1 ? 'nuevo' : 'nuevos' }}</span>
-                <span [class]="PASTILLA.neutro">{{ v.existentes }} ya {{ v.existentes === 1 ? 'estaba' : 'estaban' }}</span>
+                @if (v.existentes) {
+                  <span [class]="PASTILLA.neutro">{{ v.existentes }} ya {{ v.existentes === 1 ? 'estaba' : 'estaban' }}</span>
+                }
                 @if (v.errores) {
                   <span [class]="PASTILLA.falta">{{ v.errores }} con error</span>
                 }
@@ -990,7 +760,7 @@ function enHoras(minutos: number): string {
             }
 
             @if (errorImportar()) {
-              <p class="!m-0 text-xs text-[#b91c1c] dark:text-red-300">{{ errorImportar() }}</p>
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ errorImportar() }}</p>
             }
           </div>
 
@@ -998,6 +768,7 @@ function enHoras(minutos: number): string {
             <button type="button" [class]="estilos.botonSecundario" (click)="cerrarImportar()">Cancelar</button>
             <button type="button" [class]="estilos.botonPrimario" (click)="confirmarImportacion()"
                     [disabled]="guardando() || !vistaImportacion()?.nuevos">
+              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
               {{ guardando() ? 'Importando…' : textoImportar() }}
             </button>
           </footer>
@@ -1030,13 +801,6 @@ export class AsistenciaConfiguracionComponent {
     ERROR: { texto: 'Error', clase: this.PASTILLA.falta }
   };
 
-  /** Los tres colores del reloj, con su nombre. */
-  protected readonly LEYENDA_RELOJ = [
-    { texto: 'Trabajo', color: 'color-mix(in srgb, #0f172a 72%, #fff)' },
-    { texto: 'Almuerzo', color: 'color-mix(in srgb, #f59e0b 88%, #fff)' },
-    { texto: 'Break', color: 'color-mix(in srgb, #ea580c 82%, #fff)' }
-  ];
-
   /** Qué dice cada fondo de la rejilla. */
   protected readonly LEYENDA = [
     { texto: 'Laborable', fondo: '#ffffff', borde: '#e6e9ee' },
@@ -1045,61 +809,42 @@ export class AsistenciaConfiguracionComponent {
     { texto: 'Sin asignación', fondo: '#fdeee0', borde: '#ea580c' }
   ];
 
-  protected readonly TABS = [
-    { clave: 'horarios', texto: 'Horarios' },
-    { clave: 'calendario', texto: 'Calendario' }
-  ] as const;
-
   /** Vuelve al reporte; la pantalla la manda el módulo. */
   readonly volver = output<void>();
 
   readonly idSubcartera = input<number | null>(null);
+  /** El nombre de la subcartera elegida, para decir a quién alcanza un cambio. */
+  readonly subcartera = input<string | null>(null);
 
-  readonly tab = signal<string>('horarios');
-  /** El horario que de verdad rige: persona, subcartera o empresa, por día. */
+  /** El horario que rige cada día (subcartera o empresa): marca los fines de semana y el costo de un día. */
   readonly horarios = signal<Horario[]>([]);
-  readonly historial = signal<Horario[]>([]);
   readonly politica = signal<PoliticaAsistencia | null>(null);
   readonly tipos = signal<TipoDia[]>([]);
   readonly dias = signal<DiaCalendario[]>([]);
-  /** Los días registrados del año: es el número de la pestaña. */
+  /** Los días registrados del año: es el número junto al título. */
   readonly diasDelAnio = signal<DiaCalendario[]>([]);
-  readonly pagina = signal(0);
   readonly mes = signal(new Date());
   readonly anio = computed(() => this.mes().getFullYear());
 
   readonly guardando = signal(false);
-  /** «Guardado» se queda unos segundos y vuelve a «Sin cambios». */
-  readonly guardado = signal(false);
   readonly error = signal('');
 
-  /** La persona con excepción, si se está mirando una. */
-  readonly idPersona = signal<number | null>(null);
-  readonly personas = signal<ResumenAgente[]>([]);
-  /** Casi siempre el cambio es para toda la semana laboral. */
-  aplicarSemana = true;
-  /** El modal se abrió con «Nuevo horario»: deja elegir el día. */
-  horarioNuevo = false;
-
-  readonly formHorario = signal(false);
   readonly formDia = signal(false);
 
-  /** La regla que se está cambiando, y el detalle de un cambio de horario. */
+  /** El horario base del ámbito: lunes a viernes y el cambio que rige desde el lunes. */
+  readonly base = signal<HorarioBase | null>(null);
+  /** El formulario del horario base: los cinco días que se están escribiendo. */
+  readonly formBase = signal(false);
+  readonly filasBase = signal<{ diaSemana: number; nombre: string; entrada: string; salida: string }[]>([]);
+  readonly motivoBase = signal('');
+  readonly faltaMotivoBase = signal(false);
+  readonly errorBase = signal('');
+  protected readonly duracionBase = duracionBase;
+
+  /** La regla que se está cambiando. */
   readonly regla = signal<Regla | null>(null);
-  readonly cambio = signal<CambioHorario | null>(null);
   reglaMinutos = 0;
   reglaHora: string | null = null;
-  reglaMotivo = '';
-
-  nuevoHorario: Horario = {
-    idSubcartera: null,
-    idUsuario: null,
-    diaSemana: 1,
-    horaEntrada: '08:00',
-    horaSalida: '18:30',
-    vigenteDesde: hoy(),
-    motivo: ''
-  };
 
   /** El formulario de día. El registro que se edita; null si es uno nuevo. */
   readonly diaEditado = signal<DiaCalendario | null>(null);
@@ -1114,153 +859,21 @@ export class AsistenciaConfiguracionComponent {
   private readonly feriadosPorAnio = signal<Map<number, string[]>>(new Map());
 
   protected readonly enDuracion = enDuracion;
-  /** El aviso en rojo con su punto, como el de las 48 horas. */
+  /** El aviso en rojo con su punto, para lo que no cuadra al marcar un día. */
   protected readonly avisoMal = "inline-flex items-center gap-[7px] font-semibold text-[#b91c1c] before:h-2 before:w-2 before:rounded-full before:bg-current before:content-[''] dark:text-red-300";
+  readonly nombreSubcartera = computed(() => this.subcartera() ?? 'Esta subcartera');
 
-  /** Lo que se ha cambiado y aún no se ha guardado, por día de la semana. */
-  readonly borrador = signal<Map<number, { entrada: string; salida: string; motivo: string; vigenteDesde: string }>>(new Map());
+  /** La jornada de cada día de la semana según el horario que rige, ya sin el almuerzo. */
+  private readonly jornadas = computed(() => new Map(this.horarios().map(h => {
+    const ini = aMinutos(this.hhmm(h.horaEntrada));
+    const fin = aMinutos(this.hhmm(h.horaSalida));
+    return [h.diaSemana, Math.max(0, fin - ini - this.almuerzoDentro(ini, fin))] as [number, number];
+  })));
 
-  /**
-   * El nombre de la subcartera elegida. El módulo solo pasa el id; el nombre
-   * sale del historial o, si no hay cambios propios, de su gente.
-   */
-  readonly nombreSubcartera = computed(() => {
-    const id = this.idSubcartera();
-    return this.historial().find(h => h.idSubcartera === id && h.subcartera)?.subcartera
-      ?? this.personas().find(p => p.subcartera)?.subcartera
-      ?? 'Esta subcartera';
-  });
-
-  /**
-   * La escala del eje: desde una hora antes de la entrada más temprana hasta
-   * una después de la salida más tardía, redondeado a un número par de horas
-   * para que las marcas caigan cada dos.
-   */
-  private readonly escala = computed(() => {
-    const filas = this.filasCrudas();
-    if (!filas.length) {
-      return { desde: 7 * 60, hasta: 21 * 60 };
-    }
-    const ini = Math.min(...filas.map(f => aMinutos(f.entrada))) - 60;
-    const fin = Math.max(...filas.map(f => aMinutos(f.salida))) + 60;
-    const desde = Math.floor(ini / 60);
-    let hasta = Math.ceil(fin / 60);
-    if ((hasta - desde) % 2) {
-      hasta += 1;
-    }
-    return { desde: desde * 60, hasta: hasta * 60 };
-  });
-
-  /** Las marcas del eje, cada dos horas. */
-  readonly marcasDelEje = computed(() => {
-    const { desde, hasta } = this.escala();
-    const marcas: string[] = [];
-    for (let m = desde; m <= hasta; m += 120) {
-      marcas.push(`${String(m / 60).padStart(2, '0')}:00`);
-    }
-    return marcas;
-  });
-
-  /**
-   * Los días que se trabajan, con el borrador encima si lo hay. Un día sin
-   * horario no se pinta: la tabla dice lo que rige, no la semana entera.
-   */
-  private readonly filasCrudas = computed(() => {
-    const vigentes = this.horarios();
-    const cambios = this.borrador();
-    const filas: { diaSemana: number; entrada: string; salida: string; pendiente: boolean }[] = [];
-    for (let dia = 1; dia <= 7; dia++) {
-      const fila = vigentes.find(h => h.diaSemana === dia);
-      const cambio = cambios.get(dia);
-      if (!fila && !cambio) {
-        continue;
-      }
-      filas.push({
-        diaSemana: dia,
-        entrada: cambio ? cambio.entrada : this.hhmm(fila!.horaEntrada),
-        salida: cambio ? cambio.salida : this.hhmm(fila!.horaSalida),
-        pendiente: !!cambio
-      });
-    }
-    return filas;
-  });
-
-  /**
-   * Las filas listas para pintar: horas, jornada y el turno situado sobre el
-   * eje, con las pausas que caigan dentro recortadas encima.
-   */
-  readonly semana = computed(() => {
-    const { desde, hasta } = this.escala();
-    const total = hasta - desde;
-    const p = this.politica();
-
-    return this.filasCrudas().map(f => {
-      const ini = aMinutos(f.entrada);
-      const fin = aMinutos(f.salida);
-      const izquierda = ((ini - desde) / total) * 100;
-      const ancho = ((fin - ini) / total) * 100;
-
-      // Solo entra la pausa que cabe ENTERA dentro del turno: un sábado de
-      // media jornada no tiene almuerzo, y una subcartera sin break no lo
-      // tiene ningún día.
-      const cortes = [];
-      for (const [tipo, hora, minutos] of [
-        ['almuerzo', p?.horaAlmuerzo, p?.minutosAlmuerzo],
-        ['break', p?.horaBreak, p?.minutosBreak]
-      ] as [string, string | null | undefined, number | undefined][]) {
-        if (!hora || !minutos) {
-          continue;
-        }
-        const h = aMinutos(this.hhmm(hora));
-        if (h < ini || h + minutos > fin) {
-          continue;
-        }
-        cortes.push({
-          tipo,
-          izquierda: ((h - ini) / (fin - ini)) * 100,
-          ancho: (minutos / (fin - ini)) * 100
-        });
-      }
-
-      const jornada = fin - ini - this.almuerzoDentro(ini, fin);
-      return {
-        ...f,
-        horaEntrada: f.entrada,
-        horaSalida: f.salida,
-        jornada: enHoras(jornada),
-        minutosJornada: jornada,
-        izquierda, ancho, cortes,
-        // El sábado solo lo trabaja CASTIGO, y desde casa.
-        remoto: f.diaSemana === 6
-      };
-    });
-  });
-
-  /** La suma de la semana tal como se está viendo, con el borrador incluido. */
-  private readonly minutosSemana = computed(() =>
-    this.semana().reduce((total, d) => total + d.minutosJornada, 0));
-
-  readonly totalSemana = computed(() => enHoras(this.minutosSemana()));
-
-  readonly cuadraLaSemana = computed(() => this.minutosSemana() === MINUTOS_SEMANA);
-
-  readonly avisoSemana = computed(() => {
-    const diferencia = this.minutosSemana() - MINUTOS_SEMANA;
-    if (diferencia === 0) {
-      return 'Cumple las 48 horas semanales';
-    }
-    return diferencia < 0
-      ? `Faltan ${enHoras(-diferencia)} para las 48 horas semanales`
-      : `Se excede en ${enHoras(diferencia)} de las 48 horas semanales`;
-  });
-
-  /** Lo que dice la etiqueta junto al Guardar. */
-  readonly estadoHorario = computed(() => {
-    if (this.guardado()) {
-      return 'Guardado';
-    }
-    const n = this.borrador().size;
-    return n ? `${n} ${n === 1 ? 'día sin guardar' : 'días sin guardar'}` : 'Sin cambios';
+  /** «12 días registrados en 2026», junto al título del calendario. */
+  readonly cuentaDelAnio = computed(() => {
+    const n = this.diasDelAnio().length;
+    return `${n} ${n === 1 ? 'día registrado' : 'días registrados'} en ${this.anio()}`;
   });
 
   /**
@@ -1273,18 +886,31 @@ export class AsistenciaConfiguracionComponent {
     if (!p) {
       return [];
     }
+    // Lo que ya se cambió y rige el lunes, solo en la regla que cambia.
+    const prog = p.programada ?? null;
+    const programada = (actual: string, luego: string | null) => prog && luego !== null && luego !== actual
+      ? `Desde el lunes ${this.fechaCorta(prog.vigenteDesde)}: ${luego}` : null;
+    const valor = {
+      dia: (x: PoliticaAsistencia) => `${x.toleranciaDiaMin} min`,
+      semana: (x: PoliticaAsistencia) => `${x.toleranciaSemanaMin} min`,
+      almuerzo: (x: PoliticaAsistencia) => `${x.minutosAlmuerzo} min` + (x.horaAlmuerzo ? ` · ${this.hhmm(x.horaAlmuerzo)}` : ''),
+      break: (x: PoliticaAsistencia) => x.minutosBreak && x.horaBreak ? `${x.minutosBreak} min · ${this.hhmm(x.horaBreak)}` : 'Sin break'
+    };
+    const luego = (clave: keyof typeof valor) => (prog ? valor[clave](prog) : null);
     return [
       {
         clave: 'dia', nombre: 'Tolerancia del día', icono: 'clock',
         pie: 'Pasado esto, límite diario excedido',
         cifra: String(p.toleranciaDiaMin), unidad: 'min',
-        minutos: p.toleranciaDiaMin, hora: null, conHora: false
+        minutos: p.toleranciaDiaMin, hora: null, conHora: false,
+        programada: programada(valor.dia(p), luego('dia'))
       },
       {
         clave: 'semana', nombre: 'Tolerancia de la semana', icono: 'calendar-days',
         pie: 'Suma solo los días con retraso',
         cifra: String(p.toleranciaSemanaMin), unidad: 'min',
-        minutos: p.toleranciaSemanaMin, hora: null, conHora: false
+        minutos: p.toleranciaSemanaMin, hora: null, conHora: false,
+        programada: programada(valor.semana(p), luego('semana'))
       },
       {
         clave: 'almuerzo', nombre: 'Almuerzo', icono: 'utensils',
@@ -1292,7 +918,7 @@ export class AsistenciaConfiguracionComponent {
         cifra: String(p.minutosAlmuerzo),
         unidad: p.horaAlmuerzo ? `min · ${this.hhmm(p.horaAlmuerzo)}` : 'min',
         minutos: p.minutosAlmuerzo, hora: p.horaAlmuerzo ? this.hhmm(p.horaAlmuerzo) : null,
-        conHora: true
+        conHora: true, programada: programada(valor.almuerzo(p), luego('almuerzo'))
       },
       {
         clave: 'break', nombre: 'Break', icono: 'coffee',
@@ -1300,61 +926,49 @@ export class AsistenciaConfiguracionComponent {
         cifra: p.minutosBreak ? String(p.minutosBreak) : 'Sin break',
         unidad: p.minutosBreak ? (p.horaBreak ? `min · ${this.hhmm(p.horaBreak)}` : 'min') : '',
         minutos: p.minutosBreak, hora: p.horaBreak ? this.hhmm(p.horaBreak) : null,
-        conHora: true
+        conHora: true, programada: programada(valor.break(p), luego('break'))
       }
     ];
   });
 
-  /** A quién aplica lo que se está cambiando, con nombre. */
-  readonly alcance = computed(() => {
-    const idPersona = this.idPersona();
-    if (idPersona) {
-      const persona = this.personas().find(p => p.idUsuario === idPersona)?.nombreAgente ?? 'Esta persona';
-      return `${persona} · solo esta persona`;
-    }
-    return this.idSubcartera() ? this.nombreSubcartera() : 'Todas las carteras (configuración por defecto)';
+  /** «CASTIGO» o «Todas las carteras»: de quién es el horario base que se ve. */
+  readonly nombreAmbito = computed(() => (this.idSubcartera() ? this.nombreSubcartera() : 'Todas las carteras'));
+
+  /** «CASTIGO · 48 h por semana», junto al título. */
+  readonly cuentaBase = computed(() => {
+    const b = this.base();
+    return b ? `${this.nombreAmbito()} · ${duracionBase(b.minutosSemana)} por semana` : '';
+  });
+
+  /** «Desde el lunes 28/09: Lun a Vie 07:30–17:30»: lo guardado que todavía no rige. */
+  readonly baseProgramada = computed(() => {
+    const p = this.base()?.programado;
+    return p ? `Desde el lunes ${this.fechaCorta(p.desde)}: ${textoHorario(p.dias.map(d => ({
+      ...d, entrada: this.hhmm(d.entrada), salida: this.hhmm(d.salida)
+    })))}` : null;
   });
 
   /**
-   * El historial, un cambio por línea. Los días que cambiaron a la vez, con
-   * el mismo motivo y la misma vigencia, van juntos: «Lun a Vie», no cinco
-   * líneas iguales.
+   * La jornada de cada día del formulario y la suma de la semana. El almuerzo
+   * es el que regirá el lunes (la regla ya cambiada, si la hay) y no cuenta.
+   * Sin las 48 h justas no se puede guardar.
    */
-  readonly cambios = computed<CambioHorario[]>(() => {
-    const grupos = new Map<string, Horario[]>();
-    for (const h of this.historial()) {
-      const clave = [h.vigenteDesde, h.vigenteHasta ?? '', h.motivo, h.idSubcartera ?? '', h.idUsuario ?? ''].join('|');
-      (grupos.get(clave) ?? grupos.set(clave, []).get(clave)!).push(h);
-    }
-    return [...grupos.entries()].map(([clave, filas]) => {
-      const ordenadas = [...filas].sort((a, b) => a.diaSemana - b.diaSemana);
-      const primera = ordenadas[0];
-      const unicos = (valores: string[]) => [...new Set(valores)].join(' / ');
-      return {
-        clave,
-        desde: this.fechaLarga(primera.vigenteDesde),
-        hasta: primera.vigenteHasta ? this.fechaLarga(primera.vigenteHasta) : null,
-        vigente: !primera.vigenteHasta,
-        alcance: this.alcanceDe(primera),
-        dias: this.textoDias(ordenadas.map(h => h.diaSemana)),
-        horario: `${unicos(ordenadas.map(h => this.hhmm(h.horaEntrada)))} – ${unicos(ordenadas.map(h => this.hhmm(h.horaSalida)))}`,
-        motivo: primera.motivo,
-        registradoPor: primera.registradoPor ?? null
-      };
-    });
+  readonly sumaBase = computed(() => {
+    const p = this.politica();
+    const almuerzo = (p?.programada ?? p)?.minutosAlmuerzo ?? 60;
+    const jornadas = this.filasBase().map(f => (f.entrada && f.salida
+      ? Math.max(0, aMinutos(f.salida) - aMinutos(f.entrada) - almuerzo) : null));
+    const total = jornadas.reduce<number>((t, j) => t + (j ?? 0), 0);
+    const dif = total - MINUTOS_SEMANA;
+    const texto = !dif ? `Suma ${duracionBase(total)} por semana`
+      : dif < 0 ? `Suma ${duracionBase(total)}: faltan ${duracionBase(-dif)} para las 48 h`
+        : `Suma ${duracionBase(total)}: sobran ${duracionBase(dif)} de las 48 h`;
+    return { jornadas, ok: dif === 0, texto };
   });
 
-  readonly paginaCambios = computed(() =>
-    this.cambios().slice(this.pagina() * CAMBIOS_POR_PAGINA, (this.pagina() + 1) * CAMBIOS_POR_PAGINA));
-
-  /** Huecos invisibles: la última página mide lo mismo que las demás. */
-  readonly huecosCambios = computed(() => {
-    const visibles = this.paginaCambios().length;
-    return visibles ? Array.from({ length: CAMBIOS_POR_PAGINA - visibles }) : [];
-  });
-
-  readonly hayMas = computed(() =>
-    (this.pagina() + 1) * CAMBIOS_POR_PAGINA < this.cambios().length);
+  /** A quién aplica lo que se está cambiando, con nombre. */
+  readonly alcance = computed(() =>
+    this.idSubcartera() ? this.nombreSubcartera() : 'Todas las carteras (configuración por defecto)');
 
   /** Solo los tipos que tienen sentido en un calendario, no los de ausencia. */
   readonly tiposDeCalendario = computed(() =>
@@ -1479,14 +1093,6 @@ export class AsistenciaConfiguracionComponent {
     });
   });
 
-  /** El ancho del break en la pista de 24 horas. */
-  readonly anchoBreak = computed(() => {
-    const p = this.politica();
-    return p?.minutosBreak ? (p.minutosBreak / (24 * 60)) * 100 : 0;
-  });
-
-  private avisoGuardado: ReturnType<typeof setTimeout> | null = null;
-
   constructor() {
     effect(() => {
       const ambito = this.idSubcartera();
@@ -1504,34 +1110,12 @@ export class AsistenciaConfiguracionComponent {
       this.cargarAnio(ambito, anio);
     });
 
-    // El selector de excepción solo lista a quien está en el ámbito elegido.
-    effect(() => {
-      const ambito = this.idSubcartera();
-      if (!ambito) {
-        this.personas.set([]);
-        this.idPersona.set(null);
-        return;
-      }
-      const lunes = lunesDe(new Date());
-      this.servicio.reporte(lunes, finDeSemanaDe(new Date()), ambito).subscribe({
-        next: r => this.personas.set(r.agentes),
-        error: () => this.personas.set([])
-      });
-    });
-
     this.servicio.tiposDeDia().subscribe({
       next: t => {
         this.tipos.set(t);
       },
       error: () => this.toast.error('No se pudieron cargar los tipos de día')
     });
-  }
-
-  /** Cambiar de persona recarga el horario: el suyo puede no ser el de todos. */
-  elegirPersona(id: number | null): void {
-    this.idPersona.set(id);
-    this.borrador.set(new Map());
-    this.cargarHorarios(this.idSubcartera());
   }
 
   /**
@@ -1541,18 +1125,15 @@ export class AsistenciaConfiguracionComponent {
    * si de lunes a viernes no se trabajara.
    */
   private cargarHorarios(idSubcartera: number | null): void {
-    const idPersona = this.idPersona();
     const vacio = of([] as Horario[]);
     forkJoin({
       empresa: this.servicio.horarios(null),
-      subcartera: idSubcartera ? this.servicio.horarios(idSubcartera) : vacio,
-      persona: idSubcartera && idPersona ? this.servicio.horarios(idSubcartera, idPersona) : vacio
+      subcartera: idSubcartera ? this.servicio.horarios(idSubcartera) : vacio
     }).subscribe({
-      next: ({ empresa, subcartera, persona }) => {
+      next: ({ empresa, subcartera }) => {
         const efectivo: Horario[] = [];
         for (let dia = 1; dia <= 7; dia++) {
-          const fila = persona.find(h => h.diaSemana === dia)
-            ?? subcartera.find(h => h.diaSemana === dia)
+          const fila = subcartera.find(h => h.diaSemana === dia)
             ?? empresa.find(h => h.diaSemana === dia);
           if (fila) {
             efectivo.push(fila);
@@ -1563,26 +1144,14 @@ export class AsistenciaConfiguracionComponent {
       error: () => this.toast.error('No se pudo cargar el horario')
     });
 
-    // El historial también junta los dos niveles: lo de la empresa rige aquí
-    // mientras la subcartera no tenga lo suyo.
-    forkJoin({
-      empresa: this.servicio.historialHorarios(null),
-      propio: idSubcartera ? this.servicio.historialHorarios(idSubcartera) : vacio
-    }).subscribe({
-      next: ({ empresa, propio }) => {
-        const unicos = new Map([...empresa, ...propio].map(h => [h.id, h]));
-        // Lo vigente primero y, dentro de cada grupo, lo más reciente arriba.
-        this.historial.set([...unicos.values()].sort((a, b) =>
-          Number(!!a.vigenteHasta) - Number(!!b.vigenteHasta)
-          || (b.vigenteDesde ?? '').localeCompare(a.vigenteDesde ?? '')
-          || (b.id ?? 0) - (a.id ?? 0)));
-        this.pagina.set(0);
-      },
-      error: () => this.toast.error('No se pudo cargar el historial')
-    });
     this.servicio.politica(idSubcartera).subscribe({
       next: p => this.politica.set(p),
       error: () => this.toast.error('No se pudieron cargar las tolerancias')
+    });
+
+    this.servicio.horarioBase(idSubcartera).subscribe({
+      next: b => this.base.set(b),
+      error: () => this.toast.error('No se pudo cargar el horario base')
     });
   }
 
@@ -1716,145 +1285,6 @@ export class AsistenciaConfiguracionComponent {
     });
   }
 
-  // ==================== HORARIO ====================
-
-  /** Abre el cambio de un día concreto, con lo que hoy tiene puesto. */
-  abrirHorario(diaSemana?: number): void {
-    const dia = diaSemana ?? this.semana()[0]?.diaSemana ?? 1;
-    const fila = this.semana().find(d => d.diaSemana === dia);
-    this.formHorario.set(true);
-    this.error.set('');
-    this.horarioNuevo = diaSemana === undefined;
-    this.aplicarSemana = diaSemana === undefined;
-    this.nuevoHorario = {
-      idSubcartera: this.idSubcartera(),
-      idUsuario: this.idPersona(),
-      diaSemana: dia,
-      horaEntrada: fila?.horaEntrada ?? '08:00',
-      horaSalida: fila?.horaSalida ?? '18:30',
-      vigenteDesde: hoy(),
-      motivo: ''
-    };
-  }
-
-  cerrarHorario(): void {
-    this.formHorario.set(false);
-  }
-
-  /** Quita el cambio de un día y deja lo que estaba vigente. */
-  deshacer(diaSemana: number): void {
-    this.borrador.update(actual => {
-      const copia = new Map(actual);
-      copia.delete(diaSemana);
-      return copia;
-    });
-  }
-
-  /**
-   * Guarda los días del borrador de una vez.
-   *
-   * Se acumulan y se guardan juntos, y no uno por uno al cerrar el modal,
-   * porque la semana tiene que sumar 48 horas: cambiar un día suelto la
-   * descuadra y el guardado se bloquea hasta que vuelve a cuadrar.
-   */
-  guardarHorarios(): void {
-    const cambios = [...this.borrador().entries()];
-    if (!cambios.length) {
-      return;
-    }
-
-    this.guardando.set(true);
-    let pendientes = cambios.length;
-    let fallo: string | null = null;
-
-    for (const [diaSemana, cambio] of cambios) {
-      this.servicio.guardarHorario({
-        idSubcartera: this.idSubcartera(),
-        idUsuario: this.idPersona(),
-        diaSemana,
-        horaEntrada: cambio.entrada,
-        horaSalida: cambio.salida,
-        vigenteDesde: cambio.vigenteDesde,
-        motivo: cambio.motivo
-      }).subscribe({
-        next: () => this.alGuardarHorario(--pendientes, fallo),
-        error: respuesta => {
-          fallo = respuesta?.error?.error ?? respuesta?.error ?? 'No se pudo guardar';
-          this.alGuardarHorario(--pendientes, fallo);
-        }
-      });
-    }
-  }
-
-  /** El modal no persiste: deja el cambio en el borrador de la tabla. */
-  guardarHorario(): void {
-    if (!this.nuevoHorario.motivo.trim()) {
-      this.error.set('El motivo es obligatorio: queda en el registro de cambios');
-      return;
-    }
-    if (this.nuevoHorario.horaSalida <= this.nuevoHorario.horaEntrada) {
-      this.error.set('La salida tiene que ser posterior a la entrada');
-      return;
-    }
-
-    const dias = this.aplicarSemana ? [1, 2, 3, 4, 5] : [this.nuevoHorario.diaSemana];
-    this.borrador.update(actual => {
-      const copia = new Map(actual);
-      for (const dia of dias) {
-        copia.set(dia, {
-          entrada: this.nuevoHorario.horaEntrada,
-          salida: this.nuevoHorario.horaSalida,
-          motivo: this.nuevoHorario.motivo.trim(),
-          vigenteDesde: this.nuevoHorario.vigenteDesde ?? hoy()
-        });
-      }
-      return copia;
-    });
-    this.guardado.set(false);
-    this.cerrarHorario();
-  }
-
-  private alGuardarHorario(pendientes: number, fallo: string | null): void {
-    if (pendientes > 0) {
-      return;
-    }
-    this.guardando.set(false);
-    if (fallo) {
-      this.error.set(fallo);
-      this.toast.error(fallo);
-      return;
-    }
-    this.borrador.set(new Map());
-    this.toast.success('Horario guardado');
-    this.cargarHorarios(this.idSubcartera());
-
-    // La etiqueta confirma y a los pocos segundos vuelve a «Sin cambios».
-    this.guardado.set(true);
-    if (this.avisoGuardado) {
-      clearTimeout(this.avisoGuardado);
-    }
-    this.avisoGuardado = setTimeout(() => this.guardado.set(false), 3000);
-  }
-
-  /** La jornada que quedaría con las horas del modal, ya sin el almuerzo. */
-  jornadaResultante(): { texto: string; error: boolean } {
-    const { horaEntrada, horaSalida } = this.nuevoHorario;
-    if (!horaEntrada || !horaSalida) {
-      return { texto: '—', error: false };
-    }
-    const ini = aMinutos(horaEntrada);
-    const fin = aMinutos(horaSalida);
-    if (fin <= ini) {
-      return { texto: 'La salida tiene que ser posterior a la entrada', error: true };
-    }
-    const almuerzo = this.almuerzoDentro(ini, fin);
-    return {
-      texto: enHoras(fin - ini - almuerzo)
-        + (almuerzo ? ' · ya descontada la hora de almuerzo, que no se trabaja' : ''),
-      error: false
-    };
-  }
-
   /** Los minutos de almuerzo, si el almuerzo cae entero dentro del turno. */
   private almuerzoDentro(ini: number, fin: number): number {
     const p = this.politica();
@@ -1871,7 +1301,6 @@ export class AsistenciaConfiguracionComponent {
     this.regla.set(r);
     this.reglaMinutos = r.minutos;
     this.reglaHora = r.hora;
-    this.reglaMotivo = '';
     this.error.set('');
   }
 
@@ -1890,10 +1319,6 @@ export class AsistenciaConfiguracionComponent {
     if (!r || !actual) {
       return;
     }
-    if (!this.reglaMotivo.trim()) {
-      this.error.set('El motivo del cambio es obligatorio');
-      return;
-    }
 
     const nueva: PoliticaAsistencia = {
       idSubcartera: this.idSubcartera(),
@@ -1904,8 +1329,8 @@ export class AsistenciaConfiguracionComponent {
       horaAlmuerzo: r.clave === 'almuerzo' ? this.reglaHora : actual.horaAlmuerzo,
       horaBreak: r.clave === 'break' ? this.reglaHora : actual.horaBreak,
       avisoPrevioMin: actual.avisoPrevioMin,
-      vigenteDesde: hoy(),
-      motivo: this.reglaMotivo.trim()
+      // La semana en curso se mide con la regla con la que empezó.
+      vigenteDesde: this.proximoLunes()
     };
 
     this.guardando.set(true);
@@ -1913,12 +1338,71 @@ export class AsistenciaConfiguracionComponent {
       next: () => {
         this.guardando.set(false);
         this.cerrarRegla();
-        this.toast.success(`${r.nombre} actualizada`);
+        this.toast.success(`${r.nombre}: rige desde el lunes ${this.proximoLunesCorto()}`);
         this.cargarHorarios(this.idSubcartera());
       },
       error: respuesta => {
         this.guardando.set(false);
         this.error.set(respuesta?.error?.error ?? 'No se pudo guardar');
+      }
+    });
+  }
+
+  // ==================== HORARIO BASE ====================
+
+  /** Arranca con el que regirá el lunes: el ya cambiado, si lo hay, o el de hoy. */
+  abrirBase(): void {
+    const b = this.base();
+    if (!b) {
+      return;
+    }
+    const dias = b.programado?.dias ?? b.dias;
+    this.filasBase.set(dias.map(d => ({
+      diaSemana: d.diaSemana, nombre: d.nombre, entrada: this.hhmm(d.entrada), salida: this.hhmm(d.salida)
+    })));
+    this.motivoBase.set('');
+    this.faltaMotivoBase.set(false);
+    this.errorBase.set('');
+    this.formBase.set(true);
+    setTimeout(() => document.querySelector<HTMLInputElement>('.tabla-base input')?.focus());
+  }
+
+  cerrarBase(): void {
+    this.formBase.set(false);
+  }
+
+  cambiarFilaBase(i: number, campo: 'entrada' | 'salida', valor: string): void {
+    this.filasBase.update(filas => filas.map((f, j) => (j === i ? { ...f, [campo]: valor ?? '' } : f)));
+  }
+
+  /** Rige desde el lunes siguiente; el motivo va a la Auditoría. */
+  guardarBase(): void {
+    const motivo = this.motivoBase().trim();
+    if (!motivo) {
+      this.faltaMotivoBase.set(true);
+      document.getElementById('motivo-horario-base')?.focus();
+      return;
+    }
+    if (!this.sumaBase().ok) {
+      return;
+    }
+    this.guardando.set(true);
+    this.errorBase.set('');
+    this.servicio.cambiarHorarioBase({
+      idSubcartera: this.idSubcartera(),
+      dias: this.filasBase().map(f => ({ diaSemana: f.diaSemana, entrada: f.entrada, salida: f.salida })),
+      motivo
+    }).subscribe({
+      next: b => {
+        this.guardando.set(false);
+        this.base.set(b);
+        this.cerrarBase();
+        this.toast.success(`Horario base guardado: rige desde el lunes ${this.proximoLunesCorto()}`);
+        this.cargarHorarios(this.idSubcartera());
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.errorBase.set(respuesta?.error?.error ?? 'No se pudo guardar');
       }
     });
   }
@@ -2027,13 +1511,13 @@ export class AsistenciaConfiguracionComponent {
     for (let f = desde; f <= hasta; f = sumarDias(f, 1)) {
       todas.push(f);
     }
-    return this.semana().length ? todas.filter(f => this.jornadaDe(f) > 0) : todas;
+    return this.horarios().length ? todas.filter(f => this.jornadaDe(f) > 0) : todas;
   }
 
   /** Los minutos de jornada de una fecha según el horario que rige; 0 si no se trabaja. */
   private jornadaDe(fecha: string): number {
     const diaSemana = ((new Date(fecha + 'T00:00:00').getDay() + 6) % 7) + 1;
-    return this.semana().find(f => f.diaSemana === diaSemana)?.minutosJornada ?? 0;
+    return this.jornadas().get(diaSemana) ?? 0;
   }
 
   private cargarFeriados(anio: number): void {
@@ -2101,47 +1585,23 @@ export class AsistenciaConfiguracionComponent {
     return `${dia} ${MESES_CORTOS[Number(mes) - 1]}`;
   }
 
-  /** Dónde cae una hora en una pista que va de 00:00 a 24:00. */
-  porcentaje(hora: string): number {
-    const [h, m] = this.hhmm(hora).split(':').map(Number);
-    return ((h * 60 + m) / (24 * 60)) * 100;
-  }
-
   hhmm(hora: string): string {
     return hora.length > 5 ? hora.slice(0, 5) : hora;
   }
 
-  textoPagina(): string {
-    const desde = this.pagina() * CAMBIOS_POR_PAGINA + 1;
-    const hasta = Math.min(desde + CAMBIOS_POR_PAGINA - 1, this.cambios().length);
-    return `${desde}–${hasta} de ${this.cambios().length}`;
+  /** El lunes que viene: desde ahí rige una regla nueva. */
+  proximoLunes(): string {
+    const hoyFecha = new Date();
+    const dias = ((8 - hoyFecha.getDay()) % 7) || 7;
+    return this.aISO(new Date(hoyFecha.getFullYear(), hoyFecha.getMonth(), hoyFecha.getDate() + dias));
   }
 
-  /** «01/09/2026». */
-  private fechaLarga(iso: string | undefined | null): string {
-    if (!iso) {
-      return '—';
-    }
-    const [anio, mes, dia] = iso.split('-');
-    return `${dia}/${mes}/${anio}`;
+  proximoLunesCorto(): string {
+    return this.fechaCorta(this.proximoLunes());
   }
 
-  /** «Sábado», «Lun a Vie» o «Lun, Mié»: los días de un cambio, como se dicen. */
-  private textoDias(dias: number[]): string {
-    if (dias.length === 1) {
-      return DIAS[dias[0] - 1];
-    }
-    const seguidos = dias.every((d, i) => i === 0 || d === dias[i - 1] + 1);
-    return seguidos
-      ? `${DIAS_CORTOS[dias[0] - 1]} a ${DIAS_CORTOS[dias[dias.length - 1] - 1]}`
-      : dias.map(d => DIAS_CORTOS[d - 1]).join(', ');
-  }
-
-  /** A quién aplica una fila del historial: la persona, la subcartera o todas. */
-  private alcanceDe(h: Horario): string {
-    const subcartera = h.idSubcartera
-      ? (h.subcartera ?? (h.idSubcartera === this.idSubcartera() ? this.nombreSubcartera() : 'Otra subcartera'))
-      : 'Todas las carteras';
-    return h.idUsuario ? `${h.persona ?? 'Una persona'} · ${subcartera}` : subcartera;
+  /** «2026-09-28» → «28/09». */
+  private fechaCorta(iso: string | undefined | null): string {
+    return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
   }
 }
