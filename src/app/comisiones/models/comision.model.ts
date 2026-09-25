@@ -1,3 +1,6 @@
+// ==================== CATÁLOGOS ====================
+// Los usan también los reportes, bot de voz y meta-alcance: no cambiar su forma.
+
 /**
  * Inquilino (tenant) para dropdown
  */
@@ -33,111 +36,152 @@ export interface Subcartera {
   estaActivo?: boolean;
 }
 
-/**
- * Escala de comisión por porcentaje de cumplimiento de meta
- */
-export interface ComisionMetaEscala {
+// ==================== PERÍODOS DE COMISIÓN ====================
+
+/** Qué se mide contra la meta: recaudo conciliado o contención (T3) */
+export type TipoMetrica = 'RECAUDO' | 'CONTENCION';
+
+/** EN_CURSO → REVISADO → CERRADO (REVISADO puede volver a EN_CURSO) */
+export type EstadoPeriodo = 'EN_CURSO' | 'REVISADO' | 'CERRADO';
+
+export type RolComision = 'ASESOR' | 'SUPERVISOR';
+
+/** Por qué un pago conciliado no suma al logrado de nadie */
+export type MotivoExclusion =
+  | 'PAGO_SISTEMA'
+  | 'SUPERVISOR_NO_ASIGNA'
+  | 'AGENTE_NO_PARTICIPANTE'
+  | 'PARTICIPANTE_QUITADO';
+
+export type AccionAuditoria =
+  | 'CREAR_PERIODO'
+  | 'EDITAR_ROLES'
+  | 'EDITAR_TRAMOS'
+  | 'EDITAR_PARTICIPANTE'
+  | 'CALCULAR'
+  | 'CAMBIAR_ESTADO';
+
+/** Tramo: aplica desde que el cumplimiento llega a porcentajeDesde. El "hasta" es el desde del siguiente. */
+export interface EscalaComision {
   id?: number;
+  rol: RolComision;
   porcentajeDesde: number;
-  porcentajeHasta?: number;
   montoComision: number;
 }
 
-/**
- * Meta de comisión por subcartera/período
- */
-export interface ComisionMeta {
-  id?: number;
+/** Rol de Cashi elegido para armar la lista de participantes */
+export interface RolElegido {
+  idRol: number;
+  nombreRol?: string;
+  rolComision: RolComision;
+}
+
+/** Rol de Cashi disponible para el selector */
+export interface RolCashi {
+  idRol: number;
+  nombreRol: string;
+  asignadoASubcartera: boolean;
+}
+
+export interface PeriodoComision {
+  id: number;
   idSubcartera: number;
-  nombreSubcartera?: string;
+  nombreSubcartera: string;
   anio: number;
   mes: number;
+  tipoMetrica: TipoMetrica;
+  /** Meta INTERNA del reporte de producción */
   metaGrupal: number;
-  tipoMetrica?: string; // RECAUDO, CAPITAL_LIBERADO
-  escalas: ComisionMetaEscala[];
-  activo?: boolean;
-  fechaCreacion?: string;
-  fechaActualizacion?: string;
+  estado: EstadoPeriodo;
+  revisadoPorNombre?: string | null;
+  fechaRevision?: string | null;
+  cerradoPorNombre?: string | null;
+  fechaCierre?: string | null;
+  /** null = hay que (re)calcular porque cambió la configuración */
+  fechaCalculo?: string | null;
+  escalas: EscalaComision[];
+  roles: RolElegido[];
 }
 
-/**
- * Escala de un bono
- */
-export interface ComisionBonoEscala {
-  id?: number;
-  cantidadMinima: number;
-  monto: number;
-}
-
-/**
- * Bono de comisión por variable
- */
-export interface ComisionBono {
-  id?: number;
+export interface ParticipanteComision {
+  idResultado: number;
+  idUsuario: number;
   nombre: string;
-  descripcion?: string;
-  campoEvaluar: string;
-  valorBuscar: string;
-  idSubcartera?: number;
-  nombreSubcartera?: string;
-  anio: number;
-  mes: number;
-  activo?: boolean;
-  escalas: ComisionBonoEscala[];
-  fechaCreacion?: string;
-  fechaActualizacion?: string;
+  rol: RolComision;
+  quitado: boolean;
+  metaIndividual: number | null;
+  logrado: number;
+  /** Redondeado, solo para mostrar */
+  porcentajeCumplimiento: number | null;
+  /** porcentajeDesde del tramo alcanzado; null si no alcanzó ninguno */
+  porcentajeTramo: number | null;
+  montoComision: number;
 }
 
-/**
- * Bono ganado por un agente
- */
-export interface BonoGanado {
-  bonoId: number;
-  nombreBono: string;
-  campoEvaluar: string;
-  valorBuscar: string;
-  cantidadPagos: number;
-  montoGanado: number;
-}
-
-/**
- * Comisión calculada por agente
- */
-export interface ComisionAgente {
-  idAgente: number;
-  nombreAgente: string;
-  nombreSubcartera?: string;
-  recaudoTotal: number;
-  cantidadPagos: number;
-  metaIndividual: number;
-  porcentajeCumplimiento: number;
-  metaAlcanzada: boolean;
-  comisionBase: number;
-  bonosGanados: BonoGanado[];
-  totalBonos: number;
-  totalComision: number;
-}
-
-/**
- * Reporte de comisiones
- */
-export interface ComisionReporte {
-  anio: number;
-  mes: number;
-  idSubcartera?: number;
-  nombreSubcartera?: string;
-  totalRecaudo: number;
+export interface ReportePeriodo {
+  periodo: PeriodoComision;
+  participantes: ParticipanteComision[];
   totalComisiones: number;
-  totalBonos: number;
-  totalAgentes: number;
-  agentes: ComisionAgente[];
+  /** Solo llega lleno en la respuesta de calcular */
+  advertencias: string[];
 }
 
-/**
- * Resumen de configuración
- */
-export interface ComisionConfigResumen {
-  metas: ComisionMeta[];
-  bonos: ComisionBono[];
-  camposDisponibles: string[];
+export interface PagoSustento {
+  conciliacionId: number;
+  fechaBanco: string;
+  banco: string | null;
+  numeroOperacion: string | null;
+  documentoCliente: string | null;
+  nombreCliente: string | null;
+  idGestion: number;
+  idAgenteGestion: number;
+  nombreAgenteGestion: string | null;
+  montoAplicado: number;
+  contencion: string | null;
+  capitalAsignado: number | null;
+  /** null = el pago suma */
+  motivoExclusion: MotivoExclusion | null;
+}
+
+export interface SustentoPeriodo {
+  periodo: PeriodoComision;
+  /** null = sustento de toda la subcartera */
+  participante: ParticipanteComision | null;
+  pagos: PagoSustento[];
+}
+
+export interface AuditoriaComision {
+  id: number;
+  metaId: number;
+  accion: AccionAuditoria;
+  estadoAnterior: EstadoPeriodo | null;
+  estadoNuevo: EstadoPeriodo | null;
+  detalle: string | null;
+  idUsuario: number;
+  nombreCompleto: string | null;
+  fecha: string;
+}
+
+export interface CrearPeriodoRequest {
+  idSubcartera: number;
+  anio: number;
+  mes: number;
+  tipoMetrica: TipoMetrica;
+}
+
+// ==================== BASE DE AJUSTE ====================
+
+export interface EstadisticasBaseAjuste {
+  total_registros: number;
+  total_envios: number;
+  total_asesores: number;
+  monto_total: number;
+  primer_envio: string | null;
+  ultimo_envio: string | null;
+}
+
+export interface EnvioBaseAjuste {
+  registrosAgregados: number;
+  fechaEnvio: string;
+  mensaje: string;
 }
