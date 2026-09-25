@@ -135,39 +135,80 @@ body.light-theme .login-card > *,
 }
 
 /* ========================================
-   MASCOT - ANIMATED ROBOT
+   MASCOTA - LA VERSIÓN CORREGIDA DE V2
    ======================================== */
 
+/* Copiada tal cual de cashi-frontend-v2 (src/components/brand/mascot.css): si
+   cambia allá, se vuelve a copiar. Aquí solo se añaden los dos verdes de la
+   marca, que esta app no define; la diadema es un SVG en el HTML. */
 .mascot-container {
+  --color-cashi-500: #10b981;
+  --color-cashi-600: #059669;
+}
+
+.mascot-container {
+  --mascot-scale: 1;
   width: auto;
-  max-width: 240px;
-  margin: 0 auto 8px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  /* El hueco tiene que crecer con la escala: la antena sobresale 18 px del
+     cuerpo, así que a scale 1,5 son 27, más los 8 del pico del bocadillo.
+     Con los 22 px fijos de antes la antena quedaba tapada por 13. */
+  gap: calc(20px * var(--mascot-scale) + 14px);
   animation: mascotEntry 1s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Burbuja de diálogo del robot */
+/* El personaje escala; el bocadillo NO. Es texto: tiene que quedarse en un
+   tamaño legible. Escalar el conjunto es lo que hacía que la nube saliera del
+   doble de ancho que la cabeza. */
+.mascot-figure {
+  width: calc(100px * var(--mascot-scale));
+  height: calc(100px * var(--mascot-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Cabeza, antena y diadema suben y bajan juntas. */
+  animation: respirar 4s ease-in-out infinite;
+}
+
+/* ---------- Bocadillo ---------- */
+
 .speech-bubble {
   position: relative;
   z-index: 50;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  padding: 8px 14px;
-  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    var(--color-cashi-500) 0%,
+    var(--color-cashi-600) 100%
+  );
+  padding: 10px 18px;
+  border-radius: 18px;
+  /* Filo claro arriba y sombra proyectada abajo: le da volumen en vez de
+     parecer un rectángulo verde pegado. */
   box-shadow:
-    0 4px 16px rgba(16, 185, 129, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3);
-  max-width: 200px;
-  min-height: 40px;
+    0 10px 30px -8px rgb(4 120 87 / 0.55),
+    0 2px 6px rgb(2 44 34 / 0.2),
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(2 44 34 / 0.15);
+  max-width: 15rem;
+  min-height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transform: scale(0.8) translateY(-10px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+.dark .speech-bubble {
+  box-shadow:
+    0 4px 16px rgb(16 185 129 / 0.3),
+    inset 0 1px 2px rgb(255 255 255 / 0.3);
 }
 
 .speech-bubble.visible {
@@ -176,47 +217,6 @@ body.light-theme .login-card > *,
   animation: bubbleFloat 3s ease-in-out infinite;
 }
 
-.speech-bubble > div {
-  color: #ffffff !important;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-align: center;
-  line-height: 1.4;
-}
-
-
-/* Animación de tipeo letra por letra */
-.typing-text {
-  text-align: center;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.typing-char {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: charAppear 0.3s ease forwards;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  white-space: pre;
-  min-width: 0.3em;
-}
-
-@keyframes charAppear {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Punta de la burbuja */
 .speech-bubble::after {
   content: '';
   position: absolute;
@@ -227,8 +227,8 @@ body.light-theme .login-card > *,
   height: 0;
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
-  border-top: 10px solid #059669;
-  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2));
+  border-top: 10px solid var(--color-cashi-600);
+  filter: drop-shadow(0 2px 4px rgb(16 185 129 / 0.2));
   opacity: 0;
   transition: opacity 0.5s ease;
 }
@@ -237,28 +237,257 @@ body.light-theme .login-card > *,
   opacity: 1;
 }
 
-@keyframes bubbleFloat {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3px); }
+.typing-text {
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: -0.006em;
+  line-height: 1.35;
+  color: #fff;
+  text-wrap: balance;
 }
 
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.8) translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+/* Cada letra es un `inline-block` para poder animarla suelta, y entre dos
+   `inline-block` el navegador puede cortar la línea. Por eso «vuelta» salía
+   partido en «vuelt / a». Agrupar por palabra con `nowrap` lo impide. */
+.typing-word {
+  display: inline-block;
+  white-space: nowrap;
 }
 
-body.light-theme .speech-bubble,
-:root.light .speech-bubble {
+.typing-char {
+  display: inline-block;
+  animation: charAppear 0.26s ease both;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  white-space: pre;
+}
+
+/* Las letras aún no escritas se reservan el sitio en vez de no existir: así el
+   bocadillo nace del tamaño final y no da saltos mientras se teclea. */
+.typing-char.pending {
+  animation: none;
+  opacity: 0;
+}
+
+/* ---------- Cuerpo ---------- */
+
+.mascot-body {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex: none;
+  transform: scale(var(--mascot-scale));
+  z-index: 1;
+}
+
+.mascot-antenna {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 16px;
+  background: linear-gradient(
+    180deg,
+    var(--color-cashi-500) 0%,
+    var(--color-cashi-600) 100%
+  );
+  border-radius: 2px;
+  animation: antennaWiggle 2s ease-in-out infinite;
+}
+
+.mascot-antenna::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: var(--color-cashi-500);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgb(16 185 129 / 0.8);
+  animation: antennaBlink 1.5s ease-in-out infinite;
+}
+
+.mascot-head {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  /* Vertical y de recorrido corto. El degradado anterior iba a 135° entre
+     #f8fafc y #e2e8f0: la diagonal se leía como una franja blanca cortada a
+     media frente. Ninguno de los dos tonos es ya blanco puro. */
+  background: linear-gradient(180deg, #f5f8f9 0%, #e7edf0 100%);
+  border-radius: 20px;
   box-shadow:
-    0 4px 16px rgba(16, 185, 129, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    0 8px 24px rgb(0 0 0 / 0.1),
+    0 0 0 2px rgb(16 185 129 / 0.35),
+    0 0 0 1px rgb(0 0 0 / 0.05) inset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  /* La transición se define abajo, junto al estado `.shy`. */
 }
+
+.dark .mascot-head {
+  box-shadow:
+    0 8px 24px rgb(0 0 0 / 0.5),
+    0 0 0 2px rgb(16 185 129 / 0.7),
+    0 0 0 1px rgb(255 255 255 / 0.4) inset;
+}
+
+/* ---------- Ojos ---------- */
+
+.mascot-eyes {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.34s ease;
+}
+
+/* No hay manos. La «mano» del login antiguo era un círculo blanco liso, sin
+   brazo ni dedos: encima de un ojo colaba como palma, pero en cuanto se movía
+   se leía como una pelota pegada a la cara. Cerrar los ojos cuenta el gesto
+   entero y no necesita nada más. */
+.mascot-eyes.hiding {
+  transform: translateY(1px);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Al espiar, los ojos vuelven con un pequeño rebote. */
+.mascot-eyes.peeking {
+  animation: peek 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.eye {
+  width: 18px;
+  height: 18px;
+  background: var(--color-cashi-500);
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 2px 8px rgb(16 185 129 / 0.4);
+  animation: blink 4s ease-in-out infinite;
+  overflow: visible;
+  transition:
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.2s ease;
+}
+
+/* El párpado cerrado. Vive siempre en el DOM, plegado y transparente, y sólo
+   se despliega al tapar. Es un arco (`⌒`) y no una raya: una raya recta se lee
+   como un ojo tachado; el arco se lee como un ojo apretado. */
+.eye::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -2px;
+  right: -2px;
+  height: 10px;
+  margin-top: -5px;
+  border: 3px solid var(--color-cashi-500);
+  border-bottom: none;
+  border-radius: 999px 999px 0 0;
+  opacity: 0;
+  transform: scaleY(0.25);
+  transform-origin: bottom center;
+  transition:
+    opacity 0.16s ease,
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* La posición viene por variable CSS y no por `style` en línea desde React.
+   Con el transform en línea, ninguna regla de hoja de estilos podía moverlo ni
+   apagarlo sin `!important`: por eso las pupilas seguían viéndose con los ojos
+   cerrados. Ahora React sólo aporta el desplazamiento; el estado lo manda el CSS. */
+.pupil {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(
+    calc(-50% + var(--pupil-x, 0px)),
+    calc(-50% + var(--pupil-y, 0px))
+  );
+  transition:
+    transform 0.15s ease-out,
+    opacity 0.14s ease;
+  box-shadow: 0 0 6px rgb(255 255 255 / 0.8);
+  will-change: transform;
+}
+
+/* Ojos cerrados. El círculo relleno se vacía, el párpado se despliega y las
+   pupilas se apagan: si se quedan, parece que mira a través de los párpados. */
+.mascot-eyes.hiding .eye {
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+  transform: scaleY(0.92);
+}
+
+.mascot-eyes.hiding .eye::after {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.mascot-eyes.hiding .pupil {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+}
+
+/* ---------- Boca ---------- */
+
+.mascot-mouth {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 12px;
+  background: var(--color-cashi-500);
+  border-radius: 0 0 24px 24px;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mascot-mouth.closed {
+  width: 18px;
+  height: 8px;
+  background: transparent;
+  border: 2px solid var(--color-cashi-500);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+  animation: closeMouth 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- Diadema ---------- */
+
+/* Ya no se dibuja aquí: es un SVG (`<Diadema>` en mascot.tsx). Un arco que
+   abraza una cabeza y un brazo curvado no son rectángulos redondeados, y
+   aproximarlos con radios elípticos nunca cerraba bien. Aquí sólo queda dónde
+   se coloca el lienzo y cómo flota. */
+.mascot-headset {
+  position: absolute;
+  inset: 0;
+  width: 100px;
+  height: 100px;
+  /* Los auriculares salen del lienzo por los costados (x=-2 y x=102). */
+  overflow: visible;
+  pointer-events: none;
+  /* Sin animación propia. La banda está trazada sobre el contorno exacto de
+     la cabeza: si se mueve ella sola, se despega. Quien respira es la figura
+     entera, más abajo. */
+  filter: drop-shadow(0 3px 9px rgb(16 185 129 / 0.35));
+}
+
+/* ---------- Animaciones ---------- */
 
 @keyframes mascotEntry {
   0% {
@@ -277,394 +506,168 @@ body.light-theme .speech-bubble,
   }
 }
 
-.mascot-body {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  z-index: 1; /* Lower than speech-bubble (z-index: 50) so hat appears behind message */
-}
-
-.mascot-antenna {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 3px;
-  height: 16px;
-  background: linear-gradient(180deg, #10B981 0%, #059669 100%);
-  border-radius: 2px;
-  animation: antennaWiggle 2s ease-in-out infinite;
-}
-
-.mascot-antenna::after {
-  content: '';
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
-  background: #10B981;
-  border-radius: 50%;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
-  animation: antennaBlink 1.5s ease-in-out infinite;
-}
-
-@keyframes antennaWiggle {
-  0%, 100% { transform: translateX(-50%) rotate(0deg); }
-  25% { transform: translateX(-50%) rotate(-8deg); }
-  75% { transform: translateX(-50%) rotate(8deg); }
-}
-
-@keyframes antennaBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.mascot-head {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border-radius: 20px;
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 0 3px rgba(16, 185, 129, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.4) inset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  transition: all 0.4s ease;
-}
-
-body.light-theme .mascot-head,
-:root.light .mascot-head {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.1),
-    0 0 0 3px rgba(16, 185, 129, 0.3),
-    0 0 0 1px rgba(0, 0, 0, 0.05) inset;
-}
-
-.mascot-eyes {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.mascot-eyes.hiding {
-  transform: scaleY(0.1);
-  opacity: 0;
-}
-
-.eye {
-  width: 18px;
-  height: 18px;
-  background: #10B981;
-  border-radius: 50%;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-  animation: blink 4s ease-in-out infinite;
-  transition: background 0.4s ease;
-  overflow: visible;
-}
-
-body.light-theme .eye,
-:root.light .eye {
-  background: #10B981;
-}
-
-@keyframes blink {
-  0%, 96%, 100% { transform: scaleY(1); }
-  98% { transform: scaleY(0.1); }
-}
-
-.pupil {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 7px;
-  height: 7px;
-  background: #ffffff;
-  border-radius: 50%;
-  transition: transform 0.15s ease-out;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
-  will-change: transform;
-}
-
-.mascot-hands {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.hand {
-  width: 26px;
-  height: 26px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  position: absolute;
-  top: 50%;
-  opacity: 0;
-  transform: translateY(50px);
-}
-
-body.light-theme .hand,
-:root.light .hand {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.left-hand {
-  left: -6px;
-}
-
-.right-hand {
-  right: -6px;
-}
-
-/* Animación de saludo al cargar */
-.mascot-hands.waving .right-hand {
-  animation: waveHand 2.5s ease-in-out forwards !important;
-  opacity: 1 !important;
-}
-
-
-@keyframes waveHand {
-  0% {
-    opacity: 0;
-    right: -6px;
-    transform: translateY(50px) rotate(0deg);
-  }
-  12% {
-    opacity: 1;
-    right: -25px;
-    transform: translateY(-50%) rotate(0deg);
-  }
-  20% {
-    right: -25px;
-    transform: translateY(-50%) rotate(-40deg);
-  }
-  28% {
-    right: -25px;
-    transform: translateY(-50%) rotate(30deg);
-  }
-  36% {
-    right: -25px;
-    transform: translateY(-50%) rotate(-40deg);
-  }
-  44% {
-    right: -25px;
-    transform: translateY(-50%) rotate(30deg);
-  }
-  52% {
-    right: -25px;
-    transform: translateY(-50%) rotate(-40deg);
-  }
-  60% {
-    right: -25px;
-    transform: translateY(-50%) rotate(30deg);
-  }
-  68% {
-    right: -25px;
-    transform: translateY(-50%) rotate(-25deg);
-  }
-  76% {
-    right: -25px;
-    transform: translateY(-50%) rotate(15deg);
-  }
-  84% {
-    right: -25px;
-    transform: translateY(-50%) rotate(0deg);
-  }
-  92% {
-    opacity: 1;
-    right: -6px;
-    transform: translateY(-50%) rotate(0deg);
-  }
+@keyframes bubbleFloat {
+  0%,
   100% {
-    opacity: 0;
-    right: -6px;
-    transform: translateY(50px) rotate(0deg);
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
   }
 }
 
-/* Estado de taparse los ojos */
-.mascot-hands.covering .hand {
-  opacity: 1 !important;
-  animation: coverEyes 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
-}
-
-@keyframes coverEyes {
+@keyframes charAppear {
   from {
     opacity: 0;
-    transform: translateY(50px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(-50%);
+    transform: translateY(0);
   }
 }
 
-.mascot-hands.covering .left-hand {
-  left: 6px !important;
+@keyframes antennaWiggle {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-50%) rotate(-8deg);
+  }
+  75% {
+    transform: translateX(-50%) rotate(8deg);
+  }
 }
 
-.mascot-hands.covering .right-hand {
-  right: 6px !important;
+@keyframes antennaBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
-/* Boca abierta - :D */
-.mascot-mouth {
-  position: absolute;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 12px;
-  background: #10B981;
-  border-radius: 0 0 24px 24px;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+@keyframes blink {
+  0%,
+  96%,
+  100% {
+    transform: scaleY(1);
+  }
+  98% {
+    transform: scaleY(0.1);
+  }
 }
 
-body.light-theme .mascot-mouth,
-:root.light .mascot-mouth {
-  background: #10B981;
-}
-
-/* Boca cerrada - c: */
-.mascot-mouth.closed {
-  width: 18px;
-  height: 8px;
-  background: transparent;
-  border: 2px solid #10B981;
-  border-top: none;
-  border-radius: 0 0 18px 18px;
-  animation: closeMouth 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-body.light-theme .mascot-mouth.closed,
-:root.light .mascot-mouth.closed {
-  border-color: #10B981;
-  background: transparent;
+@keyframes peek {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  45% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes closeMouth {
   0% {
     width: 24px;
     height: 12px;
-    background: #10B981;
+    background: var(--color-cashi-500);
     border: none;
   }
   100% {
     width: 18px;
     height: 8px;
     background: transparent;
-    border: 2px solid #10B981;
+    border: 2px solid var(--color-cashi-500);
     border-top: none;
   }
 }
 
-.mascot-headset {
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: headsetFloat 3s ease-in-out infinite;
+@keyframes respirar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
-/* Diadema del headset */
-.mascot-headset::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 70px;
-  height: 25px;
-  border: 3px solid #10B981;
-  border-bottom: none;
-  border-radius: 35px 35px 0 0;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+/* Respeta a quien pidió menos movimiento en su sistema operativo. */
+@media (prefers-reduced-motion: reduce) {
+  .mascot-container,
+  .mascot-figure,
+  .mascot-antenna,
+  .mascot-antenna::after,
+  .mascot-headset,
+  .eye,
+  .speech-bubble.visible,
+  .typing-char {
+    animation: none !important;
+  }
+  .typing-char {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-/* Auricular izquierdo */
-.mascot-headset::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 20px;
-  width: 18px;
-  height: 22px;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  border-radius: 8px;
+/* ============================================================================
+   VARIANTE PLANA — la mascota como marca de interfaz
+   ============================================================================
+
+   El personaje del login es un personaje: halo verde alrededor, sombra
+   proyectada bajo la cabeza, brillo en los ojos y en la punta de la antena.
+   Eso funciona en una portada y estorba en el sidebar, donde vive ocho horas
+   al lado de iconos planos de 1,5 px de trazo: se lee borroso y grande, y
+   compite con el menú en vez de acompañarlo.
+
+   Aquí no se cambia ni un contorno. Se apagan sólo los desenfoques, que es lo
+   que no pertenece a una interfaz. El aro de 2 px de la cabeza SE QUEDA: no es
+   un brillo, es el trazo que la separa del fondo.
+
+   Y hay un efecto secundario que vale más que el estético: sin desenfoques, el
+   dibujo mide exactamente lo que dice su SVG. Los auriculares van de x=−5 a
+   x=105 y la antena sube 18 px, así que la silueta es 110×100 dentro de un
+   lienzo de 100×100 — números exactos, comprobables leyendo el `<rect>`. Con
+   las sombras había que sacarlos midiendo capturas, y ahí es donde se colaron
+   los errores que costaron media tarde. */
+
+.mascot-plano .mascot-headset {
+  filter: none;
+}
+
+.mascot-plano .mascot-antenna::after {
+  box-shadow: none;
+}
+
+.mascot-plano .eye {
+  box-shadow: none;
+}
+
+.mascot-plano .pupil {
+  box-shadow: none;
+}
+
+/* Se conservan el aro y el filo interior; se va el desenfoque de debajo. */
+.mascot-plano .mascot-head {
   box-shadow:
-    0 3px 10px rgba(16, 185, 129, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    0 0 0 2px rgb(16 185 129 / 0.35),
+    0 0 0 1px rgb(0 0 0 / 0.05) inset;
 }
 
-/* Auricular derecho con micrófono */
-.headset-right {
-  position: absolute;
-  right: 0;
-  top: 20px;
-  width: 18px;
-  height: 22px;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  border-radius: 8px;
+.dark .mascot-plano .mascot-head {
   box-shadow:
-    0 3px 10px rgba(16, 185, 129, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3);
-}
-
-/* Brazo del micrófono */
-.headset-right::before {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 2px;
-  width: 20px;
-  height: 2px;
-  background: #10B981;
-  border-radius: 2px;
-  transform-origin: right;
-  transform: rotate(-35deg);
-  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
-}
-
-/* Micrófono */
-.headset-right::after {
-  content: '';
-  position: absolute;
-  right: 16px;
-  bottom: -4px;
-  width: 6px;
-  height: 6px;
-  background: #059669;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.5);
-}
-
-@keyframes headsetFloat {
-  0%, 100% { transform: translateX(-50%) translateY(0px); }
-  50% { transform: translateX(-50%) translateY(-4px); }
-}
-
-body.light-theme .mascot-headset::before,
-:root.light .mascot-headset::before {
-  border-color: #10B981;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    0 0 0 2px rgb(16 185 129 / 0.7),
+    0 0 0 1px rgb(255 255 255 / 0.4) inset;
 }
 
 .login-header h1 {
@@ -1059,11 +1062,11 @@ body.light-theme .login-card .toggle-password mat-icon,
 
 /* Peek animation when showing password */
 .toggle-password.showing mat-icon {
-  animation: peek 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: togglePeek 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #10B981 !important;
 }
 
-@keyframes peek {
+@keyframes togglePeek {
   0% {
     transform: scale(1);
   }

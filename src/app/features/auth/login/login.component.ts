@@ -29,11 +29,16 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   usernameFocused = false;
   pupilX = 0;
   pupilY = 0;
-  isWaving = false;
   isGreeting = true; // Estado especial de saludo que tiene prioridad
   robotMessage = '¡Hola! Bienvenido';
   displayedMessage = '';
   displayedChars: string[] = [];
+  /**
+   * El mensaje del bocadillo en palabras y letras, con la posición de cada letra
+   * en el mensaje. Se pinta entero desde el principio y las letras que faltan van
+   * invisibles: así el bocadillo nace del tamaño final y no salta al escribir (v2).
+   */
+  palabrasMensaje: { letra: string; i: number }[][] = [];
   showBubble = false;
   private typingTimeout: any;
 
@@ -244,7 +249,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     // Resetear estados al iniciar
     this.showBubble = false;
     this.isGreeting = true;
-    this.isWaving = false;
     this.robotMessage = '¡Hola! Bienvenido';
     this.displayedMessage = '';
     this.displayedChars = [];
@@ -253,10 +257,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => {
       this.showBubble = true;
       this.typeMessage(this.robotMessage); // Animar el mensaje inicial
-      this.isWaving = true;
       // Terminar el saludo después de 2.5 segundos
       setTimeout(() => {
-        this.isWaving = false;
         // Finalizar el estado de saludo para permitir que el robot reaccione al formulario
         setTimeout(() => {
           this.isGreeting = false;
@@ -752,6 +754,12 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Limpiar el array
     this.displayedChars = [];
+    let posicion = 0;
+    this.palabrasMensaje = message.split(' ').map(palabra => {
+      const letras = palabra.split('').map(letra => ({ letra, i: posicion++ }));
+      posicion++; // el espacio que sigue a la palabra
+      return letras;
+    });
 
     // Convertir el mensaje en array de caracteres
     const chars = message.split('');
@@ -956,11 +964,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.pupilX = 0;
   }
 
-  getPupilTransform(): string {
-    // Mantener centrado y luego aplicar el offset
-    return `translate(calc(-50% + ${this.pupilX}px), calc(-50% + ${this.pupilY}px))`;
-  }
-
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
   }
@@ -1000,12 +1003,13 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     // Calcular distancia total
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    // Limitar el movimiento de las pupilas (máximo 5.5px desde el centro)
-    const maxDistance = 5.5;
+    // Limitar el movimiento de las pupilas (máximo 3px desde el centro, como en v2:
+    // con 5.5 la pupila de 7px llegaba al borde del ojo de 18px)
+    const maxDistance = 3;
 
     if (distance > 0) {
       // Normalizar el vector y multiplicar por la distancia máxima
-      const factor = Math.min(distance / 60, 1); // Mayor sensibilidad
+      const factor = Math.min(distance, 120) / 120;
       this.pupilX = (deltaX / distance) * factor * maxDistance;
       this.pupilY = (deltaY / distance) * factor * maxDistance;
     } else {

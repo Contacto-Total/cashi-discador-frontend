@@ -48,7 +48,7 @@ export function pintarDispositivoNoPermitido(): void {
     <main style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;
                  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f6f7f9;color:#0f172a">
       <div style="max-width:420px;text-align:center">
-        <div style="margin:0 auto 26px">${mascotaHtml('¡Desde el celular no puedo!')}</div>
+        <div style="margin:0 auto 26px">${mascotaHtml('Dispositivo no permitido')}</div>
         <h1 style="margin:0 0 8px;font-size:20px;font-weight:800">Cashi solo se abre desde una computadora</h1>
         <p style="margin:0;font-size:14px;line-height:1.5;color:#5f6c80">
           Por seguridad, el sistema solo funciona en computadoras y laptops.

@@ -95,7 +95,7 @@ interface FilaResumen {
     .lista .quien { display: flex; flex-direction: column; gap: 1px; min-width: 0 }
     .lista .quien strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
     .lista .quien span { font-size: 11.5px; color: #5f6c80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-    /* Más de dos: los dos primeros y cuántos quedan. */
+    /* Más de uno: el primero y cuántos quedan; con dos por tarjeta, la fila entera se estiraba. */
     .lista li.mas { display: block; color: #5f6c80 !important }
     :host-context(.dark) .lista li.mas { color: #94a3b8 !important }
     .pastilla { display: inline-flex; flex: none; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700 }
@@ -235,14 +235,14 @@ interface FilaResumen {
             <div class="cifra">{{ aMedias().length }}<small>{{ aMedias().length === 1 ? 'día' : 'días' }}</small></div>
             @if (aMedias().length) {
               <ul class="lista">
-                @for (d of aMedias().slice(0, 2); track d.idUsuario + d.fecha) {
+                @for (d of aMedias().slice(0, 1); track d.idUsuario + d.fecha) {
                   <li [title]="d.nombreAgente">
                     <span class="quien"><strong>{{ nombreCorto(d.nombreAgente) }}</strong><span>{{ diaCorto(d) }}</span></span>
                     <span class="pastilla p-tarde">{{ faltantesTexto(d) }}</span>
                   </li>
                 }
-                @if (aMedias().length > 2) {
-                  <li class="mas">y {{ aMedias().length - 2 }} más</li>
+                @if (aMedias().length > 1) {
+                  <li class="mas">y {{ aMedias().length - 1 }} más</li>
                 }
               </ul>
             } @else {
@@ -295,14 +295,14 @@ interface FilaResumen {
             <div class="cifra">{{ fuera().length }}<small>de {{ semanas().length }} fuera</small></div>
             @if (fuera().length) {
               <ul class="lista">
-                @for (s of fuera().slice(0, 2); track s.idUsuario) {
+                @for (s of fuera().slice(0, 1); track s.idUsuario) {
                   <li [title]="s.nombreAgente + ': ' + textoLimite(s).toLowerCase()">
                     <span class="quien"><strong>{{ nombreCorto(s.nombreAgente) }}</strong><span>{{ duracion(s.minutosTardanza) }} de tardanza</span></span>
                     <span class="pastilla p-falta">{{ limiteCorto(s) }}</span>
                   </li>
                 }
-                @if (fuera().length > 2) {
-                  <li class="mas">y {{ fuera().length - 2 }} más</li>
+                @if (fuera().length > 1) {
+                  <li class="mas">y {{ fuera().length - 1 }} más</li>
                 }
               </ul>
             } @else {
