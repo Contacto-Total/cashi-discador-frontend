@@ -1,11 +1,13 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import { Justificacion } from './asistencia.models';
-import { ESTADO_SOLICITUD, ESTILOS, abrirArchivo, descargarArchivo, hoy, sumarDias } from './asistencia.estilos';
+import { ESTADO_SOLICITUD, ESTILOS, descargarArchivo, hoy, sumarDias } from './asistencia.estilos';
+import { Visor, VisorArchivoComponent } from './visor-archivo.component';
+import { PaginadorComponent, pagina } from './paginador.component';
 
 /**
  * Bandeja de justificaciones.
@@ -31,7 +33,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
 @Component({
   selector: 'app-asistencia-justificaciones',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, VisorArchivoComponent, PaginadorComponent],
   styles: [`
     :host { display: block; }
     .aparecer { animation: aparecer .18s ease-out }
@@ -56,7 +58,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
         <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="estado-j">Estado</label>
           <select id="estado-j" [class]="estilos.campo + ' !w-[210px]'"
-                  [ngModel]="filtro()" (ngModelChange)="filtro.set($event); cargar()">
+                  [ngModel]="filtro()" (ngModelChange)="filtro.set($event); paginaActual.set(1); cargar()">
             @for (f of FILTROS; track f.clave) {
               <option [ngValue]="f.clave">{{ f.texto }}</option>
             }
@@ -65,7 +67,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
         <div class="flex flex-col gap-1.5">
           <label [class]="estilos.etiqueta" for="tipo-j">Tipo</label>
           <select id="tipo-j" [class]="estilos.campo + ' !w-[210px]'"
-                  [ngModel]="tipo()" (ngModelChange)="tipo.set($event); cargar()">
+                  [ngModel]="tipo()" (ngModelChange)="tipo.set($event); paginaActual.set(1); cargar()">
             <option value="">Todos</option>
             @for (t of tipos(); track t) { <option [value]="t">{{ t }}</option> }
           </select>
@@ -96,7 +98,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
               </tr>
             </thead>
             <tbody>
-              @for (j of solicitudes(); track j.id) {
+              @for (j of solicitudesDeLaPagina(); track j.id) {
                 <tr class="border-b border-[#f1f3f6] last:border-0 dark:border-slate-800">
                   <td [class]="estilos.td">{{ j.solicitadaEn | date: 'dd/MM' }}</td>
                   <td [class]="estilos.td + ' max-w-[180px] overflow-hidden text-ellipsis font-semibold'" [title]="j.nombreAgente">{{ j.nombreAgente }}</td>
@@ -113,8 +115,8 @@ const esDeRrhh = (j: Justificacion): boolean =>
                   </td>
                   <td [class]="estilos.td">
                     @if (j.tieneArchivo) {
-                      <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)"
-                              [attr.aria-label]="'Abrir el certificado de ' + j.nombreAgente">{{ j.archivoNombre ?? 'certificado.pdf' }}</button>
+                      <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)" [title]="j.archivoNombre ?? 'certificado.pdf'"
+                              [attr.aria-label]="'Ver el certificado de ' + j.nombreAgente"><span class="min-w-0 truncate">{{ j.archivoNombre ?? 'certificado.pdf' }}</span></button>
                     } @else {
                       <span class="text-[#8491a3] dark:text-slate-500">—</span>
                     }
@@ -152,6 +154,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
               }
             </tbody>
           </table>
+          <app-paginador [total]="solicitudes().length" [pagina]="paginaActual()" (cambiar)="paginaActual.set($event)" />
         </div>
       }
     </div>
@@ -188,11 +191,14 @@ const esDeRrhh = (j: Justificacion): boolean =>
               <span>Certificado</span>
               @if (j.tieneArchivo) {
                 <div class="flex items-start gap-3.5">
+                  <!-- La miniatura llena su cuadro; al tocarla, el certificado en grande. -->
+                  <button type="button" class="block flex-none cursor-zoom-in rounded-md border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                          (click)="verEnGrande(j)" [attr.aria-label]="'Ver en grande ' + (j.archivoNombre ?? 'el certificado')">
                   @if (vistaPrevia()) {
                     <img [src]="vistaPrevia()" alt="Certificado adjunto"
-                         class="max-h-[150px] w-[190px] flex-none rounded-md border border-[#e6e9ee] object-contain dark:border-slate-800">
+                         class="block h-[130px] w-[190px] rounded-md border border-[#e6e9ee] object-cover dark:border-slate-800">
                   } @else {
-                    <svg class="w-[190px] flex-none rounded-md" viewBox="0 0 220 150" role="img" aria-label="Vista previa del certificado">
+                    <svg class="block h-[130px] w-[190px] rounded-md" viewBox="0 0 220 150" role="img" aria-label="Vista previa del certificado">
                       <rect x="0" y="0" width="220" height="150" rx="6" class="fill-white stroke-[#e6e9ee] dark:fill-slate-900 dark:stroke-slate-800"/>
                       <rect x="16" y="18" width="70" height="7" rx="3.5" class="fill-[#8491a3]" opacity=".7"/>
                       <rect x="16" y="36" width="140" height="5" rx="2.5" class="fill-[#e6e9ee] dark:fill-slate-800"/>
@@ -205,6 +211,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
                       <rect x="16" y="116" width="86" height="5" rx="2.5" class="fill-[#e6e9ee] dark:fill-slate-800"/>
                     </svg>
                   }
+                  </button>
                   <div>
                     <strong>{{ j.archivoNombre ?? 'certificado.pdf' }}</strong>
                     <div class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ detalleArchivo() }}</div>
@@ -231,24 +238,28 @@ const esDeRrhh = (j: Justificacion): boolean =>
             }
           </div>
 
-          <footer class="flex flex-wrap items-center justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            @if (j.semanaCerrada && j.estado === 'REVISADA') {
-              <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Sus días son de una semana cerrada: ya no se resuelve</span>
-              <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cerrar</button>
-            } @else if (j.estado === 'REVISADA') {
-              <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Le toca a RR.HH.</span>
-              <button type="button" [class]="estilos.botonSecundario" (click)="rechazar(j)" [disabled]="guardando()">
-                {{ rechazando() ? 'Confirmar rechazo' : 'Rechazar' }}
-              </button>
-              <button type="button" [class]="estilos.botonPrimario" (click)="decidir(j, true)" [disabled]="guardando()">
-                Aprobar
-              </button>
-            } @else {
-              <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cerrar</button>
-            }
-          </footer>
+          <!-- Sin «Cerrar»: para eso está la X. El pie solo cuando le toca a RR.HH. -->
+          @if (j.estado === 'REVISADA') {
+            <footer class="flex flex-wrap items-center justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+              @if (j.semanaCerrada) {
+                <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Sus días son de una semana cerrada: ya no se resuelve</span>
+              } @else {
+                <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Le toca a RR.HH.</span>
+                <button type="button" [class]="estilos.botonSecundario" (click)="rechazar(j)" [disabled]="guardando()">
+                  {{ rechazando() ? 'Confirmar rechazo' : 'Rechazar' }}
+                </button>
+                <button type="button" [class]="estilos.botonPrimario" (click)="decidir(j, true)" [disabled]="guardando()">
+                  Aprobar
+                </button>
+              }
+            </footer>
+          }
         </div>
       </div>
+    }
+
+    @if (visor.abierto(); as archivo) {
+      <app-visor-archivo [archivo]="archivo" (cerrar)="visor.cerrar()" />
     }
   `
 })
@@ -280,6 +291,9 @@ export class AsistenciaJustificacionesComponent {
   readonly sinGente = computed(() => this.roster()?.size === 0);
 
   readonly solicitudes = signal<Justificacion[]>([]);
+  /** De 10 en 10, como la Auditoría: la bandeja trae tres meses. */
+  readonly paginaActual = signal(1);
+  readonly solicitudesDeLaPagina = computed(() => pagina(this.solicitudes(), this.paginaActual(), 10));
   readonly todas = signal<Justificacion[]>([]);
   readonly cargando = signal(false);
   readonly guardando = signal(false);
@@ -314,6 +328,7 @@ export class AsistenciaJustificacionesComponent {
     // La gente del ámbito: la bandeja muestra solo sus solicitudes.
     effect(() => {
       const ambito = this.idSubcartera();
+      untracked(() => this.paginaActual.set(1));
       if (!ambito) {
         this.roster.set(null);
         this.aplicarFiltro();
@@ -329,6 +344,7 @@ export class AsistenciaJustificacionesComponent {
     });
     effect(() => {
       this.agente();
+      untracked(() => this.paginaActual.set(1));
       this.aplicarFiltro();
     });
   }
@@ -460,8 +476,21 @@ export class AsistenciaJustificacionesComponent {
 
 
   /** Abre el certificado en otra pestaña: la foto o el PDF se ven, no se bajan con un nombre al azar. */
+  /** El visor del certificado: la foto o el PDF en grande, sin salir de la bandeja. */
+  protected readonly visor = new Visor();
+
+  /** Desde la tabla: lo trae y lo enseña en el visor. */
   verCertificado(j: Justificacion): void {
-    abrirArchivo(this.servicio.certificado(j.id, j.archivoNombre), j.archivoNombre,
+    this.visor.abrir(this.servicio.certificado(j.id, j.archivoNombre), j.archivoNombre,
       () => this.toast.error('No se pudo abrir el certificado'));
+  }
+
+  /** Desde la miniatura de la ventana: el archivo ya está traído. */
+  verEnGrande(j: Justificacion): void {
+    if (this.archivoAbierto) {
+      this.visor.mostrar(this.archivoAbierto, j.archivoNombre);
+    } else {
+      this.verCertificado(j);
+    }
   }
 }

@@ -63,7 +63,7 @@ export const ESTILOS = {
   /** El separador entre los tres niveles del ámbito, alineado con los campos. */
   flechaAmbito: 'flex h-[38px] items-center self-end -mx-1 text-[15px] text-[#8491a3] dark:text-slate-500',
   /** El nombre del certificado, como el «adjunto» de la maqueta; al pulsarlo se abre. */
-  adjunto: 'inline-flex items-center gap-1.5 rounded-[7px] border border-[#e6e9ee] bg-white px-[9px] py-[3px] text-[11.5px] !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200',
+  adjunto: 'inline-flex max-w-[180px] items-center gap-1.5 rounded-[7px] border border-[#e6e9ee] bg-white px-[9px] py-[3px] text-[11.5px] !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200',
 
   /** La etiqueta de rol junto al nombre. */
   rolSupervisor: 'inline-block rounded-full border border-[#c7d5fb] bg-[#eef2ff] px-2 py-[1px] text-[11px] font-bold leading-[1.5] tracking-[.01em] text-[#1e40af] dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300',

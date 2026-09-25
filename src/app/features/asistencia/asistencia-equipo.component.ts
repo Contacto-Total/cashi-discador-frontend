@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -10,9 +10,11 @@ import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.mode
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte, Justificacion, PerfilAsistencia, TipoDia } from './asistencia.models';
 import {
-  ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, abrirArchivo, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
+  ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
   errorDeRecuperacion, fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
 } from './asistencia.estilos';
+import { Visor, VisorArchivoComponent } from './visor-archivo.component';
+import { PaginadorComponent, pagina } from './paginador.component';
 
 type TipoAlerta = 'MARCA' | 'PAUSA' | 'TARDANZA';
 
@@ -55,7 +57,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
   selector: 'app-asistencia-equipo',
   standalone: true,
   host: { class: 'cashi-asistencia' },
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, VisorArchivoComponent, PaginadorComponent],
   styles: [`
     :host { display: block; }
     .aparecer { animation: aparecer .18s ease-out }
@@ -89,6 +91,8 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
     .dia-kpi { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 6px; background: #e8f5ec; color: #166534; font-size: 10.5px; line-height: 1.2 }
     .dia-kpi b { font-weight: 700 }
     .dia-kpi.falta { background: #fef6e0; color: #92400e; box-shadow: inset 0 0 0 1px #f59e0b }
+    /* Nadie trabajó ese día (un feriado, un día que no llegó): gris, no verde. */
+    .dia-kpi.vacio { background: #f1f3f6; color: #5f6c80 }
     .quienes-kpi { margin: 10px 0 0; font-size: 12.5px; color: #5f6c80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
     .quienes-kpi strong { font-weight: 600; color: #0f172a !important }
     /* Excesos de pausa: los dos más grandes. */
@@ -105,7 +109,12 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
 
     /* Alertas a la izquierda y solicitudes a la derecha. */
     /* 14 px: en la maqueta el margen de las tarjetas (14) y el de los paneles (10) se funden. */
-    .paneles-equipo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 14px }
+    .paneles-equipo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: stretch; margin-top: 14px }
+    /* Los dos paneles miden lo mismo: el más corto se estira y el paginador se
+       queda al pie, así la fila no queda con un hueco al lado de la tabla larga. */
+    .paneles-equipo > section { display: flex; flex-direction: column }
+    .paneles-equipo .panel-crece { flex: 1; display: flex; flex-direction: column }
+    .paneles-equipo .panel-crece app-paginador { margin-top: auto }
     @media (max-width: 1100px) { .paneles-equipo { grid-template-columns: minmax(0, 1fr) } }
     .linea-dos { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: #5f6c80 }
 
@@ -119,6 +128,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
     :host-context(.dark) .nombre-kpi.resto { background: #1e293b; color: #94a3b8 }
     :host-context(.dark) .dia-kpi { background: #052e16; color: #86efac }
     :host-context(.dark) .dia-kpi.falta { background: #451a03; color: #fcd34d }
+    :host-context(.dark) .dia-kpi.vacio { background: #1e293b; color: #94a3b8 }
     :host-context(.dark) .barras-pausa li em { color: #fcd34d }
     :host-context(.dark) .p-sol { background: #1e293b; color: #60a5fa }
   `],
@@ -245,9 +255,10 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
               } @else {
                 <div class="cifra">{{ cuenta('MARCA') }}</div>
                 @if (cuenta('MARCA')) {
-                  <div class="tira-kpi" role="img" aria-label="Días de la semana; en ámbar los que tienen marcas sin registrar">
+                  <div class="tira-kpi" [style.grid-template-columns]="'repeat(' + tira().length + ', minmax(0, 1fr))'"
+                       role="img" aria-label="Días de la semana; en ámbar los que tienen marcas sin registrar">
                     @for (d of tira(); track d.fecha) {
-                      <span class="dia-kpi" [class.falta]="d.n > 0" [title]="d.titulo"><b>{{ d.letra }}</b><small>{{ d.numero }}</small></span>
+                      <span class="dia-kpi" [class.falta]="d.n > 0" [class.vacio]="d.vacio" [title]="d.titulo"><b>{{ d.letra }}</b><small>{{ d.numero }}</small></span>
                     }
                   </div>
                   <p class="quienes-kpi" [title]="nombresSinMarcar()">
@@ -326,13 +337,13 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                   <button type="button"
                           [class]="estilos.tab + ' ' + (filtro() === f.clave ? estilos.tabActiva : estilos.tabApagada)"
                           [attr.aria-current]="filtro() === f.clave ? 'page' : null"
-                          (click)="filtro.set(f.clave)">
+                          (click)="filtro.set(f.clave); paginaAlertas.set(1)">
                     {{ f.texto }}
                   </button>
                 }
               </nav>
             </div>
-            <div [class]="estilos.panel">
+            <div [class]="estilos.panel + ' panel-crece'">
               <table class="w-full border-collapse">
                 <caption class="sr-only">Alertas de la semana, por asesor</caption>
                 <thead>
@@ -344,7 +355,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                   </tr>
                 </thead>
                 <tbody>
-                  @for (a of alertasVisibles(); track $index) {
+                  @for (a of alertasDeLaPagina(); track $index) {
                     <tr>
                       <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold'">{{ a.nombre }}</td>
                       <td [class]="estilos.td">{{ a.dia }}</td>
@@ -367,6 +378,8 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                   }
                 </tbody>
               </table>
+              <app-paginador [total]="alertasVisibles().length" [pagina]="paginaAlertas()" [porPagina]="POR_PAGINA_ALERTAS"
+                             (cambiar)="paginaAlertas.set($event)" />
             </div>
           </section>
 
@@ -378,7 +391,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 Revisión de la supervisora antes de la aprobación de RR.HH.
               </p>
             </div>
-            <div [class]="estilos.panel">
+            <div [class]="estilos.panel + ' panel-crece'">
               <table class="w-full border-collapse">
                 <caption class="sr-only">Solicitudes que esperan tu revisión</caption>
                 <thead>
@@ -391,7 +404,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 </thead>
                 <tbody>
                   <!-- Al final, las de una semana cerrada: no se revisaron y ya no se revisan. -->
-                  @for (j of bandeja(); track j.id) {
+                  @for (j of bandejaDeLaPagina(); track j.id) {
                     <tr>
                       <!-- La bandeja es angosta: a 1440 px el texto baja de línea antes que cortar el botón. -->
                       <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold !whitespace-normal'">
@@ -407,8 +420,8 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                       </td>
                       <td [class]="estilos.td + ' !whitespace-normal'">
                         @if (j.tieneArchivo) {
-                          <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)">
-                            {{ j.archivoNombre ?? 'Ver' }}
+                          <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)" [title]="j.archivoNombre ?? 'Ver'">
+                            <span class="min-w-0 truncate">{{ j.archivoNombre ?? 'Ver' }}</span>
                           </button>
                         } @else {
                           <span class="text-[#8491a3] dark:text-slate-500">—</span>
@@ -432,6 +445,8 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                   }
                 </tbody>
               </table>
+              <app-paginador [total]="bandeja().length" [pagina]="paginaBandeja()" [porPagina]="POR_PAGINA_BANDEJA"
+                             (cambiar)="paginaBandeja.set($event)" />
             </div>
           </section>
           </div>
@@ -468,8 +483,8 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
               <dt>Adjunto</dt>
               <dd>
                 @if (j.tieneArchivo) {
-                  <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)">
-                    {{ j.archivoNombre ?? 'Ver adjunto' }}
+                  <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)" [title]="j.archivoNombre ?? 'Ver adjunto'">
+                    <span class="min-w-0 truncate">{{ j.archivoNombre ?? 'Ver adjunto' }}</span>
                   </button>
                 } @else {
                   Este tipo no lo exige
@@ -493,7 +508,6 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             <!-- De una semana cerrada solo se mira: el backend ya no deja revisarla. -->
             @if (j.semanaCerrada) {
               <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Sus días son de una semana cerrada: ya no se revisa</span>
-              <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRevision()">Cerrar</button>
             } @else {
               <button type="button" [class]="estilos.botonSecundario + ' mr-auto'" (click)="rechazar(j)"
                       [disabled]="guardando()">
@@ -602,6 +616,10 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
         </div>
       </div>
     }
+
+    @if (visor.abierto(); as archivo) {
+      <app-visor-archivo [archivo]="archivo" (cerrar)="visor.cerrar()" />
+    }
   `
 })
 export class AsistenciaEquipoComponent implements OnInit {
@@ -612,8 +630,7 @@ export class AsistenciaEquipoComponent implements OnInit {
 
   protected readonly estilos = ESTILOS;
   protected readonly PASTILLA_ALERTA = PASTILLA_ALERTA;
-  protected readonly FILTROS: { clave: 'todas' | TipoAlerta; texto: string }[] = [
-    { clave: 'todas', texto: 'Todas' },
+  protected readonly FILTROS: { clave: TipoAlerta; texto: string }[] = [
     { clave: 'MARCA', texto: 'Marcas sin registrar' },
     { clave: 'PAUSA', texto: 'Excesos de pausa' },
     { clave: 'TARDANZA', texto: 'Tardanza' }
@@ -626,7 +643,21 @@ export class AsistenciaEquipoComponent implements OnInit {
   readonly reporte = signal<AsistenciaReporte | null>(null);
   readonly pendientes = signal<Justificacion[]>([]);
   readonly tipos = signal<TipoDia[]>([]);
-  readonly filtro = signal<'todas' | TipoAlerta>('todas');
+  readonly filtro = signal<TipoAlerta>('MARCA');
+  /** De a pocas filas: una semana con mucha gente llenaba media pantalla. */
+  protected readonly POR_PAGINA_ALERTAS = 8;
+  protected readonly POR_PAGINA_BANDEJA = 5;
+  readonly paginaAlertas = signal(1);
+  readonly paginaBandeja = signal(1);
+  /** Otra subcartera u otra semana: se vuelve a la primera página. */
+  private readonly alCambiarDeVista = effect(() => {
+    this.idSubcartera();
+    this.lunes();
+    untracked(() => {
+      this.paginaAlertas.set(1);
+      this.paginaBandeja.set(1);
+    });
+  });
   readonly cargando = signal(true);
   readonly guardando = signal(false);
 
@@ -744,7 +775,11 @@ export class AsistenciaEquipoComponent implements OnInit {
   });
 
   readonly alertasVisibles = computed(() =>
-    this.alertas().filter(a => this.filtro() === 'todas' || a.tipo === this.filtro()));
+    this.alertas().filter(a => a.tipo === this.filtro()));
+  readonly alertasDeLaPagina = computed(() =>
+    pagina(this.alertasVisibles(), this.paginaAlertas(), this.POR_PAGINA_ALERTAS));
+  readonly bandejaDeLaPagina = computed(() =>
+    pagina(this.bandeja(), this.paginaBandeja(), this.POR_PAGINA_BANDEJA));
 
   /** Solo las de su gente: la bandeja es de toda la empresa. */
   private readonly deSuGente = computed(() => {
@@ -779,13 +814,25 @@ export class AsistenciaEquipoComponent implements OnInit {
   readonly conNombre = computed(() => this.conAlerta().length > 4 ? this.conAlerta().slice(0, 3) : this.conAlerta());
   readonly sinNombre = computed(() => this.conAlerta().slice(this.conNombre().length));
 
-  /** La semana, con cuántas marcas sin registrar hubo cada día. */
-  readonly tira = computed(() => [0, 1, 2, 3, 4, 5].map(i => {
-    const fecha = sumarDias(this.lunes(), i);
-    const n = this.alertas().filter(a => a.tipo === 'MARCA' && a.orden === fecha).length;
-    const dia = DIAS_CORTOS[new Date(fecha + 'T00:00:00').getDay()];
-    return { fecha, letra: dia[0], numero: Number(fecha.slice(8, 10)), n, titulo: `${dia}: ${n ? `${n} sin marcar` : 'completo'}` };
-  }));
+  /**
+   * La semana, con cuántas marcas sin registrar hubo cada día. De lunes a
+   * viernes; el sábado solo si alguien lo trabajó o lo tenía en su horario, y
+   * el domingo nunca. Un día en que nadie trabajó sale en gris, no en verde.
+   */
+  readonly tira = computed(() => {
+    const suyos = new Set(this.gente().map(p => p.idUsuario));
+    const dias = (this.reporte()?.dias ?? []).filter(d => suyos.has(d.idUsuario));
+    const sabado = sumarDias(this.lunes(), 5);
+    const conSabado = dias.some(d => d.fecha === sabado && (!!d.entrada || d.estado !== 'NO_LABORABLE'));
+    return (conSabado ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4]).map(i => {
+      const fecha = sumarDias(this.lunes(), i);
+      const n = this.alertas().filter(a => a.tipo === 'MARCA' && a.orden === fecha).length;
+      const trabajaron = dias.some(d => d.fecha === fecha && !!d.entrada);
+      const dia = DIAS_CORTOS[new Date(fecha + 'T00:00:00').getDay()];
+      return { fecha, letra: dia[0], numero: Number(fecha.slice(8, 10)), n, vacio: !n && !trabajaron,
+        titulo: `${dia}: ${n ? `${n} sin marcar` : trabajaron ? 'completo' : 'nadie trabajó'}` };
+    });
+  });
 
   /** Quiénes no marcaron: el nombre de pila (dos que se llaman igual, con apellido); hasta tres. */
   private readonly sinMarcar = computed(() => [...new Set(this.alertas().filter(a => a.tipo === 'MARCA').map(a => a.nombre))]);
@@ -996,9 +1043,11 @@ export class AsistenciaEquipoComponent implements OnInit {
     });
   }
 
-  /** Abre el adjunto en otra pestaña: la foto o el PDF se ven, no se bajan con un nombre al azar. */
+  /** El visor del adjunto: la foto o el PDF en grande, sin salir de la bandeja. */
+  protected readonly visor = new Visor();
+
   verCertificado(j: Justificacion): void {
-    abrirArchivo(this.servicio.certificado(j.id, j.archivoNombre), j.archivoNombre,
+    this.visor.abrir(this.servicio.certificado(j.id, j.archivoNombre), j.archivoNombre,
       () => this.toast.error('No se pudo abrir el adjunto'));
   }
 

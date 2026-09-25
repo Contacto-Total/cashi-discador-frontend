@@ -7,6 +7,7 @@ import {
   AgenteCerrado, AsistenciaDia, AsistenciaReporte, CierreSemana, Justificacion, SemanaAgente, TipoMarcacion
 } from './asistencia.models';
 import { ESTILOS, hoy, lunesDe, sumarDias, textoLimite } from './asistencia.estilos';
+import { PaginadorComponent, pagina } from './paginador.component';
 
 /** Cuántas semanas cerradas caben en una página: una fila de tarjetas. */
 const CIERRES_POR_PAGINA = 4;
@@ -54,7 +55,7 @@ interface FilaResumen {
 @Component({
   selector: 'app-asistencia-cierre',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, PaginadorComponent],
   styles: [`
     :host { display: block; }
     .aparecer { animation: aparecer .18s ease-out }
@@ -80,6 +81,9 @@ interface FilaResumen {
 
     /* La semana como seis días; en ámbar los que tienen marcas a medias. */
     .tira-semana { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 10px 0 2px }
+    /* Los días centrados en el espacio libre de la tarjeta, no pegados a la fecha. */
+    .kpi .tira-semana { margin: auto 0 }
+    .kpi .tira-semana + .pie-cifra { margin-top: 0 }
     .dia-cierre { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 6px; background: #f1f3f6; color: #5f6c80; font-size: 10.5px; line-height: 1.2 }
     .dia-cierre b { font-weight: 700 }
     .dia-cierre.ok { background: #e8f5ec; color: #166534 }
@@ -91,6 +95,9 @@ interface FilaResumen {
     .lista .quien { display: flex; flex-direction: column; gap: 1px; min-width: 0 }
     .lista .quien strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
     .lista .quien span { font-size: 11.5px; color: #5f6c80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+    /* Más de dos: los dos primeros y cuántos quedan. */
+    .lista li.mas { display: block; color: #5f6c80 !important }
+    :host-context(.dark) .lista li.mas { color: #94a3b8 !important }
     .pastilla { display: inline-flex; flex: none; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700 }
     .p-tarde { background: #fef6e0; color: #92400e }
     .p-falta { background: #fdecec; color: #b91c1c }
@@ -205,7 +212,8 @@ interface FilaResumen {
             <h3>{{ cerrada() ? 'Semana cerrada' : 'Semana por cerrar' }}</h3>
           </div>
           <div class="cifra" style="font-size:20px">{{ corta(lunes()) }} – {{ corta(sabado()) }}</div>
-          <div class="tira-semana" role="img" aria-label="Días de la semana; en ámbar los que tienen marcas faltantes">
+          <div class="tira-semana" [style.grid-template-columns]="'repeat(' + tira().length + ', minmax(0, 1fr))'"
+               role="img" aria-label="Días de la semana; en ámbar los que tienen marcas faltantes">
             @for (d of tira(); track d.fecha) {
               <span class="dia-cierre" [class.falta]="d.faltan > 0" [class.ok]="!d.faltan && d.trabajados > 0" [title]="d.titulo">
                 <b>{{ d.letra }}</b><small>{{ d.numero }}</small>
@@ -232,6 +240,9 @@ interface FilaResumen {
                     <span class="quien"><strong>{{ nombreCorto(d.nombreAgente) }}</strong><span>{{ diaCorto(d) }}</span></span>
                     <span class="pastilla p-tarde">{{ faltantesTexto(d) }}</span>
                   </li>
+                }
+                @if (aMedias().length > 2) {
+                  <li class="mas">y {{ aMedias().length - 2 }} más</li>
                 }
               </ul>
             } @else {
@@ -290,6 +301,9 @@ interface FilaResumen {
                     <span class="pastilla p-falta">{{ limiteCorto(s) }}</span>
                   </li>
                 }
+                @if (fuera().length > 2) {
+                  <li class="mas">y {{ fuera().length - 2 }} más</li>
+                }
               </ul>
             } @else {
               <p class="vacio-kpi ok"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>Todos dentro del límite</p>
@@ -335,7 +349,7 @@ interface FilaResumen {
         <h2 class="titulo-seccion">Resumen de la semana</h2>
         <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ subResumen() }}</span>
       </div>
-      <ng-container [ngTemplateOutlet]="tablaResumen" [ngTemplateOutletContext]="{ filas: resumen(), vacio: sinGente() }"></ng-container>
+      <ng-container [ngTemplateOutlet]="tablaResumen" [ngTemplateOutletContext]="{ filas: resumenDeLaPagina(), vacio: sinGente(), paginado: true }"></ng-container>
 
       <!-- Las semanas ya cerradas, en tarjetas: quién la cerró, cómo quedó el equipo y sus cifras. -->
       <div class="fila-seccion">
@@ -497,7 +511,6 @@ interface FilaResumen {
           </div>
 
           <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="detalle.set(null)">Cerrar</button>
             <button type="button" [class]="estilos.botonPrimario" (click)="descargarSemana(c)">
               <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
               Descargar Excel
@@ -508,7 +521,7 @@ interface FilaResumen {
     }
 
     <!-- La tabla del resumen: la misma en la semana abierta y en el detalle de una cerrada. -->
-    <ng-template #tablaResumen let-filas="filas" let-vacio="vacio">
+    <ng-template #tablaResumen let-filas="filas" let-vacio="vacio" let-paginado="paginado">
       <div [class]="estilos.panel">
         <table class="w-full border-collapse">
           <caption class="sr-only">Cifras de cada asesor en la semana</caption>
@@ -556,6 +569,9 @@ interface FilaResumen {
             }
           </tbody>
         </table>
+        @if (paginado) {
+          <app-paginador [total]="resumen().length" [pagina]="paginaResumen()" (cambiar)="paginaResumen.set($event)" />
+        }
       </div>
     </ng-template>
   `
@@ -599,10 +615,14 @@ export class AsistenciaCierreComponent {
   readonly semanas = computed<SemanaAgente[]>(() => (this.reporte()?.semanas ?? [])
     .filter(s => s.lunes === this.lunes()));
 
+  private readonly conSabado = computed(() => this.dias().some(d =>
+    d.fecha === this.sabado() && (!!d.entrada || d.estado !== 'NO_LABORABLE')));
+
   /** Un día a medias: se trabajó y le falta alguna marca. Una falta no tiene marcas que falten. */
   readonly aMedias = computed(() => this.dias().filter(d => d.estado !== 'FALTA' && d.marcasFaltantes?.length));
 
-  readonly tira = computed(() => [0, 1, 2, 3, 4, 5].map(i => {
+  /** De lunes a viernes; el sábado solo si alguien lo trabajó o lo tenía en su horario. El domingo nunca. */
+  readonly tira = computed(() => (this.conSabado() ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4]).map(i => {
     const fecha = sumarDias(this.lunes(), i);
     const delDia = this.dias().filter(d => d.fecha === fecha);
     const faltan = delDia.filter(d => d.estado !== 'FALTA' && d.marcasFaltantes?.length).length;
@@ -695,6 +715,10 @@ export class AsistenciaCierreComponent {
   });
 
   /** El resumen de la semana abierta: lo que se va a congelar. */
+  /** De 10 en 10, como la Auditoría. */
+  readonly paginaResumen = signal(1);
+  readonly resumenDeLaPagina = computed(() => pagina(this.resumen(), this.paginaResumen(), 10));
+
   readonly resumen = computed<FilaResumen[]>(() => this.semanas().map(s => ({
     idUsuario: s.idUsuario,
     nombre: s.nombreAgente,
@@ -728,6 +752,7 @@ export class AsistenciaCierreComponent {
       const lunes = this.lunes();
       const sabado = this.sabado();
       this.pagina.set(1);
+      this.paginaResumen.set(1);
       if (!ambito) {
         this.reporte.set(null);
         this.solicitudes.set([]);
