@@ -39,9 +39,13 @@ export function esDispositivoPermitido(): boolean {
 /** En lugar de la aplicación, el aviso con la mascota de Cashi: sin Angular, sin estilos de la app. */
 export function pintarDispositivoNoPermitido(): void {
   document.title = 'Cashi · Dispositivo no permitido';
+  // El iPhone pinta la franja de la hora y la de la barra de Safari con el fondo
+  // de html/body (blanco en la app), no con el del <main>: sin esto se ve cortado.
+  document.documentElement.style.background = '#f6f7f9';
+  document.body.style.background = '#f6f7f9';
   document.body.innerHTML = `
     <style>${MASCOTA_CSS}</style>
-    <main style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    <main style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;
                  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f6f7f9;color:#0f172a">
       <div style="max-width:420px;text-align:center">
         <div style="margin:0 auto 26px">${mascotaHtml('¡Desde el celular no puedo!')}</div>
