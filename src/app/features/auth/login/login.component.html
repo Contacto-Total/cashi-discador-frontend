@@ -249,71 +249,83 @@
     <div class="login-header">
       <div class="mascot-container">
         <div class="speech-bubble" [class.visible]="showBubble">
-          <div class="typing-text">
-            <span *ngFor="let char of displayedChars; let i = index"
-                  class="typing-char"
-                  [style.animation-delay]="(i * 0.05) + 's'">{{ char }}</span>
-          </div>
+          <div class="typing-text"><ng-container *ngFor="let palabra of palabrasMensaje; let p = index">{{ p > 0 ? ' ' : '' }}<span class="typing-word"><span
+            *ngFor="let l of palabra" class="typing-char" [class.pending]="l.i >= displayedChars.length">{{ l.letra }}</span></span></ng-container></div>
         </div>
-        <div class="mascot-body">
-          <div class="mascot-antenna" [class.hidden]="showChristmasHat || showNewYearTheme || showSummerTheme"></div>
-          <!-- Gorrito navideño -->
-          <div class="christmas-hat" *ngIf="showChristmasHat">
-            <div class="hat-base"></div>
-            <div class="hat-tip"></div>
-            <div class="hat-pompom"></div>
-            <div class="hat-trim"></div>
-          </div>
-          <!-- Gorrito de fiesta (Año Nuevo) -->
-          <div class="party-hat" *ngIf="showNewYearTheme">
-            <div class="party-hat-cone"></div>
-            <div class="party-hat-pompom"></div>
-            <div class="party-hat-band"></div>
-            <div class="party-hat-stripes"></div>
-          </div>
-          <!-- Gafas 2026 (Año Nuevo) -->
-          <div class="newyear-glasses" *ngIf="showNewYearTheme">
-            <div class="glasses-frame">
-              <div class="glasses-digit">2</div>
-              <div class="glasses-digit">0</div>
-              <div class="glasses-bridge"></div>
-              <div class="glasses-digit">2</div>
-              <div class="glasses-digit">6</div>
+        <div class="mascot-figure">
+          <div class="mascot-body">
+            <div class="mascot-antenna" [class.hidden]="showChristmasHat || showNewYearTheme || showSummerTheme"></div>
+            <!-- Gorrito navideño -->
+            <div class="christmas-hat" *ngIf="showChristmasHat">
+              <div class="hat-base"></div>
+              <div class="hat-tip"></div>
+              <div class="hat-pompom"></div>
+              <div class="hat-trim"></div>
             </div>
-            <div class="glasses-arms">
-              <div class="glasses-arm left"></div>
-              <div class="glasses-arm right"></div>
+            <!-- Gorrito de fiesta (Año Nuevo) -->
+            <div class="party-hat" *ngIf="showNewYearTheme">
+              <div class="party-hat-cone"></div>
+              <div class="party-hat-pompom"></div>
+              <div class="party-hat-band"></div>
+              <div class="party-hat-stripes"></div>
             </div>
-          </div>
-          <!-- Lentes de sol (Verano) -->
-          <div class="summer-sunglasses" *ngIf="showSummerTheme">
-            <div class="sunglasses-frame">
-              <div class="sunglasses-lens left"></div>
-              <div class="sunglasses-bridge"></div>
-              <div class="sunglasses-lens right"></div>
-            </div>
-            <div class="sunglasses-arms">
-              <div class="sunglasses-arm left"></div>
-              <div class="sunglasses-arm right"></div>
-            </div>
-          </div>
-          <div class="mascot-head">
-            <div class="mascot-eyes" [class.hiding]="!isGreeting && hidePassword && passwordFocused">
-              <div class="eye left-eye">
-                <div class="pupil" [style.transform]="getPupilTransform()"></div>
+            <!-- Gafas 2026 (Año Nuevo) -->
+            <div class="newyear-glasses" *ngIf="showNewYearTheme">
+              <div class="glasses-frame">
+                <div class="glasses-digit">2</div>
+                <div class="glasses-digit">0</div>
+                <div class="glasses-bridge"></div>
+                <div class="glasses-digit">2</div>
+                <div class="glasses-digit">6</div>
               </div>
-              <div class="eye right-eye">
-                <div class="pupil" [style.transform]="getPupilTransform()"></div>
+              <div class="glasses-arms">
+                <div class="glasses-arm left"></div>
+                <div class="glasses-arm right"></div>
               </div>
             </div>
-            <div class="mascot-hands" [class.covering]="!isGreeting && hidePassword && passwordFocused" [class.waving]="isWaving">
-              <div class="hand left-hand"></div>
-              <div class="hand right-hand"></div>
+            <!-- Lentes de sol (Verano) -->
+            <div class="summer-sunglasses" *ngIf="showSummerTheme">
+              <div class="sunglasses-frame">
+                <div class="sunglasses-lens left"></div>
+                <div class="sunglasses-bridge"></div>
+                <div class="sunglasses-lens right"></div>
+              </div>
+              <div class="sunglasses-arms">
+                <div class="sunglasses-arm left"></div>
+                <div class="sunglasses-arm right"></div>
+              </div>
             </div>
-            <div class="mascot-mouth" [class.closed]="!isGreeting && !loginForm.valid"></div>
-          </div>
-          <div class="mascot-headset">
-            <div class="headset-right"></div>
+            <div class="mascot-head">
+              <div class="mascot-eyes"
+                   [class.hiding]="!isGreeting && hidePassword && passwordFocused"
+                   [class.peeking]="!isGreeting && !hidePassword && passwordFocused"
+                   [style.--pupil-x]="pupilX + 'px'"
+                   [style.--pupil-y]="pupilY + 'px'">
+                <div class="eye left-eye">
+                  <div class="pupil"></div>
+                </div>
+                <div class="eye right-eye">
+                  <div class="pupil"></div>
+                </div>
+              </div>
+              <div class="mascot-mouth" [class.closed]="!isGreeting && !loginForm.valid"></div>
+            </div>
+            <!-- Diadema de v2 con 8 px más por lado (caja y viewBox a la par): los audífonos y el
+                 arco se salen del 0–100, y Safari recorta el SVG a su caja por el drop-shadow. -->
+            <svg class="mascot-headset" viewBox="-8 -8 116 116" style="inset:-8px;width:116px;height:116px" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="cup-login" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="var(--color-cashi-500)" />
+                  <stop offset="100%" stop-color="var(--color-cashi-600)" />
+                </linearGradient>
+              </defs>
+              <path d="M10.5 46L10.5 20A20.5 20.5 0 0 1 30 -0.5L70 -0.5A20.5 20.5 0 0 1 89.5 20L89.5 46"
+                    stroke="var(--color-cashi-500)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M96 50Q91 72 67 65" stroke="var(--color-cashi-500)" stroke-width="3.5" stroke-linecap="round" />
+              <circle cx="67" cy="65" r="4" fill="var(--color-cashi-600)" />
+              <rect x="-5" y="28" width="22" height="24" rx="8" fill="url(#cup-login)" />
+              <rect x="83" y="28" width="22" height="24" rx="8" fill="url(#cup-login)" />
+            </svg>
           </div>
         </div>
       </div>

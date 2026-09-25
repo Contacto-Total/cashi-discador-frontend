@@ -434,7 +434,13 @@ export const MASCOTA_CSS = COLORES + TRISTE + `
 }
 `;
 
-/** La mascota triste con su bocadillo; la mirada un poco hacia abajo, al texto. */
+/**
+ * La mascota triste con su bocadillo; la mirada un poco hacia abajo, al texto.
+ *
+ * La diadema lleva 8 px más por lado (caja y viewBox a la par, así el dibujo no
+ * se mueve): los audífonos y el arco se salen del 0–100 de v2, y Safari de
+ * iPhone recorta el SVG a su caja por el drop-shadow aunque tenga overflow: visible.
+ */
 export function mascotaHtml(mensaje: string): string {
   return `
     <div class="mascot-container" style="--mascot-scale:1">
@@ -449,7 +455,7 @@ export function mascotaHtml(mensaje: string): string {
             </div>
             <div class="mascot-mouth triste"></div>
           </div>
-          <svg class="mascot-headset" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+          <svg class="mascot-headset" viewBox="-8 -8 116 116" style="inset:-8px;width:116px;height:116px" fill="none" aria-hidden="true">
             <defs>
               <linearGradient id="cup-bloqueo" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="var(--color-cashi-500)" />
