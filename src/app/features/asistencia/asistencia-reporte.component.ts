@@ -258,7 +258,7 @@ const COLOR_DIA: Record<string, string> = {
                       <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.breakInicio, manual: esManual(dia, 'BREAK_INICIO') }" /> – <ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.breakFin, manual: esManual(dia, 'BREAK_FIN') }" /></td>
                       <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.salida, manual: esManual(dia, 'SALIDA') }" /></td>
                       <td [class]="estilos.td + ((dia.minutosTardanza ?? 0) > 0 ? ' con-tardanza' : '')">
-                        @if (dia.tardanza) { {{ dia.tardanza }} } @else { <span class="sin-marca">—</span> }
+                        @if (dia.tardanza && !esSabado(dia)) { {{ dia.tardanza }} } @else { <span class="sin-marca">—</span> }
                       </td>
                       <td [class]="estilos.td">@if (dia.horasManana) { {{ dia.horasManana }} } @else { <span class="sin-marca">—</span> }</td>
                       <td [class]="estilos.td">@if (dia.horasTarde) { {{ dia.horasTarde }} } @else { <span class="sin-marca">—</span> }</td>
@@ -366,10 +366,24 @@ export class AsistenciaReporteComponent {
 
   readonly persona = computed<ResumenAgente | null>(() => this.roster()[this.indice()] ?? null);
 
+  /**
+   * Los días de la persona. El domingo nunca, y el sábado solo si lo trabajó:
+   * es opcional y solo de CASTIGO, y un sábado sin marcas no dice nada.
+   */
   readonly dias = computed<AsistenciaDia[]>(() => {
     const p = this.persona();
-    return p ? (this.reporte()?.dias ?? []).filter(d => d.idUsuario === p.idUsuario) : [];
+    return p ? (this.reporte()?.dias ?? []).filter(d => d.idUsuario === p.idUsuario && this.seMuestra(d)) : [];
   });
+
+  private seMuestra(d: AsistenciaDia): boolean {
+    const dia = new Date(d.fecha + 'T00:00:00').getDay();
+    return dia !== 0 && (dia !== 6 || !!d.entrada || !!d.salida);
+  }
+
+  /** El sábado no tiene hora de entrada: no hay tardanza que mostrar. */
+  protected esSabado(d: AsistenciaDia): boolean {
+    return new Date(d.fecha + 'T00:00:00').getDay() === 6;
+  }
 
   /**
    * Las semanas de la persona en el rango. Con una sola, las tarjetas son las

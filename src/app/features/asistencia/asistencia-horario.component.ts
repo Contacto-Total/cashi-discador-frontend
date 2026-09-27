@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { BloquePlan, DeudaPlan, DiaPlan, EstadoSemanaPlan, PlanSemana } from './asistencia.models';
+import { BloqueEquipoPlan, BloquePlan, DeudaEquipoPlan, DeudaPlan, DiaPlan, EstadoSemanaPlan, PlanEquipoPedido, PlanSemana,
+         PropuestaEquipoPlan } from './asistencia.models';
 import { ESTILOS, hoy, lunesDe, sumarDias } from './asistencia.estilos';
 
 /** El calendario va de 08:00 a 20:00: nadie entra antes ni sale después. */
@@ -26,9 +27,16 @@ const ESTADO: Record<EstadoSemanaPlan, { texto: string; clase: string }> = {
   PLANIFICADA: { texto: 'Planificada', clase: 'p-neutro' }
 };
 
-/** Un bloque tal como se ve y se edita: el del servidor o el que se movió aquí. */
+/**
+ * Un bloque tal como se ve y se edita: el del servidor o el que se movió aquí.
+ * Cada persona tiene a lo más uno por día; lo del equipo es uno por asesor y se
+ * dibuja en un solo cuadro.
+ */
 interface Bloque {
+  /** `idUsuario-fecha`; en el cuadro del equipo, `plan|fecha`. */
   clave: string;
+  /** De qué plan es: `p:idUsuario` (el de la persona) o `e:mes` (el del equipo por días sin asignación). */
+  plan: string;
   idUsuario: number;
   nombre: string;
   fecha: string;
@@ -37,7 +45,16 @@ interface Bloque {
   salida: number;
   confirmado: boolean;
   hecho: number | null;
+  /** El mes de la deuda del equipo que paga; null si es del plan de la persona. */
+  deuda: string | null;
+  /** Del plan del equipo: el mismo para todos. */
+  equipo: boolean;
+  /** En el cuadro del equipo: el bloque de cada asesor. */
+  gente?: Bloque[];
 }
+
+const planPersona = (idUsuario: number): string => `p:${idUsuario}`;
+const planEquipo = (mes: string): string => `e:${mes}`;
 
 /** El gesto en curso sobre un bloque: moverlo de día o estirarlo. */
 interface Gesto {
@@ -167,6 +184,11 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
     .bloque-deuda .estado { font-size: 11px; font-weight: 600; color: #92400e }
     .nota-deuda { margin: 0; font-size: 11.5px; line-height: 1.45; color: #b91c1c }
     .deuda-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px }
+    .bloque.equipo strong svg { display: inline-block; vertical-align: -1px; margin-right: 4px }
+    .aparte { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid #f1f3f6 }
+    .bloque-deuda .marca.pendiente { background: transparent; border: 1.5px solid #f59e0b; border-radius: 999px }
+    .bloque-deuda .boton-fila { height: 26px; padding: 0 10px; font-size: 11.5px }
+    .nota-deuda.info { color: #5f6c80 }
 
     :host-context(.dark) .cal-marco, :host-context(.dark) .deuda { background: #0f172a; border-color: #1e293b }
     :host-context(.dark) .cal-esquina, :host-context(.dark) .cal-cab { border-color: #1e293b }
@@ -184,6 +206,8 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
     :host-context(.dark) .p-tarde { background: #451a03; color: #fcd34d }
     :host-context(.dark) .p-neutro { background: #1e293b; color: #94a3b8 }
     :host-context(.dark) .barra { background: #1e293b }
+    :host-context(.dark) .aparte { border-color: #1e293b }
+    :host-context(.dark) .nota-deuda.info { color: #94a3b8 }
   `],
   template: `
     <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
@@ -217,7 +241,7 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
           @if (plan(); as p) {
             <span class="pastilla" [class]="ESTADO[p.estadoSemana].clase">{{ ESTADO[p.estadoSemana].texto }}</span>
             <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-              Semana del {{ dm(p.lunes) }} al {{ dm(p.sabado) }}{{ editable() ? '' : ' · solo lectura' }}
+              Semana del {{ dm(p.lunes) }} al {{ dm(finSemana()) }}{{ editable() ? '' : ' · solo lectura' }}
             </span>
           }
         </div>
@@ -270,26 +294,26 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
                       </div>
                     }
                     @for (b of bloquesDelDia(c.fecha); track b.clave; let i = $index; let n = $count) {
-                      <div class="bloque" [class.compacto]="b.minutos < 60" [class.propuesto]="!b.confirmado"
+                      <div class="bloque" [class.equipo]="!!b.gente" [class.compacto]="b.minutos < 60" [class.propuesto]="!b.confirmado"
                            [class.solo-lectura]="soloLectura(b)" [class.arrastrando]="gesto()?.bloque?.clave === b.clave && gesto()?.movido"
                            [attr.data-bloque]="b.clave" [attr.tabindex]="soloLectura(b) ? null : 0"
                            [attr.role]="soloLectura(b) ? 'note' : 'button'"
-                           [title]="b.nombre + ' · ' + rango(b) + ' · +' + duracion(b.minutos) + (b.confirmado ? '' : ' · por confirmar')"
-                           [attr.aria-label]="'Recuperación de ' + b.nombre + ' el ' + dm(b.fecha) + ', de ' + rango(b) + (b.confirmado ? '' : ', por confirmar')"
+                           [title]="quienDe(b) + ' · ' + rango(b) + ' · +' + duracion(b.minutos) + (b.confirmado ? '' : ' · por confirmar')"
+                           [attr.aria-label]="'Recuperación ' + (b.gente ? 'del equipo (' + b.gente.length + (b.gente.length === 1 ? ' asesor)' : ' asesores)') : 'de ' + b.nombre) + ' el ' + dm(b.fecha) + ', de ' + rango(b) + (b.confirmado ? '' : ', por confirmar')"
                            [style.top.px]="y(b.salida) + HUECO / 2"
                            [style.height.px]="altoBloque(b) - HUECO"
                            [style.left]="'calc(' + (100 / n * i).toFixed(2) + '% + 3px)'"
                            [style.width]="'calc(' + (100 / n).toFixed(2) + '% - 6px)'"
                            [style.transform]="gesto()?.bloque?.clave === b.clave && gesto()?.modo === 'mover' ? 'translateX(' + gesto()!.dx + 'px)' : null">
                         @if (b.minutos < 60) {
-                          <strong>{{ nombreCorto(b.nombre) }}</strong>
+                          <strong>@if (b.gente) {<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}{{ nombreCorto(b.nombre) }}</strong>
                           @if (b.hecho !== null) {
                             <em class="real" [class.ok]="b.hecho >= b.minutos" [class.mal]="b.hecho < b.minutos">{{ textoHecho(b) }}</em>
                           } @else {
                             <span class="rango">+{{ duracion(minutosVisibles(b)) }}</span>
                           }
                         } @else {
-                          <strong>{{ nombreCorto(b.nombre) }}</strong>
+                          <strong>@if (b.gente) {<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}{{ nombreCorto(b.nombre) }}</strong>
                           <span class="rango">{{ rango(b) }} · +{{ duracion(minutosVisibles(b)) }}</span>
                           @if (b.hecho !== null) {
                             <em class="real" [class.ok]="b.hecho >= b.minutos" [class.mal]="b.hecho < b.minutos">{{ textoHecho(b) }}</em>
@@ -321,6 +345,82 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
 
             <aside class="flex flex-col gap-3 !bg-transparent" aria-label="Horas por recuperar">
               <h2 class="!m-0 text-[15px] font-extrabold">Horas por recuperar</h2>
+              <!-- Lo de los días sin asignación: una tarjeta por mes, con el plan del equipo y lo que alguien deba aparte. -->
+              @for (e of equipos(); track e.deuda.clave) {
+                <div class="deuda">
+                  <div class="deuda-titulo">
+                    <div class="deuda-cab">
+                      <strong>{{ e.deuda.origen }}</strong>
+                      <span class="pastilla" [class]="e.pastilla[0]">{{ e.pastilla[1] }}</span>
+                    </div>
+                    <div class="secundario">{{ subcartera() }} · {{ e.deuda.gente.length }} {{ e.deuda.gente.length === 1 ? 'asesor' : 'asesores' }} · debe {{ e.debe }} · <span class="whitespace-nowrap">vence el {{ dm(e.deuda.vence) }}</span></div>
+                  </div>
+                  <div class="barra" role="img"
+                       [attr.aria-label]="'Del equipo: recuperado ' + e.pctRec.toFixed(0) + ' %, confirmado ' + e.pctConf.toFixed(0) + ' % y por confirmar ' + e.pctSin.toFixed(0) + ' %'">
+                    <i class="rec" [style.width.%]="e.pctRec"></i>
+                    <i class="conf" [style.width.%]="e.pctConf"></i>
+                    <i class="sin" [style.width.%]="e.pctSin"></i>
+                  </div>
+                  @if (e.tramos.length) {
+                    <ul class="bloques-deuda">
+                      @for (t of e.tramos; track t.desde) {
+                        <li class="bloque-deuda" [class.sin-confirmar]="!t.confirmado">
+                          <i class="marca" aria-hidden="true"></i>
+                          <strong>{{ t.cuando }}</strong>
+                          <span>{{ t.cuanto }}</span>
+                          <span class="estado">{{ t.confirmado ? '' : 'por confirmar' }}</span>
+                        </li>
+                      }
+                    </ul>
+                  }
+                  @if (e.aparte.length) {
+                    <div class="aparte">
+                      <span [class]="estilos.etiqueta">Por persona</span>
+                      <ul class="bloques-deuda">
+                        @for (a of e.aparte; track a.idUsuario) {
+                          <li class="bloque-deuda" [class.sin-confirmar]="a.sinConfirmar" [attr.title]="a.porque || null">
+                            <i class="marca" [class.pendiente]="!a.conBloques" aria-hidden="true"></i>
+                            <strong>{{ nombreCorto(a.nombre) }}</strong>
+                            <span>{{ a.texto }}</span>
+                            @if (a.extra > 0 && !a.sinConfirmar) {
+                              <button type="button" [class]="estilos.botonChico + ' boton-fila'" (click)="proponerAparte(e.deuda, a.idUsuario, a.nombre)"
+                                      [disabled]="guardando()">Proponer</button>
+                            } @else {
+                              <span class="estado">{{ a.sinConfirmar ? 'por confirmar' : '' }}</span>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                  @if (e.nota) {
+                    <p class="nota-deuda info">{{ e.nota }}</p>
+                  }
+                  @if (e.tarde) {
+                    <p class="nota-deuda">{{ e.tarde }} {{ e.tarde === 1 ? 'día cae' : 'días caen' }} después del vencimiento.</p>
+                  }
+                  @if (e.sinConfirmar || e.comun) {
+                    <div class="deuda-botones">
+                      <button type="button" [class]="estilos.botonSecundario" (click)="descartarPlan(e.plan, 'del equipo')"
+                              [disabled]="!e.sinConfirmar || guardando()" [title]="e.sinConfirmar ? '' : 'No hay nada sin confirmar'">
+                        <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                        Descartar
+                      </button>
+                      @if (e.sinConfirmar) {
+                        <button type="button" [class]="estilos.botonPrimario" (click)="confirmarEquipo(e.deuda)" [disabled]="guardando()">
+                          <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                          Confirmar
+                        </button>
+                      } @else {
+                        <button type="button" [class]="estilos.botonPrimario" (click)="proponerEquipo(e.deuda)" [disabled]="guardando()">
+                          <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18M12 13v5M9.5 15.5h5"/></svg>
+                          Proponer {{ duracion(e.comun) }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
               @for (d of deudas(); track d.idUsuario) {
                 <div class="deuda">
                   <div class="deuda-titulo">
@@ -353,7 +453,7 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
                   }
                   @if (d.sinConfirmar || d.falta) {
                     <div class="deuda-botones">
-                      <button type="button" [class]="estilos.botonSecundario" (click)="descartar(d.idUsuario, d.nombre)"
+                      <button type="button" [class]="estilos.botonSecundario" (click)="descartarPlan(planPersona(d.idUsuario), 'de ' + nombreCorto(d.nombre))"
                               [disabled]="!d.sinConfirmar || guardando()" [title]="d.sinConfirmar ? '' : 'No hay nada sin confirmar'">
                         <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
                         Descartar
@@ -372,7 +472,8 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
                     </div>
                   }
                 </div>
-              } @empty {
+              }
+              @if (!deudas().length && !equipos().length) {
                 <div class="deuda">
                   <div class="deuda-titulo">
                     <strong class="text-[13.5px]">Nadie debe horas</strong>
@@ -395,8 +496,8 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
              role="dialog" aria-modal="true" aria-labelledby="titulo-bloque">
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
-              <h2 id="titulo-bloque" class="!m-0 text-[15px] font-extrabold">Editar recuperación</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ b.nombre }} · {{ dm(b.fecha) }}</p>
+              <h2 id="titulo-bloque" class="!m-0 text-[15px] font-extrabold">{{ b.gente ? 'Editar recuperación del equipo' : 'Editar recuperación' }}</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ b.gente ? origenDe(b.deuda) : b.nombre }} · {{ dm(b.fecha) }}</p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="cerrarForm()" aria-label="Cerrar">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -405,7 +506,9 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
           <div class="flex flex-col gap-3.5 px-5 py-4">
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="b-persona">Persona</label>
-              <select id="b-persona" [class]="estilos.campo" disabled><option>{{ b.nombre }}</option></select>
+              <select id="b-persona" [class]="estilos.campo" disabled>
+                <option>{{ b.gente ? 'Equipo · ' + grupoDe(b).length + (grupoDe(b).length === 1 ? ' asesor' : ' asesores') : b.nombre }}</option>
+              </select>
             </div>
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="b-fecha">Día</label>
@@ -454,6 +557,7 @@ export class AsistenciaHorarioComponent {
   protected readonly HUECO = HUECO;
   protected readonly enHoras = enHoras;
   protected readonly dm = dm;
+  protected readonly planPersona = planPersona;
 
   readonly idSubcartera = input<number | null>(null);
   /** El nombre de la subcartera, para el subtítulo. */
@@ -470,8 +574,12 @@ export class AsistenciaHorarioComponent {
   readonly plan = signal<PlanSemana | null>(null);
   readonly cargando = signal(false);
   readonly guardando = signal(false);
-  /** Lo movido o propuesto y aún sin confirmar, por persona: su plan entero de hoy en adelante. */
-  readonly borrador = signal<Map<number, Bloque[]>>(new Map());
+  /**
+   * Lo movido o propuesto y aún sin confirmar, por plan (`p:idUsuario` o
+   * `e:mes`): el plan entero de hoy en adelante.
+   */
+  readonly borrador = signal<Map<string, Bloque[]>>(new Map());
+  private subcarteraAnterior: number | null = null;
   readonly gesto = signal<Gesto | null>(null);
 
   readonly horas = Array.from({ length: (CAL.hasta - CAL.desde) / 60 + 1 }, (_, i) => CAL.desde + i * 60);
@@ -490,7 +598,11 @@ export class AsistenciaHorarioComponent {
     effect(() => {
       const sub = this.idSubcartera();
       const lunes = this.lunes();
-      this.borrador.set(new Map());
+      // Lo propuesto es de hoy en adelante: se conserva al cambiar de semana, no de subcartera.
+      if (sub !== this.subcarteraAnterior) {
+        this.borrador.set(new Map());
+        this.subcarteraAnterior = sub;
+      }
       if (!sub) {
         this.plan.set(null);
         return;
@@ -542,6 +654,7 @@ export class AsistenciaHorarioComponent {
     const todos = new Map<number, string>();
     [...p.bloques, ...p.futuros].forEach(b => todos.set(b.idUsuario, b.nombre));
     p.deudas.forEach(d => todos.set(d.idUsuario, d.nombre));
+    (p.equipos ?? []).forEach(e => e.gente.forEach(g => todos.set(g.idUsuario, g.nombre)));
     p.ausencias.forEach(a => todos.set(a.idUsuario, a.nombre));
     const hallados = [...todos.entries()].filter(([, n]) => (n ?? '').toLowerCase() === texto);
     return hallados.length === 1 ? hallados[0][0] : null;
@@ -568,11 +681,19 @@ export class AsistenciaHorarioComponent {
     const s = sumarDias(l, 5);
     const m1 = MESES[Number(l.slice(5, 7)) - 1];
     const m2 = MESES[Number(s.slice(5, 7)) - 1];
-    const texto = m1 === m2 ? m1 : `${m1} – ${m2}`;
-    return texto.charAt(0).toUpperCase() + texto.slice(1) + ` ${s.slice(0, 4)}`;
+    // Cada mes con mayúscula, como la maqueta: «Septiembre – Octubre 2026».
+    const mayuscula = (m: string) => m.charAt(0).toUpperCase() + m.slice(1);
+    return `${m1 === m2 ? mayuscula(m1) : `${mayuscula(m1)} – ${mayuscula(m2)}`} ${s.slice(0, 4)}`;
   });
 
   readonly hoyEnSemana = computed(() => this.columnas().some(c => c.fecha === this.hoyIso));
+
+  /** El sábado solo es de CASTIGO: en las demás subcarteras la semana es de lunes a viernes. */
+  readonly conSabado = computed(() => (this.subcartera() ?? '').trim().toUpperCase() === 'CASTIGO');
+  readonly finSemana = computed(() => {
+    const p = this.plan();
+    return p ? (this.conSabado() ? p.sabado : sumarDias(p.lunes, 4)) : '';
+  });
 
   y(min: number): number {
     return MARGEN_ARRIBA + (min - CAL.desde) / 30 * CAL.alto;
@@ -584,7 +705,7 @@ export class AsistenciaHorarioComponent {
     if (!p) {
       return [];
     }
-    return p.dias.map(d => ({
+    return p.dias.filter(d => this.conSabado() || indiceDia(d.fecha) < 5).map(d => ({
       fecha: d.fecha,
       corto: CORTOS[indiceDia(d.fecha)],
       numero: Number(d.fecha.slice(8, 10)),
@@ -667,21 +788,27 @@ export class AsistenciaHorarioComponent {
     return chips;
   });
 
-  /** Lo que se ve de una persona de hoy en adelante: lo movido aquí o, si no, lo del servidor. */
-  private futurosDe(idUsuario: number): Bloque[] {
-    const propio = this.borrador().get(idUsuario);
+  /** Lo que se ve de un plan de hoy en adelante: lo movido aquí o, si no, lo del servidor. */
+  private futurosDe(plan: string): Bloque[] {
+    const propio = this.borrador().get(plan);
     if (propio) {
       return propio;
     }
-    return (this.plan()?.futuros ?? []).filter(b => b.idUsuario === idUsuario).map(b => this.aLocal(b));
+    return (this.plan()?.futuros ?? []).map(b => this.aLocal(b)).filter(b => b.plan === plan);
   }
 
   private aLocal(b: BloquePlan): Bloque {
-    return { clave: `${b.idUsuario}-${b.fecha}`, idUsuario: b.idUsuario, nombre: b.nombre, fecha: b.fecha,
-             minutos: b.minutos, salida: aMin(b.salida), confirmado: b.confirmado, hecho: b.hecho };
+    return { clave: `${b.idUsuario}-${b.fecha}`, plan: b.clave ? planEquipo(b.clave) : planPersona(b.idUsuario),
+             idUsuario: b.idUsuario, nombre: b.nombre, fecha: b.fecha, minutos: b.minutos, salida: aMin(b.salida),
+             confirmado: b.confirmado, hecho: b.hecho, deuda: b.clave ?? null, equipo: !!b.equipo };
   }
 
-  /** Los bloques de la semana: lo pasado tal como quedó y lo de hoy en adelante del plan que se ve. */
+  /** Los planes que se ven: los del servidor y los tocados aquí. */
+  private planes(): string[] {
+    return [...new Set<string>([...(this.plan()?.futuros ?? []).map(b => this.aLocal(b).plan), ...this.borrador().keys()])];
+  }
+
+  /** Los bloques de la semana, uno por persona: lo pasado tal como quedó y lo de hoy en adelante del plan que se ve. */
   readonly bloquesSemana = computed<Bloque[]>(() => {
     const p = this.plan();
     if (!p) {
@@ -689,13 +816,59 @@ export class AsistenciaHorarioComponent {
     }
     const id = this.persona();
     const pasados = p.bloques.filter(b => b.fecha < this.hoyIso).map(b => this.aLocal(b));
-    const gente = new Set<number>([...p.futuros.map(b => b.idUsuario), ...this.borrador().keys()]);
-    const futuros = [...gente].flatMap(g => this.futurosDe(g)).filter(b => b.fecha >= p.lunes && b.fecha <= p.sabado);
+    const futuros = this.planes().flatMap(k => this.futurosDe(k)).filter(b => b.fecha >= p.lunes && b.fecha <= p.sabado);
     return [...pasados, ...futuros].filter(b => !id || b.idUsuario === id);
   });
 
+  /**
+   * Los cuadros de un día. Lo del equipo (un día sin asignación) va en uno
+   * solo, porque todos se quedan lo mismo, y primero; después cada persona.
+   */
   bloquesDelDia(fecha: string): Bloque[] {
-    return this.bloquesSemana().filter(b => b.fecha === fecha).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const cuadros: Bloque[] = [];
+    for (const b of this.bloquesSemana().filter(x => x.fecha === fecha).sort((a, c) => a.nombre.localeCompare(c.nombre))) {
+      const ya = b.equipo ? cuadros.find(c => c.gente && c.plan === b.plan) : undefined;
+      if (ya) {
+        ya.gente!.push(b);
+      } else if (b.equipo) {
+        cuadros.push({ ...b, clave: `${b.plan}|${fecha}`, nombre: 'Equipo', gente: [b] });
+      } else {
+        cuadros.push(b);
+      }
+    }
+    return cuadros.sort((a, c) => Number(!!c.gente) - Number(!!a.gente)).map(c => (c.gente ? this.conHecho(c) : c));
+  }
+
+  /** Lo que hizo el equipo ese día: lo que le faltó a cada uno, sumado. */
+  private conHecho(c: Bloque): Bloque {
+    const con = c.gente!.filter(x => x.hecho !== null);
+    if (!con.length) {
+      return { ...c, hecho: null };
+    }
+    return { ...c, hecho: c.minutos - con.reduce((t, x) => t + Math.max(0, x.minutos - (x.hecho ?? 0)), 0) };
+  }
+
+  /** El cuadro que se ve con esa clave. */
+  private cuadro(clave: string | undefined): Bloque | undefined {
+    return this.columnas().flatMap(c => this.bloquesDelDia(c.fecha)).find(x => x.clave === clave);
+  }
+
+  /** Los bloques que se mueven juntos: los de todo el equipo ese día, o el de la persona. */
+  private enGrupo(b: Bloque): (x: Bloque) => boolean {
+    return b.gente ? x => x.equipo && x.fecha === b.fecha : x => x.clave === b.clave;
+  }
+
+  grupoDe(b: Bloque): Bloque[] {
+    return this.futurosDe(b.plan).filter(this.enGrupo(b));
+  }
+
+  /** «Equipo: Ana G., Beto P. · Sin asignación del 01/10», o el nombre. */
+  quienDe(b: Bloque): string {
+    return b.gente ? `Equipo: ${this.grupoDe(b).map(x => this.nombreCorto(x.nombre)).join(', ')} · ${this.origenDe(b.deuda)}` : b.nombre;
+  }
+
+  origenDe(deuda: string | null): string {
+    return this.plan()?.equipos?.find(e => e.clave === deuda)?.origen ?? 'Sin asignación';
   }
 
   soloLectura(b: Bloque): boolean {
@@ -729,7 +902,7 @@ export class AsistenciaHorarioComponent {
     }
     const id = this.persona();
     return p.deudas.filter(d => !id || d.idUsuario === id).map((d: DeudaPlan) => {
-      const bloques = this.futurosDe(d.idUsuario).filter(b => b.fecha >= this.hoyIso).sort((a, b) => a.fecha.localeCompare(b.fecha));
+      const bloques = this.futurosDe(planPersona(d.idUsuario)).filter(b => b.fecha >= this.hoyIso).sort((a, b) => a.fecha.localeCompare(b.fecha));
       const prog = bloques.reduce((t, b) => t + b.minutos, 0);
       const confirmado = bloques.filter(b => b.confirmado).reduce((t, b) => t + b.minutos, 0);
       const pendiente = Math.max(0, d.total - d.recuperado);
@@ -743,6 +916,84 @@ export class AsistenciaHorarioComponent {
       };
     });
   });
+
+  /**
+   * Lo que debe el equipo por días sin asignación: una tarjeta por mes, con el
+   * plan del equipo y lo que alguien deba aparte (salió antes un día).
+   */
+  readonly equipos = computed(() => {
+    const p = this.plan();
+    if (!p) {
+      return [];
+    }
+    const id = this.persona();
+    return (p.equipos ?? []).filter(T => !id || T.gente.some(g => g.idUsuario === id)).map((T: DeudaEquipoPlan) => {
+      const plan = planEquipo(T.clave);
+      const bloques = this.futurosDe(plan).filter(b => b.fecha >= this.hoyIso).sort((a, b) => a.fecha.localeCompare(b.fecha));
+      const saldos = T.gente.map(g => {
+        const suyos = bloques.filter(b => b.idUsuario === g.idUsuario);
+        const programado = suyos.reduce((t, b) => t + b.minutos, 0);
+        const confirmado = suyos.filter(b => b.confirmado).reduce((t, b) => t + b.minutos, 0);
+        return { ...g, programado, confirmado, falta: Math.max(0, g.total - g.recuperado - programado) };
+      });
+      // Lo que el plan del equipo todavía no le cubre a nadie; lo demás es de cada uno.
+      const comun = Math.min(...saldos.map(s => s.falta));
+      const dias = [...new Map(bloques.filter(b => b.equipo).map(b => [b.fecha, b])).values()];
+      const aparte = saldos.filter(s => s.falta > comun || bloques.some(b => !b.equipo && b.idUsuario === s.idUsuario)).map(s => {
+        const suyos = bloques.filter(b => !b.equipo && b.idUsuario === s.idUsuario);
+        const extra = s.falta - comun;
+        const partes = [...this.tramos(suyos).map(t => `${t.cuando} ${t.cuanto}`), ...(extra > 0 ? [`falta ${this.duracion(extra)}`] : [])];
+        const faltaron = s.faltaron.reduce((t, f) => t + f.minutos, 0);
+        return {
+          idUsuario: s.idUsuario, nombre: s.nombre, extra, texto: partes.join(' · '), conBloques: suyos.length > 0,
+          sinConfirmar: suyos.some(b => !b.confirmado),
+          porque: s.faltaron.length ? `El ${this.unirY(s.faltaron.map(f => dm(f.fecha)))} faltaron ${faltaron} min` : ''
+        };
+      });
+      const total = saldos.reduce((t, s) => t + s.total, 0);
+      const rec = saldos.reduce((t, s) => t + Math.min(s.recuperado, s.total), 0);
+      const conf = saldos.reduce((t, s) => t + Math.min(s.confirmado, Math.max(0, s.total - s.recuperado)), 0);
+      const sin = saldos.reduce((t, s) => t + Math.min(s.programado - s.confirmado, Math.max(0, s.total - s.recuperado - s.confirmado)), 0);
+      const pendientes = saldos.filter(s => s.falta > 0).length;
+      const totales = [...new Set(T.gente.map(g => g.total))];
+      const desde = [sumarDias(this.hoyIso, 1), sumarDias(T.dias[0], 1)].sort().pop()!;
+      return {
+        deuda: T, plan, comun, aparte,
+        tramos: this.tramos(dias),
+        pastilla: comun ? ['p-tarde', `Falta ${this.duracion(comun)}`]
+          : pendientes ? ['p-tarde', `${pendientes} ${pendientes === 1 ? 'pendiente' : 'pendientes'}`] : ['p-ok', 'Cubierto'],
+        debe: totales.length === 1 ? `${this.duracion(totales[0])}${T.gente.length > 1 ? ' cada uno' : ''}`
+          : `hasta ${this.duracion(Math.max(...totales))}`,
+        pctRec: this.pct(rec, total), pctConf: this.pct(conf, total), pctSin: this.pct(sin, total),
+        sinConfirmar: bloques.some(b => !b.confirmado),
+        tarde: new Set(bloques.filter(b => b.fecha > T.vence).map(b => b.fecha)).size,
+        nota: comun && !dias.length && T.dias[0] >= this.hoyIso ? `Se recupera desde el ${dm(desde)}.` : ''
+      };
+    });
+  });
+
+  /** Los días seguidos con lo mismo, en una línea: «23/09 – 28/09 · 30 min al día · 4 días». */
+  private tramos(bloques: Bloque[]): { desde: string; cuando: string; cuanto: string; confirmado: boolean }[] {
+    const grupos: { desde: string; hasta: string; minutos: number; salida: number; confirmado: boolean; dias: number }[] = [];
+    for (const b of bloques) {
+      const ultimo = grupos[grupos.length - 1];
+      if (ultimo && ultimo.minutos === b.minutos && ultimo.confirmado === b.confirmado) {
+        ultimo.hasta = b.fecha;
+        ultimo.dias++;
+      } else {
+        grupos.push({ desde: b.fecha, hasta: b.fecha, minutos: b.minutos, salida: b.salida, confirmado: b.confirmado, dias: 1 });
+      }
+    }
+    return grupos.map(g => ({
+      desde: g.desde, confirmado: g.confirmado,
+      cuando: g.dias === 1 ? `${this.corto(g.desde)} ${dm(g.desde)}` : `${dm(g.desde)} – ${dm(g.hasta)}`,
+      cuanto: g.dias === 1 ? `${enHoras(g.salida)} – ${enHoras(g.salida + g.minutos)}` : `${this.duracion(g.minutos)} al día · ${g.dias} días`
+    }));
+  }
+
+  private unirY(lista: string[]): string {
+    return lista.length < 2 ? lista.join('') : `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
+  }
 
   pct(v: number, total: number): number {
     return total ? Math.min(100, (v / total) * 100) : 0;
@@ -782,38 +1033,71 @@ export class AsistenciaHorarioComponent {
     return !d ? CAL.desde : d.abierto ? CAL.desde : aMin(d.salida);
   }
 
-  /** Cambia el plan de una persona aquí, sin guardar: lo tocado queda por confirmar. */
-  private cambiarPlan(idUsuario: number, cambio: (lista: Bloque[]) => Bloque[]): void {
-    const actual = this.futurosDe(idUsuario).map(b => ({ ...b }));
-    this.borrador.update(m => new Map(m).set(idUsuario, cambio(actual)));
+  /** Cambia un plan aquí, sin guardar: lo tocado queda por confirmar. */
+  private cambiarPlan(plan: string, cambio: (lista: Bloque[]) => Bloque[]): void {
+    const actual = this.futurosDe(plan).map(b => ({ ...b }));
+    this.borrador.update(m => new Map(m).set(plan, cambio(actual)));
   }
 
-  /** Lleva un bloque a otro día; si ya hay uno ese día, se suman. Si no cabe hasta las 20:00, se acorta. */
+  /**
+   * Por qué ese bloque (el del equipo, con todos) no puede ir ese día; null si
+   * puede. Lo de un día sin asignación se devuelve después de ese día, y nadie
+   * tiene dos recuperaciones el mismo día.
+   */
+  private motivoGrupo(b: Bloque, destino: string, minutos: number): string | null {
+    const T = b.deuda ? this.plan()?.equipos?.find(e => e.clave === b.deuda) : null;
+    if (T && destino <= T.dias[0]) {
+      return `Se recupera después del ${dm(T.dias[0])}`;
+    }
+    const gente = b.gente ? this.grupoDe(b) : [b];
+    for (const x of gente) {
+      const motivo = this.motivoNoRecupera(x.idUsuario, destino, minutos)
+        ?? (this.otraRecuperacion(x, destino) ? 'Ese día ya tiene otra recuperación' : null);
+      if (motivo) {
+        return gente.length > 1 ? `${this.nombreCorto(x.nombre)}: ${motivo.charAt(0).toLowerCase()}${motivo.slice(1)}` : motivo;
+      }
+    }
+    return null;
+  }
+
+  /** Si esa persona ya tiene ese día una recuperación de otra clase (de otro plan, o la del equipo y una aparte). */
+  private otraRecuperacion(x: Bloque, fecha: string): boolean {
+    return this.planes().some(k => this.futurosDe(k).some(y => y.idUsuario === x.idUsuario && y.fecha === fecha
+      && !(y.plan === x.plan && y.equipo === x.equipo)));
+  }
+
+  /** Lleva un bloque (el del equipo, con todos) a otro día; si ya hay uno ese día, se suman. Si no cabe hasta las 20:00, se acorta. */
   private moverBloque(b: Bloque, destino: string): boolean {
-    const motivo = this.motivoNoRecupera(b.idUsuario, destino, 30);
+    const motivo = this.motivoGrupo(b, destino, 30);
     if (motivo) {
       this.toast.error(motivo);
       return false;
     }
     const tope = CAL.hasta - this.salidaDe(destino);
-    this.cambiarPlan(b.idUsuario, lista => {
-      const ya = lista.find(x => x.fecha === destino && x.clave !== b.clave);
-      if (ya) {
-        ya.minutos = Math.min(ya.minutos + b.minutos, tope);
-        ya.confirmado = false;
-        return lista.filter(x => x.clave !== b.clave);
+    const delGrupo = this.enGrupo(b);
+    let ajustado = false;
+    this.cambiarPlan(b.plan, lista => {
+      let salida = lista;
+      for (const x of lista.filter(delGrupo)) {
+        const ya = salida.find(y => y !== x && y.idUsuario === x.idUsuario && y.fecha === destino);
+        if (ya) {
+          ya.minutos = Math.min(ya.minutos + x.minutos, tope);
+          ya.confirmado = false;
+          salida = salida.filter(y => y !== x);
+        } else {
+          ajustado ||= x.minutos > tope;
+          x.minutos = Math.min(x.minutos, tope);
+          x.fecha = destino;
+          x.salida = this.salidaDe(destino);
+          x.clave = `${x.idUsuario}-${destino}`;
+          x.confirmado = false;
+        }
       }
-      const mismo = lista.find(x => x.clave === b.clave)!;
-      if (mismo.minutos > tope) {
-        this.toast.success(`Se ajustó a ${this.duracion(tope)}: ese día no se puede pasar de las 20:00`);
-      }
-      mismo.minutos = Math.min(mismo.minutos, tope);
-      mismo.fecha = destino;
-      mismo.salida = this.salidaDe(destino);
-      mismo.clave = `${b.idUsuario}-${destino}`;
-      mismo.confirmado = false;
-      return lista;
+      return salida;
     });
+    if (ajustado) {
+      this.toast.success(`Se ajustó a ${this.duracion(tope)}: ese día no se puede pasar de las 20:00`);
+    }
     return true;
   }
 
@@ -824,7 +1108,7 @@ export class AsistenciaHorarioComponent {
     if (!el || el.classList.contains('solo-lectura') || ev.button !== 0) {
       return;
     }
-    const b = this.bloquesSemana().find(x => x.clave === el.dataset['bloque']);
+    const b = this.cuadro(el.dataset['bloque']);
     if (!b) {
       return;
     }
@@ -864,7 +1148,7 @@ export class AsistenciaHorarioComponent {
   /** Si el día bajo el bloque que se arrastra lo admite. */
   destinoValido(): boolean {
     const g = this.gesto();
-    return !!g?.destino && g.destino !== g.bloque.fecha && !this.motivoNoRecupera(g.bloque.idUsuario, g.destino, 30);
+    return !!g?.destino && g.destino !== g.bloque.fecha && !this.motivoGrupo(g.bloque, g.destino, 30);
   }
 
   soltar(): void {
@@ -879,8 +1163,8 @@ export class AsistenciaHorarioComponent {
     }
     if (g.modo === 'estirar') {
       if (g.minutos !== g.bloque.minutos) {
-        this.cambiarPlan(g.bloque.idUsuario, lista => lista.map(x => x.clave === g.bloque.clave
-          ? { ...x, minutos: g.minutos, confirmado: false } : x));
+        const delGrupo = this.enGrupo(g.bloque);
+        this.cambiarPlan(g.bloque.plan, lista => lista.map(x => delGrupo(x) ? { ...x, minutos: g.minutos, confirmado: false } : x));
       }
     } else if (g.destino && g.destino !== g.bloque.fecha) {
       this.moverBloque(g.bloque, g.destino);
@@ -897,7 +1181,7 @@ export class AsistenciaHorarioComponent {
     if (!el || el.classList.contains('solo-lectura')) {
       return;
     }
-    const b = this.bloquesSemana().find(x => x.clave === el.dataset['bloque']);
+    const b = this.cuadro(el.dataset['bloque']);
     if (!b) {
       return;
     }
@@ -910,7 +1194,7 @@ export class AsistenciaHorarioComponent {
     if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
       const destino = fechas[i + (ev.key === 'ArrowLeft' ? -1 : 1)];
       if (destino && this.moverBloque(b, destino)) {
-        this.enfocar(`${b.idUsuario}-${destino}`);
+        this.enfocar(b.gente ? `${b.plan}|${destino}` : `${b.idUsuario}-${destino}`);
       }
       ev.preventDefault();
     }
@@ -918,7 +1202,8 @@ export class AsistenciaHorarioComponent {
       const tope = CAL.hasta - b.salida;
       const nuevo = b.minutos + (ev.key === 'ArrowUp' ? -30 : 30);
       if (nuevo >= 30 && nuevo <= tope) {
-        this.cambiarPlan(b.idUsuario, lista => lista.map(x => x.clave === b.clave ? { ...x, minutos: nuevo, confirmado: false } : x));
+        const delGrupo = this.enGrupo(b);
+        this.cambiarPlan(b.plan, lista => lista.map(x => delGrupo(x) ? { ...x, minutos: nuevo, confirmado: false } : x));
         this.enfocar(b.clave);
       }
       ev.preventDefault();
@@ -937,7 +1222,7 @@ export class AsistenciaHorarioComponent {
   // ---------- Panel: proponer, confirmar, descartar ----------
 
   proponer(idUsuario: number, nombre: string): void {
-    const actual = this.futurosDe(idUsuario);
+    const actual = this.futurosDe(planPersona(idUsuario));
     this.guardando.set(true);
     this.servicio.proponerPlan(idUsuario, actual.map(b => ({ fecha: b.fecha, minutos: b.minutos }))).subscribe({
       next: r => {
@@ -948,7 +1233,7 @@ export class AsistenciaHorarioComponent {
           const igual = !!ya && ya.minutos === b.minutos;
           return { ...this.aLocal(b), nombre, confirmado: igual ? ya!.confirmado : false };
         });
-        this.borrador.update(m => new Map(m).set(idUsuario, nuevo));
+        this.borrador.update(m => new Map(m).set(planPersona(idUsuario), nuevo));
         const bien = r.falta <= 0 && nuevo.some(b => !b.confirmado);
         if (bien) {
           this.toast.success(`${r.mensaje} para ${this.nombreCorto(nombre)}`);
@@ -964,16 +1249,12 @@ export class AsistenciaHorarioComponent {
   }
 
   confirmar(idUsuario: number, nombre: string): void {
-    const plan = this.futurosDe(idUsuario);
+    const plan = this.futurosDe(planPersona(idUsuario));
     this.guardando.set(true);
     this.servicio.guardarPlan(idUsuario, plan.map(b => ({ fecha: b.fecha, minutos: b.minutos }))).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.borrador.update(m => {
-          const copia = new Map(m);
-          copia.delete(idUsuario);
-          return copia;
-        });
+        this.olvidar(planPersona(idUsuario));
         this.toast.success(`Plan de ${this.nombreCorto(nombre)} confirmado: ya lo ve en Mi Asistencia`);
         this.recargar();
       },
@@ -984,13 +1265,131 @@ export class AsistenciaHorarioComponent {
     });
   }
 
-  descartar(idUsuario: number, nombre: string): void {
+  /** Vuelve al plan guardado: «de Ana G.» o «del equipo». */
+  descartarPlan(plan: string, de: string): void {
+    this.olvidar(plan);
+    this.toast.success(`Se descartaron los cambios ${de}`);
+  }
+
+  private olvidar(plan: string): void {
     this.borrador.update(m => {
       const copia = new Map(m);
-      copia.delete(idUsuario);
+      copia.delete(plan);
       return copia;
     });
-    this.toast.success(`Se descartaron los cambios de ${this.nombreCorto(nombre)}`);
+  }
+
+  // ---------- Plan del equipo (días sin asignación) ----------
+
+  /** El plan del equipo como se manda: un bloque por día para todos y los de cada uno aparte. */
+  private pedidoEquipo(lista: Bloque[]): PlanEquipoPedido {
+    const equipo = new Map<string, number>();
+    const aparte: Record<number, { fecha: string; minutos: number }[]> = {};
+    for (const b of lista.filter(x => x.fecha >= this.hoyIso)) {
+      if (b.equipo) {
+        equipo.set(b.fecha, b.minutos);
+      } else {
+        (aparte[b.idUsuario] ??= []).push({ fecha: b.fecha, minutos: b.minutos });
+      }
+    }
+    return { equipo: [...equipo].map(([fecha, minutos]) => ({ fecha, minutos })), aparte };
+  }
+
+  /** Lo propuesto, como bloques de cada asesor: lo que ya estaba igual conserva si estaba confirmado. */
+  private desdePropuesta(T: DeudaEquipoPlan, actual: Bloque[], r: PropuestaEquipoPlan): Bloque[] {
+    const plan = planEquipo(T.clave);
+    const antes = new Map(actual.map(b => [`${b.equipo ? 'e' : b.idUsuario}|${b.fecha}`, b]));
+    const bloque = (idUsuario: number, nombre: string, b: BloqueEquipoPlan, equipo: boolean): Bloque => {
+      const ya = antes.get(`${equipo ? 'e' : idUsuario}|${b.fecha}`);
+      return { clave: `${idUsuario}-${b.fecha}`, plan, idUsuario, nombre, fecha: b.fecha, minutos: b.minutos,
+               salida: b.salida ? aMin(b.salida) : this.salidaDe(b.fecha),
+               confirmado: !!ya && ya.minutos === b.minutos ? ya.confirmado : false, hecho: null, deuda: T.clave, equipo };
+    };
+    return [
+      ...r.equipo.flatMap(b => T.gente.map(g => bloque(g.idUsuario, g.nombre, b, true))),
+      ...Object.entries(r.aparte ?? {}).flatMap(([id, lista]) =>
+        lista.map(b => bloque(Number(id), T.gente.find(g => g.idUsuario === Number(id))?.nombre ?? '', b, false)))
+    ];
+  }
+
+  /** Propone lo que le falta a todo el equipo: los mismos bloques para todos. */
+  proponerEquipo(T: DeudaEquipoPlan): void {
+    const sub = this.idSubcartera();
+    if (!sub) {
+      return;
+    }
+    const plan = planEquipo(T.clave);
+    const actual = this.futurosDe(plan);
+    this.guardando.set(true);
+    this.servicio.proponerEquipo(sub, T.clave, this.pedidoEquipo(actual)).subscribe({
+      next: r => {
+        this.guardando.set(false);
+        this.borrador.update(m => new Map(m).set(plan, this.desdePropuesta(T, actual, r)));
+        const nuevos = r.equipo.filter(b => !b.confirmado).map(b => b.fecha).sort();
+        if (r.falta > 0 || !nuevos.length) {
+          this.toast.error(r.mensaje);
+          return;
+        }
+        this.toast.success(`${r.mensaje}, ${nuevos.length === 1 ? `el ${dm(nuevos[0])}` : `del ${dm(nuevos[0])} al ${dm(nuevos[nuevos.length - 1])}`}`);
+        // Si lo propuesto empieza en otra semana, el calendario va a esa semana.
+        if (!nuevos.some(f => f >= this.lunes() && f <= sumarDias(this.lunes(), 5))) {
+          this.lunes.set(lunesDe(new Date(nuevos[0] + 'T00:00:00')));
+        }
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.toast.error(respuesta?.error?.error ?? 'No se pudo proponer');
+      }
+    });
+  }
+
+  /** Propone lo que una persona debe aparte del equipo, en los días en que no tiene la del equipo. */
+  proponerAparte(T: DeudaEquipoPlan, idUsuario: number, nombre: string): void {
+    const sub = this.idSubcartera();
+    if (!sub) {
+      return;
+    }
+    const plan = planEquipo(T.clave);
+    const actual = this.futurosDe(plan);
+    this.guardando.set(true);
+    this.servicio.proponerAparte(sub, T.clave, idUsuario, this.pedidoEquipo(actual)).subscribe({
+      next: r => {
+        this.guardando.set(false);
+        const nuevo = this.desdePropuesta(T, actual, r);
+        this.borrador.update(m => new Map(m).set(plan, nuevo));
+        const bien = r.falta <= 0 && nuevo.some(b => !b.equipo && b.idUsuario === idUsuario && !b.confirmado);
+        if (bien) {
+          this.toast.success(r.mensaje.replace(nombre, this.nombreCorto(nombre)));
+        } else {
+          this.toast.error(r.mensaje);
+        }
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.toast.error(respuesta?.error?.error ?? 'No se pudo proponer');
+      }
+    });
+  }
+
+  confirmarEquipo(T: DeudaEquipoPlan): void {
+    const sub = this.idSubcartera();
+    if (!sub) {
+      return;
+    }
+    const plan = planEquipo(T.clave);
+    this.guardando.set(true);
+    this.servicio.guardarEquipo(sub, T.clave, this.pedidoEquipo(this.futurosDe(plan))).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.olvidar(plan);
+        this.toast.success('Plan del equipo confirmado: cada asesor lo ve en Mi Asistencia');
+        this.recargar();
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.toast.error(respuesta?.error?.error ?? 'No se pudo confirmar el plan');
+      }
+    });
   }
 
   // ---------- Formulario ----------
@@ -1034,12 +1433,13 @@ export class AsistenciaHorarioComponent {
       return;
     }
     this.validando.set(true);
-    this.servicio.validarBloque(b.idUsuario, fecha, min).subscribe({
+    this.validar(b, fecha, min).subscribe({
       next: v => {
         this.validando.set(false);
         const salida = v.salida ? aMin(v.salida) : null;
-        this.resultadoForm.set(salida !== null ? `Ese día sale a las ${enHoras(salida + min)} en vez de las ${enHoras(salida)}` : '—');
-        this.errorForm.set(v.motivo ?? '');
+        this.resultadoForm.set(salida !== null
+          ? `Ese día ${b.gente ? 'salen' : 'sale'} a las ${enHoras(salida + min)} en vez de las ${enHoras(salida)}` : '—');
+        this.errorForm.set(v.motivo ?? (fecha !== b.fecha ? this.conflictoForm(b, fecha) : '') ?? '');
       },
       error: () => {
         this.validando.set(false);
@@ -1055,23 +1455,29 @@ export class AsistenciaHorarioComponent {
       return;
     }
     this.validando.set(true);
-    this.servicio.validarBloque(b.idUsuario, fecha, min).subscribe({
+    this.validar(b, fecha, min).subscribe({
       next: v => {
         this.validando.set(false);
-        if (v.motivo) {
-          this.errorForm.set(v.motivo);
+        const motivo = v.motivo ?? (fecha !== b.fecha ? this.conflictoForm(b, fecha) : '');
+        if (motivo) {
+          this.errorForm.set(motivo);
           return;
         }
         const salida = v.salida ? aMin(v.salida) : CAL.desde;
-        this.cambiarPlan(b.idUsuario, lista => {
-          const otros = lista.filter(x => x.clave !== b.clave);
-          const ya = otros.find(x => x.fecha === fecha);
-          if (ya) {
-            ya.minutos = Math.min(ya.minutos + min, CAL.hasta - salida);
-            ya.confirmado = false;
-            return otros;
+        const delGrupo = this.enGrupo(b);
+        this.cambiarPlan(b.plan, lista => {
+          const movidos = lista.filter(delGrupo);
+          let salidaLista = lista.filter(x => !delGrupo(x));
+          for (const x of movidos) {
+            const ya = salidaLista.find(y => y.idUsuario === x.idUsuario && y.fecha === fecha);
+            if (ya) {
+              ya.minutos = Math.min(ya.minutos + min, CAL.hasta - salida);
+              ya.confirmado = false;
+            } else {
+              salidaLista = [...salidaLista, { ...x, fecha, minutos: min, salida, clave: `${x.idUsuario}-${fecha}`, confirmado: false }];
+            }
           }
-          return [...otros, { ...b, fecha, minutos: min, salida, clave: `${b.idUsuario}-${fecha}`, confirmado: false }];
+          return salidaLista;
         });
         this.cerrarForm();
       },
@@ -1082,22 +1488,46 @@ export class AsistenciaHorarioComponent {
     });
   }
 
+  /** El del equipo se revisa para todos; el de una persona, para ella. */
+  private validar(b: Bloque, fecha: string, minutos: number) {
+    const sub = this.idSubcartera();
+    return b.gente && b.deuda && sub
+      ? this.servicio.validarEquipo(sub, b.deuda, fecha, minutos)
+      : this.servicio.validarBloque(b.idUsuario, fecha, minutos);
+  }
+
+  /** Lo que el servidor no ve: lo que se está armando aquí ese otro día. */
+  private conflictoForm(b: Bloque, fecha: string): string {
+    const T = b.deuda ? this.plan()?.equipos?.find(e => e.clave === b.deuda) : null;
+    if (T && fecha <= T.dias[0]) {
+      return `Se recupera después del ${dm(T.dias[0])}`;
+    }
+    const x = (b.gente ? this.grupoDe(b) : [b]).find(y => this.otraRecuperacion(y, fecha));
+    return x ? `${b.gente ? this.nombreCorto(x.nombre) + ': ese' : 'Ese'} día ya tiene otra recuperación` : '';
+  }
+
   /**
-   * Quitar un bloque confirmado, sin nada más a medias de esa persona, se guarda
+   * Quitar un bloque confirmado, sin nada más a medias en ese plan, se guarda
    * ya (queda en la Auditoría). Con otros cambios sin confirmar, se quita del
-   * plan que se está armando y se confirma junto con lo demás.
+   * plan que se está armando y se confirma junto con lo demás. El del equipo se
+   * quita para todos.
    */
   quitar(b: Bloque): void {
     const idUsuario = b.idUsuario;
-    const restantes = this.futurosDe(idUsuario).filter(x => x.clave !== b.clave);
-    const aMedias = restantes.some(x => !x.confirmado) || this.borrador().has(idUsuario);
+    const delGrupo = this.enGrupo(b);
+    const restantes = this.futurosDe(b.plan).filter(x => !delGrupo(x));
+    const aMedias = restantes.some(x => !x.confirmado) || this.borrador().has(b.plan);
     this.cerrarForm();
     if (!b.confirmado || aMedias) {
-      this.borrador.update(m => new Map(m).set(idUsuario, restantes));
+      this.borrador.update(m => new Map(m).set(b.plan, restantes));
       return;
     }
+    const sub = this.idSubcartera();
     this.guardando.set(true);
-    this.servicio.guardarPlan(idUsuario, restantes.map(x => ({ fecha: x.fecha, minutos: x.minutos }))).subscribe({
+    const guardar = b.deuda && sub
+      ? this.servicio.guardarEquipo(sub, b.deuda, this.pedidoEquipo(restantes))
+      : this.servicio.guardarPlan(idUsuario, restantes.map(x => ({ fecha: x.fecha, minutos: x.minutos })));
+    guardar.subscribe({
       next: () => {
         this.guardando.set(false);
         this.toast.success('Recuperación quitada');
