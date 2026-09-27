@@ -309,7 +309,7 @@ export interface CierreSemana {
  * solicitud, regla, feriado o cierre— con su valor anterior, el nuevo, el
  * motivo y quién lo hizo.
  */
-export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE';
+export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE';
 
 export interface CambioAsistencia {
   /** «M-12» para una marca corregida, «A-7» para el resto. */
@@ -445,6 +445,8 @@ export interface PlanSemana {
   /** Todas las de hoy en adelante de la gente del ámbito: el plan que se confirma entero. */
   futuros: BloquePlan[];
   deudas: DeudaPlan[];
+  /** Lo que debe el equipo por días sin asignación: una por mes, con lo de cada asesor. */
+  equipos: DeudaEquipoPlan[];
 }
 
 /** Un día del equipo. `abierto` = sábado sin horario fijo; `noLaborable` = feriado o sin asignación. */
@@ -480,6 +482,68 @@ export interface BloquePlan {
   confirmado: boolean;
   /** Lo que de verdad se quedó, en los días que ya pasaron. */
   hecho: number | null;
+  /** El mes de la deuda del equipo que paga («2026-10»); NULL si es del plan de la persona. */
+  clave: string | null;
+  /** Es del plan del equipo (el mismo bloque para todos), no uno aparte. */
+  equipo: boolean;
+}
+
+/**
+ * Lo que debe el equipo por los días sin asignación de un mes. `clave` es el
+ * mes: con ella se propone y se confirma su plan.
+ */
+export interface DeudaEquipoPlan {
+  clave: string;
+  origen: string;
+  dias: string[];
+  vence: string;
+  gente: SaldoEquipoPlan[];
+}
+
+/** Lo de cada asesor en la deuda del equipo: cuánto debe y cuánto de verdad ya se quedó. */
+export interface SaldoEquipoPlan {
+  idUsuario: number;
+  nombre: string;
+  total: number;
+  recuperado: number;
+  /** Los días del plan en que se quedó menos de lo acordado. */
+  faltaron: { fecha: string; minutos: number }[];
+}
+
+/** Un bloque del plan del equipo propuesto: sale `minutos` después de su `salida`; `confirmado` = ya estaba en el plan. */
+export interface BloqueEquipoPlan {
+  fecha: string;
+  minutos: number;
+  salida: string | null;
+  confirmado: boolean;
+}
+
+/** Lo que propone el sistema para el plan del equipo: sus bloques y los de cada uno aparte. */
+export interface PropuestaEquipoPlan {
+  equipo: BloqueEquipoPlan[];
+  aparte: Record<number, BloqueEquipoPlan[]>;
+  falta: number;
+  mensaje: string;
+}
+
+/** El plan del equipo que se manda: los bloques de todos y los de cada uno aparte. */
+export interface PlanEquipoPedido {
+  equipo: { fecha: string; minutos: number }[];
+  aparte: Record<number, { fecha: string; minutos: number }[]>;
+}
+
+/** Configuración › Ingreso y cese: un asesor con sus fechas. */
+export interface PersonalAsistencia {
+  idUsuario: number;
+  nombre: string;
+  usuario: string;
+  idSubcartera: number | null;
+  subcartera: string | null;
+  fechaCreacion: string | null;
+  /** La que rige: la corregida o, si no, la de creación del usuario. */
+  fechaIngreso: string | null;
+  ingresoCorregido: boolean;
+  fechaCese: string | null;
 }
 
 export interface DeudaPlan {

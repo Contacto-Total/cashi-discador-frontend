@@ -9,7 +9,7 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte } from './asistencia.models';
-import { ESTILOS, estadoVisible, hoy, semanaPorDefecto, sumarDias } from './asistencia.estilos';
+import { ESTILOS, estadoVisible, hoy, lunesDe, semanaPorDefecto, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
 import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
@@ -127,15 +127,25 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
             </select>
           </div>
 
+          <!-- La semana, en vez de un rango libre: se recorre con las flechas y
+               tocar las fechas abre el calendario para saltar a otra. -->
           <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="desde">Desde</label>
-            <input id="desde" type="date" [class]="estilos.campo"
-                   [ngModel]="desde()" (ngModelChange)="desde.set($event)">
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="hasta">Hasta</label>
-            <input id="hasta" type="date" [class]="estilos.campo"
-                   [ngModel]="hasta()" (ngModelChange)="hasta.set($event)">
+            <label [class]="estilos.etiqueta" for="texto-semana">Semana</label>
+            <div class="relative inline-flex h-[38px] items-center gap-0.5 rounded-lg border !border-[#8491a3] !bg-white px-[3px] dark:!border-slate-600 dark:!bg-slate-800">
+              <button type="button" [class]="flechaSemana" (click)="moverSemana(-7)" aria-label="Semana anterior">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <button id="texto-semana" type="button" title="Elegir otra semana" (click)="abrirCalendario(fechaSemana)"
+                      class="h-[30px] min-w-[112px] rounded-md px-1.5 text-[13px] font-semibold tabular-nums !text-[#0f172a] hover:bg-[#f1f3f6] dark:!text-slate-100 dark:hover:bg-slate-700">
+                {{ corta(desde()) }} – {{ corta(hasta()) }}
+              </button>
+              <button type="button" [class]="flechaSemana" (click)="moverSemana(7)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+              <input #fechaSemana type="date" tabindex="-1" aria-hidden="true" [max]="hoy()"
+                     class="pointer-events-none absolute bottom-0 left-9 h-px w-px opacity-0"
+                     (change)="irASemana(fechaSemana.value)">
+            </div>
           </div>
 
           <!-- Un solo campo para buscar y elegir: escribir filtra, el desplegable lista el roster. -->
@@ -260,8 +270,17 @@ export class ControlAsistenciaComponent implements OnInit {
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
-  readonly desde = signal(semanaPorDefecto().desde);
-  readonly hasta = signal(semanaPorDefecto().hasta);
+  /**
+   * El módulo es semanal (25/09/2026): con un rango libre, cuatro semanas eran
+   * una pantalla enorme y los límites son de cada semana. La semana va de lunes
+   * a viernes; el sábado es solo de CASTIGO, que lo trabaja opcional.
+   */
+  readonly semana = signal(semanaPorDefecto().desde);
+  readonly desde = computed(() => this.semana());
+  readonly hasta = computed(() => sumarDias(this.semana(), this.conSabado() ? 5 : 4));
+  readonly esSemanaActual = computed(() => this.semana() >= lunesDe(new Date()));
+  protected readonly hoy = hoy;
+  protected readonly flechaSemana = 'inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[7px] !text-[#334155] hover:bg-[#f4f6f9] disabled:cursor-default disabled:opacity-35 dark:!text-slate-200 dark:hover:bg-slate-700';
   readonly agente = signal('');
 
   readonly clientes = signal<Tenant[]>([]);
@@ -276,6 +295,9 @@ export class ControlAsistenciaComponent implements OnInit {
   /** El nombre de la subcartera elegida: Configuración lo usa para decir a quién alcanza un cambio. */
   readonly nombreSubcartera = computed(() =>
     this.subcarteras().find(s => s.id === this.idSubcartera())?.subPortfolioName ?? null);
+
+  /** La semana llega al sábado solo en CASTIGO. */
+  readonly conSabado = computed(() => (this.nombreSubcartera() ?? '').trim().toUpperCase() === 'CASTIGO');
 
   /** Configuración y Corregir marcaciones no comparten filtros con el resto. */
   readonly esPantallaAparte = computed(() =>
@@ -397,15 +419,41 @@ export class ControlAsistenciaComponent implements OnInit {
     });
   }
 
-  /** El botón «Semana anterior» del dashboard mueve el rango, que vive aquí. */
+  /** El botón «Semana anterior» del dashboard mueve la semana, que vive aquí. */
   volverASemanaPorDefecto(): void {
-    this.desde.set(semanaPorDefecto().desde);
-    this.hasta.set(semanaPorDefecto().hasta);
+    this.semana.set(semanaPorDefecto().desde);
   }
 
   retrocederSemana(): void {
-    this.desde.set(sumarDias(this.desde(), -7));
-    this.hasta.set(sumarDias(this.hasta(), -7));
+    this.moverSemana(-7);
+  }
+
+  moverSemana(dias: number): void {
+    this.irASemana(sumarDias(this.semana(), dias));
+  }
+
+  /** Cualquier día lleva a su semana; el futuro no se mira, la última es la actual. */
+  irASemana(fecha: string): void {
+    if (!fecha) {
+      return;
+    }
+    const lunes = lunesDe(new Date(fecha + 'T00:00:00'));
+    const actual = lunesDe(new Date());
+    this.semana.set(lunes > actual ? actual : lunes);
+  }
+
+  abrirCalendario(campo: HTMLInputElement): void {
+    campo.value = this.semana();
+    try {
+      campo.showPicker();
+    } catch {
+      campo.focus();
+    }
+  }
+
+  /** «14/09», como en el resto del módulo. */
+  corta(fecha: string): string {
+    return `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
   }
 
 }

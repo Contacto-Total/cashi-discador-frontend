@@ -6,7 +6,7 @@ import { forkJoin, of, switchMap } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import {
-  DiaBase, DiaCalendario, Horario, HorarioBase, ImportacionFeriados, PoliticaAsistencia, TipoDia
+  DiaBase, DiaCalendario, Horario, HorarioBase, ImportacionFeriados, PersonalAsistencia, PoliticaAsistencia, TipoDia
 } from './asistencia.models';
 import {
   ESTILOS, TIPOS_DE_CALENDARIO, aMinutos, enDuracion, hoy, sumarDias
@@ -86,6 +86,14 @@ function textoHorario(dias: DiaBase[]): string {
       display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
       gap: 10px; min-height: 38px; margin-bottom: 12px;
     }
+    /* Ingreso y cese: la fecha con de dónde sale debajo, y el botón de la fila a la derecha. */
+    .sub-celda { display: block; margin-top: 2px; font-size: 11.5px; color: #5f6c80 }
+    .tabla-personal td.celda-accion { width: 1%; text-align: right }
+    .tabla-personal tbody tr td { border-bottom: 1px solid #f1f3f6 }
+    .tabla-personal tbody tr:last-child td { border-bottom: 0 }
+    .pie-personal { margin: 10px 0 0; font-size: 12.5px; color: #5f6c80 }
+    :host-context(.dark) .sub-celda, :host-context(.dark) .pie-personal { color: #94a3b8 }
+    :host-context(.dark) .tabla-personal tbody tr td { border-color: #1e293b }
     .leyenda-cal { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px }
     .leyenda-cal span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #5f6c80 }
     .leyenda-cal i { width: 11px; height: 11px; border-radius: 3px; border: 1px solid #e6e9ee }
@@ -303,13 +311,15 @@ function textoHorario(dias: DiaBase[]): string {
               <b>{{ d.nombre }}</b><strong>{{ hhmm(d.entrada) }} – {{ hhmm(d.salida) }}</strong><small>{{ duracionBase(d.minutosJornada) }}</small>
             </div>
           }
-          <div class="dia-base libre"><b>Sábado</b><strong>Sin horario fijo</strong><small>opcional</small></div>
+          @if (conSabado()) {
+            <div class="dia-base libre"><b>Sábado</b><strong>Sin hora de entrada</strong><small>hasta la 1 p. m. · opcional</small></div>
+          }
         </div>
         @if (baseProgramada(); as prog) {
           <p class="programada">{{ prog }}</p>
         }
         <div class="pie-base">
-          <p>El almuerzo no cuenta como trabajado. El sábado no tiene horario fijo: se usa para completar o recuperar.</p>
+          <p>El almuerzo no cuenta como trabajado. 48 h por semana como máximo: lo que pase no cuenta. En CASTIGO el sábado es opcional, sin hora de entrada y hasta la 1 p. m.</p>
           <button type="button" [class]="estilos.botonChico" (click)="abrirBase()" [disabled]="!base()">
             <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             Editar
@@ -317,6 +327,59 @@ function textoHorario(dias: DiaBase[]): string {
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- INGRESO Y CESE: antes del ingreso y después del cese no hay faltas. -->
+    <div class="px-7 pb-2 pt-3">
+      <div class="aparecer">
+        <div class="fila-seccion">
+          <div class="flex items-baseline gap-2.5">
+            <h2 class="titulo-seccion !m-0">Ingreso y cese</h2>
+            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaPersonal() }}</span>
+          </div>
+        </div>
+        <div [class]="estilos.panel">
+          <table class="tabla-personal w-full border-collapse">
+            <caption class="sr-only">Fecha de ingreso y de cese de cada asesor</caption>
+            <thead>
+              <tr class="border-b border-[#e6e9ee] dark:border-slate-800">
+                <th scope="col" [class]="estilos.th">Asesor</th>
+                <th scope="col" [class]="estilos.th">Usuario</th>
+                <th scope="col" [class]="estilos.th">Subcartera</th>
+                <th scope="col" [class]="estilos.th">Fecha de ingreso</th>
+                <th scope="col" [class]="estilos.th">Fecha de cese</th>
+                <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of personal(); track p.idUsuario) {
+                <tr>
+                  <td [class]="estilos.td + ' font-semibold'">
+                    {{ p.nombre }}@if (cesado(p)) {<span [class]="PASTILLA.neutro + ' ml-2'">Cesado</span>}
+                  </td>
+                  <td [class]="estilos.td + ' secundario'">{{ p.usuario }}</td>
+                  <td [class]="estilos.td">{{ p.subcartera ?? '—' }}</td>
+                  <td [class]="estilos.td">
+                    {{ fechaCompleta(p.fechaIngreso) }}<span class="sub-celda">{{ p.ingresoCorregido ? 'Corregida' : 'Creación del usuario' }}</span>
+                  </td>
+                  <td [class]="estilos.td">
+                    @if (p.fechaCese) { {{ fechaCompleta(p.fechaCese) }} } @else { <span class="text-[#8491a3]">—</span> }
+                  </td>
+                  <td [class]="estilos.td + ' celda-accion'">
+                    <button type="button" [class]="estilos.botonChico" (click)="abrirPersonal(p)">
+                      <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" [class]="estilos.td + ' py-8 text-center text-[#5f6c80]'">Sin asesores en este ámbito</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="pie-personal">Antes del ingreso y después del cese no hay faltas. El ingreso es la fecha de creación del usuario hasta que se corrige.</p>
+      </div>
     </div>
 
     <!-- CALENDARIO -->
@@ -517,10 +580,12 @@ function textoHorario(dias: DiaBase[]): string {
                       <td [class]="estilos.td + ' font-bold'">{{ sumaBase().jornadas[i] === null ? '—' : duracionBase(sumaBase().jornadas[i] ?? 0) }}</td>
                     </tr>
                   }
-                  <tr>
-                    <td [class]="estilos.td"><strong>Sábado</strong></td>
-                    <td [class]="estilos.td + ' secundario'" colspan="3">Sin horario fijo</td>
-                  </tr>
+                  @if (conSabado()) {
+                    <tr>
+                      <td [class]="estilos.td"><strong>Sábado</strong></td>
+                      <td [class]="estilos.td + ' secundario'" colspan="3">Sin hora de entrada; cuenta hasta la 1 p. m. y es opcional</td>
+                    </tr>
+                  }
                 </tbody>
               </table>
             </div>
@@ -544,6 +609,61 @@ function textoHorario(dias: DiaBase[]): string {
             <button type="button" [class]="estilos.botonSecundario" (click)="cerrarBase()">Cancelar</button>
             <button type="button" [class]="estilos.botonPrimario" (click)="guardarBase()"
                     [disabled]="guardando() || !sumaBase().ok">Guardar</button>
+          </footer>
+        </div>
+      </div>
+    }
+
+    <!-- Corregir el ingreso o el cese de un asesor, con su motivo -->
+    @if (formPersonal(); as p) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarPersonal()"></div>
+      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,440px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-personal">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 id="titulo-personal" class="!m-0 text-[15px] font-extrabold">Editar ingreso y cese</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ p.nombre }} · {{ p.usuario }}</p>
+            </div>
+            <button type="button" [class]="estilos.botonIcono" (click)="cerrarPersonal()" aria-label="Cerrar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </header>
+
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div class="flex gap-3">
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="ic-ingreso">Fecha de ingreso</label>
+                <input id="ic-ingreso" type="date" [class]="estilos.campo"
+                       [ngModel]="personalIngreso()" (ngModelChange)="personalIngreso.set($event); errorPersonal.set('')">
+              </div>
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="ic-cese">Fecha de cese</label>
+                <input id="ic-cese" type="date" [class]="estilos.campo"
+                       [ngModel]="personalCese()" (ngModelChange)="personalCese.set($event); errorPersonal.set('')">
+              </div>
+            </div>
+            <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">
+              Creación del usuario: {{ fechaCompleta(p.fechaCreacion) }}. El cese va vacío mientras siga trabajando.
+            </p>
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="ic-motivo">Motivo</label>
+              <input id="ic-motivo" type="text" maxlength="300" [class]="estilos.campo"
+                     placeholder="Ej.: empezó el lunes; el usuario se creó antes"
+                     aria-describedby="error-ic-motivo"
+                     [ngModel]="personalMotivo()" (ngModelChange)="personalMotivo.set($event); faltaMotivoPersonal.set(false)">
+              @if (faltaMotivoPersonal()) {
+                <p id="error-ic-motivo" class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">Escribe el motivo: queda en la Auditoría</p>
+              }
+            </div>
+            @if (errorPersonal()) {
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ errorPersonal() }}</p>
+            }
+          </div>
+
+          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarPersonal()">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="guardarPersonal()" [disabled]="guardando()">Guardar</button>
           </footer>
         </div>
       </div>
@@ -815,6 +935,8 @@ export class AsistenciaConfiguracionComponent {
   readonly idSubcartera = input<number | null>(null);
   /** El nombre de la subcartera elegida, para decir a quién alcanza un cambio. */
   readonly subcartera = input<string | null>(null);
+  /** El sábado solo es de CASTIGO: opcional, sin hora de entrada y hasta la 1 p. m. */
+  readonly conSabado = computed(() => (this.subcartera() ?? '').trim().toUpperCase() === 'CASTIGO');
 
   /** El horario que rige cada día (subcartera o empresa): marca los fines de semana y el costo de un día. */
   readonly horarios = signal<Horario[]>([]);
@@ -840,6 +962,21 @@ export class AsistenciaConfiguracionComponent {
   readonly faltaMotivoBase = signal(false);
   readonly errorBase = signal('');
   protected readonly duracionBase = duracionBase;
+
+  /** Ingreso y cese: los asesores del ámbito, también los que cesaron, con sus fechas. */
+  readonly personal = signal<PersonalAsistencia[]>([]);
+  /** La persona cuyo ingreso o cese se está corrigiendo. */
+  readonly formPersonal = signal<PersonalAsistencia | null>(null);
+  readonly personalIngreso = signal('');
+  readonly personalCese = signal('');
+  readonly personalMotivo = signal('');
+  readonly faltaMotivoPersonal = signal(false);
+  readonly errorPersonal = signal('');
+  readonly cuentaPersonal = computed(() => {
+    const n = this.personal().length;
+    const cesados = this.personal().filter(p => this.cesado(p)).length;
+    return `${n} ${n === 1 ? 'asesor' : 'asesores'}` + (cesados ? ` · ${cesados} ${cesados === 1 ? 'cesado' : 'cesados'}` : '');
+  });
 
   /** La regla que se está cambiando. */
   readonly regla = signal<Regla | null>(null);
@@ -1097,6 +1234,7 @@ export class AsistenciaConfiguracionComponent {
     effect(() => {
       const ambito = this.idSubcartera();
       this.cargarHorarios(ambito);
+      this.cargarPersonal(ambito);
     });
     effect(() => {
       const ambito = this.idSubcartera();
@@ -1152,6 +1290,76 @@ export class AsistenciaConfiguracionComponent {
     this.servicio.horarioBase(idSubcartera).subscribe({
       next: b => this.base.set(b),
       error: () => this.toast.error('No se pudo cargar el horario base')
+    });
+  }
+
+  private cargarPersonal(idSubcartera: number | null): void {
+    this.servicio.personal(idSubcartera).subscribe({
+      next: p => this.personal.set(p),
+      error: () => this.toast.error('No se pudo cargar el ingreso y cese')
+    });
+  }
+
+  // ---------- Ingreso y cese ----------
+
+  /** Ya pasó su último día. */
+  cesado(p: PersonalAsistencia): boolean {
+    return !!p.fechaCese && p.fechaCese < hoy();
+  }
+
+  /** «16/09/2026». */
+  fechaCompleta(iso: string | null): string {
+    return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—';
+  }
+
+  abrirPersonal(p: PersonalAsistencia): void {
+    this.formPersonal.set(p);
+    this.personalIngreso.set(p.fechaIngreso ?? '');
+    this.personalCese.set(p.fechaCese ?? '');
+    this.personalMotivo.set('');
+    this.faltaMotivoPersonal.set(false);
+    this.errorPersonal.set('');
+    setTimeout(() => document.getElementById('ic-ingreso')?.focus());
+  }
+
+  cerrarPersonal(): void {
+    this.formPersonal.set(null);
+  }
+
+  /** Guarda las dos fechas con su motivo; queda en la Auditoría y el reporte lo toma al volver a él. */
+  guardarPersonal(): void {
+    const p = this.formPersonal();
+    if (!p) {
+      return;
+    }
+    const ingreso = this.personalIngreso();
+    const cese = this.personalCese() || null;
+    const error = !ingreso ? 'Pon la fecha de ingreso'
+      : cese && cese < ingreso ? 'El cese no puede ser antes del ingreso'
+      : ingreso === p.fechaIngreso && cese === p.fechaCese ? 'No se cambió ninguna fecha' : '';
+    this.errorPersonal.set(error);
+    if (error) {
+      return;
+    }
+    const motivo = this.personalMotivo().trim();
+    if (!motivo) {
+      this.faltaMotivoPersonal.set(true);
+      document.getElementById('ic-motivo')?.focus();
+      return;
+    }
+    this.guardando.set(true);
+    this.servicio.guardarPersonal(p.idUsuario, { fechaIngreso: ingreso, fechaCese: cese, motivo }).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.cerrarPersonal();
+        const [a, b] = p.nombre.split(' ');
+        this.toast.success(`Fechas de ${b ? `${a} ${b[0]}.` : a} guardadas`);
+        this.cargarPersonal(this.idSubcartera());
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.errorPersonal.set(respuesta?.error?.error ?? 'No se pudo guardar');
+      }
     });
   }
 
