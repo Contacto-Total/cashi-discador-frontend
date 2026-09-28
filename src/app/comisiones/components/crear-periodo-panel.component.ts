@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, afterNextRender, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ComisionesService } from '../services/comisiones.service';
 import { Cartera, Inquilino, ReportePeriodo, Subcartera, TipoMetrica } from '../models/comision.model';
@@ -8,128 +8,105 @@ import { CmxIconComponent } from './cmx-icon.component';
 /**
  * Panel lateral para crear un período de comisiones.
  * La meta no se escribe: sale de la meta INTERNA del reporte de producción.
- * Si la subcartera tuvo un período antes, se copian sus tramos y roles.
+ * Lo demás se copia de la configuración de la subcartera o, si no tiene, de su período anterior.
  */
 @Component({
   selector: 'cmx-crear-periodo-panel',
   standalone: true,
   imports: [FormsModule, CmxIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown.escape)': 'salir()' },
   template: `
-    <div class="cmx-overlay" (click)="cerrar.emit()"></div>
-    <section class="cmx-panel" role="dialog" aria-modal="true" aria-labelledby="cmx-crear-titulo"
-             (keydown.escape)="cerrar.emit()">
-      <header class="cmx-panel-head">
-        <div class="flex-1">
-          <span class="cmx-eyebrow">Nuevo período</span>
-          <h2 id="cmx-crear-titulo" class="cmx-h2 mt-3">Abrir comisiones de una subcartera</h2>
-          <p class="cmx-muted text-sm mt-1 max-w-[52ch]">
-            La meta se toma de la meta interna del reporte de producción. Si la subcartera tuvo un período antes,
-            se copian sus tramos y roles.
-          </p>
+    <div class="cmx-scrim" [class.is-closing]="cerrando()" (click)="salir()"></div>
+    <section class="cmx-drawer" [class.is-closing]="cerrando()" role="dialog" aria-modal="true" aria-labelledby="cmx-crear-nm">
+      <div class="cmx-dh">
+        <div>
+          <div class="cmx-eyebrow">Nuevo período</div>
+          <div id="cmx-crear-nm" class="cmx-nm">Abrir comisiones de una subcartera</div>
+          <div class="cmx-mt">
+            La meta sale de la meta interna del reporte de producción. Lo demás se copia de la configuración de la
+            subcartera o, si no tiene, de su período anterior.
+          </div>
         </div>
-        <button type="button" class="cmx-icon-btn" (click)="cerrar.emit()" aria-label="Cerrar panel">
-          <cmx-icon name="x" />
+        <button type="button" class="cmx-icon-btn" (click)="salir()" aria-label="Cerrar" #cerrarBtn>
+          <cmx-icon name="x" [size]="17" />
         </button>
-      </header>
-
-      <div class="cmx-panel-body">
-        <form class="flex flex-col gap-6" (ngSubmit)="crear()" id="cmx-form-crear">
-          <fieldset class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <legend class="cmx-label mb-2 col-span-full">Período</legend>
-            <label class="flex flex-col gap-1.5">
-              <span class="cmx-label">Mes</span>
-              <select class="cmx-select" name="mes" [ngModel]="mes()" (ngModelChange)="mes.set($event)">
-                @for (m of meses; track $index) {
-                  <option [ngValue]="$index + 1">{{ m }}</option>
-                }
-              </select>
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="cmx-label">Año</span>
-              <input class="cmx-input cmx-input-num" type="number" name="anio" min="2024" max="2100"
-                     [ngModel]="anio()" (ngModelChange)="anio.set(+$event)" />
-            </label>
-          </fieldset>
-
-          <fieldset class="flex flex-col gap-4">
-            <legend class="cmx-label mb-2">Subcartera</legend>
-            <label class="flex flex-col gap-1.5">
-              <span class="cmx-label">Proveedor</span>
-              <select class="cmx-select" name="inquilino" [ngModel]="idInquilino()" (ngModelChange)="elegirInquilino($event)">
-                <option [ngValue]="null">Elige un proveedor</option>
-                @for (i of inquilinos(); track i.id) {
-                  <option [ngValue]="i.id">{{ i.nombreInquilino }}</option>
-                }
-              </select>
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="cmx-label">Cartera</span>
-              <select class="cmx-select" name="cartera" [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
-                      [disabled]="!carteras().length">
-                <option [ngValue]="null">{{ idInquilino() ? 'Elige una cartera' : 'Primero elige el proveedor' }}</option>
-                @for (c of carteras(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.nombreCartera }}</option>
-                }
-              </select>
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="cmx-label">Subcartera</span>
-              <select class="cmx-select" name="subcartera" [ngModel]="idSubcartera()" (ngModelChange)="idSubcartera.set($event)"
-                      [disabled]="!subcarteras().length">
-                <option [ngValue]="null">{{ idCartera() ? 'Elige una subcartera' : 'Primero elige la cartera' }}</option>
-                @for (s of subcarteras(); track s.id) {
-                  <option [ngValue]="s.id" [disabled]="yaExiste(s.id)">
-                    {{ s.nombreSubcartera }}{{ yaExiste(s.id) ? ' · ya tiene período' : '' }}
-                  </option>
-                }
-              </select>
-            </label>
-          </fieldset>
-
-          <fieldset class="flex flex-col gap-3">
-            <legend class="cmx-label mb-2">Qué se mide contra la meta</legend>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Métrica">
-              @for (t of metricas; track t) {
-                <button type="button" role="radio" [attr.aria-checked]="tipo() === t" (click)="tipo.set(t)"
-                        class="text-left rounded-2xl p-4 transition-[box-shadow,background-color] duration-300 cursor-pointer"
-                        [style.box-shadow]="tipo() === t ? 'inset 0 0 0 1.5px var(--cmx-brand-2), 0 0 0 4px var(--cmx-brand-soft)' : 'inset 0 0 0 1px var(--cmx-line-strong)'"
-                        [style.background]="tipo() === t ? 'var(--cmx-surface)' : 'var(--cmx-soft)'">
-                  <span class="flex items-center justify-between gap-2">
-                    <span class="font-semibold text-[0.9rem]">{{ metricaInfo[t].etiqueta }}</span>
-                    @if (tipo() === t) {
-                      <span class="cmx-tag cmx-tag-brand"><cmx-icon name="check" [size]="12" /> Elegida</span>
-                    }
-                  </span>
-                  <span class="block cmx-muted text-[0.8rem] mt-1.5 leading-snug">{{ metricaInfo[t].descripcion }}</span>
-                </button>
-              }
-            </div>
-            <p class="cmx-muted text-[0.78rem]">T3 se mide por contención; Castigo, Propia y T5 por recaudo.</p>
-          </fieldset>
-
-          @if (error()) {
-            <div class="cmx-banner" role="alert">
-              <cmx-icon name="alert" />
-              <span>{{ error() }}</span>
-            </div>
-          }
-        </form>
       </div>
 
-      <footer class="cmx-panel-foot">
-        <button type="button" class="cmx-btn cmx-btn-ghost" (click)="cerrar.emit()">Cancelar</button>
-        <button type="submit" form="cmx-form-crear" class="cmx-btn cmx-btn-primary" [disabled]="!valido() || guardando()">
-          {{ guardando() ? 'Creando…' : 'Crear período de ' + nombreMes(mes()) }}
-          <span class="cmx-orb">
-            @if (guardando()) {
-              <cmx-icon name="refresh" [size]="15" class="cmx-spin" />
-            } @else {
-              <cmx-icon name="arrow-up-right" [size]="15" />
+      <form class="cmx-db" style="display:grid;gap:16px;align-content:start" (ngSubmit)="crear()" id="cmx-form-crear">
+        <div class="cmx-grid2 cmx-enter">
+          <div class="cmx-field">
+            <label for="cmx-n-mes">Mes</label>
+            <select id="cmx-n-mes" name="mes" [ngModel]="mes()" (ngModelChange)="mes.set($event)">
+              @for (m of meses; track $index) { <option [ngValue]="$index + 1">{{ m }}</option> }
+            </select>
+          </div>
+          <div class="cmx-field">
+            <label for="cmx-n-anio">Año</label>
+            <input id="cmx-n-anio" class="cmx-num" type="number" name="anio" min="2024" max="2100"
+                   [ngModel]="anio()" (ngModelChange)="anio.set(+$event)" />
+          </div>
+        </div>
+
+        <div class="cmx-field cmx-enter" style="--i:1">
+          <label for="cmx-n-prov">Proveedor</label>
+          <select id="cmx-n-prov" name="inquilino" [ngModel]="idInquilino()" (ngModelChange)="elegirInquilino($event)">
+            <option [ngValue]="null">Elige un proveedor</option>
+            @for (i of inquilinos(); track i.id) { <option [ngValue]="i.id">{{ i.nombreInquilino }}</option> }
+          </select>
+        </div>
+
+        <div class="cmx-grid2 cmx-enter" style="--i:2">
+          <div class="cmx-field">
+            <label for="cmx-n-car">Cartera</label>
+            <select id="cmx-n-car" name="cartera" [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)" [disabled]="!carteras().length">
+              <option [ngValue]="null">{{ idInquilino() ? 'Elige una cartera' : 'Primero el proveedor' }}</option>
+              @for (c of carteras(); track c.id) { <option [ngValue]="c.id">{{ c.nombreCartera }}</option> }
+            </select>
+          </div>
+          <div class="cmx-field">
+            <label for="cmx-n-sub">Subcartera</label>
+            <select id="cmx-n-sub" name="subcartera" [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)" [disabled]="!subcarteras().length">
+              <option [ngValue]="null">{{ idCartera() ? 'Elige una subcartera' : 'Primero la cartera' }}</option>
+              @for (s of subcarteras(); track s.id) {
+                <option [ngValue]="s.id" [disabled]="yaExiste(s.id)">{{ s.nombreSubcartera }}{{ yaExiste(s.id) ? ' · ya tiene período' : '' }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-enter" style="--i:3">
+          <div class="cmx-field"><span class="cmx-field-l" id="cmx-n-met">Se mide por</span></div>
+          <div class="cmx-grid2" style="margin-top:6px" role="radiogroup" aria-labelledby="cmx-n-met">
+            @for (t of metricas; track t) {
+              <button type="button" class="cmx-metric" role="radio" [attr.aria-checked]="tipo() === t" (click)="tipo.set(t)">
+                <b>{{ metricaInfo[t].etiqueta }}</b>
+                <span>{{ metricaInfo[t].descripcion }}</span>
+              </button>
             }
-          </span>
+          </div>
+          <p class="cmx-mt" style="margin-top:6px">T3 se mide por contención; Castigo, Propia y T5 por recaudo.</p>
+        </div>
+
+        @if (origen(); as o) {
+          <div class="cmx-rule is-info cmx-enter" style="margin:0">
+            <div class="cmx-rule-head"><span class="cmx-rule-title">{{ o.titulo }}</span></div>
+            <div class="cmx-rule-desc">{{ o.detalle }}</div>
+          </div>
+        }
+
+        @if (error()) {
+          <div class="cmx-warnbox" role="alert" style="margin:0">{{ error() }}</div>
+        }
+      </form>
+
+      <div class="cmx-df">
+        <button type="button" class="cmx-btn cmx-btn-sec" (click)="salir()">Cancelar</button>
+        <button type="submit" form="cmx-form-crear" class="cmx-btn cmx-btn-act" [disabled]="!valido() || guardando()">
+          @if (guardando()) { <cmx-icon name="refresh" [size]="15" class="cmx-spin" /> Creando… }
+          @else { <cmx-icon name="plus" [size]="15" /> Crear período de {{ nombreMes(mes()).toLowerCase() }} }
         </button>
-      </footer>
+      </div>
     </section>
   `
 })
@@ -161,10 +138,19 @@ export class CrearPeriodoPanelComponent implements OnInit {
   readonly tipo = signal<TipoMetrica>('RECAUDO');
   readonly guardando = signal(false);
   readonly error = signal<string | null>(null);
+  readonly cerrando = signal(false);
+  /** De dónde se copiará la configuración del período nuevo */
+  readonly origen = signal<{ titulo: string; detalle: string } | null>(null);
+
+  private readonly cerrarBtn = viewChild<ElementRef<HTMLButtonElement>>('cerrarBtn');
 
   readonly valido = computed(() =>
     this.idSubcartera() != null && this.mes() >= 1 && this.mes() <= 12 && this.anio() >= 2024
   );
+
+  constructor() {
+    afterNextRender(() => this.cerrarBtn()?.nativeElement.focus());
+  }
 
   ngOnInit(): void {
     this.anio.set(this.anioInicial());
@@ -183,7 +169,7 @@ export class CrearPeriodoPanelComponent implements OnInit {
   elegirInquilino(id: number | null): void {
     this.idInquilino.set(id);
     this.idCartera.set(null);
-    this.idSubcartera.set(null);
+    this.elegirSubcartera(null);
     this.carteras.set([]);
     this.subcarteras.set([]);
     if (id != null) {
@@ -196,7 +182,7 @@ export class CrearPeriodoPanelComponent implements OnInit {
 
   elegirCartera(id: number | null): void {
     this.idCartera.set(id);
-    this.idSubcartera.set(null);
+    this.elegirSubcartera(null);
     this.subcarteras.set([]);
     if (id != null) {
       this.service.obtenerSubcarteras(id).subscribe({
@@ -204,6 +190,39 @@ export class CrearPeriodoPanelComponent implements OnInit {
         error: e => this.error.set(mensajeError(e, 'No se pudieron cargar las subcarteras.'))
       });
     }
+  }
+
+  elegirSubcartera(id: number | null): void {
+    this.idSubcartera.set(id);
+    this.origen.set(null);
+    if (id == null) {
+      return;
+    }
+    this.service.obtenerPlantilla(id).subscribe({
+      next: pl => {
+        if (this.idSubcartera() !== id) {
+          return;
+        }
+        this.tipo.set(pl.tipoMetrica);
+        if (pl.existe) {
+          this.origen.set({
+            titulo: 'Tiene configuración de subcartera',
+            detalle: 'Se copian su métrica, roles, tramos, división de la meta y usuarios excluidos.'
+          });
+        } else if (pl.periodos.length) {
+          const ultimo = pl.periodos[0];
+          this.origen.set({
+            titulo: 'Sin configuración de subcartera',
+            detalle: `Se copia lo de ${nombreMes(ultimo.mes).toLowerCase()} ${ultimo.anio}, su último período.`
+          });
+        } else {
+          this.origen.set({
+            titulo: 'Primer período de la subcartera',
+            detalle: 'No hay nada que copiar: después elige roles y tramos, o arma antes la configuración de la subcartera.'
+          });
+        }
+      }
+    });
   }
 
   crear(): void {
@@ -228,5 +247,14 @@ export class CrearPeriodoPanelComponent implements OnInit {
         this.error.set(mensajeError(e, 'No se pudo crear el período.'));
       }
     });
+  }
+
+  /** Sale con la animación del panel y luego avisa */
+  salir(): void {
+    if (this.cerrando() || this.guardando()) {
+      return;
+    }
+    this.cerrando.set(true);
+    setTimeout(() => this.cerrar.emit(), 340);
   }
 }

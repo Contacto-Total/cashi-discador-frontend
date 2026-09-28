@@ -38,11 +38,14 @@ export interface Subcartera {
 
 // ==================== PERÍODOS DE COMISIÓN ====================
 
-/** Qué se mide contra la meta: recaudo conciliado o contención (T3) */
+/** Qué se mide contra la meta: recaudo conciliado o recaudo de clientes contenidos (T3) */
 export type TipoMetrica = 'RECAUDO' | 'CONTENCION';
 
-/** EN_CURSO → REVISADO → CERRADO (REVISADO puede volver a EN_CURSO) */
-export type EstadoPeriodo = 'EN_CURSO' | 'REVISADO' | 'CERRADO';
+/**
+ * EN_CURSO → EN_REVISION → REVISADO → APROBADO.
+ * EN_REVISION puede volver a EN_CURSO y REVISADO a EN_REVISION. APROBADO es final.
+ */
+export type EstadoPeriodo = 'EN_CURSO' | 'EN_REVISION' | 'REVISADO' | 'APROBADO';
 
 export type RolComision = 'ASESOR' | 'SUPERVISOR';
 
@@ -50,8 +53,10 @@ export type RolComision = 'ASESOR' | 'SUPERVISOR';
 export type MotivoExclusion =
   | 'PAGO_SISTEMA'
   | 'SUPERVISOR_NO_ASIGNA'
+  | 'USUARIO_EXCLUIDO'
   | 'AGENTE_NO_PARTICIPANTE'
-  | 'PARTICIPANTE_QUITADO';
+  | 'PARTICIPANTE_QUITADO'
+  | 'NO_CONTENIDO';
 
 export type AccionAuditoria =
   | 'CREAR_PERIODO'
@@ -59,7 +64,23 @@ export type AccionAuditoria =
   | 'EDITAR_TRAMOS'
   | 'EDITAR_PARTICIPANTE'
   | 'CALCULAR'
-  | 'CAMBIAR_ESTADO';
+  | 'CAMBIAR_ESTADO'
+  | 'EDITAR_PLANTILLA';
+
+/** AUTO: la meta se divide entre los asesores no quitados. FIJO: entre asesoresFijos */
+export type DivisionMeta = 'AUTO' | 'FIJO';
+
+/** Usuario cuyas promesas y pagos no comisionan */
+export interface ExcluidoComision {
+  idUsuario: number;
+  nombre: string | null;
+}
+
+/** Usuario de Cashi para el selector de excluidos */
+export interface UsuarioCashi {
+  idUsuario: number;
+  nombre: string | null;
+}
 
 /** Tramo: aplica desde que el cumplimiento llega a porcentajeDesde. El "hasta" es el desde del siguiente. */
 export interface EscalaComision {
@@ -93,14 +114,49 @@ export interface PeriodoComision {
   /** Meta INTERNA del reporte de producción */
   metaGrupal: number;
   estado: EstadoPeriodo;
+  enviadoRevisionPorNombre?: string | null;
+  fechaEnvioRevision?: string | null;
   revisadoPorNombre?: string | null;
   fechaRevision?: string | null;
-  cerradoPorNombre?: string | null;
-  fechaCierre?: string | null;
-  /** null = hay que (re)calcular porque cambió la configuración */
+  aprobadoPorNombre?: string | null;
+  fechaAprobacion?: string | null;
+  /** Último cálculo; null si no se pudo calcular (sin meta, sin participantes, dos supervisores) */
   fechaCalculo?: string | null;
+  /** Suma de comisiones de los participantes no quitados */
+  totalComisiones: number;
   escalas: EscalaComision[];
   roles: RolElegido[];
+  divisionMeta: DivisionMeta;
+  asesoresFijos: number | null;
+  excluidos: ExcluidoComision[];
+}
+
+export interface PeriodoResumen {
+  id: number;
+  anio: number;
+  mes: number;
+  estado: EstadoPeriodo;
+}
+
+/** Configuración de comisiones de una subcartera: se copia a cada período nuevo */
+export interface PlantillaSubcartera {
+  idSubcartera: number;
+  nombreSubcartera: string | null;
+  /** false = aún no tiene: los datos vienen de su último período (o vacíos) */
+  existe: boolean;
+  tipoMetrica: TipoMetrica;
+  divisionMeta: DivisionMeta;
+  asesoresFijos: number | null;
+  escalas: EscalaComision[];
+  roles: RolElegido[];
+  excluidos: ExcluidoComision[];
+  /** Usuarios de sistema, siempre excluidos */
+  excluidosSistema: ExcluidoComision[];
+  actualizadoPorNombre: string | null;
+  fechaActualizacion: string | null;
+  periodos: PeriodoResumen[];
+  /** Al guardar: aplicar también al período en curso */
+  aplicarEnCurso: boolean;
 }
 
 export interface ParticipanteComision {
@@ -122,7 +178,7 @@ export interface ReportePeriodo {
   periodo: PeriodoComision;
   participantes: ParticipanteComision[];
   totalComisiones: number;
-  /** Solo llega lleno en la respuesta de calcular */
+  /** Avisos del cálculo que acaba de hacerse (vacío en las consultas) */
   advertencias: string[];
 }
 
@@ -137,8 +193,8 @@ export interface PagoSustento {
   idAgenteGestion: number;
   nombreAgenteGestion: string | null;
   montoAplicado: number;
+  /** Solo CONTENCION: marca de la tabla dinámica */
   contencion: string | null;
-  capitalAsignado: number | null;
   /** null = el pago suma */
   motivoExclusion: MotivoExclusion | null;
 }
@@ -148,6 +204,35 @@ export interface SustentoPeriodo {
   /** null = sustento de toda la subcartera */
   participante: ParticipanteComision | null;
   pagos: PagoSustento[];
+}
+
+/**
+ * Fila de comision_detalle: un pago que suma a un asesor y cómo va el asesor hasta ese pago.
+ * RECAUDO llena recaudo y recaudoAcumulado; CONTENCION (T3) llena las de contenido.
+ */
+export interface DetalleComision {
+  idResultado: number;
+  conciliacionId: number;
+  idTenant: number;
+  idCartera: number;
+  idSubcartera: number;
+  nombreSubcartera: string | null;
+  idUsuario: number;
+  nombreAsesor: string | null;
+  idGestion: number;
+  fechaGestion: string;
+  numeroCuota: number;
+  fechaVencimientoCuota: string;
+  /** Último pago que informa el banco o Financiera OH: decide el mes y el orden */
+  fechaBanco: string;
+  fechaAprobacionConciliacion: string;
+  recaudo: number | null;
+  recaudoContenido: number | null;
+  recaudoAcumulado: number | null;
+  recaudoContenidoAcumulado: number | null;
+  metaAsesor: number | null;
+  porcentajeAcumulado: number | null;
+  comisionAlcanzada: number;
 }
 
 export interface AuditoriaComision {
@@ -167,21 +252,4 @@ export interface CrearPeriodoRequest {
   anio: number;
   mes: number;
   tipoMetrica: TipoMetrica;
-}
-
-// ==================== BASE DE AJUSTE ====================
-
-export interface EstadisticasBaseAjuste {
-  total_registros: number;
-  total_envios: number;
-  total_asesores: number;
-  monto_total: number;
-  primer_envio: string | null;
-  ultimo_envio: string | null;
-}
-
-export interface EnvioBaseAjuste {
-  registrosAgregados: number;
-  fechaEnvio: string;
-  mensaje: string;
 }

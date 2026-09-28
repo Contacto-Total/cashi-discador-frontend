@@ -6,17 +6,18 @@ import {
   AuditoriaComision,
   Cartera,
   CrearPeriodoRequest,
-  EnvioBaseAjuste,
+  DetalleComision,
   EscalaComision,
-  EstadisticasBaseAjuste,
   EstadoPeriodo,
   Inquilino,
   PeriodoComision,
+  PlantillaSubcartera,
   ReportePeriodo,
   RolCashi,
   RolElegido,
   Subcartera,
-  SustentoPeriodo
+  SustentoPeriodo,
+  UsuarioCashi
 } from '../models/comision.model';
 
 @Injectable({
@@ -45,6 +46,24 @@ export class ComisionesService {
 
   obtenerJerarquiaSubcartera(idSubcartera: number): Observable<{ idInquilino: number; idCartera: number }> {
     return this.http.get<{ idInquilino: number; idCartera: number }>(`${this.baseUrl}/subcarteras/${idSubcartera}/jerarquia`);
+  }
+
+  // ==================== CONFIGURACIÓN DE LA SUBCARTERA ====================
+
+  obtenerPlantilla(idSubcartera: number): Observable<PlantillaSubcartera> {
+    return this.http.get<PlantillaSubcartera>(`${this.baseUrl}/subcarteras/${idSubcartera}/plantilla`);
+  }
+
+  guardarPlantilla(idSubcartera: number, plantilla: Partial<PlantillaSubcartera>): Observable<PlantillaSubcartera> {
+    return this.http.put<PlantillaSubcartera>(`${this.baseUrl}/subcarteras/${idSubcartera}/plantilla`, plantilla);
+  }
+
+  listarRolesSubcartera(idSubcartera: number): Observable<RolCashi[]> {
+    return this.http.get<RolCashi[]>(`${this.baseUrl}/subcarteras/${idSubcartera}/roles-disponibles`);
+  }
+
+  listarUsuariosSubcartera(idSubcartera: number): Observable<UsuarioCashi[]> {
+    return this.http.get<UsuarioCashi[]>(`${this.baseUrl}/subcarteras/${idSubcartera}/usuarios`);
   }
 
   // ==================== PERÍODOS ====================
@@ -83,8 +102,9 @@ export class ComisionesService {
     return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/quitado`, null, { params });
   }
 
-  calcular(id: number): Observable<ReportePeriodo> {
-    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/calcular`, null);
+  /** Recalcula a mano con los pagos de este momento (EN_CURSO o EN_REVISION) */
+  actualizar(id: number): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/actualizar`, null);
   }
 
   cambiarEstado(id: number, estado: EstadoPeriodo): Observable<ReportePeriodo> {
@@ -100,6 +120,15 @@ export class ComisionesService {
     return this.http.get<SustentoPeriodo>(`${this.baseUrl}/periodos/${id}/sustento`, { params });
   }
 
+  /** Detalle pago a pago; sin idResultado (o con el supervisor) trae el de todos los asesores */
+  obtenerDetalle(id: number, idResultado?: number): Observable<DetalleComision[]> {
+    let params = new HttpParams();
+    if (idResultado != null) {
+      params = params.set('idResultado', idResultado);
+    }
+    return this.http.get<DetalleComision[]>(`${this.baseUrl}/periodos/${id}/detalle`, { params });
+  }
+
   historial(id: number): Observable<AuditoriaComision[]> {
     return this.http.get<AuditoriaComision[]>(`${this.baseUrl}/periodos/${id}/historial`);
   }
@@ -110,34 +139,5 @@ export class ComisionesService {
 
   exportarExcelParticipante(id: number, idResultado: number): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/excel`, { responseType: 'blob' });
-  }
-
-  // ==================== BASE DE AJUSTE ====================
-
-  obtenerEstadisticasBaseAjuste(anio: number, mes: number, idSubcartera?: number | null): Observable<EstadisticasBaseAjuste> {
-    return this.http.get<EstadisticasBaseAjuste>(`${this.baseUrl}/base-ajuste/estadisticas`, {
-      params: this.paramsPeriodo(anio, mes, idSubcartera)
-    });
-  }
-
-  agregarEnvioBaseAjuste(anio: number, mes: number, idSubcartera?: number | null): Observable<EnvioBaseAjuste> {
-    return this.http.post<EnvioBaseAjuste>(`${this.baseUrl}/base-ajuste/agregar-envio`, null, {
-      params: this.paramsPeriodo(anio, mes, idSubcartera)
-    });
-  }
-
-  exportarBaseAjusteExcel(anio: number, mes: number, idSubcartera?: number | null): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/base-ajuste/exportar-excel`, {
-      params: this.paramsPeriodo(anio, mes, idSubcartera),
-      responseType: 'blob'
-    });
-  }
-
-  private paramsPeriodo(anio: number, mes: number, idSubcartera?: number | null): HttpParams {
-    let params = new HttpParams().set('anio', anio).set('mes', mes);
-    if (idSubcartera != null) {
-      params = params.set('idSubcartera', idSubcartera);
-    }
-    return params;
   }
 }
