@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, afterNextRender, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { MotivoExclusion, PagoSustento, ParticipanteComision, PeriodoComision } from '../models/comision.model';
@@ -23,123 +23,112 @@ import { CmxIconComponent } from './cmx-icon.component';
   standalone: true,
   imports: [AppNumberPipe, AppDatePipe, CmxIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown.escape)': 'salir()' },
   template: `
-    <div class="cmx-overlay" (click)="cerrar.emit()"></div>
-    <section class="cmx-panel cmx-panel-wide" role="dialog" aria-modal="true" aria-labelledby="cmx-sust-titulo"
-             (keydown.escape)="cerrar.emit()">
-      <header class="cmx-panel-head">
-        <div class="flex-1 min-w-0">
-          <span class="cmx-eyebrow">Sustento · {{ rolInfo[participante().rol] }}</span>
-          <h2 id="cmx-sust-titulo" class="text-[1.4rem] font-bold tracking-tight mt-3 leading-tight">{{ participante().nombre }}</h2>
-          <p class="cmx-muted text-[0.82rem] mt-1">
-            {{ periodo().nombreSubcartera }} · {{ nombreMes(periodo().mes) }} {{ periodo().anio }}
-            · se mide por {{ metrica().etiqueta.toLowerCase() }}
-          </p>
-        </div>
-        <button type="button" class="cmx-icon-btn" (click)="cerrar.emit()" aria-label="Cerrar sustento">
-          <cmx-icon name="x" />
-        </button>
-      </header>
-
-      <div class="cmx-panel-body">
-        @if (participante().quitado) {
-          <div class="cmx-banner mb-5" role="status">
-            <cmx-icon name="user-minus" />
-            <span>Fue quitado del período: no divide la meta ni comisiona. Sus pagos figuran abajo como «Asesor quitado».</span>
+    <div class="cmx-scrim" [class.is-closing]="cerrando()" (click)="salir()"></div>
+    <section class="cmx-drawer" [class.is-closing]="cerrando()" role="dialog" aria-modal="true" aria-labelledby="cmx-sust-nm">
+      <div class="cmx-dh">
+        <div style="min-width:0">
+          <div class="cmx-eyebrow">Sustento · {{ rolInfo[participante().rol].toLowerCase() }}</div>
+          <div id="cmx-sust-nm" class="cmx-nm">{{ participante().nombre }}</div>
+          <div class="cmx-mt">
+            {{ periodo().nombreSubcartera }} · {{ nombreMes(periodo().mes).toLowerCase() }} {{ periodo().anio }} ·
+            @if (participante().rol === 'ASESOR') { meta por asesor } @else { meta completa }
+            S/ {{ participante().metaIndividual ?? periodo().metaGrupal | appNumber:'1.2-2' }}
           </div>
+        </div>
+        <button type="button" class="cmx-icon-btn" (click)="salir()" aria-label="Cerrar sustento" #cerrarBtn>
+          <cmx-icon name="x" [size]="17" />
+        </button>
+      </div>
+
+      <div class="cmx-db">
+        @if (participante().quitado) {
+          <div class="cmx-hint" style="margin:0 0 14px">Fue quitado del período: no divide la meta ni comisiona. Sus pagos figuran abajo como «Asesor quitado».</div>
         }
 
-        <!-- Conceptos -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div class="rounded-2xl p-4" style="background: var(--cmx-brand-soft); color: var(--cmx-brand-ink)">
-            <span class="text-[0.66rem] font-bold tracking-[0.14em] uppercase">Comisión</span>
-            <div class="cmx-kpi-value mt-1" style="color: inherit"><small style="color: inherit; opacity: .7">S/</small>{{ participante().montoComision | appNumber:'1.2-2' }}</div>
+        <div class="cmx-conceptos">
+          <div class="cmx-cbox is-hi cmx-enter">
+            <div class="cmx-cbox-l">Comisión</div>
+            <div class="cmx-cbox-v">S/ {{ participante().montoComision | appNumber:'1.2-2' }}</div>
           </div>
-          <div class="rounded-2xl p-4" style="box-shadow: inset 0 0 0 1px var(--cmx-line-strong)">
-            <span class="cmx-label">Cumplimiento</span>
-            <div class="cmx-kpi-value mt-1">{{ participante().porcentajeCumplimiento != null ? (participante().porcentajeCumplimiento | appNumber:'1.1-2') + ' %' : '—' }}</div>
+          <div class="cmx-cbox cmx-enter" style="--i:1">
+            <div class="cmx-cbox-l">Cumplimiento</div>
+            <div class="cmx-cbox-v">{{ participante().porcentajeCumplimiento != null ? (participante().porcentajeCumplimiento | appNumber:'1.1-1') + ' %' : '—' }}</div>
           </div>
-          <div class="rounded-2xl p-4" style="box-shadow: inset 0 0 0 1px var(--cmx-line-strong)">
-            <span class="cmx-label">Tramo alcanzado</span>
-            <div class="cmx-kpi-value mt-1">{{ participante().porcentajeTramo != null ? 'desde ' + participante().porcentajeTramo + ' %' : 'ninguno' }}</div>
+          <div class="cmx-cbox cmx-enter" style="--i:2">
+            <div class="cmx-cbox-l">Tramo</div>
+            <div class="cmx-cbox-v">{{ participante().porcentajeTramo != null ? 'desde ' + participante().porcentajeTramo + ' %' : 'ninguno' }}</div>
           </div>
         </div>
 
-        <!-- Desglose -->
         @if (!participante().quitado) {
-          <div class="cmx-breakdown mt-5">
-            <div class="cmx-breakdown-row">
-              <span class="k">{{ metrica().logrado }}</span>
-              <span class="d">{{ descripcionLogrado() }}</span>
-              <span class="a cmx-num">S/ {{ participante().logrado | appNumber:'1.2-2' }}</span>
+          <div class="cmx-brk cmx-enter" style="--i:3">
+            <div class="cmx-brk-hdr">Comisión por cumplimiento de meta</div>
+            <div class="cmx-brk-r">
+              <span class="cmx-brk-k">{{ metrica().logrado }}</span>
+              <span class="cmx-brk-d">{{ descripcionLogrado() }}</span>
+              <span class="cmx-brk-a">S/ {{ participante().logrado | appNumber:'1.2-2' }}</span>
             </div>
-            <div class="cmx-breakdown-row">
-              <span class="k">Meta</span>
-              <span class="d">
+            <div class="cmx-brk-r">
+              <span class="cmx-brk-k">Meta</span>
+              <span class="cmx-brk-d">
                 @if (participante().rol === 'ASESOR') {
-                  S/ {{ periodo().metaGrupal | appNumber:'1.2-2' }} ÷ {{ n() }} {{ n() === 1 ? 'asesor' : 'asesores' }}, igual para todos
+                  S/ {{ periodo().metaGrupal | appNumber:'1.0-2' }} ÷ {{ n() }} {{ n() === 1 ? 'asesor' : 'asesores' }}, igual para todos
                 } @else {
-                  Meta completa de la subcartera (meta interna del reporte de producción)
+                  Meta interna completa de la subcartera
                 }
               </span>
-              <span class="a cmx-num">S/ {{ participante().metaIndividual | appNumber:'1.2-2' }}</span>
+              <span class="cmx-brk-a">S/ {{ participante().metaIndividual | appNumber:'1.2-2' }}</span>
             </div>
-            <div class="cmx-breakdown-row">
-              <span class="k">Cumplimiento</span>
-              <span class="d cmx-num">
-                {{ participante().logrado | appNumber:'1.0-2' }} ÷ {{ participante().metaIndividual | appNumber:'1.0-2' }}
-              </span>
-              <span class="a cmx-num">{{ participante().porcentajeCumplimiento | appNumber:'1.1-2' }} %</span>
+            <div class="cmx-brk-r">
+              <span class="cmx-brk-k">Cumplimiento</span>
+              <span class="cmx-brk-d cmx-num">{{ participante().logrado | appNumber:'1.0-2' }} ÷ {{ participante().metaIndividual | appNumber:'1.0-2' }}</span>
+              <span class="cmx-brk-a">{{ participante().porcentajeCumplimiento | appNumber:'1.1-2' }} %</span>
             </div>
-            <div class="cmx-breakdown-row is-total">
-              <span class="k">Comisión</span>
-              <span class="d">
+            <div class="cmx-brk-r is-sum">
+              <span class="cmx-brk-k">Comisión</span>
+              <span class="cmx-brk-d">
                 {{ participante().porcentajeTramo != null
                   ? 'Tramo desde ' + participante().porcentajeTramo + ' % de la tabla del ' + rolInfo[participante().rol].toLowerCase()
-                  : 'No llegó al primer tramo de la tabla del ' + rolInfo[participante().rol].toLowerCase() }}
+                  : 'No llegó al primer tramo' }}
               </span>
-              <span class="a cmx-num">S/ {{ participante().montoComision | appNumber:'1.2-2' }}</span>
+              <span class="cmx-brk-a">S/ {{ participante().montoComision | appNumber:'1.2-2' }}</span>
             </div>
           </div>
 
           @if (siguiente(); as s) {
-            <p class="mt-4 rounded-2xl p-4 text-[0.86rem] cmx-soft-text" style="background: var(--cmx-soft); box-shadow: inset 0 0 0 1px var(--cmx-line)">
-              <b style="color: var(--cmx-ink)">Le faltaron S/ {{ s.falta | appNumber:'1.2-2' }} para llegar al {{ s.desde }} %.</b>
+            <div class="cmx-say cmx-enter" style="--i:4">
+              <b>Le faltaron S/ {{ s.falta | appNumber:'1.2-2' }} para llegar al {{ s.desde }} %.</b>
               Con eso su comisión habría pasado de S/ {{ participante().montoComision | appNumber:'1.0-2' }} a S/ {{ s.monto | appNumber:'1.0-2' }}.
-            </p>
+            </div>
           } @else if (participante().porcentajeTramo != null) {
-            <p class="mt-4 text-[0.84rem]" style="color: var(--cmx-brand)">Está en el tramo más alto de la tabla.</p>
+            <div class="cmx-say cmx-enter" style="--i:4">
+              <b>Está en el tramo más alto de la tabla.</b> Lo que recaude de más no cambia la comisión.
+            </div>
           }
         }
 
-        <!-- Pagos -->
-        <section class="mt-7" aria-labelledby="cmx-sust-pagos">
-          <div class="flex flex-wrap items-baseline gap-3 mb-3">
-            <h3 id="cmx-sust-pagos" class="font-bold text-[0.92rem]">
-              {{ participante().rol === 'SUPERVISOR' ? 'Pagos de la subcartera' : 'Pagos de sus gestiones' }}
-            </h3>
-            <span class="cmx-muted text-[0.78rem] cmx-num">{{ pagos().length }} pagos · {{ sumanCount() }} suman</span>
+        <section class="cmx-block cmx-enter" style="--i:5;margin-top:16px" aria-labelledby="cmx-sust-pagos">
+          <div class="cmx-block-head">
+            <h3 id="cmx-sust-pagos" class="cmx-block-title">{{ participante().rol === 'SUPERVISOR' ? 'Pagos de la subcartera' : 'Pagos de sus gestiones' }}</h3>
+            <span class="cmx-block-extra">{{ pagos().length }} pagos · {{ sumanCount() }} suman</span>
           </div>
-
           @if (excluidos().length) {
-            <ul class="flex flex-col gap-2 mb-4">
+            <div class="cmx-block-body" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px">
               @for (e of excluidos(); track e.motivo) {
-                <li class="cmx-banner cmx-banner-neutral !py-2.5">
-                  <span class="cmx-tag cmx-tag-amber">{{ e.cantidad }}</span>
-                  <span><b>{{ motivos[e.motivo].etiqueta }}:</b> {{ motivos[e.motivo].descripcion }}</span>
-                </li>
+                <span class="cmx-tag cmx-tag-v" [attr.title]="motivos[e.motivo].descripcion">{{ e.cantidad }} · {{ motivos[e.motivo].etiqueta }}</span>
               }
-            </ul>
+            </div>
           }
-
           @if (cargando()) {
-            <div class="flex flex-col gap-2">
-              @for (i of [1, 2, 3, 4, 5]; track i) { <div class="cmx-skeleton h-11"></div> }
+            <div class="cmx-block-body" style="display:grid;gap:8px">
+              @for (i of [1, 2, 3, 4]; track i) { <div class="cmx-skel" style="height:36px"></div> }
             </div>
           } @else if (error()) {
-            <div class="cmx-banner" role="alert"><cmx-icon name="alert" /><span>{{ error() }}</span></div>
+            <div class="cmx-empty"><p>{{ error() }}</p></div>
           } @else {
-            <div class="cmx-table-wrap rounded-2xl" style="box-shadow: inset 0 0 0 1px var(--cmx-line)">
+            <div class="cmx-tw">
               <table class="cmx-table">
                 <thead>
                   <tr>
@@ -147,38 +136,26 @@ import { CmxIconComponent } from './cmx-icon.component';
                     <th scope="col">Cliente</th>
                     @if (participante().rol === 'SUPERVISOR') { <th scope="col">Asesor</th> }
                     <th scope="col" class="n">Monto</th>
-                    @if (conContencion()) { <th scope="col" class="n">Capital</th> }
                     <th scope="col">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (p of pagos(); track p.conciliacionId) {
                     <tr [class.is-muted]="p.motivoExclusion">
-                      <td class="cmx-num whitespace-nowrap">{{ p.fechaBanco | appDate }}</td>
-                      <td>
-                        <span class="font-semibold block">{{ p.nombreCliente || 'Sin nombre' }}</span>
-                        <span class="cmx-muted cmx-num text-[0.76rem]">{{ p.documentoCliente }} · op. {{ p.numeroOperacion || '—' }}</span>
-                      </td>
+                      <td class="cmx-num">{{ p.fechaBanco | appDate }}</td>
+                      <td class="who">{{ p.nombreCliente || 'Sin nombre' }}<span class="cmx-role cmx-num">{{ p.documentoCliente }} · op. {{ p.numeroOperacion || '—' }}</span></td>
                       @if (participante().rol === 'SUPERVISOR') { <td>{{ p.nombreAgenteGestion || '—' }}</td> }
-                      <td class="n font-semibold">{{ p.montoAplicado | appNumber:'1.2-2' }}</td>
-                      @if (conContencion()) {
-                        <td class="n">
-                          @if (p.contencion) {
-                            <span class="block">{{ p.capitalAsignado != null ? (p.capitalAsignado | appNumber:'1.2-2') : '—' }}</span>
-                            <span class="cmx-muted text-[0.72rem]">{{ p.contencion }}</span>
-                          } @else { <span class="cmx-muted">—</span> }
-                        </td>
-                      }
+                      <td class="n">{{ p.montoAplicado | appNumber:'1.2-2' }}</td>
                       <td>
                         @if (p.motivoExclusion) {
-                          <span class="cmx-tag cmx-tag-amber" [attr.title]="motivos[p.motivoExclusion].descripcion">{{ motivos[p.motivoExclusion].etiqueta }}</span>
+                          <span class="cmx-tag cmx-tag-v" [attr.title]="motivos[p.motivoExclusion].descripcion">{{ motivos[p.motivoExclusion].etiqueta }}</span>
                         } @else {
-                          <span class="cmx-tag cmx-tag-brand"><span class="cmx-dot"></span>Suma</span>
+                          <span class="cmx-tag cmx-tag-d">Suma</span>
                         }
                       </td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="6" class="text-center cmx-muted py-10 text-[0.86rem]">No tiene pagos conciliados en el mes.</td></tr>
+                    <tr><td colspan="5" class="empty">No tiene pagos conciliados en el mes.</td></tr>
                   }
                 </tbody>
               </table>
@@ -187,13 +164,12 @@ import { CmxIconComponent } from './cmx-icon.component';
         </section>
       </div>
 
-      <footer class="cmx-panel-foot">
-        <button type="button" class="cmx-btn cmx-btn-ghost" (click)="cerrar.emit()">Cerrar</button>
-        <button type="button" class="cmx-btn cmx-btn-primary" [disabled]="!periodo().fechaCalculo" (click)="descargar.emit(participante())">
-          Descargar sustento
-          <span class="cmx-orb"><cmx-icon name="download" [size]="15" /></span>
+      <div class="cmx-df">
+        <button type="button" class="cmx-btn cmx-btn-sec" (click)="salir()">Cerrar</button>
+        <button type="button" class="cmx-btn cmx-btn-act" [disabled]="!periodo().fechaCalculo" (click)="descargar.emit(participante())">
+          <cmx-icon name="download" [size]="15" /> Descargar sustento
         </button>
-      </footer>
+      </div>
     </section>
   `
 })
@@ -214,9 +190,10 @@ export class SustentoParticipantePanelComponent implements OnInit {
   readonly pagos = signal<PagoSustento[]>([]);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
+  readonly cerrando = signal(false);
+  private readonly cerrarBtn = viewChild<ElementRef<HTMLButtonElement>>('cerrarBtn');
 
   readonly metrica = computed(() => METRICA_INFO[this.periodo().tipoMetrica]);
-  readonly conContencion = computed(() => this.periodo().tipoMetrica === 'CONTENCION');
   readonly n = computed(() => asesoresActivos(this.participantes()));
   readonly sumanCount = computed(() => this.pagos().filter(p => !p.motivoExclusion).length);
 
@@ -232,18 +209,15 @@ export class SustentoParticipantePanelComponent implements OnInit {
 
   readonly descripcionLogrado = computed(() => {
     const periodo = this.periodo();
-    const suman = this.pagos().filter(p => !p.motivoExclusion);
     const mes = `${nombreMes(periodo.mes).toLowerCase()} ${periodo.anio}`;
     if (this.cargando()) {
       return 'Cargando pagos…';
     }
+    const suman = this.sumanCount();
     if (periodo.tipoMetrica === 'CONTENCION') {
-      const clientes = new Set(
-        suman.filter(p => (p.contencion ?? '').trim().toUpperCase() === 'CONTENIDO').map(p => (p.documentoCliente ?? '').trim())
-      );
-      return `${clientes.size} ${clientes.size === 1 ? 'cliente CONTENIDO' : 'clientes CONTENIDO'} con pago conciliado en ${mes}; su capital asignado cuenta una sola vez`;
+      return `${suman} ${suman === 1 ? 'pago' : 'pagos'} de clientes CONTENIDO con fecha de banco en ${mes}`;
     }
-    return `${suman.length} ${suman.length === 1 ? 'pago conciliado' : 'pagos conciliados'} con fecha de banco en ${mes}`;
+    return `${suman} ${suman === 1 ? 'pago conciliado' : 'pagos conciliados'} con fecha de banco en ${mes}`;
   });
 
   readonly siguiente = computed(() => {
@@ -253,6 +227,10 @@ export class SustentoParticipantePanelComponent implements OnInit {
     }
     return siguienteTramo(tramosDe(this.periodo().escalas, p.rol), p.porcentajeTramo, p.logrado, p.metaIndividual);
   });
+
+  constructor() {
+    afterNextRender(() => this.cerrarBtn()?.nativeElement.focus());
+  }
 
   ngOnInit(): void {
     this.service.obtenerSustento(this.periodo().id, this.participante().idResultado).subscribe({
@@ -265,5 +243,14 @@ export class SustentoParticipantePanelComponent implements OnInit {
         this.error.set(mensajeError(e, 'No se pudieron cargar los pagos del sustento.'));
       }
     });
+  }
+
+  /** Sale con la animación del panel y luego avisa */
+  salir(): void {
+    if (this.cerrando()) {
+      return;
+    }
+    this.cerrando.set(true);
+    setTimeout(() => this.cerrar.emit(), 340);
   }
 }

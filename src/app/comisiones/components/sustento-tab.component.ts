@@ -12,7 +12,7 @@ const POR_PAGINA = 50;
 
 /**
  * Sustento de toda la subcartera: cada pago conciliado del mes, a quién se atribuyó
- * y, si no sumó, por qué.
+ * y, si no sumó, por qué. Es la foto guardada en el último cálculo.
  */
 @Component({
   selector: 'cmx-sustento-tab',
@@ -20,145 +20,119 @@ const POR_PAGINA = 50;
   imports: [FormsModule, AppNumberPipe, AppDatePipe, CmxIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (!calculado()) {
-      <div class="cmx-shell cmx-enter">
-        <div class="cmx-core">
+    <div class="cmx-body">
+      <div class="cmx-main is-full">
+        @if (!calculado()) {
           <div class="cmx-empty">
-            <span class="cmx-empty-mark"><cmx-icon name="receipt" [size]="22" /></span>
-            <p class="font-semibold" style="color: var(--cmx-ink)">El sustento aparece al calcular</p>
-            <p class="max-w-[46ch] text-[0.86rem]">Cada cálculo guarda una foto de los pagos conciliados del mes con su atribución.</p>
+            <span class="cmx-empty-mark"><cmx-icon name="receipt" [size]="20" /></span>
+            <b>El sustento aparece cuando el período tiene cálculo</b>
+            <p style="max-width:46ch">Cada cálculo guarda una foto de los pagos conciliados del mes con su atribución.</p>
           </div>
-        </div>
-      </div>
-    } @else if (cargando()) {
-      <div class="flex flex-col gap-3">
-        <div class="cmx-skeleton h-24"></div>
-        <div class="cmx-skeleton h-96"></div>
-      </div>
-    } @else if (error()) {
-      <div class="cmx-banner" role="alert">
-        <cmx-icon name="alert" />
-        <span class="flex-1">{{ error() }}</span>
-        <button type="button" class="cmx-btn cmx-btn-ghost cmx-btn-sm" (click)="cargar()">Reintentar</button>
-      </div>
-    } @else {
-      <!-- Resumen por motivo -->
-      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        @for (r of resumen(); track r.filtro; let i = $index) {
-          <button type="button" class="cmx-shell cmx-enter text-left cursor-pointer" [style.--i]="i"
-                  [attr.aria-pressed]="filtro() === r.filtro" (click)="elegirFiltro(r.filtro)"
-                  [style.box-shadow]="filtro() === r.filtro ? 'inset 0 0 0 1.5px var(--cmx-ink)' : null">
-            <span class="cmx-core cmx-kpi block h-full">
-              <span class="cmx-label block">{{ r.etiqueta }}</span>
-              <span class="block cmx-num font-bold text-[1.2rem] mt-1 tracking-tight">{{ r.cantidad | appNumber }}</span>
-              <span class="block cmx-muted cmx-num text-[0.76rem]">S/ {{ r.monto | appNumber:'1.2-2' }}</span>
-            </span>
-          </button>
-        }
-      </div>
+        } @else if (cargando()) {
+          <div style="display:grid;gap:10px">
+            <div class="cmx-skel" style="height:62px"></div>
+            <div class="cmx-skel" style="height:320px"></div>
+          </div>
+        } @else if (error()) {
+          <div class="cmx-empty">
+            <span class="cmx-empty-mark"><cmx-icon name="alert" [size]="20" /></span>
+            <b>No se pudo cargar el sustento</b>
+            <p>{{ error() }}</p>
+            <button type="button" class="cmx-btn cmx-btn-sec" (click)="cargar()">Reintentar</button>
+          </div>
+        } @else {
+          <div class="cmx-sumrow">
+            @for (r of resumen(); track r.filtro; let i = $index) {
+              <button type="button" class="cmx-sbox cmx-enter" [style.--i]="i" [attr.aria-pressed]="filtro() === r.filtro"
+                      (click)="elegirFiltro(r.filtro)">
+                <span class="cmx-sbox-l">{{ r.etiqueta }}</span>
+                <span class="cmx-sbox-v">{{ r.cantidad | appNumber }}</span>
+                <span class="cmx-sbox-m">S/ {{ r.monto | appNumber:'1.2-2' }}</span>
+              </button>
+            }
+          </div>
 
-      @if (motivoActivo(); as m) {
-        <div class="cmx-banner cmx-banner-neutral mt-4">
-          <cmx-icon name="info" />
-          <span>{{ m.descripcion }}</span>
-        </div>
-      }
+          @if (motivoActivo(); as m) {
+            <div class="cmx-hint cmx-enter" style="margin:0 0 14px">{{ m.descripcion }}</div>
+          }
 
-      <section class="cmx-shell mt-5 cmx-enter" style="--i:3">
-        <div class="cmx-core">
-          <header class="cmx-card-head">
-            <label class="relative flex-1 min-w-[14rem] max-w-md">
-              <span class="sr-only">Buscar por documento, cliente, asesor u operación</span>
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 cmx-muted"><cmx-icon name="search" [size]="16" /></span>
-              <input class="cmx-input pl-9" type="search" placeholder="Documento, cliente, asesor u operación"
-                     [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event); pagina.set(0)" />
-            </label>
-            <span class="ml-auto cmx-muted text-[0.8rem] cmx-num">
-              {{ filtrados().length | appNumber }} pagos · S/ {{ montoFiltrado() | appNumber:'1.2-2' }}
-            </span>
-          </header>
-
-          <div class="cmx-table-wrap">
-            <table class="cmx-table">
-              <thead>
-                <tr>
-                  <th scope="col">Fecha banco</th>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Asesor de la gestión</th>
-                  <th scope="col">Operación</th>
-                  <th scope="col" class="n">Monto</th>
-                  @if (conContencion()) {
-                    <th scope="col">Contención</th>
-                    <th scope="col" class="n">Capital asignado</th>
-                  }
-                  <th scope="col">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of paginaActual(); track p.conciliacionId) {
-                  <tr [class.is-muted]="p.motivoExclusion">
-                    <td class="cmx-num whitespace-nowrap">{{ p.fechaBanco | appDate }}</td>
-                    <td>
-                      <span class="font-semibold block">{{ p.nombreCliente || 'Sin nombre' }}</span>
-                      <span class="cmx-muted cmx-num text-[0.76rem]">{{ p.documentoCliente }}</span>
-                    </td>
-                    <td>
-                      {{ p.nombreAgenteGestion || '—' }}
-                      <span class="cmx-muted text-[0.74rem] block">Gestión {{ p.idGestion }}</span>
-                    </td>
-                    <td class="whitespace-nowrap">
-                      <span class="cmx-num">{{ p.numeroOperacion || '—' }}</span>
-                      <span class="cmx-muted text-[0.74rem] block">{{ p.banco }}</span>
-                    </td>
-                    <td class="n font-semibold">{{ p.montoAplicado | appNumber:'1.2-2' }}</td>
-                    @if (conContencion()) {
+          <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-sust-titulo">
+            <div class="cmx-block-head">
+              <h3 id="cmx-sust-titulo" class="cmx-block-title">Pagos conciliados del mes</h3>
+              <span class="cmx-block-desc">foto guardada en el último cálculo</span>
+              <label class="cmx-search" style="margin:0 0 0 auto;min-width:260px">
+                <span class="sr-only">Buscar por documento, cliente, asesor u operación</span>
+                <span class="cmx-search-ic"><cmx-icon name="search" [size]="15" /></span>
+                <input type="search" placeholder="Documento, cliente, asesor u operación"
+                       [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event); pagina.set(0)" />
+              </label>
+            </div>
+            <div class="cmx-tw">
+              <table class="cmx-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Fecha banco</th>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Asesor de la gestión</th>
+                    <th scope="col">Operación</th>
+                    <th scope="col" class="n">Monto</th>
+                    @if (conContencion()) { <th scope="col">Contención</th> }
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of paginaActual(); track p.conciliacionId) {
+                    <tr [class.is-muted]="p.motivoExclusion">
+                      <td class="cmx-num">{{ p.fechaBanco | appDate }}</td>
+                      <td class="who">{{ p.nombreCliente || 'Sin nombre' }}<span class="cmx-role cmx-num">{{ p.documentoCliente }}</span></td>
+                      <td>{{ p.nombreAgenteGestion || '—' }}<span class="cmx-role">Gestión {{ p.idGestion }}</span></td>
+                      <td class="cmx-num">{{ p.numeroOperacion || '—' }}<span class="cmx-role">{{ p.banco }}</span></td>
+                      <td class="n">{{ p.montoAplicado | appNumber:'1.2-2' }}</td>
+                      @if (conContencion()) {
+                        <td>
+                          @if (p.contencion) {
+                            <span class="cmx-tag" [class.cmx-tag-d]="esContenido(p)" [class.cmx-tag-s]="!esContenido(p)">{{ p.contencion }}</span>
+                          } @else {
+                            <span class="cmx-tag cmx-tag-off">No está en la tabla</span>
+                          }
+                        </td>
+                      }
                       <td>
-                        @if (p.contencion) {
-                          <span class="cmx-tag" [class.cmx-tag-brand]="esContenido(p)">{{ p.contencion }}</span>
+                        @if (p.motivoExclusion) {
+                          <span class="cmx-tag cmx-tag-v" [attr.title]="motivos[p.motivoExclusion].descripcion">{{ motivos[p.motivoExclusion].etiqueta }}</span>
                         } @else {
-                          <span class="cmx-muted text-[0.78rem]">No está en la tabla</span>
+                          <span class="cmx-tag cmx-tag-d">Suma</span>
                         }
                       </td>
-                      <td class="n">{{ p.capitalAsignado != null ? (p.capitalAsignado | appNumber:'1.2-2') : '—' }}</td>
-                    }
-                    <td>
-                      @if (p.motivoExclusion) {
-                        <span class="cmx-tag cmx-tag-amber" [attr.title]="motivos[p.motivoExclusion].descripcion">
-                          {{ motivos[p.motivoExclusion].etiqueta }}
-                        </span>
-                      } @else {
-                        <span class="cmx-tag cmx-tag-brand"><span class="cmx-dot"></span>Suma</span>
-                      }
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td [attr.colspan]="conContencion() ? 8 : 6" class="text-center cmx-muted py-10 text-[0.86rem]">
-                      {{ pagos().length ? 'Ningún pago coincide con el filtro.' : 'No hay pagos conciliados en el mes.' }}
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          @if (paginas() > 1) {
-            <footer class="flex items-center justify-between gap-3 px-5 py-3 border-t" style="border-color: var(--cmx-line)">
-              <span class="cmx-muted text-[0.78rem] cmx-num">
-                {{ pagina() * porPagina + 1 }}–{{ min((pagina() + 1) * porPagina, filtrados().length) }} de {{ filtrados().length | appNumber }}
-              </span>
-              <div class="flex items-center gap-1">
-                <button type="button" class="cmx-icon-btn" [disabled]="pagina() === 0" (click)="pagina.set(pagina() - 1)"
-                        aria-label="Página anterior"><cmx-icon name="chevron-left" /></button>
-                <span class="cmx-num text-[0.8rem] px-2">{{ pagina() + 1 }} / {{ paginas() }}</span>
-                <button type="button" class="cmx-icon-btn" [disabled]="pagina() >= paginas() - 1" (click)="pagina.set(pagina() + 1)"
-                        aria-label="Página siguiente"><cmx-icon name="chevron-right" /></button>
-              </div>
-            </footer>
-          }
-        </div>
-      </section>
-    }
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td [attr.colspan]="conContencion() ? 7 : 6" class="empty">
+                        {{ pagos().length ? 'Ningún pago coincide con el filtro.' : 'No hay pagos conciliados en el mes.' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="cmx-block-foot">
+              <span class="cmx-num">{{ filtrados().length | appNumber }} pagos · S/ {{ montoFiltrado() | appNumber:'1.2-2' }}</span>
+              @if (paginas() > 1) {
+                <span style="display:flex;align-items:center;gap:4px">
+                  <button type="button" class="cmx-icon-btn" [disabled]="pagina() === 0" (click)="pagina.set(pagina() - 1)" aria-label="Página anterior">
+                    <cmx-icon name="chevron-left" [size]="16" />
+                  </button>
+                  <span class="cmx-num">{{ pagina() + 1 }} / {{ paginas() }}</span>
+                  <button type="button" class="cmx-icon-btn" [disabled]="pagina() >= paginas() - 1" (click)="pagina.set(pagina() + 1)" aria-label="Página siguiente">
+                    <cmx-icon name="chevron-right" [size]="16" />
+                  </button>
+                </span>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    </div>
   `
 })
 export class SustentoTabComponent {
@@ -167,8 +141,6 @@ export class SustentoTabComponent {
   readonly reporte = input.required<ReportePeriodo>();
 
   readonly motivos = MOTIVO_INFO;
-  readonly porPagina = POR_PAGINA;
-  readonly min = Math.min;
 
   readonly pagos = signal<PagoSustento[]>([]);
   readonly cargando = signal(false);
@@ -186,9 +158,11 @@ export class SustentoTabComponent {
       const lista = pagos.filter(f);
       return { cantidad: lista.length, monto: lista.reduce((s, p) => s + p.montoAplicado, 0) };
     };
-    const motivos = Object.keys(MOTIVO_INFO) as MotivoExclusion[];
+    // "No contenido" solo tiene sentido en T3
+    const motivos = (Object.keys(MOTIVO_INFO) as MotivoExclusion[])
+      .filter(m => m !== 'NO_CONTENIDO' || this.conContencion());
     return [
-      { filtro: 'TODOS' as Filtro, etiqueta: 'Todos los pagos', ...grupo(() => true) },
+      { filtro: 'TODOS' as Filtro, etiqueta: 'Todos', ...grupo(() => true) },
       { filtro: 'SUMAN' as Filtro, etiqueta: 'Suman', ...grupo(p => !p.motivoExclusion) },
       ...motivos.map(m => ({ filtro: m as Filtro, etiqueta: MOTIVO_INFO[m].etiqueta, ...grupo(p => p.motivoExclusion === m) }))
     ];
