@@ -1,15 +1,73 @@
 /* La pantalla usa Tailwind con el mismo sistema que Gestión de Tenores y bot de voz.
-   Aquí solo quedan las animaciones y el host: los estilos del componente sí quedan aislados. */
+   Aquí queda lo que no se expresa bien con utilidades: la rejilla de la tarjeta de un
+   caso, el host y las animaciones. */
 
-/* Angular deja el host como elemento en línea y sin altura, así que el `min-h-full` del
-   div raíz no tenía contra qué resolver y el fondo acababa donde acababa el contenido.
-   `position: relative` porque `.main-content` hace scroll pero no está posicionado: los
-   `fixed` del panel se medían contra la página y la hacían más alta que la ventana. */
+/* Columna flexible, no `block`: el div raíz lleva el fondo con `min-h-full`, que
+   cuelga del host. Con el host en altura automática ese 100% no resuelve y el fondo
+   acababa a media pantalla, con el gris de `.main-content` debajo.
+   `position: relative` porque `.main-content` hace scroll pero no está posicionado:
+   los `fixed` del panel se medían contra la página y la hacían más alta que la ventana. */
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   position: relative;
   min-height: 100%;
 }
+
+/* Tres zonas fijas: la hora, el cuerpo y la columna del dato propio del tipo. Lo que
+   se repite cae siempre en el mismo sitio, y el botón de llamar queda abajo a la
+   derecha en todas las filas. */
+.caso {
+  position: relative;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 150px;
+  gap: 10px 16px;
+  align-items: start;
+  width: 100%;
+  padding: 12px 16px 12px 15px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid #e6e9ee;
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.caso:hover { background: #f8fafc; }
+.caso:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+/* La columna de la derecha estira con la tarjeta para que el botón quede abajo. */
+.caso > .caso-dato {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .caso { grid-template-columns: 62px minmax(0, 1fr); }
+  .caso > .caso-dato {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Las tarjetas de cifras son botones: sin esto heredan el fondo del navegador. */
+.cifra { cursor: pointer; height: 100%; }
+.cifra:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+
+:host-context(html.dark) .caso,
+:host-context(body.dark-theme) .caso {
+  border-color: #1e293b;
+  background: #0f172a;
+}
+:host-context(html.dark) .caso:hover,
+:host-context(body.dark-theme) .caso:hover { background: #16233b; }
 
 @keyframes deslizar { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
 @keyframes fundir { from { opacity: 0; } to { opacity: 1; } }

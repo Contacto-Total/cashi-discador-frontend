@@ -1,184 +1,238 @@
-<div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
-  <div class="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 py-5 md:px-6">
+<div class="flex-1 min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-    <!-- ===================== CABECERA ===================== -->
-    <header class="flex flex-col gap-3">
-      <div class="flex flex-wrap items-end justify-between gap-3">
-        <div class="flex flex-col gap-1">
-          <h1 class="!m-0 text-[22px] font-bold leading-tight">Agenda del bot</h1>
-          <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">
-            Llamadas que dejó Clara y necesitan a una persona: citas pactadas y promesas que hay que seguir.
-            Se llaman desde gestión manual, con la ficha del cliente delante.
-          </p>
-        </div>
+  <!-- ===================== CABECERA ===================== -->
+  <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-col gap-[3px]">
+        <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Agenda del bot</h1>
+        <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+          Llamadas de Clara que necesitan a una persona.
+        </p>
+      </div>
+      <button type="button" (click)="cargar()" [class]="ui.botonSecundarioAlto">
+        <lucide-angular name="refresh-cw" [size]="15" [class.animate-spin]="cargando" class="block"></lucide-angular>
+        Actualizar
+      </button>
+    </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          @if (puedeVerTodas) {
-            <button type="button" (click)="alternarAlcance()"
-                    [class]="ui.botonSecundarioAlto + (verTodas ? ' ' + ui.botonMarcado : '')"
-                    [attr.aria-pressed]="verTodas"
-                    title="Un supervisor no tiene citas propias: lo normal es ver todas">
-              <lucide-angular [name]="verTodas ? 'users' : 'user'" [size]="15"></lucide-angular>
-              {{ verTodas ? 'Todas' : 'Solo las mías' }}
-            </button>
-          }
-          <label class="sr-only" for="fecha-agenda">Día</label>
-          <input id="fecha-agenda" type="date" [ngModel]="fecha" (ngModelChange)="cambiarFecha($event)"
-                 [class]="ui.campo + ' !w-auto'">
-          <button type="button" (click)="cargar()" [class]="ui.botonSecundarioAlto" title="Actualizar">
-            <lucide-angular name="refresh-cw" [size]="15" [class.animate-spin]="cargando"></lucide-angular>
-            Actualizar
-          </button>
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label [class]="ui.etiqueta" for="desde">Desde</label>
+        <input id="desde" type="date" [(ngModel)]="desde" (ngModelChange)="cargar()"
+               [class]="ui.campo + ' !w-[150px] tabular-nums'">
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label [class]="ui.etiqueta" for="hasta">Hasta</label>
+        <input id="hasta" type="date" [(ngModel)]="hasta" (ngModelChange)="cargar()"
+               [class]="ui.campo + ' !w-[150px] tabular-nums'">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <span [class]="ui.etiqueta">Rango</span>
+        <div [class]="ui.segmentos" role="group" aria-label="Rango rápido">
+          <button type="button" (click)="cambiarRango('hoy')" [class]="claseTab(rangoActivo('hoy'))"
+                  [attr.aria-pressed]="rangoActivo('hoy')">Hoy</button>
+          <button type="button" (click)="cambiarRango('7')" [class]="claseTab(rangoActivo('7'))"
+                  [attr.aria-pressed]="rangoActivo('7')">7 días</button>
+          <button type="button" (click)="cambiarRango('mes')" [class]="claseTab(rangoActivo('mes'))"
+                  [attr.aria-pressed]="rangoActivo('mes')">Mes</button>
         </div>
       </div>
 
-      <!-- Cifras del día: también son el filtro. -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="button" (click)="alternarFiltro('PENDIENTE')" [class]="clasePastilla('PENDIENTE')"
-                [attr.aria-pressed]="filtroEstado === 'PENDIENTE'">
-          <lucide-angular name="clock" [size]="14"></lucide-angular>
-          Pendientes <span class="tabular-nums">{{ contar('PENDIENTE') }}</span>
-        </button>
-        <button type="button" (click)="alternarFiltro('ATENDIDA')" [class]="clasePastilla('ATENDIDA')"
-                [attr.aria-pressed]="filtroEstado === 'ATENDIDA'">
-          <lucide-angular name="check-circle" [size]="14"></lucide-angular>
-          Atendidas <span class="tabular-nums">{{ contar('ATENDIDA') }}</span>
-        </button>
-        <button type="button" (click)="alternarFiltro('NO_CONTESTA')" [class]="clasePastilla('NO_CONTESTA')"
-                [attr.aria-pressed]="filtroEstado === 'NO_CONTESTA'">
-          <lucide-angular name="phone-missed" [size]="14"></lucide-angular>
-          No contestó <span class="tabular-nums">{{ contar('NO_CONTESTA') }}</span>
-        </button>
-        <button type="button" (click)="alternarFiltro('VENCIDA')" [class]="clasePastilla('VENCIDA')"
-                [attr.aria-pressed]="filtroEstado === 'VENCIDA'">
-          <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
-          Sin llamar <span class="tabular-nums">{{ contar('VENCIDA') }}</span>
-        </button>
-        @if (filtroEstado) {
-          <button type="button" (click)="alternarFiltro(filtroEstado)" [class]="ui.botonSecundario">
-            <lucide-angular name="filter-x" [size]="14"></lucide-angular> Quitar filtro
-          </button>
-        }
+      <div class="flex flex-col gap-1.5">
+        <label [class]="ui.etiqueta" for="buscar">Buscar</label>
+        <input id="buscar" type="search" [(ngModel)]="buscar" placeholder="Cliente, documento o teléfono"
+               [class]="ui.campo + ' !w-[230px]'">
       </div>
-    </header>
+
+      <div class="flex flex-col gap-1.5">
+        <span [class]="ui.etiqueta">Seguimiento</span>
+        <div [class]="ui.segmentos" role="group" aria-label="Seguimiento">
+          <button type="button" (click)="filtroSeguimiento = 'TODOS'" [class]="claseTab(filtroSeguimiento === 'TODOS')"
+                  [attr.aria-pressed]="filtroSeguimiento === 'TODOS'">Todos</button>
+          <button type="button" (click)="filtroSeguimiento = 'PENDIENTE'" [class]="claseTab(filtroSeguimiento === 'PENDIENTE')"
+                  [attr.aria-pressed]="filtroSeguimiento === 'PENDIENTE'">Pendientes</button>
+          <button type="button" (click)="filtroSeguimiento = 'COMPLETADO'" [class]="claseTab(filtroSeguimiento === 'COMPLETADO')"
+                  [attr.aria-pressed]="filtroSeguimiento === 'COMPLETADO'">Completados</button>
+        </div>
+      </div>
+
+      @if (esSupervision) {
+        <div class="flex flex-col gap-1.5">
+          <label [class]="ui.etiqueta" for="asesor">Asesor</label>
+          <select id="asesor" [(ngModel)]="filtroAsesor" [class]="ui.campo + ' !w-[190px]'">
+            <option value="TODOS">Todos</option>
+            <option value="SIN">Sin asignar</option>
+            @for (a of asesores; track a.id) {
+              <option [value]="a.id">{{ a.nombre }}</option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ===================== CONTENIDO ===================== -->
+  <div class="flex flex-col gap-4 px-7 pb-12 pt-5">
 
     @if (mensaje) {
       <p role="status" [class]="mensajeError ? ui.aviso : ui.info">{{ mensaje }}</p>
     }
 
-    <!-- ===================== LISTA ===================== -->
+    <!-- Cifras del rango: también son el filtro por tipo. -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      @for (t of clavesTipo; track t) {
+        <button type="button" (click)="alternarTipo(t)" [attr.aria-pressed]="filtroTipo === t"
+                [class]="ui.tarjeta + ' cifra text-left'"
+                [style.border-color]="filtroTipo === t ? tipos[t].rail : null"
+                [style.box-shadow]="filtroTipo === t ? 'inset 0 0 0 1px ' + tipos[t].rail : null"
+                [style.background]="filtroTipo === t
+                  ? 'linear-gradient(165deg, ' + tipos[t].fondo + ' 0%, transparent 55%)' : null">
+          <div class="mb-2 flex items-center gap-[9px]">
+            <span [class]="ui.icono" [style.color]="tipos[t].texto"
+                  [style.background]="filtroTipo === t ? '#ffffff' : null">
+              <lucide-angular [name]="tipos[t].icono" [size]="15" class="block"></lucide-angular>
+            </span>
+            <h3 [class]="ui.rotulo">{{ tipos[t].plural }}</h3>
+          </div>
+          <span [class]="ui.cifra">{{ contar(t) }}</span>
+          <span [class]="ui.pie">{{ pieDe(t) }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="flex items-center justify-between gap-3">
+      <h2 [class]="ui.rotulo">Casos</h2>
+      <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+        {{ totalVisible }} {{ totalVisible === 1 ? 'caso' : 'casos' }}
+      </span>
+    </div>
+
     @if (error) {
-      <div [class]="ui.tarjeta">
+      <div [class]="ui.tarjeta + ' gap-2'">
         <p class="!m-0 flex items-center gap-2 text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">
           <lucide-angular name="alert-circle" [size]="16"></lucide-angular>
-          No se pudieron cargar las llamadas agendadas.
+          No se pudieron cargar los casos.
         </p>
         <p class="!m-0" [class]="ui.ayuda">{{ errorMotivo }}</p>
         <div><button type="button" (click)="cargar()" [class]="ui.botonSecundario">Reintentar</button></div>
       </div>
     } @else if (cargando) {
-      <div [class]="ui.tarjeta"><p class="!m-0" [class]="ui.ayuda">Cargando las citas del día…</p></div>
-    } @else if (filas.length === 0) {
-      <div [class]="ui.tarjeta + ' items-center py-10 text-center'">
-        <lucide-angular name="calendar-check" [size]="28" class="text-[#8491a3]"></lucide-angular>
-        <p class="!m-0 text-[14px] font-semibold">
-          {{ filtroEstado ? 'Ninguna cita en ese estado' : 'No hay llamadas agendadas este día' }}
-        </p>
-        <p class="!m-0" [class]="ui.ayuda">
-          {{ filtroEstado ? 'Quita el filtro para ver el resto.' : 'Cuando el bot pacte una cita con un cliente, aparecerá aquí.' }}
-        </p>
+      <div [class]="ui.tarjeta"><p class="!m-0" [class]="ui.ayuda">Cargando los casos del rango…</p></div>
+    } @else if (grupos.length === 0) {
+      <div [class]="ui.vacio">
+        <lucide-angular name="calendar-check" [size]="28" class="mx-auto block text-[#8491a3]"></lucide-angular>
+        <p class="!m-0 mt-2 text-[14px] font-bold">Ningún caso en este rango</p>
+        <p class="!m-0" [class]="ui.ayuda">Amplía las fechas o quita el filtro de tipo.</p>
       </div>
     } @else {
-      <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
-            <thead>
-              <tr>
-                <th [class]="ui.th">Hora</th>
-                <th [class]="ui.th">Cliente</th>
-                <th [class]="ui.th">Qué pasó en la llamada</th>
-                <th [class]="ui.th">Estado</th>
-                <th [class]="ui.th">Atiende</th>
-                <th [class]="ui.th"><span class="sr-only">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a of filas; track a.id) {
-                <tr (click)="abrir(a)" (keydown.enter)="abrir(a)" tabindex="0"
-                    class="cursor-pointer transition-colors hover:bg-[#f8fafc] focus-visible:bg-[#eff5ff] focus-visible:outline-none dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800"
-                    [ngClass]="esInminente(a) ? 'bg-[#fffaf0] dark:bg-amber-950/20' : ''"
-                    [attr.aria-label]="'Ver la cita de ' + (a.nombreCliente || a.telefono)">
+      @for (g of grupos; track g.clave) {
+        <section class="flex flex-col gap-2">
+          <h3 class="!m-0 flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">
+            {{ g.titulo }}
+            <span class="tabular-nums">{{ g.casos.length }}</span>
+            <span class="h-px flex-1 bg-[#e6e9ee] dark:bg-slate-800"></span>
+          </h3>
 
-                  <td [class]="ui.td + ' whitespace-nowrap'">
-                    <div class="text-[15px] font-bold tabular-nums">{{ hora(a.fechaHoraPactada) }}</div>
-                    <div class="text-[12px] tabular-nums" role="status"
-                         [class]="esInminente(a) ? 'font-semibold text-[#b45309] dark:text-amber-300' : 'text-[#5f6c80] dark:text-slate-400'">
-                      {{ cuentaAtras(a) }}
+          <div class="flex flex-col gap-2">
+            @for (c of g.casos; track c.tipo + '-' + c.referencia) {
+              <article class="caso" tabindex="0" role="button"
+                       (click)="abrir(c)" (keydown.enter)="abrir(c)" (keydown.space)="abrir(c)"
+                       [style.border-left-color]="tipos[c.tipo].rail"
+                       [ngClass]="abierto(c) ? '' : 'opacity-70 hover:opacity-100'"
+                       [attr.aria-label]="tipos[c.tipo].rotulo + ' de ' + (c.nombreCliente || c.telefono)">
+
+                <div class="flex flex-col">
+                  <span class="text-[15px] font-extrabold leading-tight tabular-nums">{{ hora(c.cuando) }}</span>
+                  <span class="text-[11.5px] tabular-nums"
+                        [ngClass]="inminente(c) ? 'font-semibold text-[#b45309] dark:text-amber-300' : 'text-[#5f6c80] dark:text-slate-400'">
+                    {{ cuentaAtras(c) }}
+                  </span>
+                </div>
+
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span class="text-[13.5px] font-bold">{{ c.nombreCliente || 'Sin nombre' }}</span>
+                    <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                      {{ c.documento || '—' }} · {{ c.telefono || 'sin teléfono' }}
+                    </span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex h-[22px] items-center rounded-full px-2 text-[11.5px] font-semibold"
+                          [style.background]="tipos[c.tipo].fondo" [style.color]="tipos[c.tipo].texto">
+                      {{ tipos[c.tipo].rotulo }}
+                    </span>
+                    <span [class]="insignia(c.seguimiento === 'COMPLETADO' ? 'ok' : 'aviso')">
+                      <lucide-angular [name]="c.seguimiento === 'COMPLETADO' ? 'check' : 'clock'" [size]="12"></lucide-angular>
+                      {{ c.seguimiento === 'COMPLETADO' ? 'Completado' : 'Pendiente' }}
+                    </span>
+                    @if (c.tipo === 'PROMESA' && (c.diasVencida ?? 0) > 0) {
+                      <span [class]="insignia('malo')">Vencida {{ c.diasVencida }} d</span>
+                    }
+                    @if (etiquetaMotivo(c.motivo) && c.tipo === 'CITA') {
+                      <span [class]="insignia('gris')">{{ etiquetaMotivo(c.motivo) }}</span>
+                    }
+                    @if (esSupervision) {
+                      <span [class]="insignia('gris')">
+                        <lucide-angular name="user" [size]="12"></lucide-angular>
+                        {{ c.nombreAsignado || 'Sin asignar' }}
+                      </span>
+                    }
+                    <span [class]="insignia('gris')">
+                      <lucide-angular name="bot" [size]="12"></lucide-angular> Bot
+                    </span>
+                  </div>
+
+                  <p class="!m-0 line-clamp-2 text-[12.5px] leading-snug text-[#5f6c80] dark:text-slate-400">
+                    {{ c.resumen || 'El bot no dejó resumen de esta llamada.' }}
+                  </p>
+                </div>
+
+                <div class="caso-dato">
+                  @if (c.tipo === 'PROMESA') {
+                    <div class="flex flex-col items-end gap-0.5">
+                      <span class="text-[15px] font-extrabold leading-tight tabular-nums">{{ soles(c.monto) }}</span>
+                      <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                        Cuota {{ c.numeroCuota }} de {{ c.totalCuotas }}
+                      </span>
                     </div>
-                  </td>
+                  } @else if (c.tipo === 'CITA') {
+                    <span [class]="insignia(estadoCita(c).tono)">{{ estadoCita(c).texto }}</span>
+                  } @else {
+                    <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ etiquetaMotivo(c.motivo) }}</span>
+                  }
 
-                  <td [class]="ui.td">
-                    <div class="font-semibold">{{ a.nombreCliente || 'Sin nombre' }}</div>
-                    <div class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                      {{ a.documento || '—' }} · {{ a.telefono || 'sin teléfono' }}
-                    </div>
-                  </td>
-
-                  <td [class]="ui.td + ' max-w-[420px]'">
-                    <div class="mb-1 flex flex-wrap items-center gap-1.5">
-                      @if (esDelBot(a)) {
-                        <span [class]="ui.chipBot" title="La pactó el bot durante la llamada">
-                          <lucide-angular name="bot" [size]="12"></lucide-angular> Bot
-                        </span>
-                      } @else {
-                        <span [class]="ui.chip" title="La registró un asesor a mano">
-                          <lucide-angular name="user" [size]="12"></lucide-angular> Asesor
-                        </span>
-                      }
-                      <span [class]="ui.chip">{{ etiquetaMotivo(a.motivo) }}</span>
-                    </div>
-                    <p class="!m-0 line-clamp-2 text-[12.5px] leading-snug text-[#334155] dark:text-slate-300">
-                      {{ a.resumen || 'Sin resumen de la llamada.' }}
-                    </p>
-                  </td>
-
-                  <td [class]="ui.td"><span [class]="claseEstado(a.estado)">{{ etiquetaEstado(a.estado) }}</span></td>
-
-                  <td [class]="ui.td + ' text-[12.5px]' + (a.nombreAgente ? '' : ' text-[#5f6c80] dark:text-slate-400')">
-                    {{ quienLaAtiende(a) }}
-                  </td>
-
-                  <td [class]="ui.td">
-                    <div class="flex items-center justify-end gap-1.5">
-                      <button type="button" (click)="llamar(a, $event)"
-                              [disabled]="!puedeLlamar(a)"
-                              [title]="puedeLlamar(a) ? 'Ir a gestión manual con este cliente' : motivoNoLlamar(a)"
-                              [class]="ui.botonLlamar">
-                        <lucide-angular name="phone" [size]="14"></lucide-angular> Llamar
-                      </button>
-                      <lucide-angular name="chevron-right" [size]="16" class="block text-[#8491a3]"></lucide-angular>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  <button type="button" (click)="llamar(c, $event)" [disabled]="!puedeLlamar(c)"
+                          [title]="puedeLlamar(c) ? 'Abrir gestión manual con este cliente' : motivoNoLlamar(c)"
+                          [class]="puedeLlamar(c) ? ui.botonPrimarioChico : ui.botonSecundario">
+                    <lucide-angular name="phone" [size]="13" class="block"></lucide-angular>
+                    Llamar
+                  </button>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
     }
   </div>
 
-  <!-- ===================== FICHA DE LA CITA ===================== -->
-  @if (seleccionada; as a) {
+  <!-- ===================== FICHA DEL CASO ===================== -->
+  @if (seleccionado; as c) {
     <div [class]="ui.fondo" (click)="cerrarDetalle()"></div>
-    <aside class="deslizar fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col overflow-y-auto border-l border-[#e6e9ee] bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
-           role="dialog" aria-modal="true" aria-label="Detalle de la llamada agendada" cdkTrapFocus>
+    <aside class="deslizar fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col overflow-y-auto border-l border-[#e6e9ee] bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+           role="dialog" aria-modal="true" aria-label="Detalle del caso" cdkTrapFocus>
 
-      <header class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#eef1f5] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-col gap-1">
-          <h2 class="!m-0 text-[17px] font-bold">{{ a.nombreCliente || 'Sin nombre' }}</h2>
-          <p class="!m-0 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-            {{ a.documento || '—' }} · {{ a.telefono || 'sin teléfono' }}
+      <header class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#f1f3f6] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex flex-col gap-1.5">
+          <span class="inline-flex h-[22px] items-center self-start rounded-full px-2 text-[11.5px] font-semibold"
+                [style.background]="tipos[c.tipo].fondo" [style.color]="tipos[c.tipo].texto">
+            {{ tipos[c.tipo].rotulo }}
+          </span>
+          <h2 class="!m-0 text-[15px] font-extrabold leading-tight">{{ c.nombreCliente || 'Sin nombre' }}</h2>
+          <p class="!m-0 text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+            {{ c.documento || '—' }} · {{ c.telefono || 'sin teléfono' }}
           </p>
         </div>
         <button type="button" (click)="cerrarDetalle()" [class]="ui.cerrar" aria-label="Cerrar">
@@ -189,62 +243,96 @@
       <div class="flex flex-col gap-4 px-[18px] py-4">
         <div class="grid grid-cols-2 gap-2">
           <div [class]="ui.dato">
-            <span [class]="ui.datoTitulo">Hora pactada</span>
-            <span [class]="ui.datoValor">{{ hora(a.fechaHoraPactada) }}</span>
-            <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ cuentaAtras(a) }}</span>
+            <span [class]="ui.etiqueta">Cuándo</span>
+            <span [class]="ui.datoValor">{{ hora(c.cuando) }}</span>
+            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaAtras(c) }}</span>
+          </div>
+          @if (c.tipo === 'PROMESA') {
+            <div [class]="ui.dato">
+              <span [class]="ui.etiqueta">Compromiso</span>
+              <span [class]="ui.datoValor">{{ soles(c.monto) }}</span>
+              <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                Cuota {{ c.numeroCuota }} de {{ c.totalCuotas }}
+              </span>
+            </div>
+          } @else if (c.tipo === 'CITA') {
+            <div [class]="ui.dato">
+              <span [class]="ui.etiqueta">Estado</span>
+              <span class="mt-0.5"><span [class]="insignia(estadoCita(c).tono)">{{ estadoCita(c).texto }}</span></span>
+            </div>
+          } @else {
+            <div [class]="ui.dato">
+              <span [class]="ui.etiqueta">Motivo</span>
+              <span [class]="ui.datoValor">{{ etiquetaMotivo(c.motivo) || '—' }}</span>
+            </div>
+          }
+          <div [class]="ui.dato">
+            <span [class]="ui.etiqueta">Atiende</span>
+            <span [class]="ui.datoValor">{{ c.nombreAsignado || 'Sin asignar' }}</span>
           </div>
           <div [class]="ui.dato">
-            <span [class]="ui.datoTitulo">Estado</span>
-            <span class="mt-0.5"><span [class]="claseEstado(a.estado)">{{ etiquetaEstado(a.estado) }}</span></span>
-            @if (a.detalleCierre) {
-              <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ a.detalleCierre }}</span>
-            }
+            <span [class]="ui.etiqueta">Seguimiento</span>
+            <span class="mt-0.5">
+              <span [class]="insignia(c.seguimiento === 'COMPLETADO' ? 'ok' : 'aviso')">
+                {{ c.seguimiento === 'COMPLETADO' ? 'Completado' : 'Pendiente' }}
+              </span>
+            </span>
           </div>
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <span [class]="ui.etiqueta">Qué pasó en la llamada</span>
+          <span [class]="ui.etiqueta">Resumen de la llamada</span>
           <p class="!m-0 text-[13px] leading-relaxed text-[#334155] dark:text-slate-300">
-            {{ a.resumen || 'El bot no dejó resumen de esta llamada.' }}
+            {{ c.resumen || 'El bot no dejó resumen de esta llamada.' }}
           </p>
-          <div class="mt-1 flex flex-wrap items-center gap-1.5">
-            @if (esDelBot(a)) {
-              <span [class]="ui.chipBot"><lucide-angular name="bot" [size]="12"></lucide-angular> Agendada por el bot</span>
-            } @else {
-              <span [class]="ui.chip">
-                <lucide-angular name="user" [size]="12"></lucide-angular>
-                Agendada por {{ a.nombreAgente || 'un asesor' }}
-              </span>
-            }
-            <span [class]="ui.chip">{{ etiquetaMotivo(a.motivo) }}</span>
-            <span [class]="ui.chip">Atiende: {{ quienLaAtiende(a) }}</span>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <button type="button" (click)="llamar(a)" [disabled]="!puedeLlamar(a)"
-                  [title]="puedeLlamar(a) ? 'Ir a gestión manual con este cliente' : motivoNoLlamar(a)"
-                  [class]="ui.botonPrimario + ' w-full'">
-            <lucide-angular name="phone" [size]="16"></lucide-angular>
-            Llamar desde gestión manual
-          </button>
-          @if (!puedeLlamar(a)) {
-            <p class="!m-0" [class]="ui.ayuda">{{ motivoNoLlamar(a) }}</p>
+          @if (c.gestionadoPor) {
+            <p class="!m-0" [class]="ui.ayuda">
+              Gestionado por {{ c.gestionadoPor }} · {{ hora(c.gestionadoAt) }}
+            </p>
           }
         </div>
 
-        @if (abierta(a)) {
-          <div class="flex flex-col gap-2 border-t border-[#eef1f5] pt-4 dark:border-slate-800">
-            <span [class]="ui.etiqueta">Cuando termines la gestión</span>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" (click)="cerrarCita(a, true)" [disabled]="cerrando" [class]="ui.botonSecundario">
-                <lucide-angular name="check" [size]="14"></lucide-angular> Marcar atendida
-              </button>
-              <button type="button" (click)="cerrarCita(a, false)" [disabled]="cerrando" [class]="ui.botonSecundario">
-                <lucide-angular name="phone-missed" [size]="14"></lucide-angular> No contestó
+        <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+          <button type="button" (click)="llamar(c)" [disabled]="!puedeLlamar(c)"
+                  [title]="puedeLlamar(c) ? 'Abrir gestión manual con este cliente' : motivoNoLlamar(c)"
+                  [class]="ui.botonPrimario + ' w-full'">
+            <lucide-angular name="phone" [size]="15" class="block"></lucide-angular>
+            Llamar desde gestión manual
+          </button>
+          @if (!puedeLlamar(c)) {
+            <p class="!m-0" [class]="ui.ayuda">{{ motivoNoLlamar(c) }}</p>
+          }
+        </div>
+
+        @if (esSupervision) {
+          <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+            <span [class]="ui.etiqueta">Quién hace el seguimiento</span>
+            <div class="flex gap-2">
+              <select [(ngModel)]="asesorElegido" [class]="ui.campo + ' min-w-0 flex-1'" aria-label="Asesor">
+                @for (a of asesores; track a.id) {
+                  <option [value]="a.id">{{ a.nombre }}</option>
+                }
+              </select>
+              <button type="button" (click)="asignar(c)" [disabled]="guardando || !asesorElegido"
+                      [class]="ui.botonSecundarioAlto">
+                {{ c.idAgenteAsignado ? 'Reasignar' : 'Asignar' }}
               </button>
             </div>
-            <p class="!m-0" [class]="ui.ayuda">La cita se queda en la lista con el estado que le pongas.</p>
+          </div>
+        }
+
+        @if (c.tipo === 'CITA' && abierto(c)) {
+          <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+            <span [class]="ui.etiqueta">Cuando termines la gestión</span>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" (click)="cerrarCita(c, true)" [disabled]="guardando" [class]="ui.botonSecundario">
+                <lucide-angular name="check" [size]="13"></lucide-angular> Marcar atendida
+              </button>
+              <button type="button" (click)="cerrarCita(c, false)" [disabled]="guardando" [class]="ui.botonSecundario">
+                <lucide-angular name="phone-missed" [size]="13"></lucide-angular> No contestó
+              </button>
+            </div>
+            <p class="!m-0" [class]="ui.ayuda">El caso se queda en la lista con el estado que le pongas.</p>
           </div>
         }
       </div>
