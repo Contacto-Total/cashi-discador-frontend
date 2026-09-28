@@ -191,7 +191,7 @@ export interface Justificacion {
 
 /**
  * Qué puede hacer quien entra al módulo. RR.HH. es configuración y no un rol:
- * Emily es SUPERVISOR como las demás y lo que la distingue viene de aquí.
+ * quien lo lleva tiene rol SUPERVISOR y lo que lo distingue viene de aquí.
  */
 export interface PerfilAsistencia {
   rrhh: boolean;
@@ -635,6 +635,33 @@ export interface IntentoAcceso {
   origen: string;
   dispositivo: string | null;
   motivo: string;
+}
+
+/** Los intentos de un mismo celular o tablet en un día. */
+export interface RechazoDia {
+  dia: string;
+  /** HH:mm del último intento de ese día. */
+  ultimo: string;
+  usuario: string | null;
+  nombre: string | null;
+  dispositivo: 'Android' | 'iPhone' | 'iPad' | 'Tablet' | 'Otro';
+  modelo: string | null;
+  navegador: string | null;
+  ip: string | null;
+  intentos: number;
+}
+
+export interface IngresoDia {
+  dia: string;
+  usuario: string;
+  sistema: 'WINDOWS' | 'MAC' | 'LINUX' | 'OTRO';
+}
+
+export interface PanelAcceso {
+  hoy: string;
+  ipOficina: string;
+  rechazos: RechazoDia[];
+  ingresos: IngresoDia[];
 }
 
 export interface ControlAcceso {

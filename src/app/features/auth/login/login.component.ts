@@ -849,25 +849,10 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.authService.login(username, password).subscribe({
       next: (response) => {
-        // El equipo se comprueba DESPUES de entrar y no antes: la validacion
-        // necesita el token para saber quien lo intenta, y el rechazo tiene que
-        // quedar registrado con nombre y apellido. Si no esta autorizado, se
-        // cierra la sesion recien abierta.
-        this.equipoService.validar().subscribe({
-          next: (acceso) => {
-            if (!acceso.permitido) {
-              this.loading = false;
-              this.errorMessage = acceso.mensaje ?? 'Esta computadora no está autorizada';
-              this.authService.logout();
-              return;
-            }
-            this.entrar();
-          },
-          // Si la comprobacion falla (backend viejo, red), se entra igual: dejar
-          // a la operacion fuera por un error de red es peor que el riesgo que
-          // cubre esta pantalla.
-          error: () => this.entrar()
-        });
+        // Queda el sistema de la computadora con que se entró (Control de
+        // Acceso › Equipos permitidos). Si falla, se entra igual.
+        this.equipoService.registrarIngreso().subscribe({ error: () => undefined });
+        this.entrar();
       },
       error: (error) => {
         this.loading = false;
