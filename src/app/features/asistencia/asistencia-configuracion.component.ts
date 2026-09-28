@@ -262,8 +262,20 @@ function textoHorario(dias: DiaBase[]): string {
       </div>
     </div>
 
+    <!-- Una pestaña por tema: las reglas con el horario base, el ingreso y cese y el calendario. -->
+    <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
+      <nav [class]="estilos.segmentos" role="tablist" aria-label="Secciones de configuración">
+        @for (t of SECCIONES; track t.clave) {
+          <button type="button" role="tab" [attr.aria-selected]="seccion() === t.clave"
+                  [class]="estilos.tab + ' ' + (seccion() === t.clave ? estilos.tabActiva : estilos.tabApagada)"
+                  (click)="seccion.set(t.clave)">{{ t.texto }}</button>
+        }
+      </nav>
+    </div>
+
     <!-- REGLAS Y HORARIO BASE. Un cambio rige desde el lunes siguiente. -->
-    <div class="px-7 pb-2 pt-5">
+    @if (seccion() === 'reglas') {
+    <div class="px-7 pb-12 pt-5">
     <div class="aparecer">
       <div class="fila-seccion">
         <h2 class="titulo-seccion !m-0">Reglas</h2>
@@ -328,9 +340,11 @@ function textoHorario(dias: DiaBase[]): string {
       </div>
     </div>
     </div>
+    }
 
     <!-- INGRESO Y CESE: antes del ingreso y después del cese no hay faltas. -->
-    <div class="px-7 pb-2 pt-3">
+    @if (seccion() === 'personal') {
+    <div class="px-7 pb-12 pt-5">
       <div class="aparecer">
         <div class="fila-seccion">
           <div class="flex items-baseline gap-2.5">
@@ -381,9 +395,11 @@ function textoHorario(dias: DiaBase[]): string {
         <p class="pie-personal">Antes del ingreso y después del cese no hay faltas. El ingreso es la fecha de creación del usuario hasta que se corrige.</p>
       </div>
     </div>
+    }
 
     <!-- CALENDARIO -->
-    <div class="px-7 pb-12 pt-3">
+    @if (seccion() === 'calendario') {
+    <div class="px-7 pb-12 pt-5">
       <div class="aparecer">
         <div class="fila-seccion">
           <div class="flex items-baseline gap-2.5">
@@ -479,6 +495,7 @@ function textoHorario(dias: DiaBase[]): string {
         </div>
       </div>
     </div>
+    }
 
     <!-- Cambiar una regla. Una sola: es como se piensan y como se explican,
          y un formulario con las ocho a la vez invita a tocar de más. -->
@@ -903,6 +920,13 @@ export class AsistenciaConfiguracionComponent {
 
   protected readonly estilos = ESTILOS;
   protected readonly DIAS = DIAS;
+  /** Las pestañas de la pantalla. */
+  protected readonly SECCIONES = [
+    { clave: 'reglas', texto: 'Reglas y horario base' },
+    { clave: 'personal', texto: 'Ingreso y cese' },
+    { clave: 'calendario', texto: 'Calendario' }
+  ] as const;
+  readonly seccion = signal<'reglas' | 'personal' | 'calendario'>('reglas');
   protected readonly CABECERAS = CABECERAS;
 
   /** Las pastillas del historial y del calendario, con los tonos de Cashi. */

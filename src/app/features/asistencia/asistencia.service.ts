@@ -7,6 +7,7 @@ import {
   AvisoAsistencia,
   CierreSemana,
   ControlAcceso,
+  PanelAcceso,
   CambioAsistencia,
   TipoCambio,
   DashboardAsistencia,
@@ -82,7 +83,7 @@ export class AsistenciaService {
     return this.http.post<void>(`${this.url}/marcaciones/salida`, {});
   }
 
-  /** El mismo reporte en Excel, con el formato de la hoja que ya usa RR.HH. */
+  /** El mismo reporte en Excel. */
   excel(desde: string, hasta: string, idSubcartera?: number | null): Observable<Blob> {
     let params = new HttpParams().set('desde', desde).set('hasta', hasta);
     if (idSubcartera) {
@@ -403,8 +404,14 @@ export class AsistenciaService {
 
   // ==================== CONTROL DE ACCESO ====================
 
-  controlAcceso(): Observable<ControlAcceso> {
-    return this.http.get<ControlAcceso>(`${this.url}/acceso`);
+  /** Rechazos por dispositivo e ingresos por sistema de los últimos días (máx. 30). */
+  controlAcceso(dias = 30): Observable<PanelAcceso> {
+    return this.http.get<PanelAcceso>(`${this.url}/acceso`, { params: { dias } });
+  }
+
+  /** Los equipos con pase (apagado por defecto). */
+  equiposConPase(): Observable<ControlAcceso> {
+    return this.http.get<ControlAcceso>(`${this.url}/acceso/equipos`);
   }
 
   registrarEquipo(equipo: EquipoAutorizado): Observable<{ id: number }> {
