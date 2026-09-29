@@ -3,21 +3,21 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AgregarParticipanteRequest,
   AuditoriaComision,
+  BonoPeriodo,
   Cartera,
-  CrearPeriodoRequest,
+  ConfiguracionPeriodo,
   DetalleComision,
-  EscalaComision,
-  EstadoPeriodo,
   Inquilino,
-  PeriodoComision,
-  PlantillaSubcartera,
+  MesPeriodo,
   ReportePeriodo,
   RolCashi,
-  RolElegido,
+  SimulacionPeriodo,
   Subcartera,
-  SustentoPeriodo,
-  UsuarioCashi
+  SupervisorCashi,
+  UsuarioCashi,
+  VistaPeriodo
 } from '../models/comision.model';
 
 @Injectable({
@@ -48,85 +48,68 @@ export class ComisionesService {
     return this.http.get<{ idInquilino: number; idCartera: number }>(`${this.baseUrl}/subcarteras/${idSubcartera}/jerarquia`);
   }
 
-  // ==================== CONFIGURACIÓN DE LA SUBCARTERA ====================
+  // ==================== PERÍODOS ====================
 
-  obtenerPlantilla(idSubcartera: number): Observable<PlantillaSubcartera> {
-    return this.http.get<PlantillaSubcartera>(`${this.baseUrl}/subcarteras/${idSubcartera}/plantilla`);
+  /** El período del mes si ya está configurado, y aunque no lo esté: pagos, meta INTERNA y rol sugerido */
+  obtenerVista(idSubcartera: number, anio: number, mes: number): Observable<VistaPeriodo> {
+    const params = new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio).set('mes', mes);
+    return this.http.get<VistaPeriodo>(`${this.baseUrl}/periodos/vista`, { params });
   }
 
-  guardarPlantilla(idSubcartera: number, plantilla: Partial<PlantillaSubcartera>): Observable<PlantillaSubcartera> {
-    return this.http.put<PlantillaSubcartera>(`${this.baseUrl}/subcarteras/${idSubcartera}/plantilla`, plantilla);
+  /** Los 12 meses del año de una subcartera para el selector de período */
+  listarMeses(idSubcartera: number, anio: number): Observable<MesPeriodo[]> {
+    const params = new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio);
+    return this.http.get<MesPeriodo[]>(`${this.baseUrl}/periodos/meses`, { params });
   }
 
   listarRolesSubcartera(idSubcartera: number): Observable<RolCashi[]> {
     return this.http.get<RolCashi[]>(`${this.baseUrl}/subcarteras/${idSubcartera}/roles-disponibles`);
   }
 
-  listarUsuariosSubcartera(idSubcartera: number): Observable<UsuarioCashi[]> {
-    return this.http.get<UsuarioCashi[]>(`${this.baseUrl}/subcarteras/${idSubcartera}/usuarios`);
+  /** Candidatos a asesor: usuarios activos con el rol */
+  listarUsuariosRol(idRol: number): Observable<UsuarioCashi[]> {
+    return this.http.get<UsuarioCashi[]>(`${this.baseUrl}/roles/${idRol}/usuarios`);
   }
 
-  // ==================== PERÍODOS ====================
-
-  listarPeriodos(anio: number, mes: number): Observable<PeriodoComision[]> {
-    const params = new HttpParams().set('anio', anio).set('mes', mes);
-    return this.http.get<PeriodoComision[]>(`${this.baseUrl}/periodos`, { params });
+  /** Candidatos a supervisor */
+  listarSupervisores(): Observable<SupervisorCashi[]> {
+    return this.http.get<SupervisorCashi[]>(`${this.baseUrl}/supervisores`);
   }
 
-  crearPeriodo(request: CrearPeriodoRequest): Observable<ReportePeriodo> {
-    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos`, request);
+  /** Cómo quedaría el mes con esta configuración, con los pagos de hoy. No guarda nada. */
+  simular(config: ConfiguracionPeriodo): Observable<SimulacionPeriodo> {
+    return this.http.post<SimulacionPeriodo>(`${this.baseUrl}/periodos/simular`, config);
+  }
+
+  /** Crea el período del mes si no existe o reemplaza la configuración de uno abierto */
+  guardarConfiguracion(config: ConfiguracionPeriodo): Observable<ReportePeriodo> {
+    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/configuracion`, config);
   }
 
   obtenerPeriodo(id: number): Observable<ReportePeriodo> {
     return this.http.get<ReportePeriodo>(`${this.baseUrl}/periodos/${id}`);
   }
 
-  eliminarPeriodo(id: number): Observable<{ mensaje: string }> {
-    return this.http.delete<{ mensaje: string }>(`${this.baseUrl}/periodos/${id}`);
+  agregarParticipante(id: number, request: AgregarParticipanteRequest): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/participantes`, request);
   }
 
-  guardarTramos(id: number, tramos: EscalaComision[]): Observable<ReportePeriodo> {
-    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/tramos`, tramos);
+  /** Reemplaza los bonos de un período abierto (lo recalcula) */
+  guardarBonos(id: number, bonos: BonoPeriodo[]): Observable<ReportePeriodo> {
+    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/bonos`, bonos);
   }
 
-  listarRolesDisponibles(id: number): Observable<RolCashi[]> {
-    return this.http.get<RolCashi[]>(`${this.baseUrl}/periodos/${id}/roles-disponibles`);
+  cerrar(id: number): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/cerrar`, null);
   }
 
-  guardarRoles(id: number, roles: RolElegido[]): Observable<ReportePeriodo> {
-    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/roles`, roles);
+  reabrir(id: number): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/reabrir`, null);
   }
 
-  cambiarQuitado(id: number, idResultado: number, quitado: boolean): Observable<ReportePeriodo> {
-    const params = new HttpParams().set('quitado', quitado);
-    return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/quitado`, null, { params });
-  }
-
-  /** Recalcula a mano con los pagos de este momento (EN_CURSO o EN_REVISION) */
-  actualizar(id: number): Observable<ReportePeriodo> {
-    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/actualizar`, null);
-  }
-
-  cambiarEstado(id: number, estado: EstadoPeriodo): Observable<ReportePeriodo> {
-    const params = new HttpParams().set('estado', estado);
-    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/estado`, null, { params });
-  }
-
-  obtenerSustento(id: number, idResultado?: number): Observable<SustentoPeriodo> {
-    let params = new HttpParams();
-    if (idResultado != null) {
-      params = params.set('idResultado', idResultado);
-    }
-    return this.http.get<SustentoPeriodo>(`${this.baseUrl}/periodos/${id}/sustento`, { params });
-  }
-
-  /** Detalle pago a pago; sin idResultado (o con el supervisor) trae el de todos los asesores */
-  obtenerDetalle(id: number, idResultado?: number): Observable<DetalleComision[]> {
-    let params = new HttpParams();
-    if (idResultado != null) {
-      params = params.set('idResultado', idResultado);
-    }
-    return this.http.get<DetalleComision[]>(`${this.baseUrl}/periodos/${id}/detalle`, { params });
+  /** Detalle pago a pago de todos los asesores */
+  obtenerDetalle(id: number): Observable<DetalleComision[]> {
+    return this.http.get<DetalleComision[]>(`${this.baseUrl}/periodos/${id}/detalle`);
   }
 
   historial(id: number): Observable<AuditoriaComision[]> {

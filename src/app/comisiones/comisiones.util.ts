@@ -2,14 +2,18 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { saveAs } from 'file-saver';
 import {
   AccionAuditoria,
+  BonoPeriodo,
   DetalleComision,
   EscalaComision,
   EstadoPeriodo,
-  MotivoExclusion,
+  LineaDesglose,
+  MetaCantidad,
   ParticipanteComision,
-  PeriodoComision,
   RolComision,
-  TipoMetrica
+  TipoBono,
+  TipoMetaCantidad,
+  TipoMetrica,
+  VistaPeriodo
 } from './models/comision.model';
 
 export const MESES = [
@@ -21,80 +25,65 @@ export function nombreMes(mes: number): string {
   return MESES[mes - 1] ?? '';
 }
 
-/** Orden del ciclo de vida del período */
-export const ESTADOS: EstadoPeriodo[] = ['EN_CURSO', 'EN_REVISION', 'REVISADO', 'APROBADO'];
+/** Periodo como lo escribe administración: 2026-09 */
+export function codigoPeriodo(anio: number, mes: number): string {
+  return `${anio}-${String(mes).padStart(2, '0')}`;
+}
 
-export const ESTADO_INFO: Record<EstadoPeriodo, { etiqueta: string; clase: string; descripcion: string }> = {
-  EN_CURSO: {
-    etiqueta: 'En curso',
-    clase: 'cmx-st-curso',
-    descripcion: 'Se actualiza solo con cada pago conciliado o corregido y al guardar la configuración.'
-  },
-  EN_REVISION: {
-    etiqueta: 'En revisión',
-    clase: 'cmx-st-revision',
-    descripcion: 'Ya no se actualiza solo. Se puede actualizar a mano o volver a en curso.'
-  },
-  REVISADO: {
-    etiqueta: 'Revisado',
-    clase: 'cmx-st-revisado',
-    descripcion: 'Números validados. Espera la aprobación de la jefatura de administración.'
-  },
-  APROBADO: {
-    etiqueta: 'Aprobado',
-    clase: 'cmx-st-aprobado',
-    descripcion: 'Congelado: es lo que se paga.'
+/** dd/mm de una fecha ISO (yyyy-mm-dd) */
+export function diaMes(fechaIso: string | null | undefined): string {
+  if (!fechaIso) {
+    return '';
   }
+  const [, m, d] = fechaIso.slice(0, 10).split('-');
+  return `${d}/${m}`;
+}
+
+/** Cómo se ve un mes en pantalla: abierto, cerrado, sin configurar o sin pagos */
+export type EstadoVista = 'ABIERTO' | 'CERRADO' | 'SIN_CONFIG' | 'SIN_PAGOS';
+
+export const ESTADO_VISTA_INFO: Record<EstadoVista, { etiqueta: string; clase: string; punto: string }> = {
+  ABIERTO: { etiqueta: 'Abierto', clase: 'cmx-st-abierto', punto: 'is-ab' },
+  CERRADO: { etiqueta: 'Cerrado', clase: 'cmx-st-cerrado', punto: 'is-ce' },
+  SIN_CONFIG: { etiqueta: 'Sin configurar', clase: 'cmx-st-sinconfig', punto: 'is-no' },
+  SIN_PAGOS: { etiqueta: 'Sin pagos', clase: 'cmx-st-sinpagos', punto: 'is-no' }
 };
+
+export function estadoVista(estado: EstadoPeriodo | null | undefined, pagos: number): EstadoVista {
+  if (estado === 'CERRADO') {
+    return 'CERRADO';
+  }
+  if (estado === 'EN_CURSO') {
+    return 'ABIERTO';
+  }
+  return pagos > 0 ? 'SIN_CONFIG' : 'SIN_PAGOS';
+}
+
+export function estadoDeVista(vista: VistaPeriodo): EstadoVista {
+  return estadoVista(vista.reporte?.periodo.estado, vista.pagos.cantidad);
+}
 
 export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: string; descripcion: string }> = {
   RECAUDO: {
     etiqueta: 'Recaudo',
     logrado: 'Recaudo',
-    descripcion: 'Suma de pagos conciliados del mes'
+    descripcion: 'Todo lo que pagan los clientes: cada pago conciliado suma su monto.'
   },
   CONTENCION: {
     etiqueta: 'Contención',
-    logrado: 'Recaudo contenido',
-    descripcion: 'Recaudo de clientes CONTENIDO en la tabla dinámica'
-  }
-};
-
-export const MOTIVO_INFO: Record<MotivoExclusion, { etiqueta: string; descripcion: string }> = {
-  PAGO_SISTEMA: {
-    etiqueta: 'Pago de sistema',
-    descripcion: 'La promesa o el pago están a nombre de un usuario de sistema (SYSCA CASHI): promesa sistema o pago voluntario.'
-  },
-  SUPERVISOR_NO_ASIGNA: {
-    etiqueta: 'No asignado',
-    descripcion: 'Al regularizar la fecha, el supervisor indicó que el pago no corresponde al asesor.'
-  },
-  USUARIO_EXCLUIDO: {
-    etiqueta: 'Usuario excluido',
-    descripcion: 'La promesa o el pago son de un usuario excluido en la configuración de la subcartera.'
-  },
-  AGENTE_NO_PARTICIPANTE: {
-    etiqueta: 'Fuera de la lista',
-    descripcion: 'La gestión es de alguien que no está en la lista de asesores del período.'
-  },
-  PARTICIPANTE_QUITADO: {
-    etiqueta: 'Asesor quitado',
-    descripcion: 'El asesor fue quitado del período: no divide la meta ni comisiona.'
-  },
-  NO_CONTENIDO: {
-    etiqueta: 'No contenido',
-    descripcion: 'El cliente no está CONTENIDO en la tabla dinámica: en T3 su pago no suma al alcance.'
+    logrado: 'Contención',
+    descripcion: 'Solo suman los pagos de clientes cuya contención es CONTENIDO.'
   }
 };
 
 export const ACCION_INFO: Record<AccionAuditoria, string> = {
-  CREAR_PERIODO: 'Creó el período',
+  CREAR_PERIODO: 'Configuró el período',
+  EDITAR_CONFIGURACION: 'Cambió la configuración',
   EDITAR_ROLES: 'Cambió los roles',
-  EDITAR_TRAMOS: 'Cambió los tramos',
-  EDITAR_PARTICIPANTE: 'Editó un participante',
+  EDITAR_TRAMOS: 'Cambió la escala',
+  EDITAR_PARTICIPANTE: 'Agregó un participante',
   CALCULAR: 'Recalculó',
-  CAMBIAR_ESTADO: 'Cambió el estado',
-  EDITAR_PLANTILLA: 'Configuración de la subcartera'
+  CAMBIAR_ESTADO: 'Cambió el estado'
 };
 
 export const ROL_INFO: Record<RolComision, string> = {
@@ -102,33 +91,15 @@ export const ROL_INFO: Record<RolComision, string> = {
   SUPERVISOR: 'Supervisor'
 };
 
-/** Tramos de un rol ordenados por porcentajeDesde */
+/** Niveles de un rol ordenados por porcentajeDesde */
 export function tramosDe(escalas: EscalaComision[], rol: RolComision): EscalaComision[] {
   return escalas
     .filter(e => e.rol === rol)
     .sort((a, b) => a.porcentajeDesde - b.porcentajeDesde);
 }
 
-/** Asesores que dividen la meta */
-export function asesoresActivos(participantes: ParticipanteComision[]): number {
-  return participantes.filter(p => p.rol === 'ASESOR' && !p.quitado).length;
-}
-
-/** Entre cuántos asesores se divide la meta: el número fijo de la subcartera o los asesores no quitados */
-export function divisorMeta(periodo: PeriodoComision, participantes: ParticipanteComision[]): number {
-  return periodo.divisionMeta === 'FIJO' && periodo.asesoresFijos
-    ? periodo.asesoresFijos
-    : asesoresActivos(participantes);
-}
-
-/** Meta que le toca a cada asesor (null si no hay entre quién dividir) */
-export function metaPorAsesor(periodo: PeriodoComision, participantes: ParticipanteComision[]): number | null {
-  const n = divisorMeta(periodo, participantes);
-  return n > 0 ? periodo.metaGrupal / n : null;
-}
-
 /**
- * Tramo alcanzado con la comparación exacta del backend: logrado × 100 ≥ desde × base.
+ * Nivel alcanzado con la comparación del backend: logrado × 100 ≥ desde × base.
  * tramos ordenados ascendente.
  */
 export function tramoAlcanzado(tramos: EscalaComision[], logrado: number, base: number): EscalaComision | null {
@@ -153,8 +124,8 @@ export interface Barra {
 }
 
 /**
- * Barra de tramos: un segmento por tramo (el primero, "sin comisión", si la tabla no empieza en 0)
- * y un marcador en el cumplimiento. La escala llega hasta el último tramo + 30 puntos.
+ * Barra de la escala: un segmento por nivel (el primero, "sin comisión", si la escala no empieza en 0)
+ * y un marcador en el cumplimiento. La barra llega hasta el último nivel + 30 puntos.
  */
 export function construirBarra(tramos: EscalaComision[], porcentaje: number | null): Barra {
   const ultimo = tramos.length ? tramos[tramos.length - 1].porcentajeDesde : 100;
@@ -190,8 +161,8 @@ export interface SiguienteTramo {
 }
 
 /**
- * Cuánto le falta al participante para el siguiente tramo. null si ya está en el más alto.
- * base = meta del participante (meta por asesor, o meta grupal para el supervisor).
+ * Cuánto le falta para el siguiente nivel (con monto). null si ya está en el más alto.
+ * base = meta del participante (su meta individual, o la meta del mes para el supervisor).
  */
 export function siguienteTramo(
   tramos: EscalaComision[],
@@ -202,12 +173,109 @@ export function siguienteTramo(
   if (base == null) {
     return null;
   }
-  const siguiente = tramos.find(t => tramoActual == null || t.porcentajeDesde > tramoActual);
+  const siguiente = tramos.find(t => (tramoActual == null || t.porcentajeDesde > tramoActual) && t.montoComision > 0);
   if (!siguiente) {
     return null;
   }
   const falta = (siguiente.porcentajeDesde / 100) * base - logrado;
   return falta > 0 ? { desde: siguiente.porcentajeDesde, monto: siguiente.montoComision, falta } : null;
+}
+
+// ==================== METAS DE CANTIDAD Y BONOS ====================
+
+export const TIPOS_META: { tipo: TipoMetaCantidad; nombre: string; descripcion: string; unidad: string }[] = [
+  { tipo: 'GESTIONES', nombre: 'Meta de gestiones', descripcion: 'Gestiones (tipificaciones) que registró en el mes', unidad: 'gest.' },
+  { tipo: 'PDP', nombre: 'Meta de PDP', descripcion: 'Promesas de pago que realizó en el mes', unidad: 'PDP' },
+  { tipo: 'PAGOS', nombre: 'Meta de pagos', descripcion: 'Pagos conciliados (concretados) de sus gestiones en el mes', unidad: 'pagos' },
+  { tipo: 'META', nombre: 'Meta de %MET%', descripcion: 'Llegar al 100 % de su meta individual', unidad: '' }
+];
+
+export const TIPOS_BONO: Record<TipoBono, string> = {
+  LTD: 'Bono por LTD',
+  PKM: 'Bono por PKM',
+  SOBRE: 'Bono por sobrecumplimiento'
+};
+
+/** Valores de campo_monto_origen que cuentan como LTD */
+export const ORIGENES_LTD = ['ltd', 'ltd_especial_feria', 'ltd_plus', 'ltd_especial'];
+
+export type PresetBono = 'LTD_A' | 'LTD_S' | 'PKM_A' | 'SOBRE_A' | 'SOBRE_S';
+
+export const PRESETS_BONO: { clave: PresetBono; etiqueta: string }[] = [
+  { clave: 'LTD_A', etiqueta: 'Bono por LTD · asesor' },
+  { clave: 'LTD_S', etiqueta: 'Bono por LTD · supervisor' },
+  { clave: 'PKM_A', etiqueta: 'Bono por PKM · asesor' },
+  { clave: 'SOBRE_A', etiqueta: 'Bono por sobrecumplimiento · asesor' },
+  { clave: 'SOBRE_S', etiqueta: 'Bono por sobrecumplimiento · supervisor' }
+];
+
+/** Bono nuevo con los niveles de las tablas de setiembre 2026 (el sobrecumplimiento se llena a mano) */
+export function bonoDePreset(clave: PresetBono): BonoPeriodo {
+  const nivel = (desde: number, monto: number) => ({ desde, monto, montoSegundo: null });
+  const base = { id: null, activo: true, origenes: [] as string[], baseTotal: false, porPuesto: false, excluidos: [] as number[] };
+  switch (clave) {
+    case 'LTD_A':
+      return { ...base, tipo: 'LTD', aplica: 'ASESOR', origenes: [...ORIGENES_LTD], niveles: [nivel(10, 15), nivel(26, 20), nivel(46, 25)] };
+    case 'LTD_S':
+      return { ...base, tipo: 'LTD', aplica: 'SUPERVISOR', origenes: [...ORIGENES_LTD], niveles: [nivel(70, 300), nivel(110, 500), nivel(160, 1000)] };
+    case 'PKM_A':
+      return { ...base, tipo: 'PKM', aplica: 'ASESOR', niveles: [nivel(10, 15), nivel(26, 20), nivel(36, 25)] };
+    case 'SOBRE_A':
+      return { ...base, tipo: 'SOBRE', aplica: 'ASESOR', niveles: [] };
+    case 'SOBRE_S':
+      return { ...base, tipo: 'SOBRE', aplica: 'SUPERVISOR', niveles: [] };
+  }
+}
+
+export function nombreBono(b: Pick<BonoPeriodo, 'tipo' | 'aplica'>): string {
+  return `${TIPOS_BONO[b.tipo]} · ${b.aplica === 'ASESOR' ? 'asesor' : 'supervisor'}`;
+}
+
+/** Nombre corto de una línea de bono del desglose: "Bono por LTD · asesor" → "LTD" */
+export function bonoCorto(nombre: string): string {
+  return nombre.replace(/^Bono por /, '').replace(/ · .*$/, '');
+}
+
+export interface ChipMeta {
+  nombre: string;
+  valor: string;
+  cumple: boolean;
+  monto: number;
+}
+
+/** Metas de cantidad del asesor a partir del desglose que calculó el backend */
+export function chipsMetas(p: ParticipanteComision): ChipMeta[] {
+  return (p.desglose ?? [])
+    .filter(l => l.tipo === 'META')
+    .map(l => ({
+      nombre: l.nombre.replace(/^Meta de /, ''),
+      // "3300 de 3300" → "3300 / 3300"; "95.5 % de su meta…" → "95.5 %"
+      valor: l.detalle.includes('%') ? l.detalle.slice(0, l.detalle.indexOf('%') + 1) : l.detalle.replace(' de ', ' / '),
+      cumple: l.cumple,
+      monto: l.monto
+    }));
+}
+
+/** Lo que cobra por la escala (o logros) y por las metas de cantidad */
+export function partesComision(p: ParticipanteComision): { escala: number; metas: number } {
+  const suma = (lineas: LineaDesglose[]) => lineas.filter(l => l.cumple).reduce((s, l) => s + l.monto, 0);
+  const lineas = p.desglose ?? [];
+  return {
+    escala: suma(lineas.filter(l => l.tipo === 'NIVEL' || l.tipo === 'LOGRO')),
+    metas: suma(lineas.filter(l => l.tipo === 'META'))
+  };
+}
+
+export function bonosGanados(p: ParticipanteComision): LineaDesglose[] {
+  return (p.desglose ?? []).filter(l => l.tipo === 'BONO' && l.cumple && l.monto > 0);
+}
+
+/** Metas de cantidad en el orden de la pantalla, con las que no están marcadas vacías */
+export function metasParaEditar(metas: MetaCantidad[] | null | undefined): { tipo: TipoMetaCantidad; activa: boolean; cantidad: number | null; monto: number | null }[] {
+  return TIPOS_META.map(t => {
+    const m = (metas ?? []).find(x => x.tipo === t.tipo);
+    return { tipo: t.tipo, activa: !!m, cantidad: m?.cantidad ?? null, monto: m?.monto ?? null };
+  });
 }
 
 // ==================== DETALLE ====================
@@ -217,60 +285,52 @@ export function montoDetalle(d: DetalleComision): number {
   return d.recaudo ?? d.recaudoContenido ?? 0;
 }
 
-/** Acumulado del asesor hasta el pago según la métrica */
-export function acumuladoDetalle(d: DetalleComision): number {
-  return d.recaudoAcumulado ?? d.recaudoContenidoAcumulado ?? 0;
-}
-
 export interface DiaDetalle {
   fecha: string;
   pagos: DetalleComision[];
-  recaudo: number;
+  monto: number;
   acumulado: number;
   porcentaje: number | null;
-  comision: number;
+  nivel: EscalaComision | null;
+  /** El nivel cambió este día */
+  sube: boolean;
 }
 
 /**
- * Agrupa pagos por fecha de pago (ya vienen en orden). Con varios asesores (vista de la
- * subcartera) el acumulado es la suma de todos y la comisión se calcula con los tramos
- * y la base que se pasan.
+ * Agrupa los pagos por fecha de banco y acumula. base = meta contra la que se mide
+ * (la del asesor o la del mes para el supervisor); tramos = su escala.
  */
-export function agruparPorDia(
-  filas: DetalleComision[],
-  base: number | null,
-  tramos: EscalaComision[] | null
-): DiaDetalle[] {
+export function agruparPorDia(filas: DetalleComision[], base: number | null, tramos: EscalaComision[]): DiaDetalle[] {
   const ordenadas = [...filas].sort((a, b) =>
     a.fechaBanco.localeCompare(b.fechaBanco) || a.conciliacionId - b.conciliacionId);
   const dias: DiaDetalle[] = [];
   let acumulado = 0;
+  let nivelAnterior: EscalaComision | null = null;
   for (const d of ordenadas) {
     let dia = dias[dias.length - 1];
     if (!dia || dia.fecha !== d.fechaBanco) {
-      dia = { fecha: d.fechaBanco, pagos: [], recaudo: 0, acumulado: 0, porcentaje: null, comision: 0 };
+      dia = { fecha: d.fechaBanco, pagos: [], monto: 0, acumulado: 0, porcentaje: null, nivel: null, sube: false };
       dias.push(dia);
     }
     const monto = montoDetalle(d);
     acumulado += monto;
     dia.pagos.push(d);
-    dia.recaudo += monto;
+    dia.monto += monto;
     dia.acumulado = acumulado;
-    if (tramos) {
-      dia.porcentaje = base ? acumulado / base * 100 : null;
-      const t = base ? tramoAlcanzado(tramos, acumulado, base) : null;
-      dia.comision = t ? t.montoComision : 0;
-    } else {
-      dia.porcentaje = d.porcentajeAcumulado;
-      dia.comision = d.comisionAlcanzada;
-    }
+  }
+  for (const dia of dias) {
+    dia.porcentaje = base ? dia.acumulado / base * 100 : null;
+    dia.nivel = base ? tramoAlcanzado(tramos, dia.acumulado, base) : null;
+    dia.sube = !!dia.nivel && dia.nivel.montoComision > 0
+      && (nivelAnterior == null || nivelAnterior.porcentajeDesde !== dia.nivel.porcentajeDesde);
+    nivelAnterior = dia.nivel;
   }
   return dias;
 }
 
 // ==================== VARIOS ====================
 
-/** Mensaje del backend ({ message } del manejador global, o { error } de base de ajuste) o uno genérico */
+/** Mensaje del backend ({ message } del manejador global, o { error }) o uno genérico */
 export function mensajeError(error: unknown, porDefecto: string): string {
   if (error instanceof HttpErrorResponse) {
     const cuerpo = error.error;
@@ -285,7 +345,7 @@ export function mensajeError(error: unknown, porDefecto: string): string {
       return 'No hay conexión con el servidor. Intenta de nuevo.';
     }
     if (error.status === 403) {
-      return 'Solo los administradores pueden usar el módulo de comisiones.';
+      return 'No tienes acceso al módulo de comisiones.';
     }
   }
   return porDefecto;

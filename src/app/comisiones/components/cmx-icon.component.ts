@@ -7,6 +7,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 const TRAZOS: Record<string, string[]> = {
   'chevron-left': ['M15 18l-6-6 6-6'],
   'chevron-right': ['M9 18l6-6-6-6'],
+  'chevron-down': ['M6 9l6 6 6-6'],
+  copy: ['M8 8h11v11H8z', 'M5 15V5h10'],
+  gift: ['M4 11h16v9H4z', 'M3 7h18v4H3z', 'M12 7v13', 'M12 7c-2-4-6-3-5 0', 'M12 7c2-4 6-3 5 0'],
   'arrow-left': ['M19 12H5', 'M11 18l-6-6 6-6'],
   'arrow-up-right': ['M7 17L17 7', 'M8 7h9v9'],
   plus: ['M12 5v14', 'M5 12h14'],
