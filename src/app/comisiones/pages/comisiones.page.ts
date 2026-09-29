@@ -118,7 +118,7 @@ const REFRESCO_MS = 60_000;
               <select id="cmx-f-sub" (change)="cambiarSubcartera($any($event.target).value)" [disabled]="!subcarteras().length">
                 @if (!subcarteras().length) { <option value="">—</option> }
                 @for (s of subcarteras(); track s.id) {
-                  <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.nombreSubcartera }} · {{ s.id }}</option>
+                  <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.nombreSubcartera }}</option>
                 }
               </select>
             </div>
