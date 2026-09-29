@@ -1,21 +1,42 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, DestroyRef, OnInit, ViewEncapsulation, afterRenderEffect, computed, inject, signal, viewChild, ElementRef
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AppDateTimePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
+import { AppNumberPipe, AppDateTimePipe } from '@/shared/pipes/format.pipes';
+import { ToastService } from '@/shared/services/toast.service';
 import { ComisionesService } from '../services/comisiones.service';
-import { PeriodoComision, ReportePeriodo } from '../models/comision.model';
-import { ESTADOS, ESTADO_INFO, METRICA_INFO, mensajeError, nombreMes } from '../comisiones.util';
+import { Cartera, Inquilino, ReportePeriodo, Subcartera, VistaPeriodo } from '../models/comision.model';
+import {
+  ESTADO_VISTA_INFO, EstadoVista, METRICA_INFO, codigoPeriodo, descargar, diaMes, estadoDeVista, mensajeError, nombreArchivo, nombreMes
+} from '../comisiones.util';
 import { CmxIconComponent } from '../components/cmx-icon.component';
-import { CrearPeriodoPanelComponent } from '../components/crear-periodo-panel.component';
-import { PeriodoDetalleComponent } from '../components/periodo-detalle.component';
-import { SubcarteraConfigComponent } from '../components/subcartera-config.component';
+import { PeriodoPickerComponent } from '../components/periodo-picker.component';
+import { ResultadosTabComponent } from '../components/resultados-tab.component';
+import { SustentoTabComponent } from '../components/sustento-tab.component';
+import { ConfiguracionTabComponent } from '../components/configuracion-tab.component';
+import { HistorialTabComponent } from '../components/historial-tab.component';
+import { BonosTabComponent } from '../components/bonos-tab.component';
+import { AgregarParticipanteModalComponent } from '../components/agregar-participante-modal.component';
 
-type Seccion = 'periodos' | 'subcartera';
+type Vista = 'resultados' | 'sustento' | 'config' | 'bonos' | 'historial';
+
+const VISTAS: { id: Vista; etiqueta: string }[] = [
+  { id: 'resultados', etiqueta: 'Resultados' },
+  { id: 'sustento', etiqueta: 'Sustento' },
+  { id: 'config', etiqueta: 'Configuración' },
+  { id: 'bonos', etiqueta: 'Bonos' },
+  { id: 'historial', etiqueta: 'Historial' }
+];
+
+const CLAVE_SUBCARTERA = 'cmx.subcartera';
+const REFRESCO_MS = 60_000;
 
 /**
- * Módulo de comisiones (solo administradores).
- * Un período por subcartera y mes: meta interna del reporte de producción, tramos, roles que
- * comisionan, cálculo automático sobre pagos conciliados, revisión y aprobación.
- * Mes, período abierto y sección (períodos o configuración de subcartera) viven en la URL.
+ * Módulo de comisiones.
+ * Se elige el periodo (mes) y la subcartera (Proveedor → Cartera → Subcartera). Cada mes se configura por
+ * su cuenta: al guardar la configuración nace el período y se calcula con los pagos conciliados que ya hay;
+ * mientras esté abierto se actualiza solo con cada archivo aprobado. Cerrar es el paso final (se puede reabrir).
+ * Subcartera, periodo y pestaña viven en la URL.
  */
 @Component({
   selector: 'app-comisiones',
@@ -24,9 +45,13 @@ type Seccion = 'periodos' | 'subcartera';
     AppNumberPipe,
     AppDateTimePipe,
     CmxIconComponent,
-    CrearPeriodoPanelComponent,
-    PeriodoDetalleComponent,
-    SubcarteraConfigComponent
+    PeriodoPickerComponent,
+    ResultadosTabComponent,
+    SustentoTabComponent,
+    ConfiguracionTabComponent,
+    HistorialTabComponent,
+    BonosTabComponent,
+    AgregarParticipanteModalComponent
   ],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,230 +59,433 @@ type Seccion = 'periodos' | 'subcartera';
   template: `
     <div class="cmx cmx-root">
       <div class="cmx-wrap">
-        @if (seccion() === 'subcartera') {
-          <cmx-subcartera-config [idSubcarteraInicial]="subcarteraConfig()"
-                                 (volver)="irSeccion('periodos')" (guardado)="alGuardarSubcartera()" />
-        } @else if (idPeriodo() != null) {
-          <cmx-periodo-detalle [idPeriodo]="idPeriodo()!" [reporteInicial]="reporteCreado()"
-                               (volver)="cerrarPeriodo()" (cambiado)="alCambiarPeriodo($event)" />
-        } @else {
-          <div class="cmx-app">
-            <!-- ============ CONTEXTO ============ -->
-            <div class="cmx-ctx">
-              <span class="cmx-mark" aria-hidden="true"></span>
-              <h1 class="cmx-crumb">Comisiones</h1>
-              <span class="cmx-chip" role="group" aria-label="Mes">
-                <button type="button" class="cmx-chip-nav" (click)="moverMes(-1)" aria-label="Mes anterior">
-                  <cmx-icon name="chevron-left" [size]="14" />
+        <div class="cmx-app">
+          <!-- ============ CONTEXTO ============ -->
+          <div class="cmx-ctx">
+            <span class="cmx-mark" aria-hidden="true"></span>
+            <h1 class="cmx-crumb">Comisiones</h1>
+            <div class="cmx-pnav">
+              <button type="button" class="cmx-arr" (click)="moverMes(-1)" aria-label="Periodo anterior" [attr.title]="codigoVecino(-1)">
+                <cmx-icon name="chevron-left" [size]="16" />
+              </button>
+              <cmx-periodo-picker [idSubcartera]="idSubcartera()" [anio]="anio()" [mes]="mes()" [estadoActual]="estado()"
+                                  (cambiar)="irA($event.anio, $event.mes)" />
+              <button type="button" class="cmx-arr" (click)="moverMes(1)" [disabled]="siguienteEsFuturo()" aria-label="Periodo siguiente"
+                      [attr.title]="siguienteEsFuturo() ? codigoVecino(1) + ' se habilita el 01/' + codigoVecino(1).slice(5) : codigoVecino(1)">
+                <cmx-icon name="chevron-right" [size]="16" />
+              </button>
+            </div>
+            <span class="cmx-right">
+              @if (reporte(); as r) {
+                <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcel(r)">
+                  <cmx-icon name="download" [size]="15" /> {{ descargando() ? 'Generando…' : 'Excel' }}
                 </button>
-                <i>Período</i><span aria-live="polite">{{ nombreMes(mes()) }} {{ anio() }}</span>
-                <button type="button" class="cmx-chip-nav" (click)="moverMes(1)" aria-label="Mes siguiente">
-                  <cmx-icon name="chevron-right" [size]="14" />
-                </button>
-              </span>
-              @if (!esMesActual()) {
-                <button type="button" class="cmx-btn cmx-btn-link" (click)="irMesActual()">Mes actual</button>
+                @if (r.periodo.estado === 'EN_CURSO') {
+                  <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="confirmandoCierre.set(true)">
+                    <cmx-icon name="lock" [size]="15" /> Cerrar periodo
+                  </button>
+                } @else {
+                  <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="procesando()" (click)="reabrir(r)">
+                    <cmx-icon name="unlock" [size]="15" /> {{ procesando() ? 'Reabriendo…' : 'Reabrir' }}
+                  </button>
+                }
               }
-              <span class="cmx-right">
-                <button type="button" class="cmx-btn cmx-btn-sec" (click)="configurarSubcartera(null)">
-                  <cmx-icon name="sliders" [size]="15" /> Configurar subcartera
-                </button>
-                <button type="button" class="cmx-btn cmx-btn-act" (click)="creando.set(true)">
-                  <cmx-icon name="plus" [size]="15" /> Nuevo período
+            </span>
+          </div>
+
+          <!-- ============ PROVEEDOR / CARTERA / SUBCARTERA ============ -->
+          <div class="cmx-filters">
+            <div class="cmx-field">
+              <label for="cmx-f-prov">Proveedor</label>
+              <select id="cmx-f-prov" (change)="cambiarInquilino($any($event.target).value)">
+                @if (!inquilinos().length) { <option value="">Cargando…</option> }
+                @for (i of inquilinos(); track i.id) {
+                  <option [value]="i.id" [selected]="i.id === idInquilino()">{{ i.nombreInquilino }}</option>
+                }
+              </select>
+            </div>
+            <div class="cmx-field">
+              <label for="cmx-f-cart">Cartera</label>
+              <select id="cmx-f-cart" (change)="cambiarCartera($any($event.target).value)" [disabled]="!carteras().length">
+                @if (!carteras().length) { <option value="">—</option> }
+                @for (c of carteras(); track c.id) {
+                  <option [value]="c.id" [selected]="c.id === idCartera()">{{ c.nombreCartera }}</option>
+                }
+              </select>
+            </div>
+            <div class="cmx-field">
+              <label for="cmx-f-sub">Subcartera</label>
+              <select id="cmx-f-sub" (change)="cambiarSubcartera($any($event.target).value)" [disabled]="!subcarteras().length">
+                @if (!subcarteras().length) { <option value="">—</option> }
+                @for (s of subcarteras(); track s.id) {
+                  <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.nombreSubcartera }} · {{ s.id }}</option>
+                }
+              </select>
+            </div>
+            @if (vista(); as v) {
+              <div class="cmx-fsum">
+                <span class="cmx-state" [class]="'cmx-state ' + estadoInfo().clase">{{ estadoInfo().etiqueta }}</span>
+                @if (reporte(); as r) {
+                  <span><b class="cmx-num">S/ {{ r.totalComisiones | appNumber:'1.2-2' }}</b> en comisiones@if (r.totalBonos) { · <b class="cmx-num">S/ {{ r.totalBonos | appNumber:'1.2-2' }}</b> en bonos }</span>
+                  <span class="cmx-fsum-m">{{ r.periodo.rolAsesor?.nombreRol || 'Sin rol' }} · {{ metricaInfo[r.periodo.tipoMetrica].etiqueta.toLowerCase() }}</span>
+                } @else if (estado() === 'SIN_CONFIG') {
+                  <span class="cmx-fsum-m">Falta configurar</span>
+                } @else {
+                  <span class="cmx-fsum-m">Sin conciliaciones en {{ codigo() }}</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- ============ AVISOS ============ -->
+          @if (confirmandoCierre() && reporte(); as r) {
+            <div class="cmx-banner cmx-enter" role="alertdialog" aria-labelledby="cmx-cierre-t">
+              <span class="cmx-banner-ic">!</span>
+              <span class="cmx-banner-tx">
+                <b id="cmx-cierre-t">¿Cerrar {{ codigo() }} de {{ nombreSubcartera() }}?</b>
+                @if (faltanDias(); as f) {
+                  Todavía faltan los pagos del <b>{{ f.desde }} al {{ f.hasta }}</b>: el archivo de Financiera OH llega con 2 días de
+                  retraso. Si cierras ahora, esos pagos no se sumarán a este periodo.
+                } @else {
+                  Ya hay pagos del banco hasta el último día del mes. Al cerrar, los resultados se congelan.
+                }
+              </span>
+              <span class="cmx-banner-actions">
+                <button type="button" class="cmx-btn cmx-btn-sec" (click)="confirmandoCierre.set(false)">Cancelar</button>
+                <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="cerrar(r)">
+                  {{ procesando() ? 'Cerrando…' : faltanDias() ? 'Cerrar de todas formas' : 'Cerrar periodo' }}
                 </button>
               </span>
             </div>
+          } @else if (estado() === 'CERRADO' && reporte()) {
+            <div class="cmx-banner is-dark cmx-enter">
+              <span class="cmx-banner-ic"><cmx-icon name="lock" [size]="14" /></span>
+              <span class="cmx-banner-tx">Cerrado por <b>{{ reporte()!.periodo.cerradoPorNombre }}</b> el {{ reporte()!.periodo.fechaCierre | appDateTime }}.
+                Resultados congelados: para cambiar algo hay que reabrirlo.</span>
+            </div>
+          } @else if (estado() === 'ABIERTO' && !esMesActual()) {
+            <div class="cmx-banner is-info cmx-enter">
+              <span class="cmx-banner-ic">i</span>
+              <span class="cmx-banner-tx"><b>{{ codigo() }} sigue abierto.</b>
+                @if (vista()?.pagos?.ultimaFechaBanco; as u) { Hay pagos del banco hasta el {{ diaMes(u) }}. }
+                Mientras siga abierto, cualquier pago de ese mes que se apruebe tarde se suma aquí.</span>
+            </div>
+          }
+          @for (a of advertencias(); track $index) {
+            <div class="cmx-banner cmx-enter"><span class="cmx-banner-ic">!</span><span class="cmx-banner-tx">{{ a }}</span></div>
+          }
 
-            <!-- ============ PERÍODOS DEL MES ============ -->
-            <div class="cmx-body">
-              <div class="cmx-side" role="complementary" aria-label="Resumen del mes">
-                <h2 class="cmx-side-h">{{ nombreMes(mes()) }} {{ anio() }}</h2>
-                <div class="cmx-rule cmx-enter">
-                  <div class="cmx-rule-head"><span class="cmx-rule-title">Períodos del mes</span></div>
-                  <div class="cmx-rule-value">{{ cargando() ? '…' : periodos().length }}</div>
-                  <div class="cmx-rule-desc">{{ resumenEstados() || 'Ninguno todavía' }}</div>
-                </div>
-                <div class="cmx-rule cmx-enter" style="--i:1">
-                  <div class="cmx-rule-head"><span class="cmx-rule-title">Comisiones calculadas</span></div>
-                  <div class="cmx-rule-value">S/ {{ totalMes() | appNumber:'1.2-2' }}</div>
-                  <div class="cmx-rule-desc">
-                    Los períodos en curso se actualizan solos con cada pago conciliado o corregido.
-                    @if (sinCalculo()) { <b>{{ sinCalculo() }} sin cálculo.</b> }
-                  </div>
-                </div>
-                <div class="cmx-rule is-info cmx-enter" style="--i:2">
-                  <div class="cmx-rule-head">
-                    <span class="cmx-rule-title">Cómo se arma un período</span>
-                    <button type="button" class="cmx-rule-action" (click)="configurarSubcartera(null)">Configurar</button>
-                  </div>
-                  <div class="cmx-rule-desc">
-                    La meta sale de la meta interna del reporte de producción. Lo demás se copia de la configuración de la
-                    subcartera o, si no tiene, del período anterior.
-                  </div>
-                </div>
+          <!-- ============ FRANJA DE ESTADO ============ -->
+          @if (vista(); as v) {
+            <div class="cmx-strip">
+              <ol class="cmx-steps" aria-label="Estado del periodo">
+                <li class="cmx-step" [class.is-now]="estado() === 'ABIERTO'" [class.is-done]="estado() === 'CERRADO'">
+                  <span class="cmx-step-dot">{{ estado() === 'CERRADO' ? '✓' : '' }}</span>Abierto
+                </li>
+                <li class="cmx-step-ln" aria-hidden="true"></li>
+                <li class="cmx-step" [class.is-now]="estado() === 'CERRADO'"><span class="cmx-step-dot"></span>Cerrado</li>
+              </ol>
+              <span>
+                @switch (estado()) {
+                  @case ('ABIERTO') {
+                    <span class="cmx-live" aria-hidden="true"></span>Se actualiza solo
+                    @if (reporte()?.periodo?.fechaCalculo; as f) { · último cálculo <b>{{ f | appDateTime }}</b> }
+                  }
+                  @case ('CERRADO') { Ya no se actualiza }
+                  @default { Sin configurar: los pagos llegan, pero todavía no se calcula nada }
+                }
+              </span>
+              <span class="cmx-cov">
+                <span class="cmx-cov-cells" aria-hidden="true">
+                  @for (c of cobertura(); track $index) { <span class="cmx-cov-c" [class]="'cmx-cov-c ' + c.clase" [attr.title]="c.titulo"></span> }
+                </span>
+                <span>{{ textoCobertura() }}</span>
+              </span>
+              @if (metaDelMes() != null) {
+                <span class="cmx-strip-meta">Meta del mes · <b class="cmx-num">S/ {{ metaDelMes() | appNumber:'1.2-2' }}</b></span>
+              }
+            </div>
+          }
+
+          <!-- ============ VISTAS ============ -->
+          <div class="cmx-views" role="tablist" aria-label="Vistas del periodo" #tabs>
+            @for (t of vistas; track t.id; let i = $index) {
+              @if (i === 2) { <span class="cmx-views-gap"></span> }
+              <button type="button" role="tab" [attr.aria-selected]="vistaActual() === t.id" (click)="irVista(t.id)" [attr.data-vista]="t.id">
+                {{ t.etiqueta }}
+                @if (t.id === 'resultados' && reporte()) { <span class="cmx-count">{{ reporte()!.participantes.length }}</span> }
+                @if (t.id === 'bonos' && reporte()?.periodo?.bonos?.length) { <span class="cmx-count">{{ reporte()!.periodo.bonos.length }}</span> }
+              </button>
+            }
+            <span class="cmx-views-ink" aria-hidden="true" #ink></span>
+          </div>
+
+          <!-- ============ CONTENIDO ============ -->
+          <div class="cmx-main">
+            @if (error()) {
+              <div class="cmx-empty">
+                <span class="cmx-empty-mark"><cmx-icon name="alert" [size]="20" /></span>
+                <b>No se pudo cargar el periodo</b>
+                <p style="max-width:52ch">{{ error() }}</p>
+                <button type="button" class="cmx-btn cmx-btn-sec" (click)="cargarVista()">Reintentar</button>
               </div>
-
-              <div class="cmx-main">
-                <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-lista-titulo">
-                  <div class="cmx-block-head">
-                    <h2 id="cmx-lista-titulo" class="cmx-block-title">Períodos de {{ nombreMes(mes()).toLowerCase() }} {{ anio() }}</h2>
-                    <span class="cmx-block-desc">uno por subcartera · haz clic en una fila para abrirlo</span>
-                  </div>
-
-                  @if (cargando()) {
-                    <div class="cmx-block-body" style="display:grid;gap:10px">
-                      @for (i of [1, 2, 3, 4]; track i) { <div class="cmx-skel" style="height:44px"></div> }
-                    </div>
-                  } @else if (error()) {
-                    <div class="cmx-empty">
-                      <span class="cmx-empty-mark"><cmx-icon name="alert" [size]="20" /></span>
-                      <b>No se pudieron cargar los períodos</b>
-                      <p style="max-width:46ch">{{ error() }}</p>
-                      <button type="button" class="cmx-btn cmx-btn-sec" (click)="cargarPeriodos()">Reintentar</button>
-                    </div>
-                  } @else if (!periodos().length) {
-                    <div class="cmx-empty">
-                      <span class="cmx-empty-mark"><cmx-icon name="calendar" [size]="20" /></span>
-                      <b>Aún no hay comisiones de {{ nombreMes(mes()).toLowerCase() }} {{ anio() }}</b>
-                      <p style="max-width:52ch">
-                        Abre un período por subcartera. La meta se toma del reporte de producción y, si la subcartera ya tuvo
-                        un período, se copian sus tramos y roles.
-                      </p>
-                      <button type="button" class="cmx-btn cmx-btn-act" (click)="creando.set(true)">
-                        <cmx-icon name="plus" [size]="15" /> Abrir el primer período
-                      </button>
-                    </div>
+            } @else if (!vista()) {
+              <div style="display:grid;gap:12px">
+                <div class="cmx-skel" style="height:70px"></div>
+                <div class="cmx-skel" style="height:220px"></div>
+              </div>
+            } @else if (vista(); as v) {
+              @switch (vistaActual()) {
+                @case ('bonos') {
+                  @if (reporte(); as r) {
+                    <cmx-bonos-tab [reporte]="r" [soloLectura]="estado() === 'CERRADO'" (guardado)="alGuardarBonos($event)" />
                   } @else {
-                    <div class="cmx-tw">
-                      <table class="cmx-table">
-                        <thead>
-                          <tr>
-                            <th scope="col">Subcartera</th>
-                            <th scope="col">Se mide por</th>
-                            <th scope="col" class="n">Meta</th>
-                            <th scope="col">Estado</th>
-                            <th scope="col" class="n">Comisiones</th>
-                            <th scope="col">Último movimiento</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          @for (p of periodos(); track p.id; let i = $index) {
-                            <tr class="is-click cmx-enter" [style.--i]="i + 2" tabindex="0"
-                                (click)="abrirPeriodo(p.id)" (keydown.enter)="abrirPeriodo(p.id)"
-                                [attr.aria-label]="'Abrir comisiones de ' + p.nombreSubcartera">
-                              <td class="who">{{ p.nombreSubcartera }}</td>
-                              <td>{{ metricaInfo[p.tipoMetrica].etiqueta }}</td>
-                              <td class="n">{{ p.metaGrupal | appNumber:'1.2-2' }}</td>
-                              <td><span class="cmx-state" [class]="'cmx-state ' + estadoInfo[p.estado].clase">{{ estadoInfo[p.estado].etiqueta }}</span></td>
-                              <td class="n" [class.tot]="!!p.fechaCalculo" [class.na]="!p.fechaCalculo">
-                                {{ p.fechaCalculo ? (p.totalComisiones | appNumber:'1.2-2') : '—' }}
-                              </td>
-                              <td class="is-soft" [class.is-warn]="!p.fechaCalculo && p.estado === 'EN_CURSO'">
-                                @switch (p.estado) {
-                                  @case ('APROBADO') { Aprobado por {{ p.aprobadoPorNombre }} · {{ p.fechaAprobacion | appDateTime }} }
-                                  @case ('REVISADO') { Revisado por {{ p.revisadoPorNombre }} · espera aprobación }
-                                  @case ('EN_REVISION') { En revisión desde {{ p.fechaEnvioRevision | appDateTime }} }
-                                  @default {
-                                    @if (p.fechaCalculo) { Actualizado {{ p.fechaCalculo | appDateTime }} }
-                                    @else if (!p.roles.length) { Falta elegir los roles }
-                                    @else { Sin cálculo: revisa meta y participantes }
-                                  }
-                                }
-                              </td>
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
+                    <div class="cmx-empty cmx-enter">
+                      <span class="cmx-empty-mark"><cmx-icon name="gift" [size]="20" /></span>
+                      <b>Primero configura {{ codigo() }}</b>
+                      <p>Los bonos se agregan a un periodo ya configurado: elige la métrica, los participantes y la escala, y luego vuelve aquí.</p>
+                      <button type="button" class="cmx-btn cmx-btn-act" (click)="irVista('config')"><cmx-icon name="sliders" [size]="15" /> Configurar {{ codigo() }}</button>
                     </div>
                   }
-                </section>
-              </div>
-            </div>
+                }
+                @case ('config') {
+                  <cmx-configuracion-tab [vista]="v" [soloLectura]="estado() === 'CERRADO'" (guardado)="alGuardar($event)" />
+                }
+                @default {
+                  @if (reporte(); as r) {
+                    @switch (vistaActual()) {
+                      @case ('sustento') {
+                        <cmx-sustento-tab [reporte]="r" [vista]="v" [(seleccion)]="seleccionSustento" />
+                      }
+                      @case ('historial') {
+                        <cmx-historial-tab [reporte]="r" />
+                      }
+                      @default {
+                        <cmx-resultados-tab [reporte]="r" [puedeAgregar]="estado() === 'ABIERTO'"
+                                            (agregar)="agregando.set(true)" (verSustento)="verSustento($event)" />
+                      }
+                    }
+                  } @else {
+                    <div class="cmx-emptycfg cmx-enter">
+                      <div>
+                        <h2>{{ codigo() }} de {{ nombreSubcartera() }} todavía no está configurado</h2>
+                        <p>
+                          @if (v.pagos.cantidad) {
+                            Ya hay <b>{{ v.pagos.cantidad | appNumber:'1.0-0' }} pagos conciliados</b> en el mes.
+                          } @else {
+                            Todavía no hay pagos conciliados en {{ codigo() }}.
+                          }
+                          El periodo empieza en blanco: eliges la métrica, quiénes participan y la escala de comisión. Apenas guardes, se
+                          calcula en el momento con los pagos que ya hay y desde ahí se actualiza solo con cada archivo aprobado.
+                        </p>
+                        <div class="cmx-emptycfg-acts">
+                          <button type="button" class="cmx-btn cmx-btn-act" (click)="irVista('config')">
+                            <cmx-icon name="sliders" [size]="15" /> Configurar {{ codigo() }}
+                          </button>
+                        </div>
+                      </div>
+                      <div class="cmx-emptycfg-side">
+                        <div><span>Meta interna</span><b class="cmx-num">{{ v.metaInterna != null ? 'S/ ' + (v.metaInterna | appNumber:'1.2-2') : 'Sin registrar' }}</b></div>
+                        <div><span>Conciliado a la fecha</span><b class="cmx-num">S/ {{ v.pagos.total | appNumber:'1.2-2' }}</b></div>
+                        <div><span>Rol sugerido</span><b>{{ v.rolSugerido?.nombreRol || '—' }}</b></div>
+                        <div><span>Pagos hasta</span><b class="cmx-num">{{ v.pagos.ultimaFechaBanco ? diaMes(v.pagos.ultimaFechaBanco) : '—' }}</b></div>
+                      </div>
+                    </div>
+                  }
+                }
+              }
+            }
           </div>
-        }
+        </div>
       </div>
 
-      @if (creando()) {
-        <cmx-crear-periodo-panel [anioInicial]="anio()" [mesInicial]="mes()" [subcarterasConPeriodo]="subcarterasConPeriodo()"
-                                 (cerrar)="creando.set(false)" (creado)="alCrear($event)" />
+      @if (agregando() && reporte(); as r) {
+        <cmx-agregar-participante-modal [reporte]="r" [codigo]="codigo()" (cerrar)="agregando.set(false)" (agregado)="alAgregar($event)" />
       }
     </div>
   `
 })
 export class ComisionesPage implements OnInit {
   private readonly service = inject(ComisionesService);
+  private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly estadoInfo = ESTADO_INFO;
+  readonly vistas = VISTAS;
   readonly metricaInfo = METRICA_INFO;
   readonly nombreMes = nombreMes;
+  readonly diaMes = diaMes;
 
   private readonly hoy = new Date();
   readonly anio = signal(this.hoy.getFullYear());
   readonly mes = signal(this.hoy.getMonth() + 1);
-  readonly idPeriodo = signal<number | null>(null);
-  readonly seccion = signal<Seccion>('periodos');
-  /** Subcartera con la que se abre la configuración */
-  readonly subcarteraConfig = signal<number | null>(null);
 
-  readonly periodos = signal<PeriodoComision[]>([]);
-  readonly cargando = signal(false);
+  readonly inquilinos = signal<Inquilino[]>([]);
+  readonly carteras = signal<Cartera[]>([]);
+  readonly subcarteras = signal<Subcartera[]>([]);
+  readonly idInquilino = signal<number | null>(null);
+  readonly idCartera = signal<number | null>(null);
+  readonly idSubcartera = signal<number | null>(null);
+
+  readonly vista = signal<VistaPeriodo | null>(null);
   readonly error = signal<string | null>(null);
-  readonly creando = signal(false);
-  /** Reporte recién creado, para abrir el detalle sin volver a pedirlo */
-  readonly reporteCreado = signal<ReportePeriodo | null>(null);
+  readonly vistaActual = signal<Vista>('resultados');
+  readonly seleccionSustento = signal<number | 'sup' | null>(null);
+  readonly advertencias = signal<string[]>([]);
 
-  readonly esMesActual = computed(() =>
-    this.anio() === this.hoy.getFullYear() && this.mes() === this.hoy.getMonth() + 1
-  );
+  readonly confirmandoCierre = signal(false);
+  readonly procesando = signal(false);
+  readonly descargando = signal(false);
+  readonly agregando = signal(false);
 
-  readonly subcarterasConPeriodo = computed(() => this.periodos().map(p => p.idSubcartera));
+  private readonly tabs = viewChild<ElementRef<HTMLElement>>('tabs');
+  private readonly ink = viewChild<ElementRef<HTMLElement>>('ink');
+  private tabsAnimadas = false;
+  private pedido = 0;
 
-  readonly resumenEstados = computed(() => ESTADOS
-    .map(estado => ({ estado, cantidad: this.periodos().filter(p => p.estado === estado).length }))
-    .filter(e => e.cantidad > 0)
-    .map(e => `${e.cantidad} ${ESTADO_INFO[e.estado].etiqueta.toLowerCase()}`)
-    .join(' · '));
+  readonly reporte = computed<ReportePeriodo | null>(() => this.vista()?.reporte ?? null);
+  readonly estado = computed<EstadoVista>(() => {
+    const v = this.vista();
+    return v ? estadoDeVista(v) : 'SIN_PAGOS';
+  });
+  readonly estadoInfo = computed(() => ESTADO_VISTA_INFO[this.estado()]);
+  readonly codigo = computed(() => codigoPeriodo(this.anio(), this.mes()));
+  readonly nombreSubcartera = computed(() =>
+    this.vista()?.nombreSubcartera ?? this.subcarteras().find(s => s.id === this.idSubcartera())?.nombreSubcartera ?? 'la subcartera');
+  readonly esMesActual = computed(() => this.anio() === this.hoy.getFullYear() && this.mes() === this.hoy.getMonth() + 1);
+  readonly siguienteEsFuturo = computed(() => this.anio() * 12 + this.mes() >= this.hoy.getFullYear() * 12 + this.hoy.getMonth() + 1);
+  readonly metaDelMes = computed(() => this.reporte()?.periodo.metaDelMes ?? this.vista()?.metaInterna ?? null);
 
-  readonly totalMes = computed(() => this.periodos().reduce((s, p) => s + (p.fechaCalculo ? p.totalComisiones ?? 0 : 0), 0));
-  readonly sinCalculo = computed(() => this.periodos().filter(p => !p.fechaCalculo).length);
+  readonly diasDelMes = computed(() => new Date(this.anio(), this.mes(), 0).getDate());
+  readonly ultimoDia = computed(() => {
+    const u = this.vista()?.pagos.ultimaFechaBanco;
+    return u ? Number(u.slice(8, 10)) : 0;
+  });
+
+  /** Qué días del mes ya tienen pagos del banco aprobados */
+  readonly cobertura = computed(() => {
+    const dias = this.diasDelMes();
+    const ultimo = this.ultimoDia();
+    const primera = this.vista()?.pagos.primeraFechaBanco;
+    const desde = primera ? Number(primera.slice(8, 10)) : 1;
+    return Array.from({ length: 31 }, (_, i) => {
+      const d = i + 1;
+      const clase = d > dias ? 'is-x' : ultimo === 0 ? 'is-p' : d < desde ? 'is-pre' : d <= ultimo ? '' : 'is-p';
+      return { clase, titulo: d <= dias ? `${String(d).padStart(2, '0')}/${String(this.mes()).padStart(2, '0')}` : '' };
+    });
+  });
+
+  readonly textoCobertura = computed(() => {
+    const dias = this.diasDelMes();
+    const ultimo = this.ultimoDia();
+    const mm = String(this.mes()).padStart(2, '0');
+    if (!ultimo) {
+      return 'Todavía no hay pagos del banco en el mes';
+    }
+    if (ultimo >= dias) {
+      return `Pagos del banco completos: 01–${dias}/${mm}`;
+    }
+    return `Pagos del banco hasta el ${String(ultimo).padStart(2, '0')}/${mm} · faltan ${ultimo + 1}–${dias}/${mm}`;
+  });
+
+  /** Días del mes que todavía no tienen pagos del banco (para avisar al cerrar) */
+  readonly faltanDias = computed(() => {
+    const dias = this.diasDelMes();
+    const ultimo = this.ultimoDia();
+    const mm = String(this.mes()).padStart(2, '0');
+    return ultimo < dias ? { desde: `${String(ultimo + 1).padStart(2, '0')}/${mm}`, hasta: `${dias}/${mm}` } : null;
+  });
+
+  constructor() {
+    // Subrayado de la pestaña activa
+    afterRenderEffect(() => {
+      this.vistaActual();
+      this.vista();
+      const barra = this.tabs()?.nativeElement;
+      const ink = this.ink()?.nativeElement;
+      const activa = barra?.querySelector<HTMLElement>(`[data-vista="${this.vistaActual()}"]`);
+      if (!barra || !ink || !activa) {
+        return;
+      }
+      if (!this.tabsAnimadas) {
+        ink.style.transition = 'none';
+      }
+      ink.style.transform = `translateX(${activa.offsetLeft}px) scaleX(${activa.offsetWidth})`;
+      if (!this.tabsAnimadas) {
+        void ink.offsetWidth;
+        ink.style.transition = '';
+        this.tabsAnimadas = true;
+      }
+    });
+
+    // Mientras el período está abierto, se refresca solo (lo recalcula el backend con cada archivo aprobado)
+    const reloj = setInterval(() => {
+      if (this.estado() === 'ABIERTO' && this.vistaActual() !== 'config' && this.vistaActual() !== 'bonos' && !this.agregando() && document.visibilityState === 'visible') {
+        this.cargarVista(true);
+      }
+    }, REFRESCO_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(reloj));
+  }
 
   ngOnInit(): void {
     const q = this.route.snapshot.queryParamMap;
     const anio = Number(q.get('anio'));
     const mes = Number(q.get('mes'));
-    const periodo = Number(q.get('periodo'));
-    if (anio >= 2020 && anio <= 2100) {
+    if (anio >= 2020 && anio <= 2100 && mes >= 1 && mes <= 12 && anio * 12 + mes <= this.hoy.getFullYear() * 12 + this.hoy.getMonth() + 1) {
       this.anio.set(anio);
-    }
-    if (mes >= 1 && mes <= 12) {
       this.mes.set(mes);
     }
-    if (periodo > 0) {
-      this.idPeriodo.set(periodo);
+    const vista = q.get('vista') as Vista | null;
+    if (vista && VISTAS.some(v => v.id === vista)) {
+      this.vistaActual.set(vista);
     }
-    if (q.get('seccion') === 'subcartera') {
-      const sub = Number(q.get('subcartera'));
-      this.subcarteraConfig.set(sub > 0 ? sub : null);
-      this.seccion.set('subcartera');
-    }
-    this.cargarPeriodos();
+
+    // Subcartera de la URL o la última usada; si no hay, la primera del primer proveedor
+    const idSub = Number(q.get('subcartera')) || this.subcarteraGuardada();
+    this.service.obtenerInquilinos().subscribe({
+      next: lista => {
+        this.inquilinos.set(lista);
+        if (idSub > 0) {
+          this.service.obtenerJerarquiaSubcartera(idSub).subscribe({
+            next: j => {
+              this.idInquilino.set(j.idInquilino);
+              this.cargarCarteras(j.idInquilino, j.idCartera, idSub);
+            },
+            error: () => this.elegirPrimeraSubcartera()
+          });
+        } else {
+          this.elegirPrimeraSubcartera();
+        }
+      },
+      error: e => this.error.set(mensajeError(e, 'No se pudieron cargar los proveedores.'))
+    });
   }
 
-  cargarPeriodos(): void {
-    this.cargando.set(true);
-    this.error.set(null);
-    this.service.listarPeriodos(this.anio(), this.mes()).subscribe({
-      next: data => {
-        this.periodos.set(data);
-        this.cargando.set(false);
-      },
-      error: e => {
-        this.cargando.set(false);
-        this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
-      }
-    });
+  // ==================== SELECCIÓN ====================
+
+  cambiarInquilino(valor: string): void {
+    const id = Number(valor);
+    if (!id || id === this.idInquilino()) {
+      return;
+    }
+    this.idInquilino.set(id);
+    this.cargarCarteras(id, null, null);
+  }
+
+  cambiarCartera(valor: string): void {
+    const id = Number(valor);
+    if (!id || id === this.idCartera()) {
+      return;
+    }
+    this.cargarSubcarteras(id, null);
+  }
+
+  cambiarSubcartera(valor: string): void {
+    const id = Number(valor);
+    if (!id || id === this.idSubcartera()) {
+      return;
+    }
+    this.fijarSubcartera(id);
   }
 
   moverMes(delta: number): void {
@@ -270,70 +498,201 @@ export class ComisionesPage implements OnInit {
       mes = 1;
       anio++;
     }
-    this.cambiarMes(anio, mes);
+    this.irA(anio, mes);
   }
 
-  irMesActual(): void {
-    this.cambiarMes(this.hoy.getFullYear(), this.hoy.getMonth() + 1);
+  codigoVecino(delta: number): string {
+    const clave = this.anio() * 12 + (this.mes() - 1) + delta;
+    return codigoPeriodo(Math.floor(clave / 12), (clave % 12) + 1);
   }
 
-  private cambiarMes(anio: number, mes: number): void {
+  irA(anio: number, mes: number): void {
+    if (anio * 12 + mes > this.hoy.getFullYear() * 12 + this.hoy.getMonth() + 1) {
+      return;
+    }
     this.anio.set(anio);
     this.mes.set(mes);
-    this.idPeriodo.set(null);
-    this.reporteCreado.set(null);
     this.sincronizarUrl();
-    this.cargarPeriodos();
+    this.cargarVista();
   }
 
-  configurarSubcartera(idSubcartera: number | null): void {
-    this.subcarteraConfig.set(idSubcartera);
-    this.seccion.set('subcartera');
-    this.sincronizarUrl();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  irSeccion(seccion: Seccion): void {
-    this.seccion.set(seccion);
+  irVista(vista: Vista): void {
+    this.vistaActual.set(vista);
     this.sincronizarUrl();
   }
 
-  alGuardarSubcartera(): void {
-    this.irSeccion('periodos');
-    this.cargarPeriodos();
+  verSustento(clave: number | 'sup'): void {
+    this.seleccionSustento.set(clave);
+    this.irVista('sustento');
   }
 
-  abrirPeriodo(id: number): void {
-    this.reporteCreado.set(null);
-    this.idPeriodo.set(id);
-    this.sincronizarUrl();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // ==================== ACCIONES ====================
+
+  cerrar(r: ReportePeriodo): void {
+    this.procesando.set(true);
+    this.service.cerrar(r.periodo.id).subscribe({
+      next: reporte => {
+        this.procesando.set(false);
+        this.confirmandoCierre.set(false);
+        this.aplicarReporte(reporte);
+        this.toast.success(`${this.codigo()} de ${this.nombreSubcartera()} cerrado`);
+      },
+      error: e => {
+        this.procesando.set(false);
+        this.toast.error(mensajeError(e, 'No se pudo cerrar el periodo.'));
+      }
+    });
   }
 
-  cerrarPeriodo(): void {
-    this.idPeriodo.set(null);
-    this.reporteCreado.set(null);
-    this.sincronizarUrl();
+  reabrir(r: ReportePeriodo): void {
+    this.procesando.set(true);
+    this.service.reabrir(r.periodo.id).subscribe({
+      next: reporte => {
+        this.procesando.set(false);
+        this.aplicarReporte(reporte);
+        this.toast.success('Reabierto · vuelve a actualizarse solo');
+      },
+      error: e => {
+        this.procesando.set(false);
+        this.toast.error(mensajeError(e, 'No se pudo reabrir el periodo.'));
+      }
+    });
   }
 
-  alCrear(reporte: ReportePeriodo): void {
-    this.creando.set(false);
-    const p = reporte.periodo;
-    if (p.anio !== this.anio() || p.mes !== this.mes()) {
-      this.anio.set(p.anio);
-      this.mes.set(p.mes);
+  descargarExcel(r: ReportePeriodo): void {
+    this.descargando.set(true);
+    this.service.exportarExcelPeriodo(r.periodo.id).subscribe({
+      next: blob => {
+        this.descargando.set(false);
+        descargar(blob, nombreArchivo('Comisiones', r.periodo.nombreSubcartera, this.codigo()));
+      },
+      error: e => {
+        this.descargando.set(false);
+        this.toast.error(mensajeError(e, 'No se pudo generar el Excel.'));
+      }
+    });
+  }
+
+  alGuardar(reporte: ReportePeriodo): void {
+    this.aplicarReporte(reporte);
+    this.irVista('resultados');
+  }
+
+  alGuardarBonos(reporte: ReportePeriodo): void {
+    this.aplicarReporte(reporte);
+  }
+
+  alAgregar(reporte: ReportePeriodo): void {
+    this.agregando.set(false);
+    this.aplicarReporte(reporte);
+  }
+
+  // ==================== CARGA ====================
+
+  cargarVista(silencioso = false): void {
+    const id = this.idSubcartera();
+    if (id == null) {
+      return;
     }
-    this.cargarPeriodos();
-    this.reporteCreado.set(reporte);
-    this.idPeriodo.set(p.id);
-    this.sincronizarUrl();
+    const pedido = ++this.pedido;
+    if (!silencioso) {
+      this.vista.set(null);
+      this.error.set(null);
+      this.advertencias.set([]);
+      this.confirmandoCierre.set(false);
+    }
+    this.service.obtenerVista(id, this.anio(), this.mes()).subscribe({
+      next: v => {
+        if (pedido === this.pedido) {
+          this.vista.set(v);
+          this.error.set(null);
+        }
+      },
+      error: e => {
+        if (pedido === this.pedido && !silencioso) {
+          this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
+        }
+      }
+    });
   }
 
-  alCambiarPeriodo(evento: { eliminado: boolean }): void {
-    if (evento.eliminado) {
-      this.cerrarPeriodo();
+  private aplicarReporte(reporte: ReportePeriodo): void {
+    const v = this.vista();
+    if (v) {
+      this.vista.set({ ...v, reporte });
     }
-    this.cargarPeriodos();
+    this.advertencias.set((reporte.advertencias ?? []).filter(a => a.startsWith('No se pudo calcular')));
+    // Pagos del mes y meta pueden haber cambiado mientras tanto
+    this.cargarVista(true);
+  }
+
+  private elegirPrimeraSubcartera(): void {
+    const primero = this.inquilinos()[0];
+    if (!primero) {
+      this.error.set('No hay proveedores registrados.');
+      return;
+    }
+    this.idInquilino.set(primero.id);
+    this.cargarCarteras(primero.id, null, null);
+  }
+
+  private cargarCarteras(idInquilino: number, idCartera: number | null, idSubcartera: number | null): void {
+    this.carteras.set([]);
+    this.subcarteras.set([]);
+    this.service.obtenerCarteras(idInquilino).subscribe({
+      next: lista => {
+        this.carteras.set(lista);
+        const cartera = lista.find(c => c.id === idCartera) ?? lista[0];
+        if (!cartera) {
+          this.idCartera.set(null);
+          this.idSubcartera.set(null);
+          this.vista.set(null);
+          this.error.set('El proveedor no tiene carteras.');
+          return;
+        }
+        this.cargarSubcarteras(cartera.id, idSubcartera);
+      },
+      error: e => this.error.set(mensajeError(e, 'No se pudieron cargar las carteras.'))
+    });
+  }
+
+  private cargarSubcarteras(idCartera: number, idSubcartera: number | null): void {
+    this.idCartera.set(idCartera);
+    this.subcarteras.set([]);
+    this.service.obtenerSubcarteras(idCartera).subscribe({
+      next: lista => {
+        this.subcarteras.set(lista);
+        const sub = lista.find(s => s.id === idSubcartera) ?? lista[0];
+        if (!sub) {
+          this.idSubcartera.set(null);
+          this.vista.set(null);
+          this.error.set('La cartera no tiene subcarteras.');
+          return;
+        }
+        this.fijarSubcartera(sub.id);
+      },
+      error: e => this.error.set(mensajeError(e, 'No se pudieron cargar las subcarteras.'))
+    });
+  }
+
+  private fijarSubcartera(id: number): void {
+    this.idSubcartera.set(id);
+    this.seleccionSustento.set(null);
+    try {
+      localStorage.setItem(CLAVE_SUBCARTERA, String(id));
+    } catch {
+      // Sin almacenamiento local: se queda solo en la URL
+    }
+    this.sincronizarUrl();
+    this.cargarVista();
+  }
+
+  private subcarteraGuardada(): number {
+    try {
+      return Number(localStorage.getItem(CLAVE_SUBCARTERA)) || 0;
+    } catch {
+      return 0;
+    }
   }
 
   private sincronizarUrl(): void {
@@ -341,11 +700,10 @@ export class ComisionesPage implements OnInit {
       relativeTo: this.route,
       replaceUrl: true,
       queryParams: {
+        subcartera: this.idSubcartera(),
         anio: this.anio(),
         mes: this.mes(),
-        periodo: this.seccion() === 'periodos' ? this.idPeriodo() : null,
-        seccion: this.seccion() === 'subcartera' ? 'subcartera' : null,
-        subcartera: this.seccion() === 'subcartera' ? this.subcarteraConfig() : null
+        vista: this.vistaActual() === 'resultados' ? null : this.vistaActual()
       }
     });
   }
