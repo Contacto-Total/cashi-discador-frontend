@@ -13,7 +13,6 @@ import {
   MesPeriodo,
   ReportePeriodo,
   RolCashi,
-  SimulacionPeriodo,
   Subcartera,
   SupervisorCashi,
   UsuarioCashi,
@@ -76,12 +75,7 @@ export class ComisionesService {
     return this.http.get<SupervisorCashi[]>(`${this.baseUrl}/supervisores`);
   }
 
-  /** Cómo quedaría el mes con esta configuración, con los pagos de hoy. No guarda nada. */
-  simular(config: ConfiguracionPeriodo): Observable<SimulacionPeriodo> {
-    return this.http.post<SimulacionPeriodo>(`${this.baseUrl}/periodos/simular`, config);
-  }
-
-  /** Crea el período del mes si no existe o reemplaza la configuración de uno abierto */
+  /** Crea el período del mes si no existe o reemplaza la configuración de uno abierto. No calcula. */
   guardarConfiguracion(config: ConfiguracionPeriodo): Observable<ReportePeriodo> {
     return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/configuracion`, config);
   }
@@ -94,13 +88,20 @@ export class ComisionesService {
     return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/participantes`, request);
   }
 
-  /** Reemplaza los bonos de un período abierto (lo recalcula) */
+  /** Reemplaza los bonos de un período abierto (se aplican al recalcular) */
   guardarBonos(id: number, bonos: BonoPeriodo[]): Observable<ReportePeriodo> {
     return this.http.put<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/bonos`, bonos);
   }
 
-  cerrar(id: number): Observable<ReportePeriodo> {
-    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/cerrar`, null);
+  /** Select de los pagos conciliados del mes, cálculo y guardado (el cálculo es manual) */
+  recalcular(id: number): Observable<ReportePeriodo> {
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/recalcular`, null);
+  }
+
+  /** Congela el último recálculo; recalcular = true recalcula antes de cerrar */
+  cerrar(id: number, recalcular = false): Observable<ReportePeriodo> {
+    const params = new HttpParams().set('recalcular', recalcular);
+    return this.http.post<ReportePeriodo>(`${this.baseUrl}/periodos/${id}/cerrar`, null, { params });
   }
 
   reabrir(id: number): Observable<ReportePeriodo> {
