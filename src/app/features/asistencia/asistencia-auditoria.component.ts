@@ -19,7 +19,8 @@ const TIPOS: Record<TipoCambio, { texto: string; clase: string }> = {
   FERIADO: { texto: 'Feriado', clase: 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300' },
   CIERRE: { texto: 'Cierre', clase: 'bg-[#e8f5ec] text-[#166534] dark:bg-green-950/50 dark:text-green-300' },
   INGRESO_CESE: { texto: 'Ingreso y cese', clase: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' },
-  VACACIONES: { texto: 'Vacaciones', clase: 'bg-[#eef2ff] text-[#3730a3] dark:bg-indigo-950/50 dark:text-indigo-300' }
+  VACACIONES: { texto: 'Vacaciones', clase: 'bg-[#eef2ff] text-[#3730a3] dark:bg-indigo-950/50 dark:text-indigo-300' },
+  PERSONAL: { texto: 'Personal', clase: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' }
 };
 
 /**

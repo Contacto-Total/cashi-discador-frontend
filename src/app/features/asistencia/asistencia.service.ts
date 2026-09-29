@@ -23,6 +23,9 @@ import {
   MarcacionManual,
   MiPlan,
   PersonalAsistencia,
+  FichaPersonal,
+  DatosPersonal,
+  UsuarioLibre,
   VacacionesAsesor,
   PlanEquipoPedido,
   PlanSemana,
@@ -376,16 +379,39 @@ export class AsistenciaService {
     return this.http.put<void>(`${this.url}/recuperaciones/equipo`, plan, { params });
   }
 
-  // ==================== PERSONAL: INGRESO, CESE Y VACACIONES ====================
+  // ==================== PERSONAL ====================
+
+  /** Todas las fichas; la pantalla filtra por ámbito. */
+  fichas(): Observable<FichaPersonal[]> {
+    return this.http.get<FichaPersonal[]>(`${environment.apiUrl}/personal`);
+  }
+
+  usuariosLibres(): Observable<UsuarioLibre[]> {
+    return this.http.get<UsuarioLibre[]>(`${environment.apiUrl}/personal/usuarios-libres`);
+  }
+
+  registrarFicha(datos: DatosPersonal): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal`, datos);
+  }
+
+  editarFicha(id: number, datos: DatosPersonal): Observable<FichaPersonal> {
+    return this.http.put<FichaPersonal>(`${environment.apiUrl}/personal/${id}`, datos);
+  }
+
+  cambiarSubcartera(id: number, cuerpo: { idSubcartera: number; fechaDesde: string; motivo: string }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/subcartera`, cuerpo);
+  }
+
+  registrarCese(id: number, cuerpo: { fecha: string; motivo: string; comentario: string | null }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/cese`, cuerpo);
+  }
+
+  // ==================== VACACIONES ====================
 
   /** Los asesores del ámbito (sin subcartera, todos), también los que cesaron. */
   personal(idSubcartera: number | null): Observable<PersonalAsistencia[]> {
     const params = idSubcartera ? new HttpParams().set('idSubcartera', idSubcartera) : undefined;
     return this.http.get<PersonalAsistencia[]>(`${this.url}/personal`, { params });
-  }
-
-  guardarPersonal(idUsuario: number, cambio: { fechaIngreso: string; fechaCese: string | null; motivo: string }): Observable<PersonalAsistencia> {
-    return this.http.put<PersonalAsistencia>(`${this.url}/personal/${idUsuario}`, cambio);
   }
 
   vacaciones(idSubcartera: number | null): Observable<VacacionesAsesor[]> {

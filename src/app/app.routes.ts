@@ -530,6 +530,13 @@ export const routes: Routes = [
   },
 
   {
+    path: 'personal',
+    loadComponent: () => import('./features/asistencia/personal.component').then(m => m.PersonalComponent),
+    // Las fichas son de RR.HH., igual que Control de Asistencia.
+    canActivate: [authGuard, rrhhGuard]
+  },
+
+  {
     path: 'asistencia',
     loadComponent: () => import('./features/asistencia/control-asistencia.component').then(m => m.ControlAsistenciaComponent),
     // De RR.HH.: corregir, aprobar, cerrar y configurar. RR.HH. es configuración
