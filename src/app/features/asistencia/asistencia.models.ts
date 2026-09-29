@@ -309,7 +309,7 @@ export interface CierreSemana {
  * solicitud, regla, feriado o cierre— con su valor anterior, el nuevo, el
  * motivo y quién lo hizo.
  */
-export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE' | 'VACACIONES';
+export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE' | 'VACACIONES' | 'PERSONAL';
 
 export interface CambioAsistencia {
   /** «M-12» para una marca corregida, «A-7» para el resto. */
@@ -532,18 +532,79 @@ export interface PlanEquipoPedido {
   aparte: Record<number, { fecha: string; minutos: number }[]>;
 }
 
-/** Configuración › Ingreso y cese: un asesor con sus fechas. */
+/** Un asesor del control con su ingreso y su cese, según su ficha de Personal. */
 export interface PersonalAsistencia {
   idUsuario: number;
   nombre: string;
   usuario: string;
   idSubcartera: number | null;
   subcartera: string | null;
-  fechaCreacion: string | null;
-  /** La que rige: la corregida o, si no, la de creación del usuario. */
   fechaIngreso: string | null;
-  ingresoCorregido: boolean;
   fechaCese: string | null;
+}
+
+/** Un hito de la ficha: el ingreso, cada cambio de subcartera y el cese. */
+export interface MovimientoPersonal {
+  tipo: 'ingreso' | 'cambio' | 'cese';
+  fecha: string;
+  titulo: string;
+  detalle: string;
+}
+
+/** La ficha de Personal, con su ámbito de hoy (o el de su último día). */
+export interface FichaPersonal {
+  id: number;
+  tipoDocumento: 'DNI' | 'CE';
+  numeroDocumento: string | null;
+  apellidos: string;
+  nombres: string;
+  fechaNacimiento: string | null;
+  nacionalidad: string | null;
+  estadoCivil: string | null;
+  telefonoMovil: string | null;
+  telefonoFijo: string | null;
+  correo: string | null;
+  direccion: string | null;
+  distrito: string | null;
+  idUsuario: number | null;
+  usuario: string | null;
+  fechaIngreso: string;
+  fechaCese: string | null;
+  motivoCese: string | null;
+  comentarioCese: string | null;
+  idCliente: number | null;
+  cliente: string | null;
+  idCartera: number | null;
+  cartera: string | null;
+  idSubcartera: number | null;
+  subcartera: string | null;
+  movimientos: MovimientoPersonal[];
+}
+
+/** Lo que se manda al registrar o editar una ficha. */
+export interface DatosPersonal {
+  tipoDocumento: 'DNI' | 'CE';
+  numeroDocumento: string;
+  apellidos: string;
+  nombres: string;
+  fechaNacimiento: string;
+  nacionalidad: string | null;
+  estadoCivil: string | null;
+  telefonoMovil: string;
+  telefonoFijo: string | null;
+  correo: string | null;
+  direccion: string | null;
+  distrito: string | null;
+  idUsuario: number | null;
+  fechaIngreso: string;
+  idSubcartera: number | null;
+}
+
+/** Un usuario asesor de Cashi sin ficha, para vincular. */
+export interface UsuarioLibre {
+  idUsuario: number;
+  usuario: string;
+  nombre: string | null;
 }
 
 /** Configuración › Personal › Vacaciones: un rango de un asesor. */

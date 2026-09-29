@@ -87,7 +87,7 @@ function textoHorario(dias: DiaBase[]): string {
       display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
       gap: 10px; min-height: 38px; margin-bottom: 12px;
     }
-    /* Ingreso y cese: la fecha con de dónde sale debajo, y el botón de la fila a la derecha. */
+    /* Vacaciones: el dato de apoyo debajo, y el botón de la fila a la derecha. */
     .sub-celda { display: block; margin-top: 2px; font-size: 11.5px; color: #5f6c80 }
     .tabla-personal td.celda-accion { width: 1%; text-align: right }
     .tabla-personal tbody tr td { border-bottom: 1px solid #f1f3f6 }
@@ -253,7 +253,7 @@ function textoHorario(dias: DiaBase[]): string {
         <div>
           <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Administración</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Reglas, horario base, personal y calendario
+            Reglas, horario base, vacaciones y calendario
           </p>
         </div>
         <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
@@ -263,7 +263,7 @@ function textoHorario(dias: DiaBase[]): string {
       </div>
     </div>
 
-    <!-- Una pestaña por tema: las reglas con el horario base, el ingreso y cese y el calendario. -->
+    <!-- Una pestaña por tema: las reglas con el horario base, las vacaciones y el calendario. -->
     <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
       <nav [class]="estilos.segmentos" role="tablist" aria-label="Secciones de configuración">
         @for (t of SECCIONES; track t.clave) {
@@ -343,59 +343,11 @@ function textoHorario(dias: DiaBase[]): string {
     </div>
     }
 
-    <!-- PERSONAL: ingreso y cese, y vacaciones. Antes del ingreso, después del cese y en vacaciones no hay faltas. -->
-    @if (seccion() === 'personal') {
+    <!-- VACACIONES: esos días no hay faltas. El ingreso y el cese están en la ficha de Personal. -->
+    @if (seccion() === 'vacaciones') {
     <div class="px-7 pb-12 pt-5">
       <div class="aparecer">
         <div class="fila-seccion">
-          <div class="flex items-baseline gap-2.5">
-            <h2 class="titulo-seccion !m-0">Ingreso y cese</h2>
-            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaPersonal() }}</span>
-          </div>
-        </div>
-        <div [class]="estilos.panel">
-          <table class="tabla-personal w-full border-collapse">
-            <caption class="sr-only">Fecha de ingreso y de cese de cada asesor</caption>
-            <thead>
-              <tr class="border-b border-[#e6e9ee] dark:border-slate-800">
-                <th scope="col" [class]="estilos.th">Asesor</th>
-                <th scope="col" [class]="estilos.th">Usuario</th>
-                <th scope="col" [class]="estilos.th">Subcartera</th>
-                <th scope="col" [class]="estilos.th">Fecha de ingreso</th>
-                <th scope="col" [class]="estilos.th">Fecha de cese</th>
-                <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (p of personal(); track p.idUsuario) {
-                <tr>
-                  <td [class]="estilos.td + ' font-semibold'">
-                    {{ p.nombre }}@if (cesado(p)) {<span [class]="PASTILLA.neutro + ' ml-2'">Cesado</span>}
-                  </td>
-                  <td [class]="estilos.td + ' secundario'">{{ p.usuario }}</td>
-                  <td [class]="estilos.td">{{ p.subcartera ?? '—' }}</td>
-                  <td [class]="estilos.td">
-                    {{ fechaCompleta(p.fechaIngreso) }}<span class="sub-celda">{{ p.ingresoCorregido ? 'Corregida' : 'Creación del usuario' }}</span>
-                  </td>
-                  <td [class]="estilos.td">
-                    @if (p.fechaCese) { {{ fechaCompleta(p.fechaCese) }} } @else { <span class="text-[#8491a3]">—</span> }
-                  </td>
-                  <td [class]="estilos.td + ' celda-accion'">
-                    <button type="button" [class]="estilos.botonChico" (click)="abrirPersonal(p)">
-                      <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" [class]="estilos.td + ' py-8 text-center text-[#5f6c80]'">Sin asesores en este ámbito</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <p class="pie-personal">Antes del ingreso y después del cese no hay faltas. El ingreso es la fecha de creación del usuario hasta que se corrige.</p>
-
-        <div class="fila-seccion mt-7">
           <div class="flex items-baseline gap-2.5">
             <h2 class="titulo-seccion !m-0">Vacaciones</h2>
             <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaVacaciones() }}</span>
@@ -686,60 +638,6 @@ function textoHorario(dias: DiaBase[]): string {
       </div>
     }
 
-    <!-- Corregir el ingreso o el cese de un asesor, con su motivo -->
-    @if (formPersonal(); as p) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarPersonal()"></div>
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,440px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-personal">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-personal" class="!m-0 text-[15px] font-extrabold">Editar ingreso y cese</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ p.nombre }} · {{ p.usuario }}</p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrarPersonal()" aria-label="Cerrar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            <div class="flex gap-3">
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="ic-ingreso">Fecha de ingreso</label>
-                <input id="ic-ingreso" type="date" [class]="estilos.campo"
-                       [ngModel]="personalIngreso()" (ngModelChange)="personalIngreso.set($event); errorPersonal.set('')">
-              </div>
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="ic-cese">Fecha de cese</label>
-                <input id="ic-cese" type="date" [class]="estilos.campo"
-                       [ngModel]="personalCese()" (ngModelChange)="personalCese.set($event); errorPersonal.set('')">
-              </div>
-            </div>
-            <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">
-              Creación del usuario: {{ fechaCompleta(p.fechaCreacion) }}. El cese va vacío mientras siga trabajando.
-            </p>
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="ic-motivo">Motivo</label>
-              <input id="ic-motivo" type="text" maxlength="300" [class]="estilos.campo"
-                     placeholder="Ej.: empezó el lunes; el usuario se creó antes"
-                     aria-describedby="error-ic-motivo"
-                     [ngModel]="personalMotivo()" (ngModelChange)="personalMotivo.set($event); faltaMotivoPersonal.set(false)">
-              @if (faltaMotivoPersonal()) {
-                <p id="error-ic-motivo" class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">Escribe el motivo: queda en la Auditoría</p>
-              }
-            </div>
-            @if (errorPersonal()) {
-              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ errorPersonal() }}</p>
-            }
-          </div>
-
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarPersonal()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="guardarPersonal()" [disabled]="guardando()">Guardar</button>
-          </footer>
-        </div>
-      </div>
-    }
 
     <!-- Registrar vacaciones: asesor y rango -->
     @if (formVacaciones()) {
@@ -1068,10 +966,10 @@ export class AsistenciaConfiguracionComponent {
   /** Las pestañas de la pantalla. */
   protected readonly SECCIONES = [
     { clave: 'reglas', texto: 'Reglas y horario base' },
-    { clave: 'personal', texto: 'Personal' },
+    { clave: 'vacaciones', texto: 'Vacaciones' },
     { clave: 'calendario', texto: 'Calendario' }
   ] as const;
-  readonly seccion = signal<'reglas' | 'personal' | 'calendario'>('reglas');
+  readonly seccion = signal<'reglas' | 'vacaciones' | 'calendario'>('reglas');
   protected readonly CABECERAS = CABECERAS;
 
   /** Las pastillas del historial y del calendario, con los tonos de Cashi. */
@@ -1133,20 +1031,8 @@ export class AsistenciaConfiguracionComponent {
   readonly errorBase = signal('');
   protected readonly duracionBase = duracionBase;
 
-  /** Ingreso y cese: los asesores del ámbito, también los que cesaron, con sus fechas. */
+  /** Los asesores del ámbito, también los que cesaron: los que pueden salir de vacaciones. */
   readonly personal = signal<PersonalAsistencia[]>([]);
-  /** La persona cuyo ingreso o cese se está corrigiendo. */
-  readonly formPersonal = signal<PersonalAsistencia | null>(null);
-  readonly personalIngreso = signal('');
-  readonly personalCese = signal('');
-  readonly personalMotivo = signal('');
-  readonly faltaMotivoPersonal = signal(false);
-  readonly errorPersonal = signal('');
-  readonly cuentaPersonal = computed(() => {
-    const n = this.personal().length;
-    const cesados = this.personal().filter(p => this.cesado(p)).length;
-    return `${n} ${n === 1 ? 'asesor' : 'asesores'}` + (cesados ? ` · ${cesados} ${cesados === 1 ? 'cesado' : 'cesados'}` : '');
-  });
 
   /** Vacaciones: los rangos registrados de los asesores del ámbito. */
   readonly vacaciones = signal<VacacionesAsesor[]>([]);
@@ -1491,7 +1377,7 @@ export class AsistenciaConfiguracionComponent {
   private cargarPersonal(idSubcartera: number | null): void {
     this.servicio.personal(idSubcartera).subscribe({
       next: p => this.personal.set(p),
-      error: () => this.toast.error('No se pudo cargar el ingreso y cese')
+      error: () => this.toast.error('No se pudo cargar el personal')
     });
   }
 
@@ -1582,7 +1468,7 @@ export class AsistenciaConfiguracionComponent {
     });
   }
 
-  // ---------- Ingreso y cese ----------
+  // ---------- Personal ----------
 
   /** Ya pasó su último día. */
   cesado(p: PersonalAsistencia): boolean {
@@ -1592,57 +1478,6 @@ export class AsistenciaConfiguracionComponent {
   /** «16/09/2026». */
   fechaCompleta(iso: string | null): string {
     return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—';
-  }
-
-  abrirPersonal(p: PersonalAsistencia): void {
-    this.formPersonal.set(p);
-    this.personalIngreso.set(p.fechaIngreso ?? '');
-    this.personalCese.set(p.fechaCese ?? '');
-    this.personalMotivo.set('');
-    this.faltaMotivoPersonal.set(false);
-    this.errorPersonal.set('');
-    setTimeout(() => document.getElementById('ic-ingreso')?.focus());
-  }
-
-  cerrarPersonal(): void {
-    this.formPersonal.set(null);
-  }
-
-  /** Guarda las dos fechas con su motivo; queda en la Auditoría y el reporte lo toma al volver a él. */
-  guardarPersonal(): void {
-    const p = this.formPersonal();
-    if (!p) {
-      return;
-    }
-    const ingreso = this.personalIngreso();
-    const cese = this.personalCese() || null;
-    const error = !ingreso ? 'Pon la fecha de ingreso'
-      : cese && cese < ingreso ? 'El cese no puede ser antes del ingreso'
-      : ingreso === p.fechaIngreso && cese === p.fechaCese ? 'No se cambió ninguna fecha' : '';
-    this.errorPersonal.set(error);
-    if (error) {
-      return;
-    }
-    const motivo = this.personalMotivo().trim();
-    if (!motivo) {
-      this.faltaMotivoPersonal.set(true);
-      document.getElementById('ic-motivo')?.focus();
-      return;
-    }
-    this.guardando.set(true);
-    this.servicio.guardarPersonal(p.idUsuario, { fechaIngreso: ingreso, fechaCese: cese, motivo }).subscribe({
-      next: () => {
-        this.guardando.set(false);
-        this.cerrarPersonal();
-        const [a, b] = p.nombre.split(' ');
-        this.toast.success(`Fechas de ${b ? `${a} ${b[0]}.` : a} guardadas`);
-        this.cargarPersonal(this.idSubcartera());
-      },
-      error: respuesta => {
-        this.guardando.set(false);
-        this.errorPersonal.set(respuesta?.error?.error ?? 'No se pudo guardar');
-      }
-    });
   }
 
   private cargarCalendario(idSubcartera: number | null, base: Date): void {
