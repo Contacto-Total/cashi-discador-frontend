@@ -1,7 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ToastService } from '@/shared/services/toast.service';
-import { Subject, Subscription, debounceTime } from 'rxjs';
 import { ComisionesService } from '../services/comisiones.service';
 import {
   BonoPeriodo,
@@ -11,14 +10,15 @@ import {
   ReportePeriodo,
   RolCashi,
   RolComision,
-  SimulacionPeriodo,
   SupervisorCashi,
   TipoMetaCantidad,
   TipoMetrica,
   UsuarioCashi,
   VistaPeriodo
 } from '../models/comision.model';
-import { METRICA_INFO, TIPOS_META, codigoPeriodo, mensajeError, metasParaEditar } from '../comisiones.util';
+import {
+  METRICA_INFO, TIPOS_META, codigoPeriodo, diaMes, diasHabilesDesde, mensajeError, metasParaEditar, nombreRol
+} from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Nivel {
@@ -30,7 +30,7 @@ interface Nivel {
 interface MetaEditable {
   tipo: TipoMetaCantidad;
   activa: boolean;
-  cantidad: number | null;
+  cantidadDia: number | null;
   monto: number | null;
 }
 
@@ -41,8 +41,8 @@ let secuencia = 0;
  * supervisor y escala. Con contención (TR3) además: escala por nivel alcanzado o por logros y metas
  * de cantidad del asesor.
  * Cada mes es independiente; "Copiar configuración" trae la métrica, el rol, la escala, las metas
- * de cantidad y los bonos del mes anterior, sin participantes. La vista previa se calcula en el
- * backend con los pagos de hoy.
+ * de cantidad y los bonos del mes anterior, sin participantes. Guardar no calcula: los resultados
+ * cambian al recalcular. Las metas de cantidad se escriben por día hábil.
  */
 @Component({
   selector: 'cmx-configuracion-tab',
@@ -113,7 +113,7 @@ let secuencia = 0;
         <!-- Asesores -->
         <section class="cmx-card cmx-enter" style="--i:2">
           <div class="cmx-card-h">
-            Asesores que participan<em>{{ asesores().size }} de {{ candidatos().length }}{{ rolElegido() ? ' · rol ' + rolElegido()!.nombreRol : '' }}</em>
+            Asesores que participan<em>{{ asesores().size }} de {{ candidatos().length }}{{ rolElegido() ? ' · rol ' + nombreRol(rolElegido()!.nombreRol) : '' }}</em>
             @if (!soloLectura() && candidatos().length) {
               <button type="button" class="cmx-btn cmx-btn-link" style="margin-left:auto" (click)="marcarTodos()">Marcar todos</button>
             }
@@ -125,13 +125,13 @@ let secuencia = 0;
                 <select id="cmx-rol-asesor" [disabled]="soloLectura()" (change)="cambiarRol($any($event.target).value)">
                   <option value="" disabled [selected]="idRol() == null">Elige el rol</option>
                   @for (r of roles(); track r.idRol) {
-                    <option [value]="r.idRol" [selected]="r.idRol === idRol()">{{ r.nombreRol }}{{ r.asignadoASubcartera ? '' : ' (no asignado a la subcartera)' }}</option>
+                    <option [value]="r.idRol" [selected]="r.idRol === idRol()">{{ nombreRol(r.nombreRol) }}{{ r.asignadoASubcartera ? '' : ' (no asignado a la subcartera)' }}</option>
                   }
                 </select>
               </div>
               <span class="cmx-rolpick-hint">
                 @if (vista().rolSugerido; as s) {
-                  {{ s.idRol === idRol() ? 'Sugerido para esta subcartera.' : 'El sugerido para esta subcartera es ' + s.nombreRol + '.' }}
+                  {{ s.idRol === idRol() ? 'Sugerido para esta subcartera.' : 'El sugerido para esta subcartera es ' + nombreRol(s.nombreRol) + '.' }}
                 }
                 Al cambiarlo se vacía la lista de participantes.
               </span>
@@ -142,18 +142,22 @@ let secuencia = 0;
             } @else if (!idRol()) {
               <p class="cmx-muted-txt">Elige el rol para ver a los asesores.</p>
             } @else if (!candidatos().length) {
-              <p class="cmx-muted-txt">Nadie tiene el rol {{ rolElegido()?.nombreRol }} en Cashi.</p>
+              <p class="cmx-muted-txt">Nadie tiene el rol {{ nombreRol(rolElegido()?.nombreRol) }} en Cashi.</p>
             } @else {
               @for (u of candidatos(); track u.idUsuario) {
                 @let dentro = asesores().has(u.idUsuario);
                 @let propia = asesores().get(u.idUsuario);
+                @let ingreso = ingresos().get(u.idUsuario);
                 <div class="cmx-prow" [class.is-out]="!dentro">
                   <label class="cmx-prow-nm" [for]="'cmx-ase-' + u.idUsuario">
                     <input type="checkbox" [id]="'cmx-ase-' + u.idUsuario" [checked]="dentro" [disabled]="soloLectura()" (change)="alternarAsesor(u.idUsuario)" />
                     <span>{{ u.nombre || 'Usuario ' + u.idUsuario }}</span>
                   </label>
                   @if (dentro) {
-                    @if (propia != null) {
+                    @if (ingreso && propia == null) {
+                      <span class="cmx-tag cmx-tag-v">Ingresó {{ diaMes(ingreso) }}</span>
+                      <span class="cmx-prow-st">S/ {{ metaIngreso(ingreso) | appNumber:'1.2-2' }} · {{ diasDe(ingreso) }} de {{ vista().diasHabiles }} días hábiles</span>
+                    } @else if (propia != null) {
                       <span class="cmx-tag cmx-tag-v">Meta propia</span>
                       <span class="cmx-money">
                         <span>S/</span>
@@ -174,13 +178,12 @@ let secuencia = 0;
                   } @else {
                     <span class="cmx-prow-st">No participa</span>
                   }
-                  <span class="cmx-prow-am">S/ {{ logradoDe(u.idUsuario) | appNumber:'1.2-2' }}</span>
                 </div>
               }
             }
             <p class="cmx-hint">
-              La meta del mes se divide entre los <b>{{ divisor() }}</b> asesores sin meta propia: <b>S/ {{ metaPorAsesor() | appNumber:'1.2-2' }}</b>
-              cada uno. Quien tiene meta propia (por ejemplo, porque entró a mitad de mes) no mueve esa división.
+              La meta del mes se divide entre los <b>{{ divisor() }}</b> asesores de mes completo: <b>S/ {{ metaPorAsesor() | appNumber:'1.2-2' }}</b>
+              cada uno. Quien ingresa a mitad de mes («Agregar participante» en Resultados) o tiene meta propia no mueve esa división.
             </p>
           </div>
         </section>
@@ -258,7 +261,11 @@ let secuencia = 0;
         <section class="cmx-card cmx-enter" style="--i:5">
           <div class="cmx-card-h">Metas de cantidad del asesor<em>Opcionales. Cada meta cumplida suma su monto a la comisión</em></div>
           <div class="cmx-card-b">
-            <div class="cmx-mcrow is-hd" aria-hidden="true"><span>Meta</span><span>Llegar a</span><span>Paga</span></div>
+            <div class="cmx-dhab">
+              <b class="cmx-num">{{ vista().diasHabiles }}</b> días hábiles en {{ codigo() }}
+              <span>lunes a viernes{{ vista().feriados.length ? ', sin ' + vista().feriados.length + (vista().feriados.length > 1 ? ' feriados' : ' feriado') : ', sin feriados' }}</span>
+            </div>
+            <div class="cmx-mcrow is-hd" aria-hidden="true"><span>Meta</span><span>Días hábiles</span><span>Por día</span><span>Llegar a</span><span>Paga</span></div>
             @for (m of metas(); track m.tipo; let i = $index) {
               @let t = tipoMeta(m.tipo);
               <div class="cmx-mcrow" [class.is-off]="!m.activa">
@@ -267,12 +274,16 @@ let secuencia = 0;
                   <span><b>{{ nombreMeta(t.nombre) }}</b><span>{{ t.descripcion }}</span></span>
                 </label>
                 @if (m.tipo === 'META') {
-                  <span class="cmx-mc-fixed">100 % de su meta individual</span>
+                  <span class="cmx-mc-fixed is-span3">100 % de su meta individual</span>
                 } @else {
+                  <span class="cmx-mc-dnum">{{ vista().diasHabiles }}</span>
                   <span class="cmx-money">
-                    <input type="number" min="0" step="1" [value]="m.cantidad" [disabled]="soloLectura() || !m.activa" placeholder="Cantidad"
-                           [attr.aria-label]="'Cantidad de ' + t.nombre" (input)="cambiarMeta(i, 'cantidad', $any($event.target).value)" />
-                    <span class="is-suffix">{{ t.unidad }}</span>
+                    <input type="number" min="0" step="1" [value]="m.cantidadDia" [disabled]="soloLectura() || !m.activa" placeholder="Por día"
+                           [attr.aria-label]="t.nombre + ' por día'" (input)="cambiarMeta(i, 'cantidadDia', $any($event.target).value)" />
+                    <span class="is-suffix">/ día</span>
+                  </span>
+                  <span class="cmx-mc-llegar">
+                    @if (m.cantidadDia != null) { {{ m.cantidadDia * vista().diasHabiles | appNumber:'1.0-0' }} <small>{{ t.unidad }}</small> } @else { — }
                   </span>
                 }
                 <span class="cmx-money">
@@ -287,34 +298,22 @@ let secuencia = 0;
         }
       </div>
 
-      <!-- Vista previa y acciones -->
+      <!-- Resumen y acciones (sin cálculo: los montos salen al recalcular) -->
       <div>
         <div class="cmx-prev cmx-enter" style="--i:2;position:sticky;top:12px">
-          <div class="cmx-prev-t">{{ soloLectura() ? 'Resultado congelado' : 'Así quedaría con lo pagado a la fecha' }}</div>
-          @if (simulando() && !simulacion()) {
-            <div class="cmx-skel" style="height:90px"></div>
-          } @else if (errorSimulacion()) {
-            <p class="cmx-err-txt">{{ errorSimulacion() }}</p>
-          } @else if (simulacion(); as s) {
-            @for (p of s.participantes; track p.idUsuario) {
-              <div class="cmx-prev-r">
-                <span>{{ p.nombre }}{{ p.rol === 'SUPERVISOR' ? ' (sup.)' : '' }} · {{ p.porcentajeCumplimiento ?? 0 | appNumber:'1.1-1' }} %</span>
-                <b>S/ {{ p.montoComision | appNumber:'1.2-2' }}@if (p.montoBonos) { <small> + {{ p.montoBonos | appNumber:'1.0-0' }}</small> }</b>
-              </div>
-            } @empty {
-              <p class="cmx-muted-txt">Marca a los asesores para ver cuánto cobraría cada uno.</p>
-            }
-            <div class="cmx-prev-r is-tot"><span><b style="font-family:inherit">Total</b></span><b>S/ {{ s.totalComisiones | appNumber:'1.2-2' }}</b></div>
-            @if (s.totalBonos) {
-              <div class="cmx-prev-r"><span>Bonos (aparte)</span><b>S/ {{ s.totalBonos | appNumber:'1.2-2' }}</b></div>
-            }
-            @if (totalGuardado() != null && !soloLectura()) {
-              <p class="cmx-prev-n">
-                Hoy: S/ {{ totalGuardado() | appNumber:'1.2-2' }}
-                @if (diferencia(); as d) { · {{ d > 0 ? '+' : '−' }}S/ {{ (d > 0 ? d : -d) | appNumber:'1.2-2' }} con estos cambios } @else { · sin cambios }
-              </p>
-            }
-            @for (a of s.advertencias; track $index) { <p class="cmx-prev-n">{{ a }}</p> }
+          <div class="cmx-prev-t">{{ soloLectura() ? 'Configuración congelada' : 'Lo que vas a guardar' }}</div>
+          <div class="cmx-prev-r"><span>Métrica</span><b class="is-txt">{{ tipoMetrica() ? metricaInfo[tipoMetrica()!].etiqueta : '—' }}</b></div>
+          <div class="cmx-prev-r"><span>Rol de asesores</span><b class="is-txt">{{ nombreRol(rolElegido()?.nombreRol) || '—' }}</b></div>
+          <div class="cmx-prev-r"><span>Asesores</span><b>{{ asesores().size }}@if (conMetaPropiaOIngreso()) { <small class="is-txt"> ({{ conMetaPropiaOIngreso() }} con meta propia o ingreso)</small> }</b></div>
+          <div class="cmx-prev-r"><span>Supervisor</span><b class="is-txt">{{ nombreSupervisor() }}</b></div>
+          <div class="cmx-prev-r"><span>Meta del mes</span><b>S/ {{ metaDelMes() ?? 0 | appNumber:'1.2-2' }}</b></div>
+          <div class="cmx-prev-r"><span>Niveles asesor / supervisor</span><b>{{ nivelesAsesor().length }} / {{ nivelesSupervisor().length }}</b></div>
+          @if (conLogros()) {
+            <div class="cmx-prev-r"><span>Escala del asesor</span><b class="is-txt">{{ escalaAcumulativa() ? 'Por logros' : 'Nivel alcanzado' }}</b></div>
+            <div class="cmx-prev-r"><span>Metas de cantidad</span><b>{{ metasActivas() }}</b></div>
+          }
+          @if (!soloLectura()) {
+            <p class="cmx-prev-n">Guardar no calcula nada. Las comisiones salen cuando pulses <b>Recalcular</b>.</p>
           }
         </div>
 
@@ -327,10 +326,6 @@ let secuencia = 0;
               <cmx-icon name="check" [size]="15" /> {{ guardando() ? 'Guardando…' : esNuevo() ? 'Configurar ' + codigo() : 'Guardar configuración' }}
             </button>
           </div>
-          <p class="cmx-cfg-note">
-            Esta configuración es solo de {{ codigo() }}. Al guardar se calcula en el momento con los pagos conciliados que ya hay;
-            los demás meses no cambian.
-          </p>
         }
       </div>
     </div>
@@ -346,6 +341,8 @@ export class ConfiguracionTabComponent {
   readonly guardado = output<ReportePeriodo>();
 
   readonly metricaInfo = METRICA_INFO;
+  readonly nombreRol = nombreRol;
+  readonly diaMes = diaMes;
   readonly metricas: TipoMetrica[] = ['RECAUDO', 'CONTENCION'];
   readonly lados: { rol: RolComision; titulo: string }[] = [
     { rol: 'ASESOR', titulo: 'Asesor · sobre su meta individual' },
@@ -358,6 +355,8 @@ export class ConfiguracionTabComponent {
   readonly idRol = signal<number | null>(null);
   /** idUsuario → meta propia (null = divide la meta del mes) */
   readonly asesores = signal<Map<number, number | null>>(new Map());
+  /** idUsuario → fecha de ingreso (yyyy-mm-dd) de quien entró a mitad de mes; se agrega desde Resultados */
+  readonly ingresos = signal<Map<number, string>>(new Map());
   readonly idSupervisor = signal<number | null>(null);
   readonly metaAjustada = signal<number | null>(null);
   readonly nivelesAsesor = signal<Nivel[]>([]);
@@ -376,14 +375,8 @@ export class ConfiguracionTabComponent {
   readonly supervisores = signal<SupervisorCashi[]>([]);
   readonly cargandoCandidatos = signal(false);
 
-  // Simulación y guardado
-  readonly simulacion = signal<SimulacionPeriodo | null>(null);
-  readonly simulando = signal(false);
-  readonly errorSimulacion = signal<string | null>(null);
   readonly guardando = signal(false);
   readonly copiando = signal(false);
-  private readonly simular$ = new Subject<ConfiguracionPeriodo>();
-  private simulacionEnCurso: Subscription | null = null;
 
   readonly codigo = computed(() => codigoPeriodo(this.vista().anio, this.vista().mes));
   readonly codigoAnterior = computed(() => {
@@ -393,14 +386,17 @@ export class ConfiguracionTabComponent {
   readonly esNuevo = computed(() => !this.vista().reporte);
   readonly rolElegido = computed(() => this.roles().find(r => r.idRol === this.idRol()) ?? null);
   readonly metaDelMes = computed(() => this.metaAjustada() ?? this.vista().metaInterna);
-  readonly divisor = computed(() => Math.max([...this.asesores().values()].filter(m => m == null).length, 1));
+  /** Dividen la meta del mes los asesores de mes completo (sin meta propia ni ingreso a mitad de mes) */
+  readonly divisor = computed(() => Math.max(
+    [...this.asesores().entries()].filter(([id, m]) => m == null && !this.ingresos().has(id)).length, 1));
   readonly metaPorAsesor = computed(() => (this.metaDelMes() ?? 0) / this.divisor());
-  readonly totalGuardado = computed(() => this.vista().reporte?.totalComisiones ?? null);
-  readonly diferencia = computed(() => {
-    const s = this.simulacion();
-    const g = this.totalGuardado();
-    return s && g != null ? Math.round((s.totalComisiones - g) * 100) / 100 : 0;
+  readonly conMetaPropiaOIngreso = computed(() =>
+    [...this.asesores().entries()].filter(([id, m]) => m != null || this.ingresos().has(id)).length);
+  readonly nombreSupervisor = computed(() => {
+    const id = this.idSupervisor();
+    return id == null ? 'Sin supervisor' : this.supervisores().find(s => s.idUsuario === id)?.nombre || 'Usuario ' + id;
   });
+  readonly metasActivas = computed(() => this.metas().filter(m => m.activa).length);
 
   readonly gruposSupervisores = computed(() => {
     const grupos = new Map<string, SupervisorCashi[]>();
@@ -423,7 +419,11 @@ export class ConfiguracionTabComponent {
       mes: v.mes,
       tipoMetrica,
       idRolAsesor: idRol,
-      asesores: [...this.asesores().entries()].map(([idUsuario, metaManual]) => ({ idUsuario, metaManual })),
+      asesores: [...this.asesores().entries()].map(([idUsuario, metaManual]) => ({
+        idUsuario,
+        metaManual,
+        fechaIngreso: this.ingresos().get(idUsuario) ?? null
+      })),
       idSupervisor: this.idSupervisor(),
       metaAjustada: this.metaAjustada(),
       escalas: [
@@ -434,7 +434,7 @@ export class ConfiguracionTabComponent {
       escalaAcumulativa: tipoMetrica === 'CONTENCION' && this.escalaAcumulativa(),
       metasCantidad: this.metas()
         .filter(m => tipoMetrica === 'CONTENCION' && m.activa && m.monto != null)
-        .map<MetaCantidad>(m => ({ tipo: m.tipo, cantidad: m.tipo === 'META' ? null : m.cantidad, monto: m.monto! })),
+        .map<MetaCantidad>(m => ({ tipo: m.tipo, cantidadDia: m.tipo === 'META' ? null : m.cantidadDia, monto: m.monto! })),
       bonos: this.bonosCopiados()
     };
   });
@@ -467,8 +467,8 @@ export class ConfiguracionTabComponent {
     if (this.metaDelMes() == null) {
       f.push('Falta la meta INTERNA del mes en el reporte de producción.');
     }
-    if (this.conLogros() && this.metas().some(m => m.activa && (!(m.monto! > 0) || (m.tipo !== 'META' && !(m.cantidad! > 0))))) {
-      f.push('Completa la cantidad y el monto de cada meta de cantidad marcada.');
+    if (this.conLogros() && this.metas().some(m => m.activa && (!(m.monto! > 0) || (m.tipo !== 'META' && !(m.cantidadDia! > 0))))) {
+      f.push('Completa la cantidad por día y el monto de cada meta de cantidad marcada.');
     }
     return f;
   });
@@ -483,24 +483,6 @@ export class ConfiguracionTabComponent {
     effect(() => {
       const v = this.vista();
       untracked(() => this.cargarBorrador(v));
-    });
-
-    // La vista previa se pide al backend un momento después del último cambio
-    const sub = this.simular$.pipe(debounceTime(350)).subscribe(config => this.pedirSimulacion(config));
-    inject(DestroyRef).onDestroy(() => {
-      sub.unsubscribe();
-      this.simulacionEnCurso?.unsubscribe();
-    });
-    effect(() => {
-      const config = this.configuracion();
-      if (config && config.asesores.length + (config.idSupervisor ? 1 : 0) > 0) {
-        untracked(() => this.simular$.next(config));
-      } else {
-        untracked(() => {
-          this.simulacion.set(null);
-          this.errorSimulacion.set(null);
-        });
-      }
     });
   }
 
@@ -524,7 +506,7 @@ export class ConfiguracionTabComponent {
     this.metas.update(l => l.map((m, j) => j === i ? { ...m, activa: !m.activa } : m));
   }
 
-  cambiarMeta(i: number, campo: 'cantidad' | 'monto', valor: string): void {
+  cambiarMeta(i: number, campo: 'cantidadDia' | 'monto', valor: string): void {
     const n = valor === '' ? null : Number(valor);
     this.metas.update(l => l.map((m, j) => j === i ? { ...m, [campo]: n != null && Number.isFinite(n) ? n : null } : m));
   }
@@ -533,8 +515,16 @@ export class ConfiguracionTabComponent {
     return rol === 'ASESOR' ? this.nivelesAsesor() : this.nivelesSupervisor();
   }
 
-  logradoDe(idUsuario: number): number {
-    return this.simulacion()?.logradoPorUsuario?.[String(idUsuario)] ?? 0;
+  /** Días hábiles que trabaja quien ingresó en esa fecha (inclusive) */
+  diasDe(fecha: string): number {
+    const v = this.vista();
+    return diasHabilesDesde(v.anio, v.mes, Number(fecha.slice(8, 10)), v.feriados);
+  }
+
+  /** Meta de quien ingresó: meta de un asesor de mes completo × sus días ÷ días hábiles del mes */
+  metaIngreso(fecha: string): number {
+    const diasMes = this.vista().diasHabiles;
+    return diasMes ? this.metaPorAsesor() * this.diasDe(fecha) / diasMes : 0;
   }
 
   // ==================== EDICIÓN ====================
@@ -546,6 +536,7 @@ export class ConfiguracionTabComponent {
     }
     this.idRol.set(id);
     this.asesores.set(new Map());
+    this.ingresos.set(new Map());
     this.cargarCandidatos(id);
   }
 
@@ -554,6 +545,7 @@ export class ConfiguracionTabComponent {
       const n = new Map(m);
       if (n.has(idUsuario)) {
         n.delete(idUsuario);
+        this.ingresos.update(i => { const c = new Map(i); c.delete(idUsuario); return c; });
       } else {
         n.set(idUsuario, null);
       }
@@ -653,7 +645,7 @@ export class ConfiguracionTabComponent {
         if (aviso) {
           this.toast.warning(aviso);
         } else {
-          this.toast.success(this.esNuevo() ? `${this.codigo()} configurado y calculado` : `Guardado · ${this.codigo()} recalculado`);
+          this.toast.success(this.esNuevo() ? `${this.codigo()} configurado · pulsa Recalcular para calcular` : 'Guardado · se aplica al recalcular');
         }
         this.guardado.emit(reporte);
       },
@@ -676,6 +668,9 @@ export class ConfiguracionTabComponent {
     this.tipoMetrica.set(p?.tipoMetrica ?? null);
     this.idRol.set(rol?.idRol ?? null);
     this.asesores.set(new Map(participantes.filter(x => x.rol === 'ASESOR').map(x => [x.idUsuario, x.metaManual])));
+    this.ingresos.set(new Map(participantes
+      .filter(x => x.rol === 'ASESOR' && x.fechaIngreso)
+      .map(x => [x.idUsuario, x.fechaIngreso!.slice(0, 10)])));
     this.idSupervisor.set(participantes.find(x => x.rol === 'SUPERVISOR')?.idUsuario ?? null);
     this.metaAjustada.set(p?.metaAjustada ?? null);
     this.nivelesAsesor.set(this.aNiveles(p?.escalas ?? [], 'ASESOR'));
@@ -713,23 +708,6 @@ export class ConfiguracionTabComponent {
         this.toast.error(mensajeError(e, 'No se pudieron cargar los asesores del rol.'));
       }
     });
-  }
-
-  private pedirSimulacion(config: ConfiguracionPeriodo): void {
-    this.simulacionEnCurso?.unsubscribe();
-    this.simulando.set(true);
-    this.simulacionEnCurso = this.service.simular({ ...config, escalas: config.escalas.filter(e => e.porcentajeDesde >= 0 && e.montoComision >= 0) })
-      .subscribe({
-        next: s => {
-          this.simulacion.set(s);
-          this.errorSimulacion.set(null);
-          this.simulando.set(false);
-        },
-        error: e => {
-          this.simulando.set(false);
-          this.errorSimulacion.set(mensajeError(e, 'No se pudo calcular la vista previa.'));
-        }
-      });
   }
 
   private lista(rol: RolComision) {

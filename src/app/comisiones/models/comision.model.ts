@@ -66,9 +66,10 @@ export interface EscalaComision {
 /** Meta de cantidad del asesor. META = llegar al 100 % de su meta individual (sin cantidad). */
 export type TipoMetaCantidad = 'GESTIONES' | 'PDP' | 'PAGOS' | 'META';
 
+/** cantidadDia: por día hábil; la meta = cantidadDia × días hábiles que trabaja el asesor */
 export interface MetaCantidad {
   tipo: TipoMetaCantidad;
-  cantidad: number | null;
+  cantidadDia: number | null;
   monto: number;
 }
 
@@ -149,8 +150,17 @@ export interface PeriodoComision {
   estado: EstadoPeriodo;
   cerradoPorNombre?: string | null;
   fechaCierre?: string | null;
-  /** Último cálculo; null si no se pudo calcular */
+  /** Último recálculo (el cálculo es manual); null = todavía no se recalcula */
   fechaCalculo?: string | null;
+  recalculadoPorNombre?: string | null;
+  /** Última fecha banco con pagos en el último recálculo */
+  pagosHasta?: string | null;
+  /** Se guardó configuración, bonos o participantes después del último recálculo */
+  cambiosPendientes: boolean;
+  /** Pagos conciliados del mes aprobados después del último recálculo */
+  pagosNuevos: number;
+  /** Días hábiles del mes (lunes a viernes, sin feriados) */
+  diasHabiles: number;
   totalComisiones: number;
   rolAsesor: RolDTO | null;
   escalas: EscalaComision[];
@@ -168,8 +178,14 @@ export interface ParticipanteComision {
   nombre: string;
   rol: RolComision;
   metaIndividual: number | null;
-  /** Meta propia (excepción); null = meta del mes ÷ asesores sin meta propia */
+  /** Meta propia (excepción); null = meta del mes ÷ asesores de mes completo */
   metaManual: number | null;
+  /** Ingresó a mitad de mes (yyyy-mm-dd); null = mes completo */
+  fechaIngreso: string | null;
+  /** Días hábiles que trabaja en el mes */
+  diasHabiles: number | null;
+  /** false = entró después del último recálculo */
+  calculado: boolean;
   logrado: number;
   /** Redondeado, solo para mostrar */
   porcentajeCumplimiento: number | null;
@@ -213,6 +229,10 @@ export interface VistaPeriodo {
   /** Meta INTERNA del reporte de producción; null si no está registrada */
   metaInterna: number | null;
   rolSugerido: RolDTO | null;
+  /** Días hábiles del mes para la subcartera */
+  diasHabiles: number;
+  /** Feriados del mes que caen de lunes a viernes (yyyy-mm-dd) */
+  feriados: string[];
 }
 
 /** Un mes del selector de período */
@@ -229,6 +249,8 @@ export interface MesPeriodo {
 export interface AsesorConfig {
   idUsuario: number;
   metaManual: number | null;
+  /** Ingresó a mitad de mes (se conserva al guardar) */
+  fechaIngreso: string | null;
 }
 
 /** Configuración de un mes (guardar o simular) */
@@ -248,23 +270,11 @@ export interface ConfiguracionPeriodo {
   bonos: BonoPeriodo[] | null;
 }
 
-/** Cómo quedaría el mes con una configuración (no guarda nada) */
-export interface SimulacionPeriodo {
-  metaDelMes: number;
-  metaPorAsesor: number;
-  participantes: ParticipanteComision[];
-  totalComisiones: number;
-  totalBonos: number;
-  /** Lo que suma cada usuario en el mes con la métrica elegida, participe o no */
-  logradoPorUsuario: Record<string, number>;
-  advertencias: string[];
-}
-
-/** Va una de las dos: meta propia del asesor o nueva meta del mes */
+/** Asesor que ingresa a mitad de mes: su meta sale de los días hábiles que trabaja */
 export interface AgregarParticipanteRequest {
   idUsuario: number;
-  metaManual: number | null;
-  metaAjustada: number | null;
+  /** yyyy-mm-dd, dentro del mes del período */
+  fechaIngreso: string;
 }
 
 /**

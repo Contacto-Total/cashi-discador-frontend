@@ -7,7 +7,8 @@ import { ToastService } from '@/shared/services/toast.service';
 import { ComisionesService } from '../services/comisiones.service';
 import { Cartera, Inquilino, ReportePeriodo, Subcartera, VistaPeriodo } from '../models/comision.model';
 import {
-  ESTADO_VISTA_INFO, EstadoVista, METRICA_INFO, codigoPeriodo, descargar, diaMes, estadoDeVista, mensajeError, nombreArchivo, nombreMes
+  ESTADO_VISTA_INFO, EstadoVista, METRICA_INFO, codigoPeriodo, descargar, diaMes, estadoDeVista, mensajeError, nombreArchivo, nombreMes,
+  nombreRol
 } from '../comisiones.util';
 import { CmxIconComponent } from '../components/cmx-icon.component';
 import { PeriodoPickerComponent } from '../components/periodo-picker.component';
@@ -23,7 +24,7 @@ type Vista = 'resultados' | 'sustento' | 'config' | 'bonos' | 'historial';
 const VISTAS: { id: Vista; etiqueta: string }[] = [
   { id: 'resultados', etiqueta: 'Resultados' },
   { id: 'sustento', etiqueta: 'Sustento' },
-  { id: 'config', etiqueta: 'Configuración' },
+  { id: 'config', etiqueta: 'Comisiones' },
   { id: 'bonos', etiqueta: 'Bonos' },
   { id: 'historial', etiqueta: 'Historial' }
 ];
@@ -34,8 +35,9 @@ const REFRESCO_MS = 60_000;
 /**
  * Módulo de comisiones.
  * Se elige el periodo (mes) y la subcartera (Proveedor → Cartera → Subcartera). Cada mes se configura por
- * su cuenta: al guardar la configuración nace el período y se calcula con los pagos conciliados que ya hay;
- * mientras esté abierto se actualiza solo con cada archivo aprobado. Cerrar es el paso final (se puede reabrir).
+ * su cuenta (pestañas Comisiones y Bonos): al guardar nace el período. El cálculo es manual: el botón
+ * Recalcular hace el select de los pagos conciliados y guarda el resultado. Cerrar congela el último
+ * recálculo (se puede reabrir).
  * Subcartera, periodo y pestaña viven en la URL.
  */
 @Component({
@@ -77,13 +79,20 @@ const REFRESCO_MS = 60_000;
             </div>
             <span class="cmx-right">
               @if (reporte(); as r) {
-                <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcel(r)">
-                  <cmx-icon name="download" [size]="15" /> {{ descargando() ? 'Generando…' : 'Excel' }}
-                </button>
-                @if (r.periodo.estado === 'EN_CURSO') {
-                  <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="confirmandoCierre.set(true)">
-                    <cmx-icon name="lock" [size]="15" /> Cerrar periodo
+                @if (r.periodo.fechaCalculo) {
+                  <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcel(r)">
+                    <cmx-icon name="download" [size]="15" /> {{ descargando() ? 'Generando…' : 'Excel' }}
                   </button>
+                }
+                @if (r.periodo.estado === 'EN_CURSO') {
+                  <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(r)">
+                    <cmx-icon name="refresh" [size]="15" /> {{ recalculando() ? 'Recalculando…' : 'Recalcular' }}
+                  </button>
+                  @if (r.periodo.fechaCalculo) {
+                    <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="confirmandoCierre.set(true)">
+                      <cmx-icon name="lock" [size]="15" /> Cerrar periodo
+                    </button>
+                  }
                 } @else {
                   <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="procesando()" (click)="reabrir(r)">
                     <cmx-icon name="unlock" [size]="15" /> {{ procesando() ? 'Reabriendo…' : 'Reabrir' }}
@@ -126,8 +135,10 @@ const REFRESCO_MS = 60_000;
               <div class="cmx-fsum">
                 <span class="cmx-state" [class]="'cmx-state ' + estadoInfo().clase">{{ estadoInfo().etiqueta }}</span>
                 @if (reporte(); as r) {
+                  @if (!r.periodo.fechaCalculo) { <span class="cmx-fsum-m">Falta recalcular</span> } @else {
                   <span><b class="cmx-num">S/ {{ r.totalComisiones | appNumber:'1.2-2' }}</b> en comisiones@if (r.totalBonos) { · <b class="cmx-num">S/ {{ r.totalBonos | appNumber:'1.2-2' }}</b> en bonos }</span>
-                  <span class="cmx-fsum-m">{{ r.periodo.rolAsesor?.nombreRol || 'Sin rol' }} · {{ metricaInfo[r.periodo.tipoMetrica].etiqueta.toLowerCase() }}</span>
+                  }
+                  <span class="cmx-fsum-m">{{ nombreRol(r.periodo.rolAsesor?.nombreRol) || 'Sin rol' }} · {{ metricaInfo[r.periodo.tipoMetrica].etiqueta.toLowerCase() }}</span>
                 } @else if (estado() === 'SIN_CONFIG') {
                   <span class="cmx-fsum-m">Falta configurar</span>
                 } @else {
@@ -143,18 +154,27 @@ const REFRESCO_MS = 60_000;
               <span class="cmx-banner-ic">!</span>
               <span class="cmx-banner-tx">
                 <b id="cmx-cierre-t">¿Cerrar {{ codigo() }} de {{ nombreSubcartera() }}?</b>
+                Se congela el recálculo del <b>{{ r.periodo.fechaCalculo | appDateTime }}</b>.
+                @if (pendientes()) { Hay {{ pendientes() }} que ese recálculo no incluye. }
                 @if (faltanDias(); as f) {
                   Todavía faltan los pagos del <b>{{ f.desde }} al {{ f.hasta }}</b>: el archivo de Financiera OH llega con 2 días de
                   retraso. Si cierras ahora, esos pagos no se sumarán a este periodo.
                 } @else {
-                  Ya hay pagos del banco hasta el último día del mes. Al cerrar, los resultados se congelan.
+                  Ya hay pagos del banco hasta el último día del mes.
                 }
               </span>
               <span class="cmx-banner-actions">
                 <button type="button" class="cmx-btn cmx-btn-sec" (click)="confirmandoCierre.set(false)">Cancelar</button>
-                <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="cerrar(r)">
-                  {{ procesando() ? 'Cerrando…' : faltanDias() ? 'Cerrar de todas formas' : 'Cerrar periodo' }}
-                </button>
+                @if (pendientes()) {
+                  <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="procesando()" (click)="cerrar(r, false)">Cerrar sin recalcular</button>
+                  <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="cerrar(r, true)">
+                    <cmx-icon name="refresh" [size]="15" /> {{ procesando() ? 'Cerrando…' : 'Recalcular y cerrar' }}
+                  </button>
+                } @else {
+                  <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="cerrar(r, false)">
+                    {{ procesando() ? 'Cerrando…' : faltanDias() ? 'Cerrar de todas formas' : 'Cerrar periodo' }}
+                  </button>
+                }
               </span>
             </div>
           } @else if (estado() === 'CERRADO' && reporte()) {
@@ -163,12 +183,36 @@ const REFRESCO_MS = 60_000;
               <span class="cmx-banner-tx">Cerrado por <b>{{ reporte()!.periodo.cerradoPorNombre }}</b> el {{ reporte()!.periodo.fechaCierre | appDateTime }}.
                 Resultados congelados: para cambiar algo hay que reabrirlo.</span>
             </div>
+          } @else if (vistaActual() === 'config' || (vistaActual() === 'bonos' && reporte())) {
+            <div class="cmx-banner is-info cmx-enter">
+              <span class="cmx-banner-ic">i</span>
+              <span class="cmx-banner-tx">Esta configuración es <b>solo de {{ codigo() }}</b>. Guardar no recalcula: los resultados cambian
+                cuando pulses Recalcular. Los demás periodos no cambian.</span>
+            </div>
+          } @else if (estado() === 'ABIERTO' && reporte() && !reporte()!.periodo.fechaCalculo) {
+            <div class="cmx-banner is-info cmx-enter">
+              <span class="cmx-banner-ic">i</span>
+              <span class="cmx-banner-tx"><b>{{ codigo() }} está configurado pero todavía no se recalcula.</b>
+                Pulsa Recalcular para tomar los pagos conciliados del mes y calcular las comisiones.</span>
+              <span class="cmx-banner-actions">
+                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(reporte()!)"><cmx-icon name="refresh" [size]="15" /> Recalcular</button>
+              </span>
+            </div>
+          } @else if (estado() === 'ABIERTO' && pendientes()) {
+            <div class="cmx-banner cmx-enter">
+              <span class="cmx-banner-ic">!</span>
+              <span class="cmx-banner-tx">Hay <b>{{ pendientes() }}</b> desde el último recálculo
+                ({{ reporte()!.periodo.fechaCalculo | appDateTime }}). Los resultados todavía no los incluyen.</span>
+              <span class="cmx-banner-actions">
+                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(reporte()!)"><cmx-icon name="refresh" [size]="15" /> Recalcular</button>
+              </span>
+            </div>
           } @else if (estado() === 'ABIERTO' && !esMesActual()) {
             <div class="cmx-banner is-info cmx-enter">
               <span class="cmx-banner-ic">i</span>
               <span class="cmx-banner-tx"><b>{{ codigo() }} sigue abierto.</b>
                 @if (vista()?.pagos?.ultimaFechaBanco; as u) { Hay pagos del banco hasta el {{ diaMes(u) }}. }
-                Mientras siga abierto, cualquier pago de ese mes que se apruebe tarde se suma aquí.</span>
+                Mientras siga abierto, un pago de ese mes que se apruebe tarde entra en el siguiente recálculo.</span>
             </div>
           }
           @for (a of advertencias(); track $index) {
@@ -188,10 +232,16 @@ const REFRESCO_MS = 60_000;
               <span>
                 @switch (estado()) {
                   @case ('ABIERTO') {
-                    <span class="cmx-live" aria-hidden="true"></span>Se actualiza solo
-                    @if (reporte()?.periodo?.fechaCalculo; as f) { · último cálculo <b>{{ f | appDateTime }}</b> }
+                    @if (reporte()?.periodo; as pe) {
+                      @if (pe.fechaCalculo) {
+                        Último recálculo <b>{{ pe.fechaCalculo | appDateTime }}</b>@if (pe.recalculadoPorNombre) { · {{ pe.recalculadoPorNombre }} }
+                        @if (pe.pagosHasta) { · con pagos hasta el {{ diaMes(pe.pagosHasta) }} }
+                      } @else { Configurado · falta el primer recálculo }
+                    }
                   }
-                  @case ('CERRADO') { Ya no se actualiza }
+                  @case ('CERRADO') {
+                    @if (reporte()?.periodo?.fechaCalculo; as f) { Congelado con el recálculo del <b>{{ f | appDateTime }}</b> } @else { Cerrado }
+                  }
                   @default { Sin configurar: los pagos llegan, pero todavía no se calcula nada }
                 }
               </span>
@@ -275,8 +325,8 @@ const REFRESCO_MS = 60_000;
                           } @else {
                             Todavía no hay pagos conciliados en {{ codigo() }}.
                           }
-                          El periodo empieza en blanco: eliges la métrica, quiénes participan y la escala de comisión. Apenas guardes, se
-                          calcula en el momento con los pagos que ya hay y desde ahí se actualiza solo con cada archivo aprobado.
+                          El periodo empieza en blanco: eliges la métrica, quiénes participan y la escala de comisión. Después pulsas
+                          Recalcular y recién ahí se toman los pagos conciliados y se calculan las comisiones.
                         </p>
                         <div class="cmx-emptycfg-acts">
                           <button type="button" class="cmx-btn cmx-btn-act" (click)="irVista('config')">
@@ -287,7 +337,7 @@ const REFRESCO_MS = 60_000;
                       <div class="cmx-emptycfg-side">
                         <div><span>Meta interna</span><b class="cmx-num">{{ v.metaInterna != null ? 'S/ ' + (v.metaInterna | appNumber:'1.2-2') : 'Sin registrar' }}</b></div>
                         <div><span>Conciliado a la fecha</span><b class="cmx-num">S/ {{ v.pagos.total | appNumber:'1.2-2' }}</b></div>
-                        <div><span>Rol sugerido</span><b>{{ v.rolSugerido?.nombreRol || '—' }}</b></div>
+                        <div><span>Rol sugerido</span><b>{{ nombreRol(v.rolSugerido?.nombreRol) || '—' }}</b></div>
                         <div><span>Pagos hasta</span><b class="cmx-num">{{ v.pagos.ultimaFechaBanco ? diaMes(v.pagos.ultimaFechaBanco) : '—' }}</b></div>
                       </div>
                     </div>
@@ -300,7 +350,8 @@ const REFRESCO_MS = 60_000;
       </div>
 
       @if (agregando() && reporte(); as r) {
-        <cmx-agregar-participante-modal [reporte]="r" [codigo]="codigo()" (cerrar)="agregando.set(false)" (agregado)="alAgregar($event)" />
+        <cmx-agregar-participante-modal [reporte]="r" [codigo]="codigo()" [feriados]="vista()?.feriados ?? []"
+                                        (cerrar)="agregando.set(false)" (agregado)="alAgregar($event)" />
       }
     </div>
   `
@@ -315,6 +366,7 @@ export class ComisionesPage implements OnInit {
   readonly metricaInfo = METRICA_INFO;
   readonly nombreMes = nombreMes;
   readonly diaMes = diaMes;
+  readonly nombreRol = nombreRol;
 
   private readonly hoy = new Date();
   readonly anio = signal(this.hoy.getFullYear());
@@ -335,6 +387,7 @@ export class ComisionesPage implements OnInit {
 
   readonly confirmandoCierre = signal(false);
   readonly procesando = signal(false);
+  readonly recalculando = signal(false);
   readonly descargando = signal(false);
   readonly agregando = signal(false);
 
@@ -355,6 +408,22 @@ export class ComisionesPage implements OnInit {
   readonly esMesActual = computed(() => this.anio() === this.hoy.getFullYear() && this.mes() === this.hoy.getMonth() + 1);
   readonly siguienteEsFuturo = computed(() => this.anio() * 12 + this.mes() >= this.hoy.getFullYear() * 12 + this.hoy.getMonth() + 1);
   readonly metaDelMes = computed(() => this.reporte()?.periodo.metaDelMes ?? this.vista()?.metaInterna ?? null);
+
+  /** Lo que el último recálculo no incluye: "3 pagos conciliados nuevos y cambios de configuración" */
+  readonly pendientes = computed(() => {
+    const p = this.reporte()?.periodo;
+    if (!p || !p.fechaCalculo) {
+      return '';
+    }
+    const partes: string[] = [];
+    if (p.pagosNuevos) {
+      partes.push(`${p.pagosNuevos} ${p.pagosNuevos === 1 ? 'pago conciliado nuevo' : 'pagos conciliados nuevos'}`);
+    }
+    if (p.cambiosPendientes) {
+      partes.push('cambios de configuración');
+    }
+    return partes.join(' y ');
+  });
 
   readonly diasDelMes = computed(() => new Date(this.anio(), this.mes(), 0).getDate());
   readonly ultimoDia = computed(() => {
@@ -420,7 +489,8 @@ export class ComisionesPage implements OnInit {
 
     // Mientras el período está abierto, se refresca solo (lo recalcula el backend con cada archivo aprobado)
     const reloj = setInterval(() => {
-      if (this.estado() === 'ABIERTO' && this.vistaActual() !== 'config' && this.vistaActual() !== 'bonos' && !this.agregando() && document.visibilityState === 'visible') {
+      if (this.estado() === 'ABIERTO' && this.vistaActual() !== 'config' && this.vistaActual() !== 'bonos' && !this.agregando()
+          && !this.procesando() && document.visibilityState === 'visible') {
         this.cargarVista(true);
       }
     }, REFRESCO_MS);
@@ -528,14 +598,34 @@ export class ComisionesPage implements OnInit {
 
   // ==================== ACCIONES ====================
 
-  cerrar(r: ReportePeriodo): void {
+  /** Select de los pagos conciliados del mes y cálculo (el cálculo es manual) */
+  recalcular(r: ReportePeriodo): void {
     this.procesando.set(true);
-    this.service.cerrar(r.periodo.id).subscribe({
+    this.recalculando.set(true);
+    this.service.recalcular(r.periodo.id).subscribe({
+      next: reporte => {
+        this.procesando.set(false);
+        this.recalculando.set(false);
+        this.aplicarReporte(reporte);
+        this.toast.success(`${this.codigo()} recalculado`);
+        (reporte.advertencias ?? []).slice(0, 3).forEach(a => this.toast.warning(a));
+      },
+      error: e => {
+        this.procesando.set(false);
+        this.recalculando.set(false);
+        this.toast.error(mensajeError(e, 'No se pudo recalcular el periodo.'));
+      }
+    });
+  }
+
+  cerrar(r: ReportePeriodo, recalcularAntes: boolean): void {
+    this.procesando.set(true);
+    this.service.cerrar(r.periodo.id, recalcularAntes).subscribe({
       next: reporte => {
         this.procesando.set(false);
         this.confirmandoCierre.set(false);
         this.aplicarReporte(reporte);
-        this.toast.success(`${this.codigo()} de ${this.nombreSubcartera()} cerrado`);
+        this.toast.success(`${this.codigo()} de ${this.nombreSubcartera()} ${recalcularAntes ? 'recalculado y cerrado' : 'cerrado'}`);
       },
       error: e => {
         this.procesando.set(false);
@@ -550,7 +640,7 @@ export class ComisionesPage implements OnInit {
       next: reporte => {
         this.procesando.set(false);
         this.aplicarReporte(reporte);
-        this.toast.success('Reabierto · vuelve a actualizarse solo');
+        this.toast.success('Reabierto · recalcula cuando lo necesites');
       },
       error: e => {
         this.procesando.set(false);

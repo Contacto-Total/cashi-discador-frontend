@@ -276,7 +276,9 @@
 .cmx-prev { background: var(--cmx-brand-soft); border: 1px solid var(--cmx-brand); border-radius: 8px; padding: 12px 14px; color: var(--cmx-ink-2); }
 .cmx-prev-t { font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--cmx-brand-ink); margin-bottom: 6px; }
 .cmx-prev-r { display: flex; justify-content: space-between; gap: 10px; font-size: .78rem; padding: 3px 0; }
-.cmx-prev-r b { font-family: var(--cmx-mono); color: var(--cmx-ink); font-weight: 600; }
+.cmx-prev-r b { font-family: var(--cmx-mono); color: var(--cmx-ink); font-weight: 600; text-align: right; }
+.cmx-prev-r .is-txt { font-family: var(--cmx-sans); }
+.cmx-prev-r small.is-txt { font-weight: 400; color: var(--cmx-ink-3); }
 .cmx-prev-r.is-tot { border-top: 1px solid var(--cmx-brand); margin-top: 6px; padding-top: 8px; }
 .cmx-warnbox { background: var(--cmx-amber-soft); border: 1px solid var(--cmx-amber); border-radius: 8px; padding: 11px 13px; font-size: .76rem; color: var(--cmx-amber); margin-top: 12px; line-height: 1.5; }
 .cmx-errors { margin: 10px 0 0; padding-left: 18px; font-size: .78rem; color: var(--cmx-red); }
@@ -601,7 +603,15 @@
 .cmx-brk-r:not(.ok) .a { color: var(--cmx-ink-4); }
 .cmx-brk-r.tot { background: var(--cmx-brand-tint); border-bottom: 0; }
 .cmx-brk-r.tot .a { color: var(--cmx-brand-ink); }
-.cmx-mcrow { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(120px, .8fr) minmax(120px, .8fr); gap: 8px 12px; align-items: center; padding: 9px 2px; border-bottom: 1px dashed var(--cmx-line); font-size: .8rem; }
+.cmx-mcrow { display: grid; grid-template-columns: minmax(0, 1.5fr) 70px minmax(110px, .7fr) minmax(90px, .6fr) minmax(110px, .7fr); gap: 8px 12px; align-items: center; padding: 9px 2px; border-bottom: 1px dashed var(--cmx-line); font-size: .8rem; }
+.cmx-mc-fixed.is-span3 { grid-column: span 3; }
+.cmx-mc-dnum { font-family: var(--cmx-mono); color: var(--cmx-ink-3); text-align: right; }
+.cmx-mc-llegar { font-family: var(--cmx-mono); font-weight: 600; text-align: right; }
+.cmx-mc-llegar small { font-family: var(--cmx-sans); font-weight: 400; font-size: .68rem; color: var(--cmx-ink-3); }
+.cmx-mcrow.is-off .cmx-mc-llegar { color: var(--cmx-ink-4); }
+.cmx-dhab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 12px; padding: 9px 12px; background: var(--cmx-soft); border: 1px solid var(--cmx-line); border-radius: 7px; font-size: .8rem; }
+.cmx-dhab b { font-size: 1.05rem; }
+.cmx-dhab span { color: var(--cmx-ink-3); font-size: .74rem; }
 .cmx-mcrow:last-of-type { border-bottom: 0; }
 .cmx-mcrow.is-hd { padding: 0 2px 6px; border-bottom: 1px solid var(--cmx-line); font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--cmx-ink-3); }
 .cmx-mcrow label { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
@@ -611,7 +621,7 @@
 .cmx-mc-fixed { font-size: .74rem; color: var(--cmx-ink-3); }
 .cmx-mcrow.is-off .cmx-money { opacity: .45; }
 .cmx-money > span.is-suffix { border-right: 0; border-left: 1px solid var(--cmx-line); }
-@media (max-width: 640px) { .cmx-mcrow { grid-template-columns: 1fr 1fr; } .cmx-mcrow.is-hd { display: none; } .cmx-mcrow label { grid-column: 1 / -1; } }
+@media (max-width: 640px) { .cmx-mcrow { grid-template-columns: 1fr 1fr; } .cmx-mcrow.is-hd { display: none; } .cmx-mcrow label, .cmx-mc-fixed.is-span3 { grid-column: 1 / -1; } }
 .cmx-bcard { border: 1px solid var(--cmx-line); border-radius: 9px; background: var(--cmx-surface); overflow: hidden; }
 .cmx-bcard + .cmx-bcard { margin-top: 12px; }
 .cmx-bcard.is-off { opacity: .6; }
@@ -640,3 +650,11 @@
 .cmx-baddrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .cmx.cmx-root .cmx-baddrow select { flex: 1; min-width: 220px; font: inherit; font-size: .82rem; border: 1px solid var(--cmx-line-2); border-radius: 6px; padding: 8px 10px; }
 .cmx-bactions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+
+/* ---------- Ingreso a mitad de mes ---------- */
+.cmx.cmx-root .cmx-fdate, .cmx-modal .cmx-fdate { font: inherit; font-size: .85rem; border: 1px solid var(--cmx-line-2); border-radius: 6px; padding: 7px 9px; background: var(--cmx-surface); color: var(--cmx-ink); max-width: 200px; }
+.cmx-calcbox { border: 1px solid var(--cmx-line); border-radius: 8px; background: var(--cmx-soft); padding: 10px 12px; display: grid; gap: 2px; }
+.cmx-calcbox .cr { display: flex; justify-content: space-between; gap: 12px; font-size: .82rem; margin-top: 6px; }
+.cmx-calcbox .cr:first-child { margin-top: 0; }
+.cmx-calcbox .cr b { font-family: var(--cmx-mono); }
+.cmx-calcbox .cx { font-size: .72rem; color: var(--cmx-ink-3); }

@@ -11,6 +11,8 @@ interface Persona {
   esSupervisor: boolean;
   meta: number | null;
   metaPropia: boolean;
+  /** Ingresó a mitad de mes: "Ingresó el 15/09: 12 de 22 días hábiles" */
+  ingreso: string | null;
   logrado: number;
   porcentaje: number | null;
   nivel: number | null;
@@ -55,7 +57,7 @@ const B = 28;
       <div class="cmx-empty">
         <span class="cmx-empty-mark"><cmx-icon name="users" [size]="20" /></span>
         <b>Nadie participa en este periodo</b>
-        <p>Elige a los asesores en Configuración.</p>
+        <p>Elige a los asesores en la pestaña Comisiones.</p>
       </div>
     } @else {
       <div class="cmx-who" role="group" aria-label="Persona">
@@ -74,7 +76,7 @@ const B = 28;
               @if (p.esSupervisor) {
                 {{ metrica().logrado }} total de los {{ personas().length - 1 }} asesores contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
               } @else {
-                {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }})
+                {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
               }
             </span>
           </div>
@@ -274,6 +276,8 @@ export class SustentoTabComponent {
         esSupervisor: false,
         meta: a.metaIndividual,
         metaPropia: a.metaManual != null,
+        ingreso: a.fechaIngreso && a.metaManual == null
+          ? `ingresó el ${diaMes(a.fechaIngreso)}: ${a.diasHabiles} de ${r.periodo.diasHabiles} días hábiles` : null,
         logrado: a.logrado,
         porcentaje: a.porcentajeCumplimiento,
         nivel: a.porcentajeTramo,
@@ -291,6 +295,7 @@ export class SustentoTabComponent {
           esSupervisor: true,
           meta: sup.metaIndividual ?? r.periodo.metaDelMes,
           metaPropia: false,
+          ingreso: null,
           logrado: sup.logrado,
           porcentaje: sup.porcentajeCumplimiento,
           nivel: sup.porcentajeTramo,

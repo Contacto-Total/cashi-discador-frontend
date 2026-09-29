@@ -86,6 +86,32 @@ export const ACCION_INFO: Record<AccionAuditoria, string> = {
   CAMBIAR_ESTADO: 'Cambió el estado'
 };
 
+/** Nombre del rol de Cashi como se muestra: AGENT es el asesor de Tramo Propio */
+export function nombreRol(nombre: string | null | undefined): string {
+  if (!nombre) {
+    return '';
+  }
+  return nombre.trim().toUpperCase() === 'AGENT' ? 'Asesor Tramo Propio' : nombre;
+}
+
+/**
+ * Días hábiles del mes desde un día (inclusive): lunes a viernes, sin feriados (yyyy-mm-dd).
+ * Es la misma regla del backend.
+ */
+export function diasHabilesDesde(anio: number, mes: number, desdeDia: number, feriados: string[]): number {
+  const fin = new Date(anio, mes, 0).getDate();
+  const fuera = new Set(feriados.map(f => f.slice(0, 10)));
+  let dias = 0;
+  for (let d = Math.max(desdeDia, 1); d <= fin; d++) {
+    const w = new Date(anio, mes - 1, d).getDay();
+    const iso = `${anio}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (w !== 0 && w !== 6 && !fuera.has(iso)) {
+      dias++;
+    }
+  }
+  return dias;
+}
+
 export const ROL_INFO: Record<RolComision, string> = {
   ASESOR: 'Asesor',
   SUPERVISOR: 'Supervisor'
@@ -249,8 +275,10 @@ export function chipsMetas(p: ParticipanteComision): ChipMeta[] {
     .filter(l => l.tipo === 'META')
     .map(l => ({
       nombre: l.nombre.replace(/^Meta de /, ''),
-      // "3300 de 3300" → "3300 / 3300"; "95.5 % de su meta…" → "95.5 %"
-      valor: l.detalle.includes('%') ? l.detalle.slice(0, l.detalle.indexOf('%') + 1) : l.detalle.replace(' de ', ' / '),
+      // "3300 de 3300 (150 por día × 22…)" → "3300 / 3300"; "95.5 % de su meta…" → "95.5 %"
+      valor: l.detalle.includes(' % ') && !l.detalle.includes(' por día')
+        ? l.detalle.slice(0, l.detalle.indexOf('%') + 1)
+        : l.detalle.split(' (')[0].replace(' de ', ' / '),
       cumple: l.cumple,
       monto: l.monto
     }));
@@ -271,10 +299,10 @@ export function bonosGanados(p: ParticipanteComision): LineaDesglose[] {
 }
 
 /** Metas de cantidad en el orden de la pantalla, con las que no están marcadas vacías */
-export function metasParaEditar(metas: MetaCantidad[] | null | undefined): { tipo: TipoMetaCantidad; activa: boolean; cantidad: number | null; monto: number | null }[] {
+export function metasParaEditar(metas: MetaCantidad[] | null | undefined): { tipo: TipoMetaCantidad; activa: boolean; cantidadDia: number | null; monto: number | null }[] {
   return TIPOS_META.map(t => {
     const m = (metas ?? []).find(x => x.tipo === t.tipo);
-    return { tipo: t.tipo, activa: !!m, cantidad: m?.cantidad ?? null, monto: m?.monto ?? null };
+    return { tipo: t.tipo, activa: !!m, cantidadDia: m?.cantidadDia ?? null, monto: m?.monto ?? null };
   });
 }
 
