@@ -309,7 +309,7 @@ export interface CierreSemana {
  * solicitud, regla, feriado o cierre— con su valor anterior, el nuevo, el
  * motivo y quién lo hizo.
  */
-export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE';
+export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE' | 'VACACIONES';
 
 export interface CambioAsistencia {
   /** «M-12» para una marca corregida, «A-7» para el resto. */
@@ -544,6 +544,22 @@ export interface PersonalAsistencia {
   fechaIngreso: string | null;
   ingresoCorregido: boolean;
   fechaCese: string | null;
+}
+
+/** Configuración › Personal › Vacaciones: un rango de un asesor. */
+export interface VacacionesAsesor {
+  id: number;
+  idUsuario: number;
+  nombre: string;
+  usuario: string;
+  subcartera: string | null;
+  fechaDesde: string;
+  fechaHasta: string;
+  dias: number;
+  nota: string | null;
+  registradoPor: string | null;
+  /** false si toca una semana cerrada: ya no se puede anular. */
+  editable: boolean;
 }
 
 export interface DeudaPlan {

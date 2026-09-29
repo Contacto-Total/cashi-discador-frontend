@@ -23,6 +23,7 @@ import {
   MarcacionManual,
   MiPlan,
   PersonalAsistencia,
+  VacacionesAsesor,
   PlanEquipoPedido,
   PlanSemana,
   PoliticaAsistencia,
@@ -375,7 +376,7 @@ export class AsistenciaService {
     return this.http.put<void>(`${this.url}/recuperaciones/equipo`, plan, { params });
   }
 
-  // ==================== INGRESO Y CESE ====================
+  // ==================== PERSONAL: INGRESO, CESE Y VACACIONES ====================
 
   /** Los asesores del ámbito (sin subcartera, todos), también los que cesaron. */
   personal(idSubcartera: number | null): Observable<PersonalAsistencia[]> {
@@ -385,6 +386,19 @@ export class AsistenciaService {
 
   guardarPersonal(idUsuario: number, cambio: { fechaIngreso: string; fechaCese: string | null; motivo: string }): Observable<PersonalAsistencia> {
     return this.http.put<PersonalAsistencia>(`${this.url}/personal/${idUsuario}`, cambio);
+  }
+
+  vacaciones(idSubcartera: number | null): Observable<VacacionesAsesor[]> {
+    const params = idSubcartera ? new HttpParams().set('idSubcartera', idSubcartera) : undefined;
+    return this.http.get<VacacionesAsesor[]>(`${this.url}/personal/vacaciones`, { params });
+  }
+
+  registrarVacaciones(cuerpo: { idUsuario: number; fechaDesde: string; fechaHasta: string; nota: string | null }): Observable<VacacionesAsesor> {
+    return this.http.post<VacacionesAsesor>(`${this.url}/personal/vacaciones`, cuerpo);
+  }
+
+  anularVacaciones(id: number, motivo: string): Observable<void> {
+    return this.http.post<void>(`${this.url}/personal/vacaciones/${id}/anular`, { motivo });
   }
 
   cierre(id: number): Observable<CierreSemana> {
