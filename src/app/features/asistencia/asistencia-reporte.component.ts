@@ -335,10 +335,10 @@ export class AsistenciaReporteComponent {
   /** El roster, para que la cabecera pueda ofrecerlo en su desplegable. */
   readonly rosterCambia = output<string[]>();
   readonly reporteCargado = output<AsistenciaReporte | null>();
+  /** Las flechas eligen a la persona en el campo de la cabecera: así sigue elegida al cambiar de semana. */
+  readonly agenteCambia = output<string>();
 
   readonly reporte = signal<AsistenciaReporte | null>(null);
-  /** Lo que eligieron las flechas; manda sobre lo escrito en la cabecera. */
-  readonly agenteElegido = signal('');
   readonly cargando = signal(false);
 
   /** El roster del reporte: por donde caminan las flechas. */
@@ -351,7 +351,7 @@ export class AsistenciaReporteComponent {
    */
   readonly indice = computed(() => {
     const gente = this.roster();
-    const texto = (this.agenteElegido() || this.agente()).toLowerCase().trim();
+    const texto = this.agente().toLowerCase().trim();
     if (!texto) {
       return 0;
     }
@@ -509,7 +509,6 @@ export class AsistenciaReporteComponent {
     this.servicio.reporte(desde, hasta, idSubcartera).subscribe({
       next: r => {
         this.reporte.set(r);
-        this.agenteElegido.set('');
         this.rosterCambia.emit(r.agentes.map(a => a.nombreAgente));
         this.reporteCargado.emit(r);
         this.cargando.set(false);
@@ -525,7 +524,7 @@ export class AsistenciaReporteComponent {
   mover(paso: number): void {
     const gente = this.roster();
     const siguiente = Math.min(gente.length - 1, Math.max(0, this.indice() + paso));
-    this.agenteElegido.set(gente[siguiente]?.nombreAgente ?? '');
+    this.agenteCambia.emit(gente[siguiente]?.nombreAgente ?? '');
   }
 
 

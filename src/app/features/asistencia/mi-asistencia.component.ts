@@ -1,10 +1,12 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
 import { concatMap, from, toArray } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
+import { MASCOTA_CSS, MASCOTA_FILA_CSS, mascotaFilaHtml } from '../../core/mascota-cashi';
 import { AsistenciaService } from './asistencia.service';
 import {
   AsistenciaDia,
@@ -18,6 +20,14 @@ import {
   RECUPERACION, TIPOS_DE_CALENDARIO, abrirArchivo, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
   errorDeRecuperacion, hoy as hoyLocal, lunesDe as lunesLocal, primerDiaPermitido, sumarDias as sumarDiasLocal
 } from './asistencia.estilos';
+
+type TonoMensaje = 'ok' | 'info' | 'tarde' | 'incomp' | 'falta';
+
+/** Cómo se nombra cada marca en los mensajes. */
+const NOMBRE_MARCA: Record<string, string> = {
+  ENTRADA: 'entrada', BREAK_INICIO: 'inicio de break', BREAK_FIN: 'fin de break',
+  ALMUERZO_INICIO: 'inicio de almuerzo', ALMUERZO_FIN: 'fin de almuerzo', SALIDA: 'salida'
+};
 
 const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 /** Los meses escritos, en minúscula: el navegador en es-PE da «Setiembre» con mayúscula. */
@@ -206,12 +216,10 @@ const ESTILOS = {
       </div>
 
       <div class="px-7 pb-12 pt-5">
-        <!-- El plazo del cierre: a la vista, no escondido en el formulario -->
-        <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-[#fbd391] bg-[#fef6e0] px-4 py-3 text-[12.5px] leading-normal text-[#92400e] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-             role="note">
-          <svg class="mt-px shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-          <p class="!m-0"><strong class="font-extrabold">{{ aviso.titulo }}:</strong> {{ aviso.texto }}@if (aviso.fecha) {<strong class="font-extrabold">{{ aviso.fecha }}</strong>}{{ aviso.resto }}</p>
-        </div>
+        <!-- Cómo va la semana, dicho por Cashi: un mensaje, no un aviso. -->
+        @if (!cargando() && cashiDice()) {
+          <div class="mb-[22px] mt-1 pl-1" role="status" [innerHTML]="cashiDice()"></div>
+        }
         @if (cargando()) {
           <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando tus horas…</p>
         } @else {
@@ -371,6 +379,12 @@ const ESTILOS = {
               <div class="flex flex-col">
                 <h2 [class]="estilos.titulo">Mis solicitudes</h2>
                 <div class="tarjeta flex flex-1 flex-col">
+                  <!-- El plazo del cierre, junto a las solicitudes a las que se aplica -->
+                  <div class="mb-2.5 flex items-start gap-2 rounded-lg border border-[#fbd391] bg-[#fef6e0] px-3 py-2 text-[12px] leading-normal text-[#92400e] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                       role="note">
+                    <svg class="mt-px shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    <p class="!m-0"><strong class="font-extrabold">{{ aviso.titulo }}:</strong> {{ aviso.texto }}@if (aviso.fecha) {<strong class="font-extrabold">{{ aviso.fecha }}</strong>}{{ aviso.resto }}</p>
+                  </div>
                   <ul class="lista-limpia flex-1">
                     @for (s of paginaSolicitudes(); track s.id) {
                       <li>
@@ -650,13 +664,91 @@ export class MiAsistenciaComponent implements OnInit {
       const [texto, clase, marcable]: [string, string, boolean] = f > hoy ? ['Aún no llega', 'p-neutro', true]
         : !d || d.estado === 'FALTA' ? ['No trabajado', 'p-falta', true]
         : d.estado === 'TARDE' ? ['Llegó tarde', 'p-tarde', true]
-        : d.estado === 'NO_LABORABLE' ? ['No laborable', 'p-neutro', false]
+        : d.estado === 'NO_LABORABLE' ? [d.tipoDia ?? 'No laborable', 'p-neutro', false]
         : d.estado === 'JUSTIFICADO' ? [d.tipoDia ?? 'Justificado', 'p-neutro', false]
         : ['Trabajado', 'p-ok', false];
       filas.push({ fecha: f, etiqueta: `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`, texto, clase, marcable });
     }
     return filas;
   });
+
+  private readonly sanitizer = inject(DomSanitizer);
+
+  /** Cashi con el mensaje de la semana. Sonríe; pone la cara triste si se pasó la tolerancia. */
+  readonly cashiDice = computed<SafeHtml | null>(() => {
+    const m = this.mensaje();
+    if (!m) {
+      return null;
+    }
+    // El HTML es fijo del propio front y el texto va escapado.
+    return this.sanitizer.bypassSecurityTrustHtml(
+      `<style>${MASCOTA_CSS}${MASCOTA_FILA_CSS}</style>` + mascotaFilaHtml(m.texto, m.tono === 'falta'));
+  });
+
+
+
+
+
+  /**
+   * El mensaje de la semana en curso: el primero que aplique, de lo más urgente
+   * a lo más tranquilo. Solo en la semana actual; las pasadas ya no se cambian.
+   */
+  readonly mensaje = computed<{ tono: TonoMensaje; texto: string } | null>(() => {
+    if (!this.esSemanaActual() || !this.reporte()) {
+      return null;
+    }
+    const hoy = this.hoy();
+    const dias = this.dias();
+    const semana = this.semana();
+    const tolSemana = this.reporte()?.toleranciaSemanaMin ?? 30;
+    const tolDia = this.reporte()?.toleranciaDiaMin ?? 10;
+
+    const deHoy = dias.find(d => d.fecha === hoy);
+    if (deHoy?.codigoTipoDia === 'VACACIONES') {
+      let fin = hoy;
+      for (const d of dias) {
+        if (d.fecha > fin && d.codigoTipoDia === 'VACACIONES' && d.fecha === this.sumarDias(fin, 1)) {
+          fin = d.fecha;
+        }
+      }
+      return { tono: 'info', texto: `De vacaciones hasta el ${this.corta(fin)}. Estos días no cuentan para tu asistencia.` };
+    }
+
+    const pendiente = dias.find(d => d.fecha < hoy && this.diasIncompletos().includes(d));
+    if (pendiente) {
+      const marca = NOMBRE_MARCA[(pendiente.marcasFaltantes ?? [])[0]] ?? 'una marca';
+      return { tono: 'incomp', texto: `Falta tu marca de ${marca} del ${this.diaNombrado(pendiente)}. Avisa a tu supervisora para regularizarla.` };
+    }
+
+    const tardanza = semana?.minutosTardanza ?? 0;
+    if (semana?.superoToleranciaSemanal) {
+      return { tono: 'falta', texto: `Superaste la tolerancia de la semana: ${tardanza} de ${tolSemana} min. La próxima semana empiezas en cero.` };
+    }
+    const diaTarde = dias.find(d => (d.minutosTardanza ?? 0) > tolDia);
+    if (diaTarde) {
+      return { tono: 'falta', texto: `El ${this.diaNombrado(diaTarde)} llegaste ${diaTarde.minutosTardanza} min tarde; la tolerancia diaria es de ${tolDia} min. Cuida tus ingresos el resto de la semana.` };
+    }
+    if (tardanza >= Math.ceil(tolSemana * 2 / 3)) {
+      return { tono: 'tarde', texto: `Llevas ${tardanza} min de tardanza esta semana y te quedan ${tolSemana - tardanza} min. Llega temprano los días que faltan para no perder el bono.` };
+    }
+    if (tardanza > 0) {
+      return { tono: 'tarde', texto: `Llevas ${tardanza} min de tardanza acumulada hasta hoy. Procura llegar temprano el resto de la semana para no perder el bono. ¡Tú puedes!` };
+    }
+
+    const diaSemana = new Date(hoy + 'T00:00:00').getDay();
+    if (diaSemana === 1 && !deHoy?.entrada) {
+      return { tono: 'info', texto: 'Semana nueva: 0 min de tardanza. Llega a tu hora y asegura tu bono.' };
+    }
+    if (diaSemana === 5) {
+      return { tono: 'ok', texto: 'Último día de la semana y vas puntual. Llega a tiempo hoy y cierras la semana limpia.' };
+    }
+    return { tono: 'ok', texto: 'Semana puntual hasta hoy. ¡Sigue así!' };
+  });
+
+  /** «martes 23/09». */
+  private diaNombrado(d: AsistenciaDia): string {
+    return `${DIAS_LARGOS[new Date(d.fecha + 'T00:00:00').getDay()].toLowerCase()} ${this.corta(d.fecha)}`;
+  }
 
   readonly minutosTrabajados = computed(() => this.semana()?.minutosTrabajados ?? 0);
   readonly minutosJornada = computed(() => this.semana()?.minutosJornada ?? 0);
@@ -777,7 +869,7 @@ export class MiAsistenciaComponent implements OnInit {
     const fecha = this.sumarDias(this.lunes(), i);
     const d = this.dias().find(x => x.fecha === fecha);
     const nombre = DIAS_LARGOS[new Date(fecha + 'T00:00:00').getDay()];
-    const [clase, estado] = !d || d.estado === 'NO_LABORABLE' ? ['', i === 5 ? 'sin trabajo, es opcional' : 'sin trabajo']
+    const [clase, estado] = !d || d.estado === 'NO_LABORABLE' ? ['', d?.tipoDia ? d.tipoDia.toLowerCase() : i === 5 ? 'sin trabajo, es opcional' : 'sin trabajo']
       : d.estado === 'FALTA' ? ['falta', 'falta']
       : (d.marcasFaltantes ?? []).length ? ['incomp', 'marcaciones pendientes']
       : d.estado === 'JUSTIFICADO' ? ['', d.tipoDia ?? 'justificado'] : ['ok', 'completo'];

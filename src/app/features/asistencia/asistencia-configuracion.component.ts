@@ -6,7 +6,8 @@ import { forkJoin, of, switchMap } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import {
-  DiaBase, DiaCalendario, Horario, HorarioBase, ImportacionFeriados, PersonalAsistencia, PoliticaAsistencia, TipoDia
+  DiaBase, DiaCalendario, Horario, HorarioBase, ImportacionFeriados, PersonalAsistencia, PoliticaAsistencia, TipoDia,
+  VacacionesAsesor
 } from './asistencia.models';
 import {
   ESTILOS, TIPOS_DE_CALENDARIO, aMinutos, enDuracion, hoy, sumarDias
@@ -250,9 +251,9 @@ function textoHorario(dias: DiaBase[]): string {
     <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Configuración</h1>
+          <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Administración</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Reglas de asistencia y calendario laboral
+            Reglas, horario base, personal y calendario
           </p>
         </div>
         <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
@@ -342,7 +343,7 @@ function textoHorario(dias: DiaBase[]): string {
     </div>
     }
 
-    <!-- INGRESO Y CESE: antes del ingreso y después del cese no hay faltas. -->
+    <!-- PERSONAL: ingreso y cese, y vacaciones. Antes del ingreso, después del cese y en vacaciones no hay faltas. -->
     @if (seccion() === 'personal') {
     <div class="px-7 pb-12 pt-5">
       <div class="aparecer">
@@ -393,6 +394,60 @@ function textoHorario(dias: DiaBase[]): string {
           </table>
         </div>
         <p class="pie-personal">Antes del ingreso y después del cese no hay faltas. El ingreso es la fecha de creación del usuario hasta que se corrige.</p>
+
+        <div class="fila-seccion mt-7">
+          <div class="flex items-baseline gap-2.5">
+            <h2 class="titulo-seccion !m-0">Vacaciones</h2>
+            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ cuentaVacaciones() }}</span>
+          </div>
+          <button type="button" [class]="estilos.botonPrimario" (click)="abrirVacaciones()">
+            <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Registrar vacaciones
+          </button>
+        </div>
+        <div [class]="estilos.panel">
+          <table class="tabla-personal w-full border-collapse">
+            <caption class="sr-only">Vacaciones registradas por asesor</caption>
+            <thead>
+              <tr class="border-b border-[#e6e9ee] dark:border-slate-800">
+                <th scope="col" [class]="estilos.th">Asesor</th>
+                <th scope="col" [class]="estilos.th">Subcartera</th>
+                <th scope="col" [class]="estilos.th">Desde</th>
+                <th scope="col" [class]="estilos.th">Hasta</th>
+                <th scope="col" [class]="estilos.th">Días</th>
+                <th scope="col" [class]="estilos.th">Registrado por</th>
+                <th scope="col" [class]="estilos.th">Nota</th>
+                <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of vacaciones(); track v.id) {
+                <tr>
+                  <td [class]="estilos.td + ' font-semibold'">
+                    {{ v.nombre }}@if (enCurso(v)) {<span [class]="PASTILLA.info + ' ml-2'">En curso</span>}
+                    <span class="sub-celda !font-normal">{{ v.usuario }}</span>
+                  </td>
+                  <td [class]="estilos.td">{{ v.subcartera ?? '—' }}</td>
+                  <td [class]="estilos.td">{{ fechaCompleta(v.fechaDesde) }}</td>
+                  <td [class]="estilos.td">{{ fechaCompleta(v.fechaHasta) }}</td>
+                  <td [class]="estilos.td">{{ v.dias }}</td>
+                  <td [class]="estilos.td">{{ v.registradoPor ?? '—' }}</td>
+                  <td [class]="estilos.td + ' max-w-[220px] truncate'" [attr.title]="v.nota">{{ v.nota ?? '—' }}</td>
+                  <td [class]="estilos.td + ' celda-accion'">
+                    <button type="button" [class]="estilos.botonChico" (click)="abrirAnular(v)" [disabled]="!v.editable"
+                            [attr.title]="v.editable ? null : 'Toca una semana cerrada'">
+                      <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      Anular
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8" [class]="estilos.td + ' py-8 text-center text-[#5f6c80]'">Sin vacaciones registradas</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="pie-personal">Los días de vacaciones no cuentan falta, tardanza ni marcas. Si toda la semana es de vacaciones, el asesor no sale en el reporte de esa semana.</p>
       </div>
     </div>
     }
@@ -686,6 +741,96 @@ function textoHorario(dias: DiaBase[]): string {
       </div>
     }
 
+    <!-- Registrar vacaciones: asesor y rango -->
+    @if (formVacaciones()) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarVacaciones()"></div>
+      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,440px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-vacaciones">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <h2 id="titulo-vacaciones" class="!m-0 text-[15px] font-extrabold">Registrar vacaciones</h2>
+            <button type="button" [class]="estilos.botonIcono" (click)="cerrarVacaciones()" aria-label="Cerrar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </header>
+
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="va-asesor">Asesor</label>
+              <select id="va-asesor" [class]="estilos.campo"
+                      [ngModel]="vacAsesor()" (ngModelChange)="vacAsesor.set($event); errorVacaciones.set('')">
+                <option [ngValue]="null">Elige un asesor</option>
+                @for (p of asesoresVigentes(); track p.idUsuario) {
+                  <option [ngValue]="p.idUsuario">{{ p.nombre }} · {{ p.usuario }}</option>
+                }
+              </select>
+            </div>
+            <div class="flex gap-3">
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="va-desde">Desde</label>
+                <input id="va-desde" type="date" [class]="estilos.campo"
+                       [ngModel]="vacDesde()" (ngModelChange)="vacDesde.set($event); errorVacaciones.set('')">
+              </div>
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="va-hasta">Hasta</label>
+                <input id="va-hasta" type="date" [class]="estilos.campo" [min]="vacDesde()"
+                       [ngModel]="vacHasta()" (ngModelChange)="vacHasta.set($event); errorVacaciones.set('')">
+              </div>
+            </div>
+            @if (diasVacaciones(); as n) {
+              <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">{{ n }} {{ n === 1 ? 'día' : 'días' }} calendario</p>
+            }
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="va-nota">Nota <span class="font-semibold normal-case tracking-normal">(opcional)</span></label>
+              <input id="va-nota" type="text" maxlength="300" [class]="estilos.campo"
+                     [ngModel]="vacNota()" (ngModelChange)="vacNota.set($event)">
+            </div>
+            @if (errorVacaciones()) {
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ errorVacaciones() }}</p>
+            }
+          </div>
+
+          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonSecundario" (click)="cerrarVacaciones()">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="guardarVacaciones()" [disabled]="guardando()">Registrar</button>
+          </footer>
+        </div>
+      </div>
+    }
+
+    <!-- Anular vacaciones, con su motivo -->
+    @if (anulando(); as v) {
+      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="anulando.set(null)"></div>
+      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,440px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
+             role="dialog" aria-modal="true" aria-labelledby="titulo-anular">
+          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 id="titulo-anular" class="!m-0 text-[15px] font-extrabold">Anular vacaciones</h2>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ v.nombre }} · {{ fechaCompleta(v.fechaDesde) }} – {{ fechaCompleta(v.fechaHasta) }}</p>
+            </div>
+            <button type="button" [class]="estilos.botonIcono" (click)="anulando.set(null)" aria-label="Cerrar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </header>
+          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+            <div class="flex flex-col gap-1.5">
+              <label [class]="estilos.etiqueta" for="va-motivo">Motivo</label>
+              <input id="va-motivo" type="text" maxlength="300" [class]="estilos.campo"
+                     [ngModel]="motivoAnular()" (ngModelChange)="motivoAnular.set($event); errorVacaciones.set('')">
+            </div>
+            @if (errorVacaciones()) {
+              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ errorVacaciones() }}</p>
+            }
+          </div>
+          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
+            <button type="button" [class]="estilos.botonSecundario" (click)="anulando.set(null)">Cancelar</button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="confirmarAnular()" [disabled]="guardando()">Anular</button>
+          </footer>
+        </div>
+      </div>
+    }
+
     <!-- Marcar un día del calendario: uno o un rango, con lo que cuesta en horas -->
     @if (formDia()) {
       <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarDia()"></div>
@@ -923,7 +1068,7 @@ export class AsistenciaConfiguracionComponent {
   /** Las pestañas de la pantalla. */
   protected readonly SECCIONES = [
     { clave: 'reglas', texto: 'Reglas y horario base' },
-    { clave: 'personal', texto: 'Ingreso y cese' },
+    { clave: 'personal', texto: 'Personal' },
     { clave: 'calendario', texto: 'Calendario' }
   ] as const;
   readonly seccion = signal<'reglas' | 'personal' | 'calendario'>('reglas');
@@ -935,7 +1080,8 @@ export class AsistenciaConfiguracionComponent {
     neutro: 'inline-flex items-center rounded-full bg-[#f1f3f6] px-[9px] py-[2px] text-[11.5px] font-bold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400',
     incomp: 'inline-flex items-center rounded-full bg-[#fdeee0] px-[9px] py-[2px] text-[11.5px] font-bold text-[#c2410c] dark:bg-orange-950/50 dark:text-orange-300',
     tarde: 'inline-flex items-center rounded-full bg-[#fef6e0] px-[9px] py-[2px] text-[11.5px] font-bold text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300',
-    falta: 'inline-flex items-center rounded-full bg-[#fdecec] px-[9px] py-[2px] text-[11.5px] font-bold text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300'
+    falta: 'inline-flex items-center rounded-full bg-[#fdecec] px-[9px] py-[2px] text-[11.5px] font-bold text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300',
+    info: 'inline-flex items-center rounded-full bg-[#eef2ff] px-[9px] py-[2px] text-[11.5px] font-bold text-[#3730a3] dark:bg-indigo-950/50 dark:text-indigo-300'
   };
 
   /** Qué pasa con cada fila del archivo de feriados. */
@@ -1000,6 +1146,30 @@ export class AsistenciaConfiguracionComponent {
     const n = this.personal().length;
     const cesados = this.personal().filter(p => this.cesado(p)).length;
     return `${n} ${n === 1 ? 'asesor' : 'asesores'}` + (cesados ? ` · ${cesados} ${cesados === 1 ? 'cesado' : 'cesados'}` : '');
+  });
+
+  /** Vacaciones: los rangos registrados de los asesores del ámbito. */
+  readonly vacaciones = signal<VacacionesAsesor[]>([]);
+  readonly formVacaciones = signal(false);
+  readonly vacAsesor = signal<number | null>(null);
+  readonly vacDesde = signal('');
+  readonly vacHasta = signal('');
+  readonly vacNota = signal('');
+  readonly errorVacaciones = signal('');
+  readonly anulando = signal<VacacionesAsesor | null>(null);
+  readonly motivoAnular = signal('');
+  readonly cuentaVacaciones = computed(() => {
+    const n = this.vacaciones().length;
+    return `${n} ${n === 1 ? 'registro' : 'registros'}`;
+  });
+  /** Quien puede salir de vacaciones: los que no cesaron. */
+  readonly asesoresVigentes = computed(() => this.personal().filter(p => !this.cesado(p)));
+  readonly diasVacaciones = computed(() => {
+    const d = this.vacDesde(), h = this.vacHasta();
+    if (!d || !h || h < d) {
+      return 0;
+    }
+    return Math.round((new Date(h + 'T12:00:00').getTime() - new Date(d + 'T12:00:00').getTime()) / 86400000) + 1;
   });
 
   /** La regla que se está cambiando. */
@@ -1259,6 +1429,7 @@ export class AsistenciaConfiguracionComponent {
       const ambito = this.idSubcartera();
       this.cargarHorarios(ambito);
       this.cargarPersonal(ambito);
+      this.cargarVacaciones(ambito);
     });
     effect(() => {
       const ambito = this.idSubcartera();
@@ -1321,6 +1492,93 @@ export class AsistenciaConfiguracionComponent {
     this.servicio.personal(idSubcartera).subscribe({
       next: p => this.personal.set(p),
       error: () => this.toast.error('No se pudo cargar el ingreso y cese')
+    });
+  }
+
+  // ---------- Vacaciones ----------
+
+  private cargarVacaciones(idSubcartera: number | null): void {
+    this.servicio.vacaciones(idSubcartera).subscribe({
+      next: v => this.vacaciones.set(v),
+      error: () => this.toast.error('No se pudieron cargar las vacaciones')
+    });
+  }
+
+  /** Hoy cae dentro del rango. */
+  enCurso(v: VacacionesAsesor): boolean {
+    const h = hoy();
+    return v.fechaDesde <= h && h <= v.fechaHasta;
+  }
+
+  abrirVacaciones(): void {
+    this.vacAsesor.set(null);
+    this.vacDesde.set('');
+    this.vacHasta.set('');
+    this.vacNota.set('');
+    this.errorVacaciones.set('');
+    this.formVacaciones.set(true);
+    setTimeout(() => document.getElementById('va-asesor')?.focus());
+  }
+
+  cerrarVacaciones(): void {
+    this.formVacaciones.set(false);
+  }
+
+  guardarVacaciones(): void {
+    const idUsuario = this.vacAsesor();
+    const desde = this.vacDesde();
+    const hasta = this.vacHasta();
+    const error = !idUsuario ? 'Elige al asesor'
+      : !desde || !hasta ? 'Pon las dos fechas'
+      : hasta < desde ? 'La fecha final no puede ser antes de la inicial' : '';
+    this.errorVacaciones.set(error);
+    if (error || !idUsuario) {
+      return;
+    }
+    this.guardando.set(true);
+    this.servicio.registrarVacaciones({ idUsuario, fechaDesde: desde, fechaHasta: hasta, nota: this.vacNota().trim() || null }).subscribe({
+      next: v => {
+        this.guardando.set(false);
+        this.cerrarVacaciones();
+        this.toast.success(`Vacaciones de ${v.nombre} registradas`);
+        this.cargarVacaciones(this.idSubcartera());
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.errorVacaciones.set(respuesta?.error?.error ?? 'No se pudo registrar');
+      }
+    });
+  }
+
+  abrirAnular(v: VacacionesAsesor): void {
+    this.motivoAnular.set('');
+    this.errorVacaciones.set('');
+    this.anulando.set(v);
+    setTimeout(() => document.getElementById('va-motivo')?.focus());
+  }
+
+  confirmarAnular(): void {
+    const v = this.anulando();
+    const motivo = this.motivoAnular().trim();
+    if (!v) {
+      return;
+    }
+    if (!motivo) {
+      this.errorVacaciones.set('Escribe el motivo: queda en la Auditoría');
+      return;
+    }
+    this.guardando.set(true);
+    this.servicio.anularVacaciones(v.id, motivo).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.anulando.set(null);
+        this.toast.success('Vacaciones anuladas');
+        this.cargarVacaciones(this.idSubcartera());
+      },
+      error: respuesta => {
+        this.guardando.set(false);
+        this.errorVacaciones.set(respuesta?.error?.error ?? 'No se pudo anular');
+      }
     });
   }
 
