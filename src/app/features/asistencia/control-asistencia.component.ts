@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -8,7 +8,7 @@ import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaReporte } from './asistencia.models';
+import { AsistenciaReporte, Justificacion } from './asistencia.models';
 import { ESTILOS, estadoVisible, hoy, lunesDe, semanaPorDefecto, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
@@ -213,7 +213,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           @case ('justificaciones') {
             <app-asistencia-justificaciones
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" [agente]="agente()"
-              (sinResolverCambia)="sinResolver.set($event)" />
+              (sinResolverCambia)="cargarPorAprobar()" />
           }
           @case ('cierre') {
             <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
@@ -291,7 +291,15 @@ export class ControlAsistenciaComponent implements OnInit {
   /** Los nombres del roster, para el desplegable del campo de agente. */
   readonly roster = signal<string[]>([]);
   readonly reporte = signal<AsistenciaReporte | null>(null);
-  readonly sinResolver = signal(0);
+  /** Lo que espera a RR.HH. en todas las subcarteras; el número se acota al ámbito. */
+  private readonly porAprobar = signal<Justificacion[]>([]);
+  /** Solo las de la gente del ámbito elegido, igual que la lista de la pestaña. */
+  private readonly genteDelAmbito = signal<Set<number> | null>(null);
+  readonly sinResolver = computed(() => {
+    const lista = this.porAprobar();
+    const gente = this.genteDelAmbito();
+    return gente ? lista.filter(j => gente.has(j.idUsuario)).length : lista.length;
+  });
 
   /** El nombre de la subcartera elegida: Configuración lo usa para decir a quién alcanza un cambio. */
   readonly nombreSubcartera = computed(() =>
@@ -323,9 +331,27 @@ export class ControlAsistenciaComponent implements OnInit {
     // haya abierto: es lo que avisa de que hay algo esperando. Cuenta solo lo
     // que le toca a RR.HH. (lo que ya revisó la supervisora), de tres meses
     // atrás a dos adelante, lo mismo que lista la pestaña.
+    this.cargarPorAprobar();
+
+    // La gente del ámbito, con la misma consulta que usa la pestaña para su lista.
+    effect(() => {
+      const ambito = this.idSubcartera(), desde = this.desde(), hasta = this.hasta();
+      untracked(() => this.genteDelAmbito.set(null));
+      if (!ambito) {
+        return;
+      }
+      this.servicio.reporte(desde, hasta, ambito).subscribe({
+        next: r => this.genteDelAmbito.set(new Set(r.agentes.map(a => a.idUsuario))),
+        error: () => this.genteDelAmbito.set(null)
+      });
+    });
+  }
+
+  /** Se vuelve a leer cuando la pestaña resuelve una solicitud. */
+  cargarPorAprobar(): void {
     this.servicio.justificaciones(sumarDias(hoy(), -90), sumarDias(hoy(), 60), ['REVISADA']).subscribe({
-      next: j => this.sinResolver.set(j.length),
-      error: () => this.sinResolver.set(0)
+      next: j => this.porAprobar.set(j),
+      error: () => this.porAprobar.set([])
     });
   }
 
