@@ -2041,6 +2041,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Rellamada signals
   protected isRellamada = signal(false);          // Flag: rellamada en progreso
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
+  /** La rellamada fue CONTESTADA. rellamadaCallActive ya es true desde que timbra. */
+  protected rellamadaEnLlamada = signal(false);
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   // Evita hacer muchos clicks en rellamada y saturar el SIP
@@ -3365,6 +3367,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         if (state === CallState.CONNECTING || state === CallState.RINGING || state === CallState.ACTIVE) {
           this.rellamadaCallActive.set(true);
           console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
+        }
+
+        // Contestaron: recien ahi es EN_LLAMADA. Timbrar no cuenta, igual que en la
+        // predictiva y en la manual. Si nadie contesta, el estado no se toca.
+        if (state === CallState.ACTIVE && !this.rellamadaEnLlamada()) {
+          this.rellamadaEnLlamada.set(true);
+          const usuarioRellamada = this.authService.getCurrentUser();
+          if (usuarioRellamada?.id) {
+            this.agentService.iniciarLlamadaSistema(usuarioRellamada.id, 'Rellamada manual').subscribe({
+              next: () => console.log('✅ [Rellamada] Estado cambiado a EN_LLAMADA'),
+              error: (err: any) => console.error('❌ [Rellamada] Error cambiando a EN_LLAMADA:', err)
+            });
+          }
         }
         
         // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
@@ -4868,11 +4883,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.isMuted.set(false);
     this.isOnHold.set(false);
 
-    if (this.isTipifying()) {
+    // Si la rellamada fue contestada hay gestion que guardar, asi que va a TIPIFICANDO
+    // igual que cualquier llamada. Si nunca contestaron, no se toca el estado.
+    const veniaHablando = this.rellamadaEnLlamada();
+    this.rellamadaEnLlamada.set(false);
+
+    if (veniaHablando || this.isTipifying()) {
       this.sipService.blockIncomingCallsMode(true);
       const currentUser = this.authService.getCurrentUser();
-      if(currentUser?.id) {
-        this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+      if (currentUser?.id) {
+        // Endpoint de sistema: el manual rechaza cambios estando EN_LLAMADA
+        this.agentService.iniciarTipificacionSistema(currentUser.id).subscribe({
           next: () => console.log('[Rellamada] Estado cambiado a TIPIFICANDO'),
           error: (err: any) => console.error('[Rellamada] Error cambiando estado:', err)
         });
