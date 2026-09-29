@@ -305,7 +305,7 @@ export class SustentoTabComponent {
 
   tituloDesglose(p: Persona): string {
     const lineas = p.desglose;
-    const partes = [lineas.some(l => l.tipo === 'LOGRO') ? 'los logros se suman' : p.esSupervisor ? 'comisión por la escala' : 'nivel más alto'];
+    const partes = [lineas.some(l => l.tipo === 'LOGRO') ? 'por logros' : p.esSupervisor ? 'comisión por la escala' : 'nivel alcanzado'];
     if (lineas.some(l => l.tipo === 'META')) {
       partes.push('metas de cantidad');
     }

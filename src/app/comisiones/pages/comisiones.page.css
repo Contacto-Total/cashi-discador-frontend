@@ -579,6 +579,7 @@
 .cmx .cmx-pn { font-size: .74rem; color: var(--cmx-ink-3); margin: 6px 0 0; line-height: 1.5; }
 .cmx-pagomodo { display: grid; gap: 8px; margin: 0 0 10px; }
 .cmx-pagomodo .cmx-opt + .cmx-opt { margin-top: 0; }
+.cmx-pagomodo > .cmx-field-l { font-size: .68rem; font-weight: 600; color: var(--cmx-ink-3); }
 .cmx-mchips { display: flex; flex-wrap: wrap; gap: 4px; max-width: 330px; }
 .cmx-mchip { display: inline-flex; align-items: center; gap: 5px; font-size: .66rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; background: var(--cmx-soft-2); color: var(--cmx-ink-3); border: 1px solid var(--cmx-line); }
 .cmx-mchip b { font-family: var(--cmx-mono); font-weight: 600; }

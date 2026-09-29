@@ -47,7 +47,7 @@ import { CmxIconComponent } from './cmx-icon.component';
     <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-res-ases">
       <div class="cmx-block-head">
         <h3 id="cmx-res-ases" class="cmx-block-title">Asesores</h3>
-        <span class="cmx-block-desc">Rol {{ p.rolAsesor?.nombreRol || '—' }} · midiendo {{ metrica().etiqueta.toLowerCase() }}@if (p.escalaAcumulativa) { · los logros se suman }</span>
+        <span class="cmx-block-desc">Rol {{ p.rolAsesor?.nombreRol || '—' }} · midiendo {{ metrica().etiqueta.toLowerCase() }}@if (p.escalaAcumulativa) { · por logros }</span>
         @if (puedeAgregar()) {
           <button type="button" class="cmx-btn cmx-btn-sec cmx-btn-sm" style="margin-left:auto" (click)="agregar.emit()">
             <cmx-icon name="user-plus" [size]="15" /> Agregar participante

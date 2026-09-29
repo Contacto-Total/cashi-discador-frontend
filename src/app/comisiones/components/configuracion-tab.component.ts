@@ -38,7 +38,8 @@ let secuencia = 0;
 
 /**
  * Configuración del mes: métrica, rol y asesores que participan (con meta propia si es excepción),
- * supervisor, escala (nivel más alto o logros que se suman) y metas de cantidad del asesor.
+ * supervisor y escala. Con contención (TR3) además: escala por nivel alcanzado o por logros y metas
+ * de cantidad del asesor.
  * Cada mes es independiente; "Copiar configuración" trae la métrica, el rol, la escala, las metas
  * de cantidad y los bonos del mes anterior, sin participantes. La vista previa se calcula en el
  * backend con los pagos de hoy.
@@ -211,17 +212,18 @@ let secuencia = 0;
             @for (lado of lados; track lado.rol) {
               <div>
                 <h4 class="cmx-tcols-h">{{ lado.titulo }}</h4>
-                @if (lado.rol === 'ASESOR') {
-                  <div class="cmx-pagomodo" role="radiogroup" aria-label="Cómo paga la escala del asesor">
+                @if (lado.rol === 'ASESOR' && conLogros()) {
+                  <div class="cmx-pagomodo" role="radiogroup" aria-labelledby="cmx-acu-t">
+                    <span id="cmx-acu-t" class="cmx-field-l">¿Cómo paga la escala del asesor?</span>
                     <label class="cmx-opt" for="cmx-acu-no">
                       <input type="radio" name="cmx-acumula" id="cmx-acu-no" [checked]="!escalaAcumulativa()" [disabled]="soloLectura()"
                              (change)="escalaAcumulativa.set(false)" />
-                      <span><b>Paga el nivel más alto</b><span>Con 85 % cobra solo el nivel de 80 %.</span></span>
+                      <span><b>Nivel alcanzado</b><span>Cobra solo el nivel más alto al que llegó. Con 85 % cobra S/ 250.</span></span>
                     </label>
                     <label class="cmx-opt" for="cmx-acu-si">
                       <input type="radio" name="cmx-acumula" id="cmx-acu-si" [checked]="escalaAcumulativa()" [disabled]="soloLectura()"
                              (change)="escalaAcumulativa.set(true)" />
-                      <span><b>Los niveles se suman (logros)</b><span>Con 85 % cobra el de 70 % y el de 80 %.</span></span>
+                      <span><b>Por logros</b><span>Cada nivel alcanzado se suma. Con 85 % cobra 200 + 250 = S/ 450.</span></span>
                     </label>
                   </div>
                 }
@@ -251,7 +253,8 @@ let secuencia = 0;
           </div>
         </section>
 
-        <!-- Metas de cantidad -->
+        <!-- Metas de cantidad (TR3: solo cuando se mide contención) -->
+        @if (conLogros()) {
         <section class="cmx-card cmx-enter" style="--i:5">
           <div class="cmx-card-h">Metas de cantidad del asesor<em>Opcionales. Cada meta cumplida suma su monto a la comisión</em></div>
           <div class="cmx-card-b">
@@ -279,13 +282,9 @@ let secuencia = 0;
                 </span>
               </div>
             }
-            <p class="cmx-hint">
-              Se cuentan del mes del periodo: gestiones = tipificaciones del asesor en <code>registros_gestion</code>; PDP = las que son
-              promesa de pago; pagos = pagos conciliados de sus gestiones que suman. La meta de {{ etiquetaMetrica() }} se cumple al llegar
-              al 100 % de su meta individual.
-            </p>
           </div>
         </section>
+        }
       </div>
 
       <!-- Vista previa y acciones -->
@@ -431,9 +430,10 @@ export class ConfiguracionTabComponent {
         ...this.aEscala('ASESOR', this.nivelesAsesor()),
         ...this.aEscala('SUPERVISOR', this.nivelesSupervisor())
       ],
-      escalaAcumulativa: this.escalaAcumulativa(),
+      // Logros y metas de cantidad solo cuando se mide contención (TR3)
+      escalaAcumulativa: tipoMetrica === 'CONTENCION' && this.escalaAcumulativa(),
       metasCantidad: this.metas()
-        .filter(m => m.activa && m.monto != null)
+        .filter(m => tipoMetrica === 'CONTENCION' && m.activa && m.monto != null)
         .map<MetaCantidad>(m => ({ tipo: m.tipo, cantidad: m.tipo === 'META' ? null : m.cantidad, monto: m.monto! })),
       bonos: this.bonosCopiados()
     };
@@ -467,7 +467,7 @@ export class ConfiguracionTabComponent {
     if (this.metaDelMes() == null) {
       f.push('Falta la meta INTERNA del mes en el reporte de producción.');
     }
-    if (this.metas().some(m => m.activa && (!(m.monto! > 0) || (m.tipo !== 'META' && !(m.cantidad! > 0))))) {
+    if (this.conLogros() && this.metas().some(m => m.activa && (!(m.monto! > 0) || (m.tipo !== 'META' && !(m.cantidad! > 0))))) {
       f.push('Completa la cantidad y el monto de cada meta de cantidad marcada.');
     }
     return f;
@@ -503,6 +503,9 @@ export class ConfiguracionTabComponent {
       }
     });
   }
+
+  /** Logros y metas de cantidad son de TR3, la única que se mide por contención */
+  readonly conLogros = computed(() => this.tipoMetrica() === 'CONTENCION');
 
   readonly etiquetaMetrica = computed(() => {
     const t = this.tipoMetrica();
