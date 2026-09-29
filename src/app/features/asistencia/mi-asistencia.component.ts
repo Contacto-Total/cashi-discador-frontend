@@ -16,7 +16,7 @@ import {
 } from './asistencia.models';
 import {
   RECUPERACION, TIPOS_DE_CALENDARIO, abrirArchivo, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
-  errorDeRecuperacion, hoy as hoyLocal, lunesDe as lunesLocal, primerDiaPermitido, sumarDias as sumarDiasLocal
+  hoy as hoyLocal, lunesDe as lunesLocal, primerDiaPermitido, sumarDias as sumarDiasLocal
 } from './asistencia.estilos';
 
 const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -442,7 +442,7 @@ const ESTILOS = {
 
               <div class="flex gap-3">
                 <div class="flex flex-1 flex-col gap-1.5">
-                  <label [class]="estilos.etiqueta" for="j-desde">{{ esRecuperacion() ? 'Recupera desde' : 'Desde' }}</label>
+                  <label [class]="estilos.etiqueta" for="j-desde">Desde</label>
                   <input id="j-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
                          [ngModel]="nuevo.fechaDesde" (ngModelChange)="nuevo.fechaDesde = $event; cargarRango()">
                 </div>
@@ -452,26 +452,6 @@ const ESTILOS = {
                          [ngModel]="nuevo.fechaHasta" (ngModelChange)="nuevo.fechaHasta = $event; cargarRango()">
                 </div>
               </div>
-
-              @if (esRecuperacion()) {
-                <div>
-                  <div class="flex gap-3">
-                    <div class="flex flex-1 flex-col gap-1.5">
-                      <label [class]="estilos.etiqueta" for="j-origen">Recupera lo del</label>
-                      <input id="j-origen" type="date" [class]="estilos.campo" [max]="hoy()"
-                             [(ngModel)]="nuevo.fechaOrigen">
-                    </div>
-                    <div class="flex flex-1 flex-col gap-1.5">
-                      <label [class]="estilos.etiqueta" for="j-minutos">Minutos extra por día</label>
-                      <input id="j-minutos" type="number" min="5" max="60" step="5" [class]="estilos.campo"
-                             [(ngModel)]="nuevo.minutosExtra">
-                    </div>
-                  </div>
-                  <p class="!mb-0 !mt-2 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                    Esos días sales más tarde, sin pasar de las 20:00. La tardanza igual cuenta para el límite.
-                  </p>
-                </div>
-              }
 
               <p class="nota-panel">Sirve para días pasados y para días futuros.</p>
 
@@ -500,19 +480,17 @@ const ESTILOS = {
                 </div>
               </div>
 
-              @if (!esRecuperacion()) {
-                <div class="flex flex-col gap-1.5">
-                  <span class="text-[13px]">Certificado</span>
-                  <label class="zona-archivo" for="j-archivo">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <strong class="text-[13px] !text-[#0f172a] dark:!text-slate-100">{{ archivo()?.name ?? 'Adjuntar certificado' }}</strong>
-                    <span>Foto o PDF, hasta 10 MB. {{ textoCertificado() }}</span>
-                  </label>
-                  <input id="j-archivo" type="file" class="sr-only"
-                         accept="image/jpeg,image/png,image/webp,application/pdf"
-                         (change)="elegirArchivo($event)">
-                </div>
-              }
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[13px]">Certificado</span>
+                <label class="zona-archivo" for="j-archivo">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <strong class="text-[13px] !text-[#0f172a] dark:!text-slate-100">{{ archivo()?.name ?? 'Adjuntar certificado' }}</strong>
+                  <span>Foto o PDF, hasta 10 MB. {{ textoCertificado() }}</span>
+                </label>
+                <input id="j-archivo" type="file" class="sr-only"
+                       accept="image/jpeg,image/png,image/webp,application/pdf"
+                       (change)="elegirArchivo($event)">
+              </div>
 
               <div class="flex flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="j-comentario">Comentario</label>
@@ -592,9 +570,7 @@ export class MiAsistenciaComponent implements OnInit {
     idTipoDia: null as number | null,
     fechaDesde: this.hoy(),
     fechaHasta: this.hoy(),
-    comentario: '',
-    fechaOrigen: this.hoy(),
-    minutosExtra: null as number | null
+    comentario: ''
   };
 
   protected readonly detalleRecuperacion = detalleRecuperacion;
@@ -678,10 +654,6 @@ export class MiAsistenciaComponent implements OnInit {
 
   primerDia(): string | null {
     return primerDiaPermitido(this.tipoElegido());
-  }
-
-  esRecuperacion(): boolean {
-    return this.tipoElegido()?.codigo === RECUPERACION;
   }
 
   /** «7 – 11 de septiembre» o «31 de agosto – 4 de septiembre»: de lunes a viernes. */
@@ -817,7 +789,8 @@ export class MiAsistenciaComponent implements OnInit {
   ngOnInit(): void {
     this.servicio.tiposDeDia().subscribe({
       next: t => {
-        const deAusencia = t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo));
+        // La recuperación no se pide: la planifica RR.HH.
+        const deAusencia = t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo) && x.codigo !== RECUPERACION);
         this.tipos.set(deAusencia);
         this.nuevo.idTipoDia = deAusencia[0]?.id ?? null;
       },
@@ -881,9 +854,7 @@ export class MiAsistenciaComponent implements OnInit {
       idTipoDia: this.tipos()[0]?.id ?? null,
       fechaDesde: this.hoy(),
       fechaHasta: this.hoy(),
-      comentario: '',
-      fechaOrigen: this.hoy(),
-      minutosExtra: null
+      comentario: ''
     };
     // Lo de la semana a la vista ya está: se usa mientras llega lo del rango.
     this.diasConocidos.set(new Map(this.dias().map(d => [d.fecha, d])));
@@ -989,12 +960,6 @@ export class MiAsistenciaComponent implements OnInit {
       this.error.set(avisoAnticipacion(this.tipoElegido()!));
       return;
     }
-    const recupera = this.esRecuperacion();
-    const errorRecuperacion = recupera ? errorDeRecuperacion({ ...this.nuevo, fechaDesde: tramos[0].desde }) : null;
-    if (errorRecuperacion) {
-      this.error.set(errorRecuperacion);
-      return;
-    }
     if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {
       this.error.set(`${this.tipoElegido()!.nombre} necesita certificado adjunto`);
       return;
@@ -1014,9 +979,7 @@ export class MiAsistenciaComponent implements OnInit {
         fechaDesde: tramo.desde,
         fechaHasta: tramo.hasta,
         comentario: this.nuevo.comentario.trim(),
-        archivo: recupera ? null : this.archivo(),
-        minutosExtra: recupera ? Number(this.nuevo.minutosExtra) : null,
-        fechaOrigen: recupera ? this.nuevo.fechaOrigen : null
+        archivo: this.archivo()
       })),
       toArray()
     ).subscribe({

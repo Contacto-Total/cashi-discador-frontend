@@ -155,27 +155,6 @@ export function textoLimite(s: { superoToleranciaDiaria: boolean; superoToleranc
  */
 export const RECUPERACION = 'RECUPERACION';
 
-/** Hasta una hora extra al día; más deja de ser una recuperación razonable. */
-export const TOPE_RECUPERACION = 60;
-
-/** Lo que falla en una recuperación, con el mismo texto que el backend; null si está bien. */
-export function errorDeRecuperacion(n: { fechaOrigen: string; fechaDesde: string; minutosExtra: number | null }): string | null {
-  const minutos = Number(n.minutosExtra);
-  if (!Number.isFinite(minutos) || minutos <= 0 || minutos > TOPE_RECUPERACION) {
-    return `Los minutos extra van de 1 a ${TOPE_RECUPERACION} por día`;
-  }
-  if (!n.fechaOrigen) {
-    return 'Elige el día que recupera';
-  }
-  if (n.fechaOrigen > n.fechaDesde) {
-    return 'Se recupera el mismo día o después, no antes';
-  }
-  if (n.fechaOrigen > hoy()) {
-    return 'El día que se recupera no puede ser futuro';
-  }
-  return null;
-}
-
 /** «Sale 20 min más tarde · recupera lo del 23/09», para las listas de solicitudes. */
 export function detalleRecuperacion(j: { minutosExtra: number | null; fechaOrigen: string | null }): string | null {
   if (!j.minutosExtra || !j.fechaOrigen) {
