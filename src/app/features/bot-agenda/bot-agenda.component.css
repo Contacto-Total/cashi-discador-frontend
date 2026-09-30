@@ -1,28 +1,71 @@
 /* La pantalla usa Tailwind con el mismo sistema que Gestión de Tenores y bot de voz.
-   Aquí queda lo que no se expresa bien con utilidades: la rejilla de la tarjeta de un
-   caso, el host y las animaciones. */
+   Aquí queda lo que no se expresa bien con utilidades: las rejillas, la ficha, el
+   avatar del asesor y las animaciones. Los valores son los de la maqueta aprobada. */
 
 /* Columna flexible, no `block`: el div raíz lleva el fondo con `min-h-full`, que
    cuelga del host. Con el host en altura automática ese 100% no resuelve y el fondo
    acababa a media pantalla, con el gris de `.main-content` debajo.
    `position: relative` porque `.main-content` hace scroll pero no está posicionado:
-   los `fixed` del panel se medían contra la página y la hacían más alta que la ventana. */
+   los `fixed` de la ficha se medían contra la página y la hacían más alta que la ventana. */
 :host {
   display: flex;
   flex-direction: column;
   position: relative;
   min-height: 100%;
+
+  /* El color de cada subcartera, el mismo que en Personal. */
+  --c-1: #2a78d6;
+  --c-2: #eb6834;
+  --c-3: #1baf7a;
+  --c-4: #eda100;
+  --c-gris: #8491a3;
+  /* El mismo alto a los dos lados: la primera tarjeta de la columna y la primera fila
+     de la lista arrancan y acaban a la misma altura. */
+  --alto-tarjeta: 148px;
 }
 
-/* Tres zonas fijas: la hora, el cuerpo y la columna del dato propio del tipo. Lo que
-   se repite cae siempre en el mismo sitio, y el botón de llamar queda abajo a la
-   derecha en todas las filas. */
+:host-context(html.dark),
+:host-context(body.dark-theme) {
+  --c-1: #3987e5;
+  --c-2: #d95926;
+  --c-3: #199e70;
+  --c-4: #c98500;
+  --c-gris: #64748b;
+}
+
+/* ---------- marco de página ---------- */
+.cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-bottom: 1px solid #e6e9ee;
+  background: #ffffff;
+  padding: 20px 28px;
+}
+.contenido { display: flex; flex-direction: column; gap: 16px; padding: 20px 28px 48px; }
+@media (max-width: 640px) {
+  .cabecera { padding: 16px; }
+  .contenido { padding: 16px 16px 40px; }
+}
+.titulo-pagina { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; }
+.sub { margin: 0; font-size: 12.5px; color: #5f6c80; }
+
+/* Las dos columnas arrancan con una cabecera de la misma altura —a la izquierda hay
+   pastillas de 30 px y a la derecha solo texto—, así la primera tarjeta de cada lado
+   empieza en la misma línea. */
+.cabecera-columna { display: flex; align-items: center; gap: 12px; min-height: 34px; }
+
+.tablero.con-reparto { grid-template-columns: minmax(0, 1fr) 300px; }
+@media (max-width: 1024px) { .tablero.con-reparto { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- la cola de casos ---------- */
 .caso {
   position: relative;
   display: grid;
   grid-template-columns: 74px minmax(0, 1fr) 150px;
   gap: 10px 16px;
   align-items: start;
+  min-height: var(--alto-tarjeta);
   width: 100%;
   padding: 12px 16px 12px 15px;
   text-align: left;
@@ -36,8 +79,12 @@
 }
 .caso:hover { background: #f8fafc; }
 .caso:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+/* La gestionada se distingue por el fondo, no con `opacity`: eso crea un contexto de
+   apilado propio y apaga también el color del riel. */
+.caso-cerrado { background: #f8fafc; border-color: #f1f3f6; }
 
-/* La columna de la derecha estira con la tarjeta para que el botón quede abajo. */
+/* La columna de la derecha estira con la tarjeta: el dato propio del tipo arriba, a la
+   altura del nombre, y el botón abajo, en el mismo sitio en todas las filas. */
 .caso > .caso-dato {
   align-self: stretch;
   display: flex;
@@ -46,34 +93,229 @@
   justify-content: space-between;
   gap: 10px;
 }
-
 @media (max-width: 760px) {
   .caso { grid-template-columns: 62px minmax(0, 1fr); }
-  .caso > .caso-dato {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
+  .caso > .caso-dato { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
 }
 
-/* Las tarjetas de cifras son botones: sin esto heredan el fondo del navegador. */
-.cifra { cursor: pointer; height: 100%; }
-.cifra:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.pastilla-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.pastilla-filtro:hover { filter: brightness(0.97); }
+.pastilla-filtro:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
 
-:host-context(html.dark) .caso,
-:host-context(body.dark-theme) .caso {
-  border-color: #1e293b;
+/* ---------- la columna del reparto ---------- */
+.reparto { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+
+/* Las tarjetas se reparten el alto de la columna y van alternando lado. Así tres o
+   cinco asesores llenan lo mismo sin dejar un hueco muerto al final, y el zigzag hace
+   que el espacio entre ellas se lea como intención y no como sobra. */
+.asesores { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; height: 100%; }
+.asesor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 86%;
+  cursor: pointer;
+  text-align: left;
+  border: 1px solid #e6e9ee;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  padding: 10px 10px 10px 14px;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  animation: entrar 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.asesor:nth-child(even) { align-self: flex-end; }
+.asesor:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tono) 55%, #e6e9ee); }
+.asesor:active { transform: translateY(0); transition-duration: 0.08s; }
+.asesor:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.asesor[aria-pressed='true'] { border-color: var(--tono); box-shadow: inset 0 0 0 1px var(--tono); }
+
+/* El avatar y su anillo son los de Personal, para que la misma persona se reconozca de
+   una pantalla a otra. */
+.figura {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--tono) 88%, #000);
+  background: color-mix(in srgb, var(--tono) 18%, #ffffff);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px color-mix(in srgb, var(--tono) 30%, #e6e9ee);
+}
+.figura ::ng-deep svg { width: 100%; height: 100%; display: block; }
+
+/* La cuenta va sobre el avatar, con el color de su estado: en ámbar lo que le falta por
+   trabajar, en verde cuando ya no le queda nada. */
+.figura-cuenta { position: relative; display: inline-flex; flex: none; }
+.figura-cuenta .marca {
+  position: absolute;
+  left: -4px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- la ficha ---------- */
+/* Centrada y no lateral: entrando por un lado tapaba justo la columna desde la que se
+   pulsa, y lo que se acaba de tocar tiene que seguir viéndose. */
+/* El mismo velo que las ventanas centradas del módulo de asistencia. El de
+   `#0f172a/45` con 2 px de desenfoque es el de los paneles laterales de Tenores y
+   bot de voz, y esta ficha no es lateral. */
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(2, 6, 23, 0.35);
+  backdrop-filter: blur(5px);
+}
+.ficha {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 50;
+  width: min(560px, calc(100% - 32px));
+  height: max-content;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e6e9ee;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow-y: auto;
+}
+.ficha-cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #f1f3f6;
+  background: #ffffff;
+  padding: 16px 18px;
+}
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid #f1f3f6;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 8px 10px;
+}
+.dato-valor { font-size: 13px; font-weight: 700; }
+.fila-promesa {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid #f1f3f6;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 8px 10px;
+  font: inherit;
+  color: #0f172a;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.fila-promesa:hover { background: #f4f6f9; border-color: #e6e9ee; }
+.fila-promesa:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+
+.linea-hablado { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.linea-rotulo { font-size: 12px; font-weight: 600; color: #334155; }
+.linea-valor { font-size: 12.5px; color: #5f6c80; }
+
+.aviso-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 60;
   background: #0f172a;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
 }
+
+/* ---------- tema oscuro ---------- */
+:host-context(html.dark) .cabecera,
+:host-context(body.dark-theme) .cabecera { background: #0f172a; border-color: #1e293b; }
+:host-context(html.dark) .sub,
+:host-context(body.dark-theme) .sub { color: #94a3b8; }
+:host-context(html.dark) .caso,
+:host-context(body.dark-theme) .caso { background: #0f172a; border-color: #1e293b; }
 :host-context(html.dark) .caso:hover,
 :host-context(body.dark-theme) .caso:hover { background: #16233b; }
+:host-context(html.dark) .caso-cerrado,
+:host-context(body.dark-theme) .caso-cerrado { background: #0b1220; border-color: #172033; }
+:host-context(html.dark) .asesor,
+:host-context(body.dark-theme) .asesor { background: #0f172a; border-color: #1e293b; }
+:host-context(html.dark) .figura,
+:host-context(body.dark-theme) .figura {
+  background: color-mix(in srgb, var(--tono) 18%, #0f172a);
+  box-shadow: 0 0 0 2px #0f172a, 0 0 0 3px color-mix(in srgb, var(--tono) 30%, #1e293b);
+}
+:host-context(html.dark) .figura-cuenta .marca,
+:host-context(body.dark-theme) .figura-cuenta .marca { border-color: #0f172a; }
+:host-context(html.dark) .ficha,
+:host-context(body.dark-theme) .ficha { background: #0f172a; border-color: #1e293b; }
+:host-context(html.dark) .ficha-cabecera,
+:host-context(body.dark-theme) .ficha-cabecera { background: #0f172a; border-color: #172033; }
+:host-context(html.dark) .dato,
+:host-context(body.dark-theme) .dato { background: #0b1220; border-color: #172033; }
+:host-context(html.dark) .fila-promesa,
+:host-context(body.dark-theme) .fila-promesa { background: #0b1220; border-color: #172033; color: #e2e8f0; }
+:host-context(html.dark) .fila-promesa:hover,
+:host-context(body.dark-theme) .fila-promesa:hover { background: #16233b; }
+:host-context(html.dark) .linea-rotulo,
+:host-context(body.dark-theme) .linea-rotulo { color: #cbd5e1; }
+:host-context(html.dark) .linea-valor,
+:host-context(body.dark-theme) .linea-valor { color: #94a3b8; }
+:host-context(html.dark) .aviso-toast,
+:host-context(body.dark-theme) .aviso-toast { background: #ffffff; color: #0f172a; }
 
-@keyframes deslizar { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+/* ---------- animaciones ---------- */
+@keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes deslizar { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes fundir { from { opacity: 0; } to { opacity: 1; } }
-.deslizar { animation: deslizar 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.fundir { animation: fundir 0.2s ease-out both; }
+.deslizar { animation: deslizar 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.fundir { animation: fundir 0.18s ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .deslizar, .fundir { animation: none; }
+  .asesor, .deslizar, .fundir { animation: none; }
+  .asesor:hover { transform: none; }
 }

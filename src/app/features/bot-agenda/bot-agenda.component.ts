@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
+import { AVATARES_PERSONAL } from '../asistencia/avatares-personal';
 import { AsesorAgenda, BotAgendaService, CasoAgendaBot } from './bot-agenda.service';
 
 /**
@@ -19,27 +21,14 @@ const CLASES = {
   ayuda: 'text-[12px] leading-snug text-[#5f6c80] dark:text-slate-400',
   campo: 'h-[38px] w-full rounded-lg border !border-[#8491a3] !bg-white px-[11px] text-[13px] !text-[#0f172a] placeholder:text-[#8491a3] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100',
   botonPrimario: 'inline-flex h-[38px] items-center justify-center gap-[7px] whitespace-nowrap rounded-lg bg-[#0f172a] px-4 text-[13.5px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:!text-slate-900 dark:hover:bg-slate-200',
-  botonPrimarioChico: 'inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] bg-[#0f172a] px-3 text-[12px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:bg-white dark:!text-slate-900 dark:hover:bg-slate-200',
-  botonSecundario: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
-  botonSecundarioAlto: 'inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#8491a3] bg-white px-3.5 text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
-  cerrar: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] !text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:!text-slate-400 dark:hover:bg-slate-800',
+  botonPrimarioChico: 'inline-flex h-[30px] items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] bg-[#0f172a] px-3 text-[12px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:bg-white dark:!text-slate-900 dark:hover:bg-slate-200',
+  botonChico: 'inline-flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#8491a3] bg-white px-[11px] text-[12px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  botonAlto: 'inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#8491a3] bg-white px-3.5 text-[13px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  botonIcono: 'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[7px] border border-[#8491a3] bg-white !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200',
+  cerrar: 'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[7px] !text-[#5f6c80] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:!text-slate-400 dark:hover:bg-slate-800',
   tarjeta: 'flex min-w-0 flex-col rounded-xl border border-[#e6e9ee] bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900',
-  icono: 'flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f1f3f6] dark:bg-slate-800',
   rotulo: '!m-0 text-[11.5px] font-bold uppercase tracking-[0.05em] !text-[#5f6c80] dark:!text-slate-400',
-  cifra: 'text-2xl font-extrabold leading-[1.3] tracking-[-0.02em] tabular-nums',
-  unidad: 'ml-1.5 text-[12px] font-semibold tracking-normal text-[#5f6c80] dark:text-slate-400',
-  pie: 'mt-auto pt-1.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400',
-  segmentos: 'inline-flex gap-0.5 rounded-full border border-[#e6e9ee] bg-white p-[3px] dark:border-slate-700 dark:bg-slate-900',
-  tab: 'inline-flex h-[30px] items-center gap-[7px] whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors',
-  tabApagada: '!text-[#5f6c80] hover:!text-[#0f172a] dark:!text-slate-400 dark:hover:!text-slate-100',
-  tabActiva: 'bg-[#0f172a] !text-white dark:bg-white dark:!text-[#0f172a]',
-  dato: 'flex flex-col gap-0.5 rounded-[10px] border border-[#f1f3f6] bg-[#f8fafc] px-[10px] py-2 dark:border-slate-800 dark:bg-slate-950/40',
-  datoValor: 'text-[13px] font-bold tabular-nums',
-  panel: 'rounded-xl border border-[#e6e9ee] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900',
   vacio: 'rounded-xl border border-[#e6e9ee] bg-white py-14 text-center dark:border-slate-800 dark:bg-slate-900',
-  aviso: 'flex items-start gap-2 rounded-lg bg-[#fdf2dc] px-3 py-2.5 text-[12.5px] leading-snug text-[#92400e] dark:bg-amber-950/40 dark:text-amber-300',
-  info: 'flex items-start gap-2 rounded-lg bg-[#eff5ff] px-3 py-2.5 text-[12.5px] leading-snug text-[#1e40af] dark:bg-blue-950/40 dark:text-blue-300',
-  fondo: 'fundir fixed inset-0 z-40 bg-[#0f172a]/45',
 };
 
 /** Lo que distingue a cada tipo: orden, color, icono y rótulo. */
@@ -57,16 +46,21 @@ const TIPOS: Record<string, { orden: number; rotulo: string; plural: string; ico
 
 /** Minutos antes de la hora pactada en los que ya se puede llamar. */
 const MARGEN_LLAMADA_MIN = 15;
+/** Filas por página; con cuatro, la lista y la columna de asesores acaban a la par. */
+const POR_PAGINA = 4;
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
                'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-/** Un día de la lista, con sus casos ya ordenados. */
-interface GrupoDia {
-  clave: string;
-  titulo: string;
-  casos: CasoAgendaBot[];
+/** Un asesor en la columna del reparto, con lo que le tocó hoy. */
+interface RepartoAsesor {
+  idAgente: number;
+  nombre: string;
+  subcartera: string;
+  cuantas: number;
+  monto: number;
+  sinGestionar: number;
 }
 
 /**
@@ -76,9 +70,9 @@ interface GrupoDia {
  * por qué, y la llamada se hace desde gestión manual, que es donde está la ficha
  * del cliente y la tipificación.
  *
- * La misma pantalla sirve a los dos roles: la supervisión ve todo y reparte, y un
- * asesor solo ve lo que le asignaron. El recorte lo hace el backend; aquí solo se
- * esconde lo que no le toca manejar.
+ * La misma pantalla sirve a los dos roles. La supervisión ve la cola de lo que
+ * sigue pendiente y, al lado, quién lleva las promesas que repartió el sistema esta
+ * mañana; el asesor solo ve sus promesas. El recorte lo hace el backend.
  */
 @Component({
   selector: 'app-bot-agenda',
@@ -93,40 +87,46 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   readonly clavesTipo = ['PROMESA', 'SIN_CERRAR', 'CITA', 'CON_INTENCION'];
 
   casos: CasoAgendaBot[] = [];
-  seleccionado?: CasoAgendaBot;
   asesores: AsesorAgenda[] = [];
 
   cargando = false;
   error = false;
   errorMotivo = '';
-  mensaje = '';
-  mensajeError = false;
   guardando = false;
+  aviso = '';
 
   /** Si quien mira reparte trabajo. Se descubre probando el catálogo de asesores. */
   esSupervision = false;
 
-  desde = BotAgendaComponent.iso(BotAgendaComponent.hace(6));
-  hasta = BotAgendaComponent.iso(new Date());
-
   filtroTipo = '';
-  filtroSeguimiento: 'TODOS' | 'PENDIENTE' | 'COMPLETADO' = 'TODOS';
-  filtroAsesor = 'TODOS';
+  /**
+   * Abre en el día de hoy, que es el trabajo de la jornada. Vaciándolo se ve todo lo
+   * que sigue pendiente, incluido lo que quedó de días anteriores.
+   */
+  filtroDia = BotAgendaComponent.iso(new Date());
   buscar = '';
+  pagina = 0;
 
-  /** Asesor elegido en la ficha, antes de pulsar Asignar. */
-  asesorElegido?: number;
+  casoAbierto?: CasoAgendaBot;
+  asesorAbierto?: RepartoAsesor;
 
   private readonly REFRESCO_MS = 30000;
   private refresco?: ReturnType<typeof setInterval>;
   private reloj?: ReturnType<typeof setInterval>;
+  private temporizadorAviso?: ReturnType<typeof setTimeout>;
   ahora = Date.now();
 
-  constructor(private svc: BotAgendaService, private router: Router) {}
+  /** Las 48 figuras, saneadas una vez: con el tamaño inyectado o Safari las encoge a cero. */
+  private readonly avatares: SafeHtml[] = AVATARES_PERSONAL.map((a) =>
+    this.sanitizer.bypassSecurityTrustHtml(a.replace('<svg ', '<svg width="100%" height="100%" ')));
+
+  constructor(private svc: BotAgendaService,
+              private router: Router,
+              private sanitizer: DomSanitizer) {}
 
   ngOnInit(): void {
     // Un 403 aquí es la respuesta esperable para un asesor, no un error: dice que
-    // esta pantalla es de solo lectura para él y que no puede repartir.
+    // esta pantalla es de solo lectura para él y que no ve el reparto de los demás.
     this.svc.asesores().subscribe({
       next: (a) => { this.esSupervision = true; this.asesores = a; },
       error: () => { this.esSupervision = false; this.asesores = []; },
@@ -139,19 +139,20 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     clearInterval(this.refresco);
     clearInterval(this.reloj);
+    clearTimeout(this.temporizadorAviso);
   }
 
   cargar(silencioso = false): void {
     this.cargando = !silencioso && this.casos.length === 0;
-    this.svc.casos(this.desde, this.hasta).subscribe({
+    this.svc.casos().subscribe({
       next: (c) => {
         this.casos = c;
         this.error = false;
         this.errorMotivo = '';
         this.cargando = false;
         this.ahora = Date.now();
-        if (this.seleccionado) {
-          this.seleccionado = c.find((x) => this.mismo(x, this.seleccionado!)) ?? this.seleccionado;
+        if (this.casoAbierto) {
+          this.casoAbierto = c.find((x) => this.mismo(x, this.casoAbierto!)) ?? this.casoAbierto;
         }
       },
       error: (e) => {
@@ -172,126 +173,142 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     return 'El servidor respondió con un error' + (status ? ' (' + status + ')' : '') + '.';
   }
 
-  // ---------- rango ----------
+  // ---------- qué entra en cada mitad ----------
 
-  cambiarRango(cual: 'hoy' | '7' | 'mes'): void {
-    const hoy = new Date();
-    if (cual === 'hoy') {
-      this.desde = BotAgendaComponent.iso(hoy);
-    } else if (cual === '7') {
-      this.desde = BotAgendaComponent.iso(BotAgendaComponent.hace(6));
-    } else {
-      this.desde = BotAgendaComponent.iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
-    }
-    this.hasta = BotAgendaComponent.iso(hoy);
-    this.cargar();
+  /**
+   * La promesa repartida no está en la cola de nadie: su sitio es la ficha de su
+   * asesor. Si vence sin gestionar queda como no atendida y la vuelve a traer el
+   * discador de campañas, que es donde se levanta; la agenda no la persigue.
+   */
+  private fueraDeLaCola(c: CasoAgendaBot): boolean {
+    if (!this.esSupervision) return false;
+    return c.tipo === 'PROMESA' && !!c.idAgenteAsignado;
   }
 
-  /** Qué atajo está marcado, para que el rango escrito a mano no marque ninguno. */
-  rangoActivo(cual: 'hoy' | '7' | 'mes'): boolean {
-    const hoy = new Date();
-    if (this.hasta !== BotAgendaComponent.iso(hoy)) return false;
-    if (cual === 'hoy') return this.desde === BotAgendaComponent.iso(hoy);
-    if (cual === '7') return this.desde === BotAgendaComponent.iso(BotAgendaComponent.hace(6));
-    return this.desde === BotAgendaComponent.iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  /** La cola sin el filtro de día: de ahí salen los días que vale la pena ofrecer. */
+  private get colaSinDia(): CasoAgendaBot[] {
+    return this.casos
+      .filter((c) => !this.fueraDeLaCola(c))
+      .filter((c) => c.seguimiento !== 'COMPLETADO');
   }
 
-  private static hace(dias: number): Date {
-    const d = new Date();
-    d.setDate(d.getDate() - dias);
-    return d;
+  /** Lo pendiente, lo más antiguo arriba: es lo que lleva más tiempo esperando. */
+  get visibles(): CasoAgendaBot[] {
+    const q = this.buscar.trim().toLowerCase();
+    return this.colaSinDia
+      .filter((c) => !this.filtroDia || (c.cuando || '').slice(0, 10) === this.filtroDia)
+      .filter((c) => !this.filtroTipo || c.tipo === this.filtroTipo)
+      .filter((c) => !q || (`${c.nombreCliente ?? ''} ${c.documento ?? ''} ${c.telefono ?? ''}`)
+        .toLowerCase().includes(q))
+      .sort((a, b) => (a.cuando || '').localeCompare(b.cuando || ''));
   }
 
-  private static iso(d: Date): string {
-    return [d.getFullYear(),
-            String(d.getMonth() + 1).padStart(2, '0'),
-            String(d.getDate()).padStart(2, '0')].join('-');
+  get paginas(): number {
+    return Math.max(1, Math.ceil(this.visibles.length / POR_PAGINA));
   }
 
-  // ---------- filtros ----------
+  get filas(): CasoAgendaBot[] {
+    const desde = Math.min(this.pagina, this.paginas - 1) * POR_PAGINA;
+    return this.visibles.slice(desde, desde + POR_PAGINA);
+  }
+
+  get desdeFila(): number {
+    return Math.min(this.pagina, this.paginas - 1) * POR_PAGINA + 1;
+  }
+
+  get hastaFila(): number {
+    return this.desdeFila + this.filas.length - 1;
+  }
+
+  pasarPagina(paso: number): void {
+    this.pagina = Math.max(0, Math.min(this.paginas - 1, this.pagina + paso));
+  }
+
+  /** Cuántos hay de ese tipo en la cola: la pastilla cuenta lo que se verá al pulsarla. */
+  contar(tipo: string): number {
+    return this.colaSinDia
+      .filter((c) => !this.filtroDia || (c.cuando || '').slice(0, 10) === this.filtroDia)
+      .filter((c) => c.tipo === tipo).length;
+  }
+
+  /**
+   * Solo se ofrecen los tipos que hay en la cola: una pastilla que marca 0 no filtra
+   * nada. A la supervisión eso le quita Promesas, que ya no pasan por su lista.
+   */
+  get tiposConCasos(): string[] {
+    return this.clavesTipo.filter((t) => this.contar(t) > 0 || this.filtroTipo === t);
+  }
 
   alternarTipo(tipo: string): void {
     this.filtroTipo = this.filtroTipo === tipo ? '' : tipo;
+    this.pagina = 0;
   }
 
-  /** Los casos que pasan todos los filtros de la pantalla. */
-  get visibles(): CasoAgendaBot[] {
-    const q = this.buscar.trim().toLowerCase();
-    return this.casos
-      .filter((c) => !this.filtroTipo || c.tipo === this.filtroTipo)
-      .filter((c) => this.filtroSeguimiento === 'TODOS' || c.seguimiento === this.filtroSeguimiento)
-      .filter((c) => this.pasaFiltroAsesor(c))
-      .filter((c) => !q || (`${c.nombreCliente ?? ''} ${c.documento ?? ''} ${c.telefono ?? ''}`)
-        .toLowerCase().includes(q));
-  }
+  // ---------- el reparto de hoy ----------
 
-  private pasaFiltroAsesor(c: CasoAgendaBot): boolean {
-    if (!this.esSupervision || this.filtroAsesor === 'TODOS') return true;
-    if (this.filtroAsesor === 'SIN') return !c.idAgenteAsignado;
-    return String(c.idAgenteAsignado ?? '') === this.filtroAsesor;
-  }
-
-  /** La lista, agrupada por día y con el día más reciente arriba. */
-  get grupos(): GrupoDia[] {
-    const porDia = new Map<string, CasoAgendaBot[]>();
-    for (const c of this.visibles) {
-      const clave = (c.cuando || '').slice(0, 10);
-      if (!porDia.has(clave)) porDia.set(clave, []);
-      porDia.get(clave)!.push(c);
-    }
-    return [...porDia.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([clave, casos]) => ({
-        clave,
-        titulo: this.tituloDia(clave),
-        casos: casos.sort((x, y) =>
-          (TIPOS[x.tipo]?.orden ?? 9) - (TIPOS[y.tipo]?.orden ?? 9) ||
-          (x.cuando || '').localeCompare(y.cuando || '')),
-      }));
-  }
-
-  private tituloDia(clave: string): string {
-    if (!clave) return 'Sin fecha';
-    const d = new Date(clave + 'T00:00:00');
-    const largo = `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+  /** Quién lleva qué de lo que repartió el sistema esta mañana. */
+  get repartidasHoy(): RepartoAsesor[] {
+    if (!this.esSupervision) return [];
     const hoy = BotAgendaComponent.iso(new Date());
-    const ayer = BotAgendaComponent.iso(BotAgendaComponent.hace(1));
-    if (clave === hoy) return `Hoy · ${largo}`;
-    if (clave === ayer) return `Ayer · ${largo}`;
-    return largo;
-  }
-
-  // ---------- cifras ----------
-
-  contar(tipo: string): number {
-    return this.casos.filter((c) => c.tipo === tipo && this.pasaFiltroAsesor(c)).length;
-  }
-
-  /** El pie de cada tarjeta: el dato que de verdad dice si hay trabajo pendiente. */
-  pieDe(tipo: string): string {
-    const propios = this.casos.filter((c) => c.tipo === tipo && this.pasaFiltroAsesor(c));
-    if (tipo === 'PROMESA') {
-      const total = propios.reduce((s, c) => s + (c.monto ?? 0), 0);
-      return `${this.soles(total)} comprometidos`;
+    const cuenta = new Map<number, RepartoAsesor>();
+    for (const c of this.casos) {
+      if (c.tipo !== 'PROMESA' || !c.idAgenteAsignado) continue;
+      if ((c.asignadoAt || '').slice(0, 10) !== hoy) continue;
+      const ficha = this.asesores.find((a) => a.id === c.idAgenteAsignado);
+      const fila = cuenta.get(c.idAgenteAsignado) ?? {
+        idAgente: c.idAgenteAsignado,
+        nombre: c.nombreAsignado ?? ficha?.nombre ?? 'Sin nombre',
+        subcartera: ficha?.subcartera ?? '',
+        cuantas: 0, monto: 0, sinGestionar: 0,
+      };
+      fila.cuantas++;
+      fila.monto += c.monto ?? 0;
+      if (c.seguimiento !== 'COMPLETADO') fila.sinGestionar++;
+      cuenta.set(c.idAgenteAsignado, fila);
     }
-    if (tipo === 'CITA') {
-      const proximas = propios.filter((c) => {
-        const m = this.minutosPara(c);
-        return this.abierto(c) && m > -MARGEN_LLAMADA_MIN && m <= 60;
-      }).length;
-      if (proximas) return `${proximas} en la próxima hora`;
-      return `${propios.filter((c) => this.abierto(c)).length} sin atender`;
-    }
-    return `${propios.filter((c) => c.seguimiento !== 'COMPLETADO').length} sin gestionar`;
+    return [...cuenta.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
 
-  get totalVisible(): number {
-    return this.visibles.length;
+  get totalRepartidoHoy(): number {
+    return this.repartidasHoy.reduce((s, r) => s + r.cuantas, 0);
+  }
+
+  /** Las promesas de un asesor, incluidas las que dejó vencer: es el control de ella. */
+  promesasDe(r: RepartoAsesor): CasoAgendaBot[] {
+    return this.casos
+      .filter((c) => c.tipo === 'PROMESA' && c.idAgenteAsignado === r.idAgente)
+      .sort((a, b) => (a.cuando || '').localeCompare(b.cuando || ''));
+  }
+
+  /**
+   * Cómo acabó una promesa: vencida sin gestionar es «No atendida», y a partir de ahí
+   * la recupera el discador de campañas, no esta pantalla.
+   */
+  marcaDePromesa(c: CasoAgendaBot): { texto: string; tono: 'ok' | 'aviso' | 'malo' } {
+    if (c.seguimiento === 'COMPLETADO') return { texto: 'Completado', tono: 'ok' };
+    if ((c.diasVencida ?? 0) > 0) return { texto: 'No atendida', tono: 'malo' };
+    return { texto: 'Pendiente', tono: 'aviso' };
+  }
+
+  // ---------- avatar y color, como en Personal ----------
+
+  avatarDe(r: RepartoAsesor): SafeHtml {
+    const ficha = this.asesores.find((a) => a.id === r.idAgente)?.idPersonal ?? r.idAgente;
+    return this.avatares[ficha % this.avatares.length];
+  }
+
+  /** El color de cada subcartera, por su nombre: el mismo en todas las pantallas. */
+  tonoDe(subcartera?: string): string {
+    const n = (subcartera ?? '').toUpperCase();
+    if (n.includes('PROPIO') || n.includes('PROPIA')) return 'var(--c-1)';
+    if (n.includes('CASTIGO')) return 'var(--c-2)';
+    if (/\b3\b/.test(n)) return 'var(--c-3)';
+    if (/\b5\b/.test(n)) return 'var(--c-4)';
+    return 'var(--c-gris)';
   }
 
   // ---------- estado de un caso ----------
 
-  /** Sigue vivo: nadie lo ha trabajado todavía. */
   abierto(c: CasoAgendaBot): boolean {
     return c.seguimiento !== 'COMPLETADO' && c.estadoCita !== 'ATENDIDA';
   }
@@ -302,12 +319,13 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   }
 
   cuentaAtras(c: CasoAgendaBot): string {
+    const hoy = BotAgendaComponent.iso(new Date());
+    const dia = (c.cuando || '').slice(0, 10);
     if (c.tipo === 'PROMESA') {
-      return (c.diasVencida ?? 0) > 0 ? `Vencida hace ${c.diasVencida} d` : 'Vence hoy';
+      if ((c.diasVencida ?? 0) > 0) return `Vencida hace ${c.diasVencida} d`;
+      return dia === hoy ? 'Vence hoy' : 'Vence mañana';
     }
-    if ((c.cuando || '').slice(0, 10) !== BotAgendaComponent.iso(new Date())) {
-      return DIAS[new Date(c.cuando).getDay()].slice(0, 3);
-    }
+    if (dia !== hoy) return DIAS[new Date(c.cuando).getDay()].slice(0, 3);
     const m = this.minutosPara(c);
     if (m > 90) return `en ${Math.floor(m / 60)} h ${m % 60} min`;
     if (m > 0) return `en ${m} min`;
@@ -327,15 +345,40 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
    */
   puedeLlamar(c: CasoAgendaBot): boolean {
     if (!this.abierto(c)) return false;
+    // La promesa la trabaja el asesor al que se la repartió el sistema. La supervisión
+    // la ve para controlar que se haga, no para llamarla ella.
+    if (this.esSupervision && c.tipo === 'PROMESA') return false;
     if (c.tipo !== 'CITA') return true;
     return this.minutosPara(c) <= MARGEN_LLAMADA_MIN;
   }
 
   motivoNoLlamar(c: CasoAgendaBot): string {
+    if (this.esSupervision && c.tipo === 'PROMESA') {
+      return 'La promesa la trabaja el asesor al que se le repartió.';
+    }
     if (c.estadoCita === 'ATENDIDA') return 'La cita ya se atendió.';
     if (c.seguimiento === 'COMPLETADO') return 'Ya hubo gestión de una persona sobre este cliente.';
     const d = new Date(new Date(c.cuando).getTime() - MARGEN_LLAMADA_MIN * 60000);
     return `Se habilita a las ${this.hora(d.toISOString())}, ${MARGEN_LLAMADA_MIN} min antes de la hora pactada.`;
+  }
+
+  /**
+   * Lo que se habló, armado con los datos duros que ya trae el caso. No se le pide al
+   * modelo: el importe, las cuotas y la fecha los decidió el código durante la llamada.
+   */
+  negociado(c: CasoAgendaBot): { rotulo: string; valor: string }[] {
+    if (c.tipo === 'PROMESA' && c.monto) {
+      const lineas = [
+        { rotulo: 'Clara ofreció', valor: `${c.totalCuotas ?? 1} cuotas de ${this.soles(c.monto)}` },
+        { rotulo: 'El cliente aceptó', valor: `pagar el ${this.diaLegible(c.cuando)}` },
+      ];
+      if ((c.diasVencida ?? 0) > 0) lineas.push({ rotulo: 'Quedó pendiente', valor: 'el pago no figura' });
+      return lineas;
+    }
+    if (c.tipo === 'CITA') {
+      return [{ rotulo: 'El cliente pidió', valor: `que lo llamen a las ${this.hora(c.cuando)}` }];
+    }
+    return [];
   }
 
   // ---------- acciones ----------
@@ -353,50 +396,36 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Cierre manual de una cita: la fila se queda, con su estado nuevo. */
-  cerrarCita(c: CasoAgendaBot, contesto: boolean): void {
-    if (this.guardando || !c.idAgenda) return;
+  recordar(r: RepartoAsesor): void {
+    if (this.guardando) return;
     this.guardando = true;
-    this.svc.cerrar(c.idAgenda, contesto).subscribe({
-      next: () => {
-        c.estadoCita = contesto ? 'ATENDIDA' : 'NO_CONTESTA';
-        if (contesto) c.seguimiento = 'COMPLETADO';
+    this.svc.recordar(r.idAgente, r.sinGestionar).subscribe({
+      next: (res) => {
         this.guardando = false;
-        this.flash(contesto ? 'Cita marcada como atendida' : 'Cita marcada como no contestó');
+        // El aviso viaja por WebSocket: si no tiene Cashi abierto no le llega, y decir
+        // "avisado" sin más haría creer que sí.
+        this.flash(res?.enviado ? `Aviso enviado a ${r.nombre}` : `${r.nombre} no está conectado`);
       },
       error: () => {
         this.guardando = false;
-        this.flash('No se pudo guardar el cierre', true);
+        this.flash('No se pudo enviar el aviso');
       },
     });
   }
 
-  /** Dejar el seguimiento a un asesor. Solo la supervisión llega hasta aquí. */
-  asignar(c: CasoAgendaBot): void {
-    if (this.guardando || !c.referencia || !this.asesorElegido) return;
-    const elegido = this.asesores.find((a) => a.id === Number(this.asesorElegido));
-    this.guardando = true;
-    this.svc.asignar(c.tipo, c.referencia, Number(this.asesorElegido)).subscribe({
-      next: () => {
-        c.idAgenteAsignado = elegido?.id;
-        c.nombreAsignado = elegido?.nombre;
-        this.guardando = false;
-        this.flash(`Seguimiento asignado a ${elegido?.nombre ?? 'el asesor'}`);
-      },
-      error: () => {
-        this.guardando = false;
-        this.flash('No se pudo asignar el seguimiento', true);
-      },
-    });
+  abrirCaso(c: CasoAgendaBot): void {
+    this.asesorAbierto = undefined;
+    this.casoAbierto = c;
   }
 
-  abrir(c: CasoAgendaBot): void {
-    this.seleccionado = c;
-    this.asesorElegido = c.idAgenteAsignado ?? this.asesores[0]?.id;
+  abrirAsesor(r: RepartoAsesor): void {
+    this.casoAbierto = undefined;
+    this.asesorAbierto = r;
   }
 
-  cerrarDetalle(): void {
-    this.seleccionado = undefined;
+  cerrarFicha(): void {
+    this.casoAbierto = undefined;
+    this.asesorAbierto = undefined;
   }
 
   // ---------- presentación ----------
@@ -408,6 +437,18 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   hora(iso?: string): string {
     if (!iso) return '—';
     return new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /** «lunes 28 de septiembre», con hoy, ayer y mañana dichos por su nombre. */
+  diaLegible(iso?: string): string {
+    if (!iso) return '—';
+    const clave = iso.slice(0, 10);
+    const d = new Date(clave + 'T00:00:00');
+    const largo = `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+    if (clave === BotAgendaComponent.iso(new Date())) return `hoy, ${largo}`;
+    if (clave === BotAgendaComponent.iso(BotAgendaComponent.enDias(-1))) return `ayer, ${largo}`;
+    if (clave === BotAgendaComponent.iso(BotAgendaComponent.enDias(1))) return `mañana, ${largo}`;
+    return largo;
   }
 
   soles(n?: number): string {
@@ -428,7 +469,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   }
 
   /** Estado de la cita, con su tono. */
-  estadoCita(c: CasoAgendaBot): { texto: string; tono: 'ok' | 'aviso' | 'gris' | 'azul' } {
+  estadoCita(c: CasoAgendaBot): { texto: string; tono: 'ok' | 'gris' | 'azul' } {
     if (c.estadoCita === 'ATENDIDA') return { texto: 'Atendida', tono: 'ok' };
     if (c.estadoCita === 'NO_CONTESTA') return { texto: 'No contestó', tono: 'gris' };
     return { texto: 'Por atender', tono: 'azul' };
@@ -447,13 +488,21 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     } as Record<string, string>)[motivo] ?? motivo;
   }
 
-  claseTab(activa: boolean): string {
-    return `${CLASES.tab} ${activa ? CLASES.tabActiva : CLASES.tabApagada}`;
+  private flash(m: string): void {
+    this.aviso = m;
+    clearTimeout(this.temporizadorAviso);
+    this.temporizadorAviso = setTimeout(() => (this.aviso = ''), 2600);
   }
 
-  private flash(m: string, error = false): void {
-    this.mensaje = m;
-    this.mensajeError = error;
-    setTimeout(() => (this.mensaje = ''), 3500);
+  private static iso(d: Date): string {
+    return [d.getFullYear(),
+            String(d.getMonth() + 1).padStart(2, '0'),
+            String(d.getDate()).padStart(2, '0')].join('-');
+  }
+
+  private static enDias(dias: number): Date {
+    const d = new Date();
+    d.setDate(d.getDate() + dias);
+    return d;
   }
 }

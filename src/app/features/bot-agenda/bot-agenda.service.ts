@@ -38,11 +38,18 @@ export interface CasoAgendaBot {
 
   idAgenteAsignado?: number;
   nombreAsignado?: string;
+  /** Quién lo dejó ahí: la supervisión, o el reparto automático de promesas. */
+  asignadoPor?: string;
+  /** Cuándo se asignó, para separar lo que repartió el sistema esta mañana. */
+  asignadoAt?: string;
 }
 
 export interface AsesorAgenda {
   id: number;
   nombre: string;
+  /** Ficha de Personal: decide qué avatar le toca, igual que en la pantalla Personal. */
+  idPersonal?: number;
+  subcartera?: string;
 }
 
 /**
@@ -56,11 +63,13 @@ export class BotAgendaService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Los casos de un rango. El backend decide qué devuelve según el rol: todo a la
-   * supervisión y solo lo asignado a un asesor.
+   * Los casos pendientes. La pantalla no pregunta por fechas: el backend acota por su
+   * cuenta y decide qué devuelve según el rol —todo a la supervisión, y solo sus
+   * promesas repartidas a un asesor—.
    */
-  casos(desde: string, hasta: string): Observable<CasoAgendaBot[]> {
-    return this.http.get<CasoAgendaBot[]>(`${this.apiUrl}/casos?desde=${desde}&hasta=${hasta}`);
+  casos(desde?: string, hasta?: string): Observable<CasoAgendaBot[]> {
+    const q = desde && hasta ? `?desde=${desde}&hasta=${hasta}` : '';
+    return this.http.get<CasoAgendaBot[]>(`${this.apiUrl}/casos${q}`);
   }
 
   /** Los asesores a los que se puede repartir. Solo responde a supervisión. */
@@ -68,13 +77,8 @@ export class BotAgendaService {
     return this.http.get<AsesorAgenda[]>(`${this.apiUrl}/asesores`);
   }
 
-  /** Deja el caso en manos de un asesor; con `idAgente` nulo se lo quita. */
-  asignar(tipo: string, referencia: number, idAgente: number | null): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/asignar`, { tipo, referencia, idAgente });
-  }
-
-  /** `contesto` distingue una cita atendida de una que no respondió. */
-  cerrar(idAgenda: number, contesto: boolean): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${idAgenda}/cerrar?contesto=${contesto}`, {});
+  /** Le avisa al asesor que mire su agenda. Solo le llega si tiene Cashi abierto. */
+  recordar(idAgente: number, casos: number): Observable<{ enviado: boolean }> {
+    return this.http.post<{ enviado: boolean }>(`${this.apiUrl}/recordar`, { idAgente, casos });
   }
 }
