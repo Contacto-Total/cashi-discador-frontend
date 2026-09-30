@@ -50,9 +50,9 @@
               <button type="button" (click)="alternarTipo(t)" [attr.aria-pressed]="filtroTipo === t"
                       class="pastilla-filtro"
                       [attr.aria-label]="tipos[t].plural + ': ' + contar(t) + ' casos'"
-                      [style.border-color]="filtroTipo === t ? '#0f172a' : tipos[t].rail + '59'"
-                      [style.background]="filtroTipo === t ? '#0f172a' : tipos[t].fondo"
-                      [style.color]="filtroTipo === t ? '#ffffff' : tipos[t].texto">
+                      [style.--pf-borde]="filtroTipo === t ? '#0f172a' : tipos[t].rail + '59'"
+                      [style.--pf-fondo]="filtroTipo === t ? '#0f172a' : tipos[t].fondo"
+                      [style.--pf-texto]="filtroTipo === t ? '#ffffff' : tipos[t].texto">
                 <lucide-angular [name]="tipos[t].icono" [size]="13" class="block"></lucide-angular>
                 {{ tipos[t].plural }}<span class="tabular-nums font-bold">{{ contar(t) }}</span>
               </button>
