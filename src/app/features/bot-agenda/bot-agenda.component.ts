@@ -100,10 +100,11 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   filtroTipo = '';
   /**
-   * Abre en el día de hoy, que es el trabajo de la jornada. Vaciándolo se ve todo lo
-   * que sigue pendiente, incluido lo que quedó de días anteriores.
+   * Día suelto; vacío es toda la cola, que es como abre: lo pendiente no caduca con la
+   * jornada y lo de días anteriores es justo lo que hay que levantar. El día sirve para
+   * mirar una fecha concreta.
    */
-  filtroDia = BotAgendaComponent.iso(new Date());
+  filtroDia = '';
   buscar = '';
   pagina = 0;
 
@@ -486,6 +487,12 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
       ACUERDA_PAGO: 'Acordó pagar',
       CON_INTENCION: 'Con intención',
     } as Record<string, string>)[motivo] ?? motivo;
+  }
+
+  /** El título dice qué se está mirando, incluido el día cuando hay uno elegido. */
+  get tituloLista(): string {
+    const base = this.esSupervision ? 'Por gestionar' : 'Mis promesas';
+    return this.filtroDia ? `${base} · ${this.diaLegible(this.filtroDia)}` : base;
   }
 
   private flash(m: string): void {
