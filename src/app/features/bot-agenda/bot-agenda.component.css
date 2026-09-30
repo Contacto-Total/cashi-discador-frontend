@@ -98,7 +98,13 @@
   .caso > .caso-dato { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
 }
 
+/* Los colores van por variable y con `!important`: el tema global de Cashi pisa el
+   color de los controles, y con `style` suelto la pastilla elegida salía con el texto
+   y el icono en gris sobre el fondo oscuro. */
 .pastilla-filtro {
+  color: var(--pf-texto) !important;
+  background: var(--pf-fondo);
+  border-color: var(--pf-borde) !important;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -176,7 +182,7 @@
   padding: 0 6px;
   border-radius: 999px;
   border: 2px solid #ffffff;
-  color: #ffffff;
+  color: #ffffff !important;
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -263,7 +269,7 @@
   transform: translateX(-50%);
   z-index: 60;
   background: #0f172a;
-  color: #ffffff;
+  color: #ffffff !important;
   border-radius: 999px;
   padding: 9px 16px;
   font-size: 12.5px;
