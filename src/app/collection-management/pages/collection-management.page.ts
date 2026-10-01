@@ -396,7 +396,7 @@ type EvaluacionConvenio =
                                   </span>
                                 }
                               </div>
-                              <div class="text-xs font-bold truncate" [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 line-through' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                              <div class="text-xs font-bold truncate" [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
                             </div>
                           </button>
                         }
@@ -431,7 +431,7 @@ type EvaluacionConvenio =
                                   </span>
                                 }
                               </div>
-                              <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                              <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
                             </div>
                           </div>
                         }
