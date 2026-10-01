@@ -7,6 +7,7 @@ import {
   AvisoAsistencia,
   CierreSemana,
   ControlAcceso,
+  PanelAcceso,
   CambioAsistencia,
   TipoCambio,
   DashboardAsistencia,
@@ -21,8 +22,15 @@ import {
   Justificacion,
   MarcacionManual,
   MiPlan,
+  PersonalAsistencia,
+  FichaPersonal,
+  DatosPersonal,
+  UsuarioLibre,
+  VacacionesAsesor,
+  PlanEquipoPedido,
   PlanSemana,
   PoliticaAsistencia,
+  PropuestaEquipoPlan,
   PropuestaPlan,
   Recuperacion,
   ValidacionPlan,
@@ -79,7 +87,7 @@ export class AsistenciaService {
     return this.http.post<void>(`${this.url}/marcaciones/salida`, {});
   }
 
-  /** El mismo reporte en Excel, con el formato de la hoja que ya usa RR.HH. */
+  /** El mismo reporte en Excel. */
   excel(desde: string, hasta: string, idSubcartera?: number | null): Observable<Blob> {
     let params = new HttpParams().set('desde', desde).set('hasta', hasta);
     if (idSubcartera) {
@@ -347,6 +355,78 @@ export class AsistenciaService {
     return this.http.get<ValidacionPlan>(`${this.url}/recuperaciones/plan/${idUsuario}/validar`, { params });
   }
 
+  /** Lo que propone el sistema para el plan del equipo de un mes (días sin asignación). No guarda nada. */
+  proponerEquipo(idSubcartera: number, mes: string, actual: PlanEquipoPedido): Observable<PropuestaEquipoPlan> {
+    const params = new HttpParams().set('idSubcartera', idSubcartera).set('mes', mes);
+    return this.http.post<PropuestaEquipoPlan>(`${this.url}/recuperaciones/equipo/propuesta`, actual, { params });
+  }
+
+  /** Lo que una persona debe aparte del equipo. No guarda nada. */
+  proponerAparte(idSubcartera: number, mes: string, idUsuario: number, actual: PlanEquipoPedido): Observable<PropuestaEquipoPlan> {
+    const params = new HttpParams().set('idSubcartera', idSubcartera).set('mes', mes);
+    return this.http.post<PropuestaEquipoPlan>(`${this.url}/recuperaciones/equipo/propuesta/${idUsuario}`, actual, { params });
+  }
+
+  /** Si todo el equipo puede quedarse esos minutos ese día, y a qué hora salen. */
+  validarEquipo(idSubcartera: number, mes: string, fecha: string, minutos: number): Observable<ValidacionPlan> {
+    const params = new HttpParams().set('idSubcartera', idSubcartera).set('mes', mes).set('fecha', fecha).set('minutos', minutos);
+    return this.http.get<ValidacionPlan>(`${this.url}/recuperaciones/equipo/validar`, { params });
+  }
+
+  /** Confirma el plan del equipo de un mes de hoy en adelante: llega entero y reemplaza lo que había. */
+  guardarEquipo(idSubcartera: number, mes: string, plan: PlanEquipoPedido): Observable<void> {
+    const params = new HttpParams().set('idSubcartera', idSubcartera).set('mes', mes);
+    return this.http.put<void>(`${this.url}/recuperaciones/equipo`, plan, { params });
+  }
+
+  // ==================== PERSONAL ====================
+
+  /** Todas las fichas; la pantalla filtra por ámbito. */
+  fichas(): Observable<FichaPersonal[]> {
+    return this.http.get<FichaPersonal[]>(`${environment.apiUrl}/personal`);
+  }
+
+  usuariosLibres(): Observable<UsuarioLibre[]> {
+    return this.http.get<UsuarioLibre[]>(`${environment.apiUrl}/personal/usuarios-libres`);
+  }
+
+  registrarFicha(datos: DatosPersonal): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal`, datos);
+  }
+
+  editarFicha(id: number, datos: DatosPersonal): Observable<FichaPersonal> {
+    return this.http.put<FichaPersonal>(`${environment.apiUrl}/personal/${id}`, datos);
+  }
+
+  cambiarSubcartera(id: number, cuerpo: { idSubcartera: number; fechaDesde: string; motivo: string }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/subcartera`, cuerpo);
+  }
+
+  registrarCese(id: number, cuerpo: { fecha: string; motivo: string; comentario: string | null }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/cese`, cuerpo);
+  }
+
+  // ==================== VACACIONES ====================
+
+  /** Los asesores del ámbito (sin subcartera, todos), también los que cesaron. */
+  personal(idSubcartera: number | null): Observable<PersonalAsistencia[]> {
+    const params = idSubcartera ? new HttpParams().set('idSubcartera', idSubcartera) : undefined;
+    return this.http.get<PersonalAsistencia[]>(`${this.url}/personal`, { params });
+  }
+
+  vacaciones(idSubcartera: number | null): Observable<VacacionesAsesor[]> {
+    const params = idSubcartera ? new HttpParams().set('idSubcartera', idSubcartera) : undefined;
+    return this.http.get<VacacionesAsesor[]>(`${this.url}/personal/vacaciones`, { params });
+  }
+
+  registrarVacaciones(cuerpo: { idUsuario: number; fechaDesde: string; fechaHasta: string; nota: string | null }): Observable<VacacionesAsesor> {
+    return this.http.post<VacacionesAsesor>(`${this.url}/personal/vacaciones`, cuerpo);
+  }
+
+  anularVacaciones(id: number, motivo: string): Observable<void> {
+    return this.http.post<void>(`${this.url}/personal/vacaciones/${id}/anular`, { motivo });
+  }
+
   cierre(id: number): Observable<CierreSemana> {
     return this.http.get<CierreSemana>(`${this.url}/cierres/${id}`);
   }
@@ -364,8 +444,14 @@ export class AsistenciaService {
 
   // ==================== CONTROL DE ACCESO ====================
 
-  controlAcceso(): Observable<ControlAcceso> {
-    return this.http.get<ControlAcceso>(`${this.url}/acceso`);
+  /** Rechazos por dispositivo e ingresos por sistema de los últimos días (máx. 30). */
+  controlAcceso(dias = 30): Observable<PanelAcceso> {
+    return this.http.get<PanelAcceso>(`${this.url}/acceso`, { params: { dias } });
+  }
+
+  /** Los equipos con pase (apagado por defecto). */
+  equiposConPase(): Observable<ControlAcceso> {
+    return this.http.get<ControlAcceso>(`${this.url}/acceso/equipos`);
   }
 
   registrarEquipo(equipo: EquipoAutorizado): Observable<{ id: number }> {

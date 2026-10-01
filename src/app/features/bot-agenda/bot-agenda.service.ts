@@ -3,28 +3,53 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-/** Una llamada que el bot pactó con el cliente para que la atienda una persona. */
-export interface BotAgendaFila {
-  id: number;
-  fechaHoraPactada: string;
-  nombreCliente?: string;
+/**
+ * Un caso de la Agenda del bot: algo que dejó Clara y necesita a una persona.
+ *
+ * Las cuatro fuentes llegan con la misma forma; lo que cambia es el `tipo`, que
+ * decide el orden, el color y qué dato propio se muestra.
+ */
+export interface CasoAgendaBot {
+  tipo: 'PROMESA' | 'SIN_CERRAR' | 'CITA' | 'CON_INTENCION';
+  cuando: string;
+  idCliente?: number;
   documento?: string;
+  nombreCliente?: string;
   telefono?: string;
-  motivo?: string;
   resumen?: string;
-  estado: string;          // PENDIENTE | ATENDIDA | NO_CONTESTA | VENCIDA | CANCELADA
-  detalleCierre?: string;
-  intentos?: number;
-  idCuota?: number;
-  idAgenteTitular?: number;
+  motivo?: string;
+
+  estadoCita?: string;
+  idAgenda?: number;
+  /** Clave con la que se asigna el caso; única junto al `tipo`. */
+  referencia?: number;
+
+  idSesion?: number;
+  uuidLlamada?: string;
+
+  monto?: number;
+  numeroCuota?: number;
+  totalCuotas?: number;
+  diasVencida?: number;
+
+  seguimiento?: 'PENDIENTE' | 'COMPLETADO';
+  gestionadoAt?: string;
+  gestionadoPor?: string;
+
   idAgenteAsignado?: number;
-  nombreAgente?: string;
-  /**
-   * Quién pactó la cita. Hoy todas las crea el bot y el backend aún no manda el
-   * campo, así que se asume BOT; cuando las asesoras puedan registrar las suyas,
-   * el backend lo enviará y la etiqueta cambiará sola.
-   */
-  origen?: 'BOT' | 'ASESOR';
+  nombreAsignado?: string;
+  /** Quién lo dejó ahí: la supervisión, o el reparto automático de promesas. */
+  asignadoPor?: string;
+  /** Cuándo se asignó, para separar lo que repartió el sistema esta mañana. */
+  asignadoAt?: string;
+}
+
+export interface AsesorAgenda {
+  id: number;
+  nombre: string;
+  /** Ficha de Personal: decide qué avatar le toca, igual que en la pantalla Personal. */
+  idPersonal?: number;
+  subcartera?: string;
 }
 
 /**
@@ -37,25 +62,23 @@ export class BotAgendaService {
 
   constructor(private http: HttpClient) {}
 
-  /** Las del asesor que consulta. */
-  mias(fecha?: string): Observable<BotAgendaFila[]> {
-    const q = fecha ? `?fecha=${fecha}` : '';
-    return this.http.get<BotAgendaFila[]>(`${this.apiUrl}/mias${q}`);
+  /**
+   * Los casos pendientes. La pantalla no pregunta por fechas: el backend acota por su
+   * cuenta y decide qué devuelve según el rol —todo a la supervisión, y solo sus
+   * promesas repartidas a un asesor—.
+   */
+  casos(desde?: string, hasta?: string): Observable<CasoAgendaBot[]> {
+    const q = desde && hasta ? `?desde=${desde}&hasta=${hasta}` : '';
+    return this.http.get<CasoAgendaBot[]>(`${this.apiUrl}/casos${q}`);
   }
 
-  /** Todas las del día (supervisión y admin). */
-  todas(fecha?: string): Observable<BotAgendaFila[]> {
-    const q = fecha ? `?fecha=${fecha}` : '';
-    return this.http.get<BotAgendaFila[]>(`${this.apiUrl}${q}`);
+  /** Los asesores a los que se puede repartir. Solo responde a supervisión. */
+  asesores(): Observable<AsesorAgenda[]> {
+    return this.http.get<AsesorAgenda[]>(`${this.apiUrl}/asesores`);
   }
 
-  resumen(fecha?: string): Observable<Record<string, number>> {
-    const q = fecha ? `?fecha=${fecha}` : '';
-    return this.http.get<Record<string, number>>(`${this.apiUrl}/resumen${q}`);
-  }
-
-  /** `contesto` distingue una cita atendida de una que no respondió. */
-  cerrar(id: number, contesto: boolean): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${id}/cerrar?contesto=${contesto}`, {});
+  /** Le avisa al asesor que mire su agenda. Solo le llega si tiene Cashi abierto. */
+  recordar(idAgente: number, casos: number): Observable<{ enviado: boolean }> {
+    return this.http.post<{ enviado: boolean }>(`${this.apiUrl}/recordar`, { idAgente, casos });
   }
 }

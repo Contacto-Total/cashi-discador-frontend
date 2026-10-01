@@ -1,322 +1,245 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { FormatService } from '@/shared/services/format.service';
-import { AppDateTimePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
-import { EscalaComision, ParticipanteComision, ReportePeriodo, RolComision } from '../models/comision.model';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
+import { ParticipanteComision, ReportePeriodo } from '../models/comision.model';
 import {
-  Barra,
-  METRICA_INFO,
-  SiguienteTramo,
-  asesoresActivos,
-  construirBarra,
-  metaPorAsesor,
-  siguienteTramo,
-  tramosDe
+  GRUPO_INFO, METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, partesComision, siguienteTramo, tramosDe
 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
-interface FilaResultado {
-  p: ParticipanteComision;
-  barra: Barra;
-  siguiente: SiguienteTramo | null;
-  maximo: boolean;
-}
-
 /**
- * Resultado del período: reglas a la izquierda, a quién le toca cuánto a la derecha.
- * Comisión de asesores y del supervisor en bloques separados (se miden distinto).
+ * Resultados del período: los asesores (vista principal), cada uno contra su meta individual,
+ * y abajo el supervisor, que comisiona sobre el total de los asesores contra la meta del mes.
  */
 @Component({
   selector: 'cmx-resultados-tab',
   standalone: true,
-  imports: [AppNumberPipe, AppDateTimePipe, CmxIconComponent],
+  imports: [AppNumberPipe, CmxIconComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="grid grid-cols-1 xl:grid-cols-[19rem_minmax(0,1fr)] gap-6">
-      <!-- ============ REGLAS DEL PERÍODO ============ -->
-      <aside class="flex flex-col gap-4" aria-label="Reglas del período">
-        <div class="cmx-shell cmx-enter" style="--i:0">
-          <div class="cmx-core cmx-card-body">
-            <div class="flex items-center justify-between gap-2">
-              <span class="cmx-label">Meta del mes</span>
-              <span class="cmx-tag cmx-tag-outline">Reporte de producción</span>
-            </div>
-            <div class="cmx-kpi-value mt-2"><small>S/</small>{{ periodo().metaGrupal | appNumber:'1.2-2' }}</div>
-            <p class="cmx-muted text-[0.78rem] mt-1">
-              Meta interna · se mide por <b class="cmx-soft-text">{{ metrica().etiqueta.toLowerCase() }}</b>
-            </p>
-            <div class="mt-4 pt-4 border-t border-dashed" style="border-color: var(--cmx-line-strong)">
-              <span class="cmx-label">Meta por asesor</span>
-              @if (metaAsesor() != null) {
-                <div class="cmx-num font-bold text-[1.05rem] mt-1">S/ {{ metaAsesor() | appNumber:'1.2-2' }}</div>
-                <p class="cmx-muted text-[0.76rem] mt-0.5">
-                  S/ {{ periodo().metaGrupal | appNumber:'1.0-2' }} ÷ {{ n() }} {{ n() === 1 ? 'asesor' : 'asesores' }}
-                  · igual para todos
-                </p>
-              } @else {
-                <p class="cmx-muted text-[0.78rem] mt-1">Sin asesores: elige los roles en Configuración.</p>
-              }
-            </div>
-          </div>
+    @let p = reporte().periodo;
+    <div class="cmx-kpis cmx-enter">
+      <div class="cmx-kpi">
+        <div class="cmx-kpi-l">Meta del mes</div>
+        <div class="cmx-kpi-v"><small>S/</small>{{ p.metaDelMes | appNumber:'1.2-2' }}</div>
+        <div class="cmx-kpi-d">
+          @if (p.metaAjustada != null) { Ajustada solo para comisiones · reporte: S/ {{ p.metaGrupal | appNumber:'1.2-2' }} }
+          @else { Reporte de producción · interna }
         </div>
-
-        @for (bloque of bloquesTramos(); track bloque.rol; let i = $index) {
-          <div class="cmx-shell cmx-enter" [style.--i]="i + 1">
-            <div class="cmx-core cmx-card-body">
-              <span class="cmx-label">Tramos del {{ bloque.rol === 'ASESOR' ? 'asesor' : 'supervisor' }}</span>
-              @if (bloque.tramos.length) {
-                <div class="mt-2">
-                  @if (bloque.tramos[0].porcentajeDesde > 0) {
-                    <div class="cmx-tier"><span class="cmx-num">0 – {{ bloque.tramos[0].porcentajeDesde }} %</span><b class="cmx-num">S/ 0</b></div>
-                  }
-                  @for (t of bloque.tramos; track t.porcentajeDesde; let last = $last; let j = $index) {
-                    <div class="cmx-tier">
-                      <span class="cmx-num">
-                        {{ t.porcentajeDesde }}{{ last ? ' % a más' : ' – ' + bloque.tramos[j + 1].porcentajeDesde + ' %' }}
-                      </span>
-                      <b class="cmx-num">S/ {{ t.montoComision | appNumber:'1.0-2' }}</b>
-                    </div>
-                  }
-                </div>
-              } @else {
-                <p class="cmx-muted text-[0.8rem] mt-2">Sin tramos. Configúralos en la pestaña Configuración.</p>
-              }
-            </div>
-          </div>
-        }
-      </aside>
-
-      <!-- ============ RESULTADOS ============ -->
-      <div class="flex flex-col gap-6 min-w-0">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          @for (k of kpis(); track k.etiqueta; let i = $index) {
-            <div class="cmx-shell cmx-enter" [style.--i]="i">
-              <div class="cmx-core cmx-kpi h-full">
-                <span class="cmx-label">{{ k.etiqueta }}</span>
-                <div class="cmx-kpi-value mt-1.5">
-                  @if (k.moneda) { <small>S/</small> }{{ k.valor }}
-                </div>
-                <p class="cmx-muted text-[0.74rem] mt-0.5">{{ k.nota }}</p>
-              </div>
-            </div>
-          }
-        </div>
-
-        @if (!calculado()) {
-          <div class="cmx-shell cmx-enter" style="--i:2">
-            <div class="cmx-core">
-              <div class="cmx-empty">
-                <span class="cmx-empty-mark"><cmx-icon name="calculator" [size]="22" /></span>
-                <p class="font-semibold" style="color: var(--cmx-ink)">Sin cálculo vigente</p>
-                <p class="max-w-[46ch] text-[0.86rem]">
-                  El período se creó o su configuración cambió. Revisa roles y tramos y pulsa «Calcular»:
-                  se leen los pagos conciliados del mes y la meta interna del día.
-                </p>
-              </div>
-            </div>
-          </div>
-        }
-
-        @for (bloque of bloquesResultado(); track bloque.rol; let i = $index) {
-          <section class="cmx-shell cmx-enter" [style.--i]="i + 2" [attr.aria-label]="bloque.titulo">
-            <div class="cmx-core">
-              <header class="cmx-card-head">
-                <div>
-                  <h3 class="font-bold text-[0.92rem]">{{ bloque.titulo }}</h3>
-                  <p class="cmx-muted text-[0.76rem]">{{ bloque.descripcion }}</p>
-                </div>
-                <span class="ml-auto cmx-num font-bold text-[0.95rem]">S/ {{ bloque.total | appNumber:'1.2-2' }}</span>
-              </header>
-
-              @if (bloque.filas.length) {
-                <div class="cmx-table-wrap">
-                  <table class="cmx-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">{{ bloque.rol === 'ASESOR' ? 'Asesor' : 'Supervisor' }}</th>
-                        <th scope="col" class="n">Meta</th>
-                        <th scope="col" class="n">{{ metrica().logrado }}</th>
-                        <th scope="col">Posición en los tramos</th>
-                        <th scope="col" class="n">Comisión</th>
-                        <th scope="col"><span class="sr-only">Acciones</span></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (f of bloque.filas; track f.p.idResultado) {
-                        <tr class="is-clickable" [class.is-muted]="f.p.quitado" (click)="verSustento.emit(f.p)"
-                            tabindex="0" (keydown.enter)="verSustento.emit(f.p)">
-                          <td>
-                            <span class="font-semibold">{{ f.p.nombre }}</span>
-                            @if (f.p.quitado) {
-                              <span class="cmx-tag cmx-tag-amber ml-2">Quitado</span>
-                            }
-                          </td>
-                          <td class="n">{{ f.p.metaIndividual != null ? (f.p.metaIndividual | appNumber:'1.2-2') : '—' }}</td>
-                          <td class="n font-semibold">{{ f.p.logrado | appNumber:'1.2-2' }}</td>
-                          <td>
-                            @if (f.p.quitado) {
-                              <span class="cmx-muted text-[0.8rem]">No divide la meta ni comisiona</span>
-                            } @else if (!calculado()) {
-                              <span class="cmx-muted text-[0.8rem]">Pendiente de calcular</span>
-                            } @else {
-                              <div class="cmx-bar" [attr.aria-label]="'Cumplimiento ' + (f.p.porcentajeCumplimiento ?? 0) + ' %'">
-                                <div class="cmx-bar-track">
-                                  @for (s of f.barra.segmentos; track $index) {
-                                    <span class="cmx-bar-seg" [class]="'cmx-bar-seg lv' + s.nivel" [class.is-reached]="s.alcanzado"
-                                          [style.width.%]="s.ancho" [attr.title]="s.titulo"></span>
-                                  }
-                                  <span class="cmx-bar-marker" [style.left.%]="f.barra.marcador"></span>
-                                </div>
-                                <div class="cmx-bar-caption">
-                                  <b class="cmx-num" style="color: var(--cmx-ink)">{{ f.p.porcentajeCumplimiento | appNumber:'1.1-2' }} %</b>
-                                  @if (f.maximo) {
-                                    <span style="color: var(--cmx-brand)">tramo máximo</span>
-                                  } @else if (f.siguiente) {
-                                    <span class="cmx-num" style="color: var(--cmx-amber)">
-                                      faltan S/ {{ f.siguiente.falta | appNumber:'1.0-0' }} → S/ {{ f.siguiente.monto | appNumber:'1.0-0' }}
-                                    </span>
-                                  }
-                                </div>
-                              </div>
-                            }
-                          </td>
-                          <td class="n font-bold">{{ f.p.montoComision | appNumber:'1.2-2' }}</td>
-                          <td class="text-right whitespace-nowrap">
-                            <button type="button" class="cmx-icon-btn" (click)="$event.stopPropagation(); verSustento.emit(f.p)"
-                                    [attr.aria-label]="'Ver sustento de ' + f.p.nombre">
-                              <cmx-icon name="eye" />
-                            </button>
-                            <button type="button" class="cmx-icon-btn" [disabled]="!calculado()"
-                                    (click)="$event.stopPropagation(); descargar.emit(f.p)"
-                                    [attr.aria-label]="'Descargar sustento en Excel de ' + f.p.nombre">
-                              <cmx-icon name="download" />
-                            </button>
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              } @else {
-                <div class="cmx-empty">
-                  <span class="cmx-empty-mark"><cmx-icon name="users" [size]="22" /></span>
-                  <p class="text-[0.86rem] max-w-[42ch]">{{ bloque.vacio }}</p>
-                </div>
-              }
-            </div>
-          </section>
-        }
-
-        @if (calculado()) {
-          <p class="cmx-muted text-[0.76rem]">
-            Calculado el {{ periodo().fechaCalculo | appDateTime }}. Haz clic en una fila para ver su sustento.
-          </p>
-        }
+      </div>
+      <div class="cmx-kpi">
+        <div class="cmx-kpi-l">{{ metrica().logrado }} total</div>
+        <div class="cmx-kpi-v"><small>S/</small>{{ totalAsesores() | appNumber:'1.2-2' }}</div>
+        <div class="cmx-kpi-d">{{ porcentajeTotal() | appNumber:'1.1-1' }} % de la meta · lo que mide el supervisor</div>
+      </div>
+      <div class="cmx-kpi">
+        <div class="cmx-kpi-l">Meta por asesor</div>
+        <div class="cmx-kpi-v"><small>S/</small>{{ metaPorAsesor() | appNumber:'1.2-2' }}</div>
+        <div class="cmx-kpi-d">Meta ÷ {{ divisor() }}@if (conMetaPropia()) { · {{ conMetaPropia() }} con meta propia o ingreso }</div>
+      </div>
+      <div class="cmx-kpi">
+        <div class="cmx-kpi-l">A pagar</div>
+        <div class="cmx-kpi-v"><small>S/</small>{{ reporte().totalComisiones + reporte().totalBonos | appNumber:'1.2-2' }}</div>
+        <div class="cmx-kpi-d">Comisiones S/ {{ reporte().totalComisiones | appNumber:'1.0-0' }} · bonos S/ {{ reporte().totalBonos | appNumber:'1.0-0' }}</div>
       </div>
     </div>
+
+    <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-res-ases">
+      <div class="cmx-block-head">
+        <h3 id="cmx-res-ases" class="cmx-block-title">Asesores</h3>
+        <span class="cmx-block-desc">{{ p.grupo !== 'GENERAL' ? grupoInfo[p.grupo] + ' · midiendo ' : 'Midiendo ' }}{{ metrica().etiqueta.toLowerCase() }}@if (p.escalaAcumulativa) { · por logros }</span>
+        @if (puedeAgregar()) {
+          <button type="button" class="cmx-btn cmx-btn-sec cmx-btn-sm" style="margin-left:auto" (click)="agregar.emit()">
+            <cmx-icon name="user-plus" [size]="15" /> Agregar participante
+          </button>
+        }
+        <span class="cmx-block-extra" [style.margin-left]="puedeAgregar() ? '0' : 'auto'">S/ {{ comisionAsesores() | appNumber:'1.2-2' }}</span>
+      </div>
+      <div class="cmx-tw">
+        <table class="cmx-table">
+          <thead>
+            <tr>
+              <th scope="col">Asesor</th>
+              <th scope="col" class="n">Meta individual</th>
+              <th scope="col" class="n">{{ metrica().logrado }}</th>
+              <th scope="col">Avance sobre su meta</th>
+              @if (conMetas()) { <th scope="col">Metas de cantidad</th> }
+              <th scope="col" class="n">Comisión</th>
+              <th scope="col" class="n">Bonos</th>
+              <th scope="col" class="n">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of asesores(); track a.idUsuario; let i = $index) {
+              @let b = barra(a, 'ASESOR');
+              <tr class="is-click" tabindex="0" (click)="verSustento.emit(a.idUsuario)" (keydown.enter)="verSustento.emit(a.idUsuario)"
+                  [attr.aria-label]="'Ver el sustento de ' + a.nombre">
+                <td class="who">
+                  {{ a.nombre }}
+                  <span class="cmx-role">Asesor</span>
+                  @if (a.metaManual != null) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">Meta propia · excepción</span> }
+                  @else if (a.fechaIngreso) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">Ingresó {{ diaMes(a.fechaIngreso) }} · {{ a.diasHabiles }} de {{ p.diasHabiles }} días hábiles</span> }
+                  @if (!a.calculado) { <span class="cmx-tag cmx-tag-off" style="margin-top:3px">Entra al recalcular</span> }
+                </td>
+                <td class="n">{{ a.metaIndividual | appNumber:'1.2-2' }}</td>
+                <td class="n">{{ a.logrado | appNumber:'1.2-2' }}</td>
+                <td>
+                  <div class="cmx-gauge">
+                    <div class="cmx-track">
+                      @for (s of b.barra.segmentos; track $index) {
+                        <span class="cmx-seg" [class]="'cmx-seg cmx-t' + s.nivel" [style.width.%]="s.ancho" [attr.title]="s.titulo"></span>
+                      }
+                      <span class="cmx-mk" [style.left.%]="b.barra.marcador" [style.--i]="i"></span>
+                    </div>
+                    <div class="cmx-cap">
+                      <b>{{ a.porcentajeCumplimiento ?? 0 | appNumber:'1.1-1' }} %</b>
+                      @if (b.siguiente; as s) {
+                        <span class="cmx-gap-t">Faltan S/ {{ s.falta | appNumber:'1.0-0' }} para {{ s.desde }} %</span>
+                      } @else {
+                        <span class="cmx-top-t">{{ p.escalaAcumulativa ? 'Todos los logros' : 'Nivel máximo' }}</span>
+                      }
+                    </div>
+                  </div>
+                </td>
+                @if (conMetas()) {
+                  <td>
+                    <div class="cmx-mchips">
+                      @for (m of chips(a); track m.nombre) {
+                        <span class="cmx-mchip" [class.ok]="m.cumple" [attr.title]="m.nombre + ' · S/ ' + m.monto">{{ m.nombre }} <b>{{ m.valor }}</b></span>
+                      }
+                    </div>
+                  </td>
+                }
+                <td class="n tot" [class.na]="!a.montoComision">
+                  {{ a.montoComision ? 'S/ ' + (a.montoComision | appNumber:'1.2-2') : '—' }}
+                  @if (conMetas() || p.escalaAcumulativa) {
+                    @let pc = partes(a);
+                    <span class="cmx-subtot">{{ p.escalaAcumulativa ? 'Logros' : 'Escala' }} S/ {{ pc.escala | appNumber:'1.0-0' }}@if (conMetas()) { · metas S/ {{ pc.metas | appNumber:'1.0-0' }} }</span>
+                  }
+                </td>
+                <ng-container *ngTemplateOutlet="celdasBono; context: { $implicit: a }" />
+              </tr>
+            } @empty {
+              <tr><td [attr.colspan]="conMetas() ? 8 : 7" class="empty">Nadie participa todavía. Elige a los asesores en la pestaña Comisiones.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-res-sup">
+      <div class="cmx-block-head">
+        <h3 id="cmx-res-sup" class="cmx-block-title">Supervisor</h3>
+        <span class="cmx-block-desc">Comisiona sobre el {{ metrica().etiqueta.toLowerCase() }} total de los asesores contra la meta del mes</span>
+        @if (supervisor(); as s) { <span class="cmx-block-extra">S/ {{ s.montoComision | appNumber:'1.2-2' }}</span> }
+      </div>
+      @if (supervisor(); as s) {
+        @let b = barra(s, 'SUPERVISOR');
+        <div class="cmx-tw">
+          <table class="cmx-table">
+            <thead>
+              <tr>
+                <th scope="col">Supervisor</th>
+                <th scope="col" class="n">Meta del mes</th>
+                <th scope="col" class="n">{{ metrica().logrado }} total</th>
+                <th scope="col">Avance</th>
+                <th scope="col" class="n">Comisión</th>
+                <th scope="col" class="n">Bonos</th>
+                <th scope="col" class="n">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="is-click" tabindex="0" (click)="verSustento.emit('sup')" (keydown.enter)="verSustento.emit('sup')"
+                  [attr.aria-label]="'Ver el sustento de ' + s.nombre">
+                <td class="who">{{ s.nombre }}<span class="cmx-role">Supervisor</span></td>
+                <td class="n">{{ s.metaIndividual | appNumber:'1.2-2' }}</td>
+                <td class="n">{{ s.logrado | appNumber:'1.2-2' }}</td>
+                <td>
+                  <div class="cmx-gauge">
+                    <div class="cmx-track">
+                      @for (seg of b.barra.segmentos; track $index) {
+                        <span class="cmx-seg" [class]="'cmx-seg cmx-t' + seg.nivel" [style.width.%]="seg.ancho" [attr.title]="seg.titulo"></span>
+                      }
+                      <span class="cmx-mk" [style.left.%]="b.barra.marcador"></span>
+                    </div>
+                    <div class="cmx-cap">
+                      <b>{{ s.porcentajeCumplimiento ?? 0 | appNumber:'1.1-1' }} %</b>
+                      @if (b.siguiente; as sig) {
+                        <span class="cmx-gap-t">Faltan S/ {{ sig.falta | appNumber:'1.0-0' }} para {{ sig.desde }} %</span>
+                      } @else {
+                        <span class="cmx-top-t">Nivel máximo</span>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="n tot" [class.na]="!s.montoComision">{{ s.montoComision ? 'S/ ' + (s.montoComision | appNumber:'1.2-2') : '—' }}</td>
+                <ng-container *ngTemplateOutlet="celdasBono; context: { $implicit: s }" />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="cmx-block-body cmx-muted-txt">Sin supervisor elegido para este periodo.</div>
+      }
+    </section>
+
+    <ng-template #celdasBono let-x>
+      <td class="n">
+        @if (x.montoBonos) {
+          <span class="cmx-bcell">S/ {{ x.montoBonos | appNumber:'1.2-2' }}
+            <small>{{ resumenBonos(x) }}</small>
+          </span>
+        } @else {
+          <span class="cmx-bcell na">—</span>
+        }
+      </td>
+      <td class="n tot">S/ {{ x.montoComision + (x.montoBonos ?? 0) | appNumber:'1.2-2' }}</td>
+    </ng-template>
   `
 })
 export class ResultadosTabComponent {
-  private readonly fmt = inject(FormatService);
-
   readonly reporte = input.required<ReportePeriodo>();
+  readonly puedeAgregar = input(false);
 
-  readonly verSustento = output<ParticipanteComision>();
-  readonly descargar = output<ParticipanteComision>();
+  readonly agregar = output<void>();
+  readonly verSustento = output<number | 'sup'>();
 
-  readonly periodo = computed(() => this.reporte().periodo);
-  readonly metrica = computed(() => METRICA_INFO[this.periodo().tipoMetrica]);
-  readonly calculado = computed(() => !!this.periodo().fechaCalculo);
-  readonly n = computed(() => asesoresActivos(this.reporte().participantes));
-  readonly metaAsesor = computed(() => metaPorAsesor(this.periodo(), this.reporte().participantes));
+  readonly metrica = computed(() => METRICA_INFO[this.reporte().periodo.tipoMetrica]);
 
-  readonly bloquesTramos = computed(() => (['ASESOR', 'SUPERVISOR'] as RolComision[]).map(rol => ({
-    rol,
-    tramos: tramosDe(this.periodo().escalas, rol)
-  })));
+  readonly asesores = computed(() => this.reporte().participantes
+    .filter(p => p.rol === 'ASESOR')
+    .sort((a, b) => Number(a.metaManual != null || !!a.fechaIngreso) - Number(b.metaManual != null || !!b.fechaIngreso)
+      || b.logrado - a.logrado));
 
-  private readonly supervisor = computed(() =>
-    this.reporte().participantes.find(p => p.rol === 'SUPERVISOR' && !p.quitado) ?? null
-  );
+  readonly conMetas = computed(() => (this.reporte().periodo.metasCantidad ?? []).length > 0);
 
-  /** Logrado de la subcartera: el del supervisor, o la suma de asesores si no hay supervisor */
-  readonly logradoSubcartera = computed(() => {
-    const sup = this.supervisor();
-    if (sup) {
-      return sup.logrado;
-    }
-    return this.reporte().participantes
-      .filter(p => p.rol === 'ASESOR' && !p.quitado)
-      .reduce((s, p) => s + p.logrado, 0);
-  });
+  readonly chips = chipsMetas;
+  readonly partes = partesComision;
 
-  readonly kpis = computed(() => {
-    const participantes = this.reporte().participantes;
-    const quitados = participantes.filter(p => p.quitado).length;
-    const meta = this.periodo().metaGrupal;
-    const logrado = this.logradoSubcartera();
-    const calculado = this.calculado();
-    return [
-      {
-        etiqueta: 'Comisiones del mes',
-        valor: this.formatear(this.reporte().totalComisiones),
-        moneda: true,
-        nota: calculado ? 'Asesores y supervisor' : 'Pendiente de calcular'
-      },
-      {
-        etiqueta: `${this.metrica().logrado} de la subcartera`,
-        valor: this.formatear(logrado),
-        moneda: true,
-        nota: this.supervisor() ? 'Lo que suman sus asesores' : 'Suma de asesores'
-      },
-      {
-        etiqueta: 'Cumplimiento',
-        valor: calculado && meta > 0 ? this.fmt.number(logrado / meta * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %' : '—',
-        moneda: false,
-        nota: 'Contra la meta del mes'
-      },
-      {
-        etiqueta: 'Participantes',
-        valor: String(participantes.length - quitados),
-        moneda: false,
-        nota: quitados ? `${quitados} quitado${quitados === 1 ? '' : 's'}` : `${this.n()} asesores`
-      }
-    ];
-  });
-
-  readonly bloquesResultado = computed(() => {
-    const participantes = this.reporte().participantes;
-    const metaAsesor = this.metaAsesor();
-    return (['ASESOR', 'SUPERVISOR'] as RolComision[]).map(rol => {
-      const tramos = tramosDe(this.periodo().escalas, rol);
-      const filas = participantes
-        .filter(p => p.rol === rol)
-        .map(p => this.fila(p, tramos, rol === 'ASESOR' ? metaAsesor : this.periodo().metaGrupal));
-      return {
-        rol,
-        titulo: rol === 'ASESOR' ? 'Comisión de asesores' : 'Comisión del supervisor',
-        descripcion: rol === 'ASESOR'
-          ? 'Cada asesor contra la meta por asesor, con la tabla del asesor'
-          : 'Contra la meta completa de la subcartera, con su propia tabla',
-        vacio: rol === 'ASESOR'
-          ? 'No hay asesores en el período. Elige los roles de asesor en Configuración.'
-          : 'No hay supervisor en el período. Elige el rol de supervisor en Configuración.',
-        total: filas.filter(f => !f.p.quitado).reduce((s, f) => s + f.p.montoComision, 0),
-        filas
-      };
-    });
-  });
-
-  private fila(p: ParticipanteComision, tramos: EscalaComision[], base: number | null): FilaResultado {
-    const ultimo = tramos.length ? tramos[tramos.length - 1].porcentajeDesde : null;
-    return {
-      p,
-      barra: construirBarra(tramos, p.porcentajeCumplimiento),
-      siguiente: siguienteTramo(tramos, p.porcentajeTramo, p.logrado, base),
-      maximo: ultimo != null && p.porcentajeTramo === ultimo
-    };
+  /** "LTD S/ 60 · PKM S/ 15" */
+  resumenBonos(p: ParticipanteComision): string {
+    return bonosGanados(p).map(b => `${bonoCorto(b.nombre)} S/ ${Math.round(b.monto)}`).join(' · ');
   }
 
-  private formatear(valor: number): string {
-    return this.fmt.number(valor ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  readonly supervisor = computed(() => this.reporte().participantes.find(p => p.rol === 'SUPERVISOR') ?? null);
+
+  readonly totalAsesores = computed(() => this.asesores().reduce((s, a) => s + a.logrado, 0));
+  readonly comisionAsesores = computed(() => this.asesores().reduce((s, a) => s + a.montoComision, 0));
+  readonly conMetaPropia = computed(() => this.asesores().filter(a => a.metaManual != null || !!a.fechaIngreso).length);
+  readonly grupoInfo = GRUPO_INFO;
+  readonly diaMes = diaMes;
+  readonly divisor = computed(() => Math.max(this.asesores().length - this.conMetaPropia(), 1));
+  readonly metaPorAsesor = computed(() => this.reporte().periodo.metaDelMes / this.divisor());
+  readonly porcentajeTotal = computed(() => {
+    const meta = this.reporte().periodo.metaDelMes;
+    return meta ? this.totalAsesores() / meta * 100 : 0;
+  });
+
+  barra(p: ParticipanteComision, rol: 'ASESOR' | 'SUPERVISOR') {
+    const tramos = tramosDe(this.reporte().periodo.escalas, rol);
+    return {
+      barra: construirBarra(tramos, p.porcentajeCumplimiento),
+      siguiente: siguienteTramo(tramos, p.porcentajeTramo, p.logrado, p.metaIndividual)
+    };
   }
 }

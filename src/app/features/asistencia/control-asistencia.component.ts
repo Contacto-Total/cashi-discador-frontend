@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -8,8 +8,8 @@ import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaReporte } from './asistencia.models';
-import { ESTILOS, estadoVisible, hoy, semanaPorDefecto, sumarDias } from './asistencia.estilos';
+import { AsistenciaReporte, Justificacion } from './asistencia.models';
+import { ESTILOS, estadoVisible, hoy, lunesDe, semanaPorDefecto, sumarDias } from './asistencia.estilos';
 import { AsistenciaReporteComponent } from './asistencia-reporte.component';
 import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
 import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
@@ -73,7 +73,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
                     [class]="pantalla() === 'configuracion' ? botonActivo : estilos.botonSecundario"
                     [attr.aria-current]="pantalla() === 'configuracion' ? 'page' : null">
               <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
-              Configuración
+              Administración
             </button>
             <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('edicion')"
                     [attr.aria-current]="pantalla() === 'edicion' ? 'page' : null">
@@ -127,15 +127,25 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
             </select>
           </div>
 
+          <!-- La semana, en vez de un rango libre: se recorre con las flechas y
+               tocar las fechas abre el calendario para saltar a otra. -->
           <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="desde">Desde</label>
-            <input id="desde" type="date" [class]="estilos.campo"
-                   [ngModel]="desde()" (ngModelChange)="desde.set($event)">
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="hasta">Hasta</label>
-            <input id="hasta" type="date" [class]="estilos.campo"
-                   [ngModel]="hasta()" (ngModelChange)="hasta.set($event)">
+            <label [class]="estilos.etiqueta" for="texto-semana">Semana</label>
+            <div class="relative inline-flex h-[38px] items-center gap-0.5 rounded-lg border !border-[#8491a3] !bg-white px-[3px] dark:!border-slate-600 dark:!bg-slate-800">
+              <button type="button" [class]="flechaSemana" (click)="moverSemana(-7)" aria-label="Semana anterior">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <button id="texto-semana" type="button" title="Elegir otra semana" (click)="abrirCalendario(fechaSemana)"
+                      class="h-[30px] min-w-[112px] rounded-md px-1.5 text-[13px] font-semibold tabular-nums !text-[#0f172a] hover:bg-[#f1f3f6] dark:!text-slate-100 dark:hover:bg-slate-700">
+                {{ corta(desde()) }} – {{ corta(hasta()) }}
+              </button>
+              <button type="button" [class]="flechaSemana" (click)="moverSemana(7)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+              <input #fechaSemana type="date" tabindex="-1" aria-hidden="true" [max]="hoy()"
+                     class="pointer-events-none absolute bottom-0 left-9 h-px w-px opacity-0"
+                     (change)="irASemana(fechaSemana.value)">
+            </div>
           </div>
 
           <!-- Un solo campo para buscar y elegir: escribir filtra, el desplegable lista el roster. -->
@@ -190,6 +200,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
               [agente]="agente()"
               (rosterCambia)="roster.set($event)"
+              (agenteCambia)="agente.set($event)"
               (reporteCargado)="reporte.set($event)" />
           }
           @case ('dashboard') {
@@ -202,7 +213,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           @case ('justificaciones') {
             <app-asistencia-justificaciones
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" [agente]="agente()"
-              (sinResolverCambia)="sinResolver.set($event)" />
+              (sinResolverCambia)="cargarPorAprobar()" />
           }
           @case ('cierre') {
             <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
@@ -260,8 +271,17 @@ export class ControlAsistenciaComponent implements OnInit {
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
-  readonly desde = signal(semanaPorDefecto().desde);
-  readonly hasta = signal(semanaPorDefecto().hasta);
+  /**
+   * El módulo es semanal (25/09/2026): con un rango libre, cuatro semanas eran
+   * una pantalla enorme y los límites son de cada semana. La semana va de lunes
+   * a viernes; el sábado es solo de CASTIGO, que lo trabaja opcional.
+   */
+  readonly semana = signal(semanaPorDefecto().desde);
+  readonly desde = computed(() => this.semana());
+  readonly hasta = computed(() => sumarDias(this.semana(), this.conSabado() ? 5 : 4));
+  readonly esSemanaActual = computed(() => this.semana() >= lunesDe(new Date()));
+  protected readonly hoy = hoy;
+  protected readonly flechaSemana = 'inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[7px] !text-[#334155] hover:bg-[#f4f6f9] disabled:cursor-default disabled:opacity-35 dark:!text-slate-200 dark:hover:bg-slate-700';
   readonly agente = signal('');
 
   readonly clientes = signal<Tenant[]>([]);
@@ -271,11 +291,22 @@ export class ControlAsistenciaComponent implements OnInit {
   /** Los nombres del roster, para el desplegable del campo de agente. */
   readonly roster = signal<string[]>([]);
   readonly reporte = signal<AsistenciaReporte | null>(null);
-  readonly sinResolver = signal(0);
+  /** Lo que espera a RR.HH. en todas las subcarteras; el número se acota al ámbito. */
+  private readonly porAprobar = signal<Justificacion[]>([]);
+  /** Solo las de la gente del ámbito elegido, igual que la lista de la pestaña. */
+  private readonly genteDelAmbito = signal<Set<number> | null>(null);
+  readonly sinResolver = computed(() => {
+    const lista = this.porAprobar();
+    const gente = this.genteDelAmbito();
+    return gente ? lista.filter(j => gente.has(j.idUsuario)).length : lista.length;
+  });
 
   /** El nombre de la subcartera elegida: Configuración lo usa para decir a quién alcanza un cambio. */
   readonly nombreSubcartera = computed(() =>
     this.subcarteras().find(s => s.id === this.idSubcartera())?.subPortfolioName ?? null);
+
+  /** La semana llega al sábado solo en CASTIGO. */
+  readonly conSabado = computed(() => (this.nombreSubcartera() ?? '').trim().toUpperCase() === 'CASTIGO');
 
   /** Configuración y Corregir marcaciones no comparten filtros con el resto. */
   readonly esPantallaAparte = computed(() =>
@@ -300,9 +331,27 @@ export class ControlAsistenciaComponent implements OnInit {
     // haya abierto: es lo que avisa de que hay algo esperando. Cuenta solo lo
     // que le toca a RR.HH. (lo que ya revisó la supervisora), de tres meses
     // atrás a dos adelante, lo mismo que lista la pestaña.
+    this.cargarPorAprobar();
+
+    // La gente del ámbito, con la misma consulta que usa la pestaña para su lista.
+    effect(() => {
+      const ambito = this.idSubcartera(), desde = this.desde(), hasta = this.hasta();
+      untracked(() => this.genteDelAmbito.set(null));
+      if (!ambito) {
+        return;
+      }
+      this.servicio.reporte(desde, hasta, ambito).subscribe({
+        next: r => this.genteDelAmbito.set(new Set(r.agentes.map(a => a.idUsuario))),
+        error: () => this.genteDelAmbito.set(null)
+      });
+    });
+  }
+
+  /** Se vuelve a leer cuando la pestaña resuelve una solicitud. */
+  cargarPorAprobar(): void {
     this.servicio.justificaciones(sumarDias(hoy(), -90), sumarDias(hoy(), 60), ['REVISADA']).subscribe({
-      next: j => this.sinResolver.set(j.length),
-      error: () => this.sinResolver.set(0)
+      next: j => this.porAprobar.set(j),
+      error: () => this.porAprobar.set([])
     });
   }
 
@@ -397,15 +446,41 @@ export class ControlAsistenciaComponent implements OnInit {
     });
   }
 
-  /** El botón «Semana anterior» del dashboard mueve el rango, que vive aquí. */
+  /** El botón «Semana anterior» del dashboard mueve la semana, que vive aquí. */
   volverASemanaPorDefecto(): void {
-    this.desde.set(semanaPorDefecto().desde);
-    this.hasta.set(semanaPorDefecto().hasta);
+    this.semana.set(semanaPorDefecto().desde);
   }
 
   retrocederSemana(): void {
-    this.desde.set(sumarDias(this.desde(), -7));
-    this.hasta.set(sumarDias(this.hasta(), -7));
+    this.moverSemana(-7);
+  }
+
+  moverSemana(dias: number): void {
+    this.irASemana(sumarDias(this.semana(), dias));
+  }
+
+  /** Cualquier día lleva a su semana; el futuro no se mira, la última es la actual. */
+  irASemana(fecha: string): void {
+    if (!fecha) {
+      return;
+    }
+    const lunes = lunesDe(new Date(fecha + 'T00:00:00'));
+    const actual = lunesDe(new Date());
+    this.semana.set(lunes > actual ? actual : lunes);
+  }
+
+  abrirCalendario(campo: HTMLInputElement): void {
+    campo.value = this.semana();
+    try {
+      campo.showPicker();
+    } catch {
+      campo.focus();
+    }
+  }
+
+  /** «14/09», como en el resto del módulo. */
+  corta(fecha: string): string {
+    return `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
   }
 
 }

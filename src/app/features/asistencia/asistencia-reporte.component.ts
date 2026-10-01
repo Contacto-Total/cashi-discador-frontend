@@ -258,7 +258,7 @@ const COLOR_DIA: Record<string, string> = {
                       <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.breakInicio, manual: esManual(dia, 'BREAK_INICIO') }" /> – <ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.breakFin, manual: esManual(dia, 'BREAK_FIN') }" /></td>
                       <td [class]="estilos.td"><ng-container *ngTemplateOutlet="hora; context: { $implicit: dia.salida, manual: esManual(dia, 'SALIDA') }" /></td>
                       <td [class]="estilos.td + ((dia.minutosTardanza ?? 0) > 0 ? ' con-tardanza' : '')">
-                        @if (dia.tardanza) { {{ dia.tardanza }} } @else { <span class="sin-marca">—</span> }
+                        @if (dia.tardanza && !esSabado(dia)) { {{ dia.tardanza }} } @else { <span class="sin-marca">—</span> }
                       </td>
                       <td [class]="estilos.td">@if (dia.horasManana) { {{ dia.horasManana }} } @else { <span class="sin-marca">—</span> }</td>
                       <td [class]="estilos.td">@if (dia.horasTarde) { {{ dia.horasTarde }} } @else { <span class="sin-marca">—</span> }</td>
@@ -335,10 +335,10 @@ export class AsistenciaReporteComponent {
   /** El roster, para que la cabecera pueda ofrecerlo en su desplegable. */
   readonly rosterCambia = output<string[]>();
   readonly reporteCargado = output<AsistenciaReporte | null>();
+  /** Las flechas eligen a la persona en el campo de la cabecera: así sigue elegida al cambiar de semana. */
+  readonly agenteCambia = output<string>();
 
   readonly reporte = signal<AsistenciaReporte | null>(null);
-  /** Lo que eligieron las flechas; manda sobre lo escrito en la cabecera. */
-  readonly agenteElegido = signal('');
   readonly cargando = signal(false);
 
   /** El roster del reporte: por donde caminan las flechas. */
@@ -351,7 +351,7 @@ export class AsistenciaReporteComponent {
    */
   readonly indice = computed(() => {
     const gente = this.roster();
-    const texto = (this.agenteElegido() || this.agente()).toLowerCase().trim();
+    const texto = this.agente().toLowerCase().trim();
     if (!texto) {
       return 0;
     }
@@ -366,10 +366,24 @@ export class AsistenciaReporteComponent {
 
   readonly persona = computed<ResumenAgente | null>(() => this.roster()[this.indice()] ?? null);
 
+  /**
+   * Los días de la persona. El domingo nunca, y el sábado solo si lo trabajó:
+   * es opcional y solo de CASTIGO, y un sábado sin marcas no dice nada.
+   */
   readonly dias = computed<AsistenciaDia[]>(() => {
     const p = this.persona();
-    return p ? (this.reporte()?.dias ?? []).filter(d => d.idUsuario === p.idUsuario) : [];
+    return p ? (this.reporte()?.dias ?? []).filter(d => d.idUsuario === p.idUsuario && this.seMuestra(d)) : [];
   });
+
+  private seMuestra(d: AsistenciaDia): boolean {
+    const dia = new Date(d.fecha + 'T00:00:00').getDay();
+    return dia !== 0 && (dia !== 6 || !!d.entrada || !!d.salida);
+  }
+
+  /** El sábado no tiene hora de entrada: no hay tardanza que mostrar. */
+  protected esSabado(d: AsistenciaDia): boolean {
+    return new Date(d.fecha + 'T00:00:00').getDay() === 6;
+  }
 
   /**
    * Las semanas de la persona en el rango. Con una sola, las tarjetas son las
@@ -495,7 +509,6 @@ export class AsistenciaReporteComponent {
     this.servicio.reporte(desde, hasta, idSubcartera).subscribe({
       next: r => {
         this.reporte.set(r);
-        this.agenteElegido.set('');
         this.rosterCambia.emit(r.agentes.map(a => a.nombreAgente));
         this.reporteCargado.emit(r);
         this.cargando.set(false);
@@ -511,7 +524,7 @@ export class AsistenciaReporteComponent {
   mover(paso: number): void {
     const gente = this.roster();
     const siguiente = Math.min(gente.length - 1, Math.max(0, this.indice() + paso));
-    this.agenteElegido.set(gente[siguiente]?.nombreAgente ?? '');
+    this.agenteCambia.emit(gente[siguiente]?.nombreAgente ?? '');
   }
 
 

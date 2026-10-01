@@ -4,11 +4,9 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { EquipoService } from '../../features/asistencia/equipo.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const equipoService = inject(EquipoService);
   const router = inject(Router);
   const token = authService.getToken();
 
@@ -24,14 +22,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const agentId = authService.getCurrentUser()?.id;
   if (agentId && req.url.includes('/v2/whatsapp')) {
     headers['X-Agent-Id'] = String(agentId);
-  }
-
-  // X-Equipo: el pase de esta computadora. Va solo al discador porque es el
-  // único que lo valida; mandarlo a los demás obligaría a un preflight CORS que
-  // no tienen permitido. Mientras el bloqueo esté apagado en el backend, la
-  // cabecera viaja y no hace nada.
-  if (token && req.url.startsWith(environment.apiUrl)) {
-    headers['X-Equipo'] = equipoService.pase();
   }
 
   if (Object.keys(headers).length > 0) {

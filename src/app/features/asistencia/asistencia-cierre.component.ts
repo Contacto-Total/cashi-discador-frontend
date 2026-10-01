@@ -190,7 +190,7 @@ interface FilaResumen {
         <div>
           <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Cierre semanal</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Semana del {{ corta(lunes()) }} al {{ corta(sabado()) }}{{ cerrada() ? ' · cerrada' : '' }}
+            Semana del {{ corta(lunes()) }} al {{ corta(fin()) }}{{ cerrada() ? ' · cerrada' : '' }}
           </p>
         </div>
         <button type="button" [class]="estilos.botonPrimario" (click)="confirmando.set(true)"
@@ -211,7 +211,7 @@ interface FilaResumen {
             <span class="icono-kpi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/></svg></span>
             <h3>{{ cerrada() ? 'Semana cerrada' : 'Semana por cerrar' }}</h3>
           </div>
-          <div class="cifra" style="font-size:20px">{{ corta(lunes()) }} – {{ corta(sabado()) }}</div>
+          <div class="cifra" style="font-size:20px">{{ corta(lunes()) }} – {{ corta(fin()) }}</div>
           <div class="tira-semana" [style.grid-template-columns]="'repeat(' + tira().length + ', minmax(0, 1fr))'"
                role="img" aria-label="Días de la semana; en ámbar los que tienen marcas faltantes">
             @for (d of tira(); track d.fecha) {
@@ -434,7 +434,7 @@ interface FilaResumen {
           <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
             <div>
               <h2 id="titulo-cerrar" class="!m-0 text-[15px] font-extrabold">Cerrar la semana</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">Semana del {{ corta(lunes()) }} al {{ corta(sabado()) }}</p>
+              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">Semana del {{ corta(lunes()) }} al {{ corta(fin()) }}</p>
             </div>
             <button type="button" [class]="estilos.botonIcono" (click)="confirmando.set(false)" aria-label="Cerrar">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -606,6 +606,8 @@ export class AsistenciaCierreComponent {
   /** Lunes y sábado de la semana del rango. */
   readonly lunes = computed(() => lunesDe(new Date(this.desde() + 'T00:00:00')));
   readonly sabado = computed(() => sumarDias(this.lunes(), 5));
+  /** Hasta dónde llega la semana en pantalla: el viernes, o el sábado en CASTIGO (lo decide la cabecera). */
+  readonly fin = computed(() => this.hasta() < this.sabado() ? sumarDias(this.lunes(), 4) : this.sabado());
 
   /** La gente del ámbito, sin días de más: solo los de esa semana. */
   private readonly gente = computed(() => new Set((this.reporte()?.agentes ?? []).map(a => a.idUsuario)));
@@ -816,7 +818,7 @@ export class AsistenciaCierreComponent {
       next: () => {
         this.guardando.set(false);
         this.confirmando.set(false);
-        this.toast.success(`Semana del ${this.corta(this.lunes())} al ${this.corta(this.sabado())} cerrada`);
+        this.toast.success(`Semana del ${this.corta(this.lunes())} al ${this.corta(this.fin())} cerrada`);
         this.cargarCierres();
       },
       error: respuesta => {

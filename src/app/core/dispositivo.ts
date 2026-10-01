@@ -1,19 +1,22 @@
 /**
- * Bloqueo momentáneo por tipo de equipo (decisión del 25/09/2026): Cashi solo
- * se abre desde una computadora o una laptop. Celulares, tablets y lo demás
- * quedan fuera. El backend y el gateway rechazan lo mismo por el User-Agent;
- * esto evita que la aplicación siquiera cargue.
+ * Cashi solo se abre desde una computadora o una laptop. Celulares, tablets y
+ * lo demás quedan fuera. El backend y el gateway rechazan lo mismo por el
+ * User-Agent; esto evita que la aplicación siquiera cargue.
  *
- * Es de momento: el bloqueo de la oficina será por la IP fija en EC2 cuando
- * el proveedor la entregue, y la VPN queda para el trabajo remoto.
- *
- * Además del User-Agent (lo que pidió el jefe de TI), se mira lo que un
- * celular no puede esconder cambiando a «modo PC»: la pantalla táctil sin
- * puntero fino. Y el iPad, que desde iPadOS 13 se presenta como una Mac.
+ * Además del User-Agent se mira lo que un celular no puede esconder cambiando
+ * a «modo PC»: la pantalla táctil sin puntero fino. Y el iPad, que desde
+ * iPadOS 13 se presenta como una Mac.
  */
 import { MASCOTA_CSS, mascotaHtml } from './mascota-cashi';
+import { environment } from '../../environments/environment';
 
 const MOVIL = /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle|BlackBerry|Opera Mini|IEMobile|webOS/i;
+
+/** Pantalla táctil sin puntero fino: un iPad que dice ser Mac o un celular en «modo PC». */
+function esTactil(): boolean {
+  return (/Macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1)
+    || !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+}
 
 export function esDispositivoPermitido(): boolean {
   const ua = navigator.userAgent || '';
@@ -36,8 +39,29 @@ export function esDispositivoPermitido(): boolean {
   return true;
 }
 
+/**
+ * Deja constancia del intento en Control de Acceso. Sin sesión: el usuario es
+ * el último que entró desde este navegador, si alguno entró. El modelo y el
+ * navegador los lee el backend del User-Agent. Si falla, no pasa nada.
+ */
+function registrarRechazo(): void {
+  let usuario: string | null = null;
+  try {
+    usuario = JSON.parse(localStorage.getItem('callcenter_user') ?? 'null')?.username ?? null;
+  } catch {
+    usuario = null;
+  }
+  fetch(`${environment.apiUrl}/asistencia/acceso/rechazo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario, tactil: esTactil() }),
+    keepalive: true
+  }).catch(() => undefined);
+}
+
 /** En lugar de la aplicación, el aviso con la mascota de Cashi: sin Angular, sin estilos de la app. */
 export function pintarDispositivoNoPermitido(): void {
+  registrarRechazo();
   document.title = 'Cashi · Dispositivo no permitido';
   // El iPhone pinta la franja de la hora y la de la barra de Safari con el fondo
   // de html/body (blanco en la app), no con el del <main>: sin esto se ve cortado.

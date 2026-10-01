@@ -191,7 +191,7 @@ export interface Justificacion {
 
 /**
  * Qué puede hacer quien entra al módulo. RR.HH. es configuración y no un rol:
- * Emily es SUPERVISOR como las demás y lo que la distingue viene de aquí.
+ * quien lo lleva tiene rol SUPERVISOR y lo que lo distingue viene de aquí.
  */
 export interface PerfilAsistencia {
   rrhh: boolean;
@@ -309,7 +309,7 @@ export interface CierreSemana {
  * solicitud, regla, feriado o cierre— con su valor anterior, el nuevo, el
  * motivo y quién lo hizo.
  */
-export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE';
+export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE' | 'VACACIONES' | 'PERSONAL';
 
 export interface CambioAsistencia {
   /** «M-12» para una marca corregida, «A-7» para el resto. */
@@ -445,6 +445,8 @@ export interface PlanSemana {
   /** Todas las de hoy en adelante de la gente del ámbito: el plan que se confirma entero. */
   futuros: BloquePlan[];
   deudas: DeudaPlan[];
+  /** Lo que debe el equipo por días sin asignación: una por mes, con lo de cada asesor. */
+  equipos: DeudaEquipoPlan[];
 }
 
 /** Un día del equipo. `abierto` = sábado sin horario fijo; `noLaborable` = feriado o sin asignación. */
@@ -480,6 +482,145 @@ export interface BloquePlan {
   confirmado: boolean;
   /** Lo que de verdad se quedó, en los días que ya pasaron. */
   hecho: number | null;
+  /** El mes de la deuda del equipo que paga («2026-10»); NULL si es del plan de la persona. */
+  clave: string | null;
+  /** Es del plan del equipo (el mismo bloque para todos), no uno aparte. */
+  equipo: boolean;
+}
+
+/**
+ * Lo que debe el equipo por los días sin asignación de un mes. `clave` es el
+ * mes: con ella se propone y se confirma su plan.
+ */
+export interface DeudaEquipoPlan {
+  clave: string;
+  origen: string;
+  dias: string[];
+  vence: string;
+  gente: SaldoEquipoPlan[];
+}
+
+/** Lo de cada asesor en la deuda del equipo: cuánto debe y cuánto de verdad ya se quedó. */
+export interface SaldoEquipoPlan {
+  idUsuario: number;
+  nombre: string;
+  total: number;
+  recuperado: number;
+  /** Los días del plan en que se quedó menos de lo acordado. */
+  faltaron: { fecha: string; minutos: number }[];
+}
+
+/** Un bloque del plan del equipo propuesto: sale `minutos` después de su `salida`; `confirmado` = ya estaba en el plan. */
+export interface BloqueEquipoPlan {
+  fecha: string;
+  minutos: number;
+  salida: string | null;
+  confirmado: boolean;
+}
+
+/** Lo que propone el sistema para el plan del equipo: sus bloques y los de cada uno aparte. */
+export interface PropuestaEquipoPlan {
+  equipo: BloqueEquipoPlan[];
+  aparte: Record<number, BloqueEquipoPlan[]>;
+  falta: number;
+  mensaje: string;
+}
+
+/** El plan del equipo que se manda: los bloques de todos y los de cada uno aparte. */
+export interface PlanEquipoPedido {
+  equipo: { fecha: string; minutos: number }[];
+  aparte: Record<number, { fecha: string; minutos: number }[]>;
+}
+
+/** Un asesor del control con su ingreso y su cese, según su ficha de Personal. */
+export interface PersonalAsistencia {
+  idUsuario: number;
+  nombre: string;
+  usuario: string;
+  idSubcartera: number | null;
+  subcartera: string | null;
+  fechaIngreso: string | null;
+  fechaCese: string | null;
+}
+
+/** Un hito de la ficha: el ingreso, cada cambio de subcartera y el cese. */
+export interface MovimientoPersonal {
+  tipo: 'ingreso' | 'cambio' | 'cese';
+  fecha: string;
+  titulo: string;
+  detalle: string;
+}
+
+/** La ficha de Personal, con su ámbito de hoy (o el de su último día). */
+export interface FichaPersonal {
+  id: number;
+  tipoDocumento: 'DNI' | 'CE';
+  numeroDocumento: string | null;
+  apellidos: string;
+  nombres: string;
+  fechaNacimiento: string | null;
+  nacionalidad: string | null;
+  estadoCivil: string | null;
+  telefonoMovil: string | null;
+  telefonoFijo: string | null;
+  correo: string | null;
+  direccion: string | null;
+  distrito: string | null;
+  idUsuario: number | null;
+  usuario: string | null;
+  fechaIngreso: string;
+  fechaCese: string | null;
+  motivoCese: string | null;
+  comentarioCese: string | null;
+  idCliente: number | null;
+  cliente: string | null;
+  idCartera: number | null;
+  cartera: string | null;
+  idSubcartera: number | null;
+  subcartera: string | null;
+  movimientos: MovimientoPersonal[];
+}
+
+/** Lo que se manda al registrar o editar una ficha. */
+export interface DatosPersonal {
+  tipoDocumento: 'DNI' | 'CE';
+  numeroDocumento: string;
+  apellidos: string;
+  nombres: string;
+  fechaNacimiento: string;
+  nacionalidad: string | null;
+  estadoCivil: string | null;
+  telefonoMovil: string;
+  telefonoFijo: string | null;
+  correo: string | null;
+  direccion: string | null;
+  distrito: string | null;
+  idUsuario: number | null;
+  fechaIngreso: string;
+  idSubcartera: number | null;
+}
+
+/** Un usuario asesor de Cashi sin ficha, para vincular. */
+export interface UsuarioLibre {
+  idUsuario: number;
+  usuario: string;
+  nombre: string | null;
+}
+
+/** Configuración › Personal › Vacaciones: un rango de un asesor. */
+export interface VacacionesAsesor {
+  id: number;
+  idUsuario: number;
+  nombre: string;
+  usuario: string;
+  subcartera: string | null;
+  fechaDesde: string;
+  fechaHasta: string;
+  dias: number;
+  nota: string | null;
+  registradoPor: string | null;
+  /** false si toca una semana cerrada: ya no se puede anular. */
+  editable: boolean;
 }
 
 export interface DeudaPlan {
@@ -571,6 +712,33 @@ export interface IntentoAcceso {
   origen: string;
   dispositivo: string | null;
   motivo: string;
+}
+
+/** Los intentos de un mismo celular o tablet en un día. */
+export interface RechazoDia {
+  dia: string;
+  /** HH:mm del último intento de ese día. */
+  ultimo: string;
+  usuario: string | null;
+  nombre: string | null;
+  dispositivo: 'Android' | 'iPhone' | 'iPad' | 'Tablet' | 'Otro';
+  modelo: string | null;
+  navegador: string | null;
+  ip: string | null;
+  intentos: number;
+}
+
+export interface IngresoDia {
+  dia: string;
+  usuario: string;
+  sistema: 'WINDOWS' | 'MAC' | 'LINUX' | 'OTRO';
+}
+
+export interface PanelAcceso {
+  hoy: string;
+  ipOficina: string;
+  rechazos: RechazoDia[];
+  ingresos: IngresoDia[];
 }
 
 export interface ControlAcceso {

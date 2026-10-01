@@ -1,253 +1,380 @@
-<div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
-  <div class="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 py-5 md:px-6">
+<div class="flex-1 min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-    <!-- ===================== CABECERA ===================== -->
-    <header class="flex flex-col gap-3">
-      <div class="flex flex-wrap items-end justify-between gap-3">
-        <div class="flex flex-col gap-1">
-          <h1 class="!m-0 text-[22px] font-bold leading-tight">Agenda del bot</h1>
-          <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">
-            Llamadas que dejó Clara y necesitan a una persona: citas pactadas y promesas que hay que seguir.
-            Se llaman desde gestión manual, con la ficha del cliente delante.
-          </p>
-        </div>
+  <!-- ===================== CABECERA ===================== -->
+  <div class="cabecera">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-col gap-[3px]">
+        <h1 class="titulo-pagina">Agenda del bot</h1>
+        <p class="sub">Llamadas de Clara que necesitan a una persona.</p>
+      </div>
+      <button type="button" (click)="cargar()" [class]="ui.botonAlto">
+        <lucide-angular name="refresh-cw" [size]="15" [class.animate-spin]="cargando" class="block"></lucide-angular>
+        Actualizar
+      </button>
+    </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          @if (puedeVerTodas) {
-            <button type="button" (click)="alternarAlcance()"
-                    [class]="ui.botonSecundarioAlto + (verTodas ? ' ' + ui.botonMarcado : '')"
-                    [attr.aria-pressed]="verTodas"
-                    title="Un supervisor no tiene citas propias: lo normal es ver todas">
-              <lucide-angular [name]="verTodas ? 'users' : 'user'" [size]="15"></lucide-angular>
-              {{ verTodas ? 'Todas' : 'Solo las mías' }}
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label [class]="ui.etiqueta" for="dia">Día</label>
+        <div class="flex items-center gap-2">
+          <input id="dia" type="date" [(ngModel)]="filtroDia" (ngModelChange)="pagina = 0"
+                 [class]="ui.campo + ' !w-[160px] tabular-nums'">
+          @if (filtroDia) {
+            <button type="button" (click)="filtroDia = ''; pagina = 0" [class]="ui.botonIcono"
+                    title="Ver todo lo pendiente" aria-label="Quitar el filtro de día">
+              <lucide-angular name="x" [size]="14"></lucide-angular>
             </button>
           }
-          <label class="sr-only" for="fecha-agenda">Día</label>
-          <input id="fecha-agenda" type="date" [ngModel]="fecha" (ngModelChange)="cambiarFecha($event)"
-                 [class]="ui.campo + ' !w-auto'">
-          <button type="button" (click)="cargar()" [class]="ui.botonSecundarioAlto" title="Actualizar">
-            <lucide-angular name="refresh-cw" [size]="15" [class.animate-spin]="cargando"></lucide-angular>
-            Actualizar
-          </button>
         </div>
       </div>
 
-      <!-- Cifras del día: también son el filtro. -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="button" (click)="alternarFiltro('PENDIENTE')" [class]="clasePastilla('PENDIENTE')"
-                [attr.aria-pressed]="filtroEstado === 'PENDIENTE'">
-          <lucide-angular name="clock" [size]="14"></lucide-angular>
-          Pendientes <span class="tabular-nums">{{ contar('PENDIENTE') }}</span>
-        </button>
-        <button type="button" (click)="alternarFiltro('ATENDIDA')" [class]="clasePastilla('ATENDIDA')"
-                [attr.aria-pressed]="filtroEstado === 'ATENDIDA'">
-          <lucide-angular name="check-circle" [size]="14"></lucide-angular>
-          Atendidas <span class="tabular-nums">{{ contar('ATENDIDA') }}</span>
-        </button>
-        <button type="button" (click)="alternarFiltro('NO_CONTESTA')" [class]="clasePastilla('NO_CONTESTA')"
-                [attr.aria-pressed]="filtroEstado === 'NO_CONTESTA'">
-          <lucide-angular name="phone-missed" [size]="14"></lucide-angular>
-          No contestó <span class="tabular-nums">{{ contar('NO_CONTESTA') }}</span>
-        </button>
-        <button type="button" (click)="alternarFiltro('VENCIDA')" [class]="clasePastilla('VENCIDA')"
-                [attr.aria-pressed]="filtroEstado === 'VENCIDA'">
-          <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
-          Sin llamar <span class="tabular-nums">{{ contar('VENCIDA') }}</span>
-        </button>
-        @if (filtroEstado) {
-          <button type="button" (click)="alternarFiltro(filtroEstado)" [class]="ui.botonSecundario">
-            <lucide-angular name="filter-x" [size]="14"></lucide-angular> Quitar filtro
-          </button>
-        }
+      <div class="flex flex-col gap-1.5">
+        <label [class]="ui.etiqueta" for="buscar">Buscar</label>
+        <input id="buscar" type="search" [(ngModel)]="buscar" (ngModelChange)="pagina = 0"
+               placeholder="Cliente, documento o teléfono" [class]="ui.campo + ' !w-[230px]'">
       </div>
-    </header>
-
-    @if (mensaje) {
-      <p role="status" [class]="mensajeError ? ui.aviso : ui.info">{{ mensaje }}</p>
-    }
-
-    <!-- ===================== LISTA ===================== -->
-    @if (error) {
-      <div [class]="ui.tarjeta">
-        <p class="!m-0 flex items-center gap-2 text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">
-          <lucide-angular name="alert-circle" [size]="16"></lucide-angular>
-          No se pudieron cargar las llamadas agendadas.
-        </p>
-        <p class="!m-0" [class]="ui.ayuda">{{ errorMotivo }}</p>
-        <div><button type="button" (click)="cargar()" [class]="ui.botonSecundario">Reintentar</button></div>
-      </div>
-    } @else if (cargando) {
-      <div [class]="ui.tarjeta"><p class="!m-0" [class]="ui.ayuda">Cargando las citas del día…</p></div>
-    } @else if (filas.length === 0) {
-      <div [class]="ui.tarjeta + ' items-center py-10 text-center'">
-        <lucide-angular name="calendar-check" [size]="28" class="text-[#8491a3]"></lucide-angular>
-        <p class="!m-0 text-[14px] font-semibold">
-          {{ filtroEstado ? 'Ninguna cita en ese estado' : 'No hay llamadas agendadas este día' }}
-        </p>
-        <p class="!m-0" [class]="ui.ayuda">
-          {{ filtroEstado ? 'Quita el filtro para ver el resto.' : 'Cuando el bot pacte una cita con un cliente, aparecerá aquí.' }}
-        </p>
-      </div>
-    } @else {
-      <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
-            <thead>
-              <tr>
-                <th [class]="ui.th">Hora</th>
-                <th [class]="ui.th">Cliente</th>
-                <th [class]="ui.th">Qué pasó en la llamada</th>
-                <th [class]="ui.th">Estado</th>
-                <th [class]="ui.th">Atiende</th>
-                <th [class]="ui.th"><span class="sr-only">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a of filas; track a.id) {
-                <tr (click)="abrir(a)" (keydown.enter)="abrir(a)" tabindex="0"
-                    class="cursor-pointer transition-colors hover:bg-[#f8fafc] focus-visible:bg-[#eff5ff] focus-visible:outline-none dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800"
-                    [ngClass]="esInminente(a) ? 'bg-[#fffaf0] dark:bg-amber-950/20' : ''"
-                    [attr.aria-label]="'Ver la cita de ' + (a.nombreCliente || a.telefono)">
-
-                  <td [class]="ui.td + ' whitespace-nowrap'">
-                    <div class="text-[15px] font-bold tabular-nums">{{ hora(a.fechaHoraPactada) }}</div>
-                    <div class="text-[12px] tabular-nums" role="status"
-                         [class]="esInminente(a) ? 'font-semibold text-[#b45309] dark:text-amber-300' : 'text-[#5f6c80] dark:text-slate-400'">
-                      {{ cuentaAtras(a) }}
-                    </div>
-                  </td>
-
-                  <td [class]="ui.td">
-                    <div class="font-semibold">{{ a.nombreCliente || 'Sin nombre' }}</div>
-                    <div class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                      {{ a.documento || '—' }} · {{ a.telefono || 'sin teléfono' }}
-                    </div>
-                  </td>
-
-                  <td [class]="ui.td + ' max-w-[420px]'">
-                    <div class="mb-1 flex flex-wrap items-center gap-1.5">
-                      @if (esDelBot(a)) {
-                        <span [class]="ui.chipBot" title="La pactó el bot durante la llamada">
-                          <lucide-angular name="bot" [size]="12"></lucide-angular> Bot
-                        </span>
-                      } @else {
-                        <span [class]="ui.chip" title="La registró un asesor a mano">
-                          <lucide-angular name="user" [size]="12"></lucide-angular> Asesor
-                        </span>
-                      }
-                      <span [class]="ui.chip">{{ etiquetaMotivo(a.motivo) }}</span>
-                    </div>
-                    <p class="!m-0 line-clamp-2 text-[12.5px] leading-snug text-[#334155] dark:text-slate-300">
-                      {{ a.resumen || 'Sin resumen de la llamada.' }}
-                    </p>
-                  </td>
-
-                  <td [class]="ui.td"><span [class]="claseEstado(a.estado)">{{ etiquetaEstado(a.estado) }}</span></td>
-
-                  <td [class]="ui.td + ' text-[12.5px]' + (a.nombreAgente ? '' : ' text-[#5f6c80] dark:text-slate-400')">
-                    {{ quienLaAtiende(a) }}
-                  </td>
-
-                  <td [class]="ui.td">
-                    <div class="flex items-center justify-end gap-1.5">
-                      <button type="button" (click)="llamar(a, $event)"
-                              [disabled]="!puedeLlamar(a)"
-                              [title]="puedeLlamar(a) ? 'Ir a gestión manual con este cliente' : motivoNoLlamar(a)"
-                              [class]="ui.botonLlamar">
-                        <lucide-angular name="phone" [size]="14"></lucide-angular> Llamar
-                      </button>
-                      <lucide-angular name="chevron-right" [size]="16" class="block text-[#8491a3]"></lucide-angular>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    }
+    </div>
   </div>
 
-  <!-- ===================== FICHA DE LA CITA ===================== -->
-  @if (seleccionada; as a) {
-    <div [class]="ui.fondo" (click)="cerrarDetalle()"></div>
-    <aside class="deslizar fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col overflow-y-auto border-l border-[#e6e9ee] bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
-           role="dialog" aria-modal="true" aria-label="Detalle de la llamada agendada" cdkTrapFocus>
+  <!-- ===================== CONTENIDO ===================== -->
+  <div class="contenido">
+    <div class="tablero grid items-stretch gap-4" [class.con-reparto]="repartidasHoy.length">
 
-      <header class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#eef1f5] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-col gap-1">
-          <h2 class="!m-0 text-[17px] font-bold">{{ a.nombreCliente || 'Sin nombre' }}</h2>
-          <p class="!m-0 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-            {{ a.documento || '—' }} · {{ a.telefono || 'sin teléfono' }}
-          </p>
+      <!-- Cola de lo pendiente -->
+      <div class="flex min-w-0 flex-col gap-2">
+        <div class="cabecera-columna flex-wrap gap-x-3 gap-y-2">
+          <h2 [class]="ui.rotulo">{{ tituloLista }}</h2>
+
+          <div class="flex flex-wrap gap-2">
+            @for (t of tiposConCasos; track t) {
+              <button type="button" (click)="alternarTipo(t)" [attr.aria-pressed]="filtroTipo === t"
+                      class="pastilla-filtro"
+                      [attr.aria-label]="tipos[t].plural + ': ' + contar(t) + ' casos'"
+                      [style.--pf-borde]="filtroTipo === t ? '#0f172a' : tipos[t].rail + '59'"
+                      [style.--pf-fondo]="filtroTipo === t ? '#0f172a' : tipos[t].fondo"
+                      [style.--pf-texto]="filtroTipo === t ? '#ffffff' : tipos[t].texto">
+                <lucide-angular [name]="tipos[t].icono" [size]="13" class="block"></lucide-angular>
+                {{ tipos[t].plural }}<span class="tabular-nums font-bold">{{ contar(t) }}</span>
+              </button>
+            }
+          </div>
+
+          @if (visibles.length > 4) {
+            <div class="ml-auto flex items-center gap-2">
+              <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                {{ desdeFila }}–{{ hastaFila }} de {{ visibles.length }}
+              </span>
+              <button type="button" (click)="pasarPagina(-1)" [disabled]="pagina === 0"
+                      [class]="ui.botonIcono" aria-label="Página anterior">
+                <lucide-angular name="chevron-left" [size]="14"></lucide-angular>
+              </button>
+              <button type="button" (click)="pasarPagina(1)" [disabled]="pagina >= paginas - 1"
+                      [class]="ui.botonIcono" aria-label="Página siguiente">
+                <lucide-angular name="chevron-right" [size]="14"></lucide-angular>
+              </button>
+            </div>
+          }
         </div>
-        <button type="button" (click)="cerrarDetalle()" [class]="ui.cerrar" aria-label="Cerrar">
-          <lucide-angular name="x" [size]="18"></lucide-angular>
+
+        @if (error) {
+          <div [class]="ui.tarjeta + ' gap-2'">
+            <p class="!m-0 flex items-center gap-2 text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">
+              <lucide-angular name="alert-circle" [size]="16"></lucide-angular>
+              No se pudieron cargar los casos.
+            </p>
+            <p class="!m-0" [class]="ui.ayuda">{{ errorMotivo }}</p>
+            <div><button type="button" (click)="cargar()" [class]="ui.botonChico">Reintentar</button></div>
+          </div>
+        } @else if (cargando) {
+          <div [class]="ui.tarjeta"><p class="!m-0" [class]="ui.ayuda">Cargando la agenda…</p></div>
+        } @else if (!filas.length) {
+          <div [class]="ui.vacio">
+            <lucide-angular name="calendar-check" [size]="28" class="mx-auto block text-[#8491a3]"></lucide-angular>
+            <p class="!m-0 mt-2 text-[14px] font-bold">
+              {{ filtroDia ? 'Ese día no dejó nada pendiente'
+                  : (filtroTipo || buscar ? 'Ningún caso con estos filtros'
+                      : (esSupervision ? 'Nada pendiente' : 'No tienes promesas')) }}
+            </p>
+            <p class="!m-0" [class]="ui.ayuda">
+              {{ filtroDia ? 'Quita el filtro de día para ver todo lo pendiente.'
+                  : (filtroTipo || buscar ? 'Quita el filtro para ver el resto.'
+                      : (esSupervision
+                          ? 'Las promesas repartidas están en la tarjeta de cada asesor.'
+                          : 'El sistema te asigna las promesas el día antes de que venzan.')) }}
+            </p>
+          </div>
+        } @else {
+          <div class="flex flex-col gap-2">
+            @for (c of filas; track c.tipo + '-' + c.referencia) {
+              <article class="caso" tabindex="0" role="button"
+                       (click)="abrirCaso(c)" (keydown.enter)="abrirCaso(c)" (keydown.space)="abrirCaso(c)"
+                       [class.caso-cerrado]="!abierto(c)"
+                       [style.border-left-color]="tipos[c.tipo].rail"
+                       [attr.aria-label]="tipos[c.tipo].rotulo + ' de ' + (c.nombreCliente || c.telefono)">
+
+                <div class="flex flex-col">
+                  <span class="text-[15px] font-extrabold leading-tight tabular-nums">{{ hora(c.cuando) }}</span>
+                  <span class="text-[11.5px] tabular-nums"
+                        [ngClass]="inminente(c) ? 'font-semibold text-[#b45309] dark:text-amber-300' : 'text-[#5f6c80] dark:text-slate-400'">
+                    {{ cuentaAtras(c) }}
+                  </span>
+                </div>
+
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span class="text-[13.5px] font-bold">{{ c.nombreCliente || 'Sin nombre' }}</span>
+                    <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                      {{ c.documento || '—' }} · {{ c.telefono || 'sin teléfono' }}
+                    </span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex h-[22px] items-center rounded-full px-2 text-[11.5px] font-semibold"
+                          [style.background]="tipos[c.tipo].fondo" [style.color]="tipos[c.tipo].texto">
+                      {{ tipos[c.tipo].rotulo }}
+                    </span>
+                    <span [class]="insignia(c.seguimiento === 'COMPLETADO' ? 'ok' : 'aviso')">
+                      <lucide-angular [name]="c.seguimiento === 'COMPLETADO' ? 'check' : 'clock'" [size]="12"></lucide-angular>
+                      {{ c.seguimiento === 'COMPLETADO' ? 'Completado' : 'Pendiente' }}
+                    </span>
+                    @if (c.tipo === 'PROMESA' && (c.diasVencida ?? 0) > 0) {
+                      <span [class]="insignia('malo')">Vencida {{ c.diasVencida }} d</span>
+                    }
+                    @if (etiquetaMotivo(c.motivo)) {
+                      <span [class]="insignia('gris')">{{ etiquetaMotivo(c.motivo) }}</span>
+                    }
+                    @if (esSupervision && c.nombreAsignado) {
+                      <span [class]="insignia('gris')">
+                        <lucide-angular name="user" [size]="12"></lucide-angular> {{ c.nombreAsignado }}
+                      </span>
+                    }
+                    <span [class]="insignia('gris')">
+                      <lucide-angular name="bot" [size]="12"></lucide-angular> Bot
+                    </span>
+                  </div>
+
+                  <p class="!m-0 line-clamp-2 text-[12.5px] leading-snug text-[#5f6c80] dark:text-slate-400">
+                    {{ c.resumen || 'El bot no dejó resumen de esta llamada.' }}
+                  </p>
+                </div>
+
+                <div class="caso-dato">
+                  @if (c.tipo === 'PROMESA') {
+                    <div class="flex flex-col items-end gap-0.5">
+                      <span class="text-[15px] font-extrabold leading-tight tabular-nums">{{ soles(c.monto) }}</span>
+                      <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                        Cuota {{ c.numeroCuota }} de {{ c.totalCuotas }}
+                      </span>
+                    </div>
+                  } @else if (c.tipo === 'CITA') {
+                    <div class="flex flex-col items-end gap-0.5">
+                      <span [class]="insignia(estadoCita(c).tono)">{{ estadoCita(c).texto }}</span>
+                    </div>
+                  } @else {
+                    <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ etiquetaMotivo(c.motivo) }}</span>
+                  }
+
+                  <button type="button" (click)="llamar(c, $event)" [disabled]="!puedeLlamar(c)"
+                          [title]="puedeLlamar(c) ? 'Abrir gestión manual con este cliente' : motivoNoLlamar(c)"
+                          [class]="puedeLlamar(c) ? ui.botonPrimarioChico : ui.botonChico">
+                    <lucide-angular name="phone" [size]="13" class="block"></lucide-angular>
+                    Llamar
+                  </button>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Lo que repartió el sistema esta mañana -->
+      @if (repartidasHoy.length) {
+        <aside class="reparto">
+          <div class="cabecera-columna justify-between">
+            <h2 [class]="ui.rotulo">Promesas repartidas hoy</h2>
+            <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400" role="status">
+              {{ totalRepartidoHoy }}
+            </span>
+          </div>
+
+          <div class="asesores">
+            @for (r of repartidasHoy; track r.idAgente; let i = $index) {
+              <button type="button" class="asesor" (click)="abrirAsesor(r)"
+                      [attr.aria-pressed]="asesorAbierto?.idAgente === r.idAgente"
+                      [style.--tono]="tonoDe(r.subcartera)"
+                      [style.animation-delay]="(i * 60) + 'ms'"
+                      [attr.aria-label]="r.nombre + ', ' + (r.sinGestionar
+                        ? r.sinGestionar + ' de ' + r.cuantas + ' sin gestionar'
+                        : 'al día con sus ' + r.cuantas)">
+                <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span class="truncate text-[13px] font-bold leading-tight">{{ r.nombre }}</span>
+                  <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ soles(r.monto) }}</span>
+                  <span class="text-[11.5px] font-semibold"
+                        [style.color]="r.sinGestionar ? '#b45309' : '#15803d'">
+                    {{ r.sinGestionar ? r.sinGestionar + ' sin gestionar' : 'Al día' }}
+                  </span>
+                </span>
+                <span class="figura-cuenta">
+                  <span class="figura" aria-hidden="true" [innerHTML]="avatarDe(r)"></span>
+                  <span class="marca" aria-hidden="true"
+                        [style.background]="r.sinGestionar ? '#b45309' : '#15803d'">{{ r.cuantas }}</span>
+                </span>
+              </button>
+            }
+          </div>
+        </aside>
+      }
+    </div>
+  </div>
+
+  <!-- ===================== FICHA DEL CASO ===================== -->
+  @if (casoAbierto; as c) {
+    <div class="velo fundir" (click)="cerrarFicha()"></div>
+    <aside class="ficha deslizar" role="dialog" aria-modal="true" aria-label="Detalle del caso" cdkTrapFocus>
+      <header class="ficha-cabecera">
+        <div class="flex flex-col gap-1.5">
+          <h2 class="!m-0 text-[15px] font-extrabold leading-tight">{{ c.nombreCliente || 'Sin nombre' }}</h2>
+          <p class="!m-0 text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+            {{ c.documento || '—' }} · {{ c.telefono || 'sin teléfono' }}
+          </p>
+          <span class="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span class="inline-flex h-[22px] items-center rounded-full px-2 text-[11.5px] font-semibold"
+                  [style.background]="tipos[c.tipo].fondo" [style.color]="tipos[c.tipo].texto">
+              {{ tipos[c.tipo].rotulo }}
+            </span>
+            <span [class]="insignia(c.seguimiento === 'COMPLETADO' ? 'ok' : 'aviso')">
+              {{ c.seguimiento === 'COMPLETADO' ? 'Completado' : 'Pendiente' }}
+            </span>
+            @if (etiquetaMotivo(c.motivo)) {
+              <span [class]="insignia('gris')">{{ etiquetaMotivo(c.motivo) }}</span>
+            }
+          </span>
+        </div>
+        <button type="button" (click)="cerrarFicha()" [class]="ui.cerrar" aria-label="Cerrar">
+          <lucide-angular name="x" [size]="15"></lucide-angular>
         </button>
       </header>
 
       <div class="flex flex-col gap-4 px-[18px] py-4">
         <div class="grid grid-cols-2 gap-2">
-          <div [class]="ui.dato">
-            <span [class]="ui.datoTitulo">Hora pactada</span>
-            <span [class]="ui.datoValor">{{ hora(a.fechaHoraPactada) }}</span>
-            <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ cuentaAtras(a) }}</span>
+          <div class="dato">
+            <span [class]="ui.etiqueta">Cuándo</span>
+            <span class="dato-valor tabular-nums">{{ hora(c.cuando) }} · {{ diaLegible(c.cuando) }}</span>
           </div>
-          <div [class]="ui.dato">
-            <span [class]="ui.datoTitulo">Estado</span>
-            <span class="mt-0.5"><span [class]="claseEstado(a.estado)">{{ etiquetaEstado(a.estado) }}</span></span>
-            @if (a.detalleCierre) {
-              <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ a.detalleCierre }}</span>
-            }
+          @if (c.tipo === 'PROMESA') {
+            <div class="dato">
+              <span [class]="ui.etiqueta">Compromiso</span>
+              <span class="dato-valor tabular-nums">{{ soles(c.monto) }} · cuota {{ c.numeroCuota }} de {{ c.totalCuotas }}</span>
+            </div>
+          } @else {
+            <div class="dato">
+              <span [class]="ui.etiqueta">Estado</span>
+              <span class="dato-valor">{{ c.tipo === 'CITA' ? estadoCita(c).texto : etiquetaMotivo(c.motivo) || '—' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span [class]="ui.etiqueta">Resumen de la llamada</span>
+          <p class="!m-0 text-[13px] leading-relaxed">{{ c.resumen || 'El bot no dejó resumen de esta llamada.' }}</p>
+          @if (c.gestionadoPor) {
+            <p class="!m-0" [class]="ui.ayuda">Gestionado por {{ c.gestionadoPor }} · {{ hora(c.gestionadoAt) }}</p>
+          }
+        </div>
+
+        @if (negociado(c).length) {
+          <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+            <span [class]="ui.etiqueta">Lo que se habló</span>
+            <div class="flex flex-col gap-1.5">
+              @for (l of negociado(c); track l.rotulo) {
+                <div class="linea-hablado">
+                  <span class="linea-rotulo">{{ l.rotulo }}</span>
+                  <span class="linea-valor">{{ l.valor }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+          <button type="button" (click)="llamar(c)" [disabled]="!puedeLlamar(c)"
+                  [class]="ui.botonPrimario + ' w-full'">
+            <lucide-angular name="phone" [size]="15" class="block"></lucide-angular>
+            Llamar desde gestión manual
+          </button>
+          @if (!puedeLlamar(c)) {
+            <p class="!m-0" [class]="ui.ayuda">{{ motivoNoLlamar(c) }}</p>
+          }
+        </div>
+
+      </div>
+    </aside>
+  }
+
+  <!-- ===================== FICHA DEL ASESOR ===================== -->
+  @if (asesorAbierto; as r) {
+    <div class="velo fundir" (click)="cerrarFicha()"></div>
+    <aside class="ficha deslizar" role="dialog" aria-modal="true"
+           [attr.aria-label]="'Promesas de ' + r.nombre" cdkTrapFocus>
+      <header class="ficha-cabecera">
+        <div class="flex items-center gap-2.5" [style.--tono]="tonoDe(r.subcartera)">
+          <span class="figura" aria-hidden="true" [innerHTML]="avatarDe(r)"></span>
+          <div class="flex flex-col">
+            <h2 class="!m-0 text-[15px] font-extrabold leading-tight">{{ r.nombre }}</h2>
+            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ r.subcartera || 'Sin subcartera' }}</span>
+          </div>
+        </div>
+        <button type="button" (click)="cerrarFicha()" [class]="ui.cerrar" aria-label="Cerrar">
+          <lucide-angular name="x" [size]="15"></lucide-angular>
+        </button>
+      </header>
+
+      <div class="flex flex-col gap-4 px-[18px] py-4">
+        <div class="grid grid-cols-2 gap-2">
+          <div class="dato">
+            <span [class]="ui.etiqueta">Repartidas hoy</span>
+            <span class="dato-valor tabular-nums">{{ r.cuantas }}</span>
+          </div>
+          <div class="dato">
+            <span [class]="ui.etiqueta">Comprometido</span>
+            <span class="dato-valor tabular-nums">{{ soles(r.monto) }}</span>
           </div>
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <span [class]="ui.etiqueta">Qué pasó en la llamada</span>
-          <p class="!m-0 text-[13px] leading-relaxed text-[#334155] dark:text-slate-300">
-            {{ a.resumen || 'El bot no dejó resumen de esta llamada.' }}
-          </p>
-          <div class="mt-1 flex flex-wrap items-center gap-1.5">
-            @if (esDelBot(a)) {
-              <span [class]="ui.chipBot"><lucide-angular name="bot" [size]="12"></lucide-angular> Agendada por el bot</span>
-            } @else {
-              <span [class]="ui.chip">
-                <lucide-angular name="user" [size]="12"></lucide-angular>
-                Agendada por {{ a.nombreAgente || 'un asesor' }}
-              </span>
+          <span [class]="ui.etiqueta">Sus promesas</span>
+          <div class="flex flex-col gap-1.5">
+            @for (c of promesasDe(r); track c.referencia) {
+              <button type="button" class="fila-promesa" (click)="abrirCaso(c)">
+                <span class="flex min-w-0 flex-col items-start gap-1">
+                  <span class="truncate text-[13px] font-bold">{{ c.nombreCliente || 'Sin nombre' }}</span>
+                  <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                    {{ c.documento }} · {{ cuentaAtras(c).toLowerCase() }}
+                  </span>
+                  <span [class]="insignia(marcaDePromesa(c).tono)">{{ marcaDePromesa(c).texto }}</span>
+                </span>
+                <span class="shrink-0 text-[13px] font-extrabold tabular-nums">{{ soles(c.monto) }}</span>
+              </button>
             }
-            <span [class]="ui.chip">{{ etiquetaMotivo(a.motivo) }}</span>
-            <span [class]="ui.chip">Atiende: {{ quienLaAtiende(a) }}</span>
           </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-          <button type="button" (click)="llamar(a)" [disabled]="!puedeLlamar(a)"
-                  [title]="puedeLlamar(a) ? 'Ir a gestión manual con este cliente' : motivoNoLlamar(a)"
+        <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+          <button type="button" (click)="recordar(r)" [disabled]="guardando || !r.sinGestionar"
+                  [title]="r.sinGestionar ? 'Avisarle que revise su agenda' : 'Ya las trabajó todas'"
                   [class]="ui.botonPrimario + ' w-full'">
-            <lucide-angular name="phone" [size]="16"></lucide-angular>
-            Llamar desde gestión manual
+            <lucide-angular name="bell" [size]="15" class="block"></lucide-angular>
+            Recordarle que revise su agenda
           </button>
-          @if (!puedeLlamar(a)) {
-            <p class="!m-0" [class]="ui.ayuda">{{ motivoNoLlamar(a) }}</p>
+          @if (!r.sinGestionar) {
+            <p class="!m-0" [class]="ui.ayuda">Ya trabajó las {{ r.cuantas }} que le tocaron hoy.</p>
           }
         </div>
-
-        @if (abierta(a)) {
-          <div class="flex flex-col gap-2 border-t border-[#eef1f5] pt-4 dark:border-slate-800">
-            <span [class]="ui.etiqueta">Cuando termines la gestión</span>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" (click)="cerrarCita(a, true)" [disabled]="cerrando" [class]="ui.botonSecundario">
-                <lucide-angular name="check" [size]="14"></lucide-angular> Marcar atendida
-              </button>
-              <button type="button" (click)="cerrarCita(a, false)" [disabled]="cerrando" [class]="ui.botonSecundario">
-                <lucide-angular name="phone-missed" [size]="14"></lucide-angular> No contestó
-              </button>
-            </div>
-            <p class="!m-0" [class]="ui.ayuda">La cita se queda en la lista con el estado que le pongas.</p>
-          </div>
-        }
       </div>
     </aside>
+  }
+
+  @if (aviso) {
+    <div class="aviso-toast fundir" role="status">{{ aviso }}</div>
   }
 </div>

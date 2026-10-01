@@ -51,6 +51,7 @@ export class InactivityService {
       .pipe(debounceTime(1000)) // Evitar múltiples eventos en poco tiempo
       .subscribe(() => {
         this.lastActivityTime = Date.now();
+        this.avisarAsistencia();
       });
 
     // Verificar inactividad cada segundo

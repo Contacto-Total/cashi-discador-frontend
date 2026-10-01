@@ -15,8 +15,7 @@ import { PaginadorComponent, pagina } from './paginador.component';
  * Son DOS decisiones y no una: la supervisora REVISA —confirma que la ausencia
  * ocurrió— y RR.HH. APRUEBA —decide si se paga y si se recupera—. Por eso los
  * botones cambian según el estado de la fila y nunca sale «Aprobar» sobre algo
- * que la supervisora aún no ha visto: es lo que pidió Emily, que a ella solo le
- * llegue lo ya revisado.
+ * que la supervisora aún no ha visto: a RR.HH. solo le llega lo ya revisado.
  *
  * RR.HH. no registra solicitudes: las registra el asesor desde Mi Asistencia o
  * su supervisora desde Asistencia del Equipo, y aquí solo se revisan y se

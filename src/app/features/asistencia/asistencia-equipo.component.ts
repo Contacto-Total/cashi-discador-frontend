@@ -11,7 +11,7 @@ import { AsistenciaService } from './asistencia.service';
 import { AsistenciaReporte, Justificacion, PerfilAsistencia, TipoDia } from './asistencia.models';
 import {
   ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
-  errorDeRecuperacion, fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
+  fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
 } from './asistencia.estilos';
 import { Visor, VisorArchivoComponent } from './visor-archivo.component';
 import { PaginadorComponent, pagina } from './paginador.component';
@@ -558,16 +558,9 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 }
               </select>
             </div>
-            @if (esRecuperacion()) {
-              <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-origen">Recupera lo del</label>
-                <input id="eq-origen" type="date" [class]="estilos.campo" [max]="hoyTexto"
-                       [(ngModel)]="nueva.fechaOrigen">
-              </div>
-            }
             <div class="flex gap-3">
               <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-desde">{{ esRecuperacion() ? 'Recupera desde' : 'Desde' }}</label>
+                <label [class]="estilos.etiqueta" for="eq-desde">Desde</label>
                 <input id="eq-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
                        [(ngModel)]="nueva.fechaDesde">
               </div>
@@ -577,22 +570,11 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                        [(ngModel)]="nueva.fechaHasta">
               </div>
             </div>
-            @if (esRecuperacion()) {
-              <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-minutos">Minutos extra por día</label>
-                <input id="eq-minutos" type="number" min="5" max="60" step="5" [class]="estilos.campo"
-                       [(ngModel)]="nueva.minutosExtra">
-                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                  Esos días sale más tarde. La tardanza igual cuenta para el límite.
-                </p>
-              </div>
-            }
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-comentario">Comentario</label>
               <textarea id="eq-comentario" rows="3" maxlength="500" [class]="estilos.area" placeholder="Qué pasó, en una línea"
                         [(ngModel)]="nueva.comentario"></textarea>
             </div>
-            @if (!esRecuperacion()) {
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-adjunto">Certificado o constancia</label>
               <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="!bg-transparent [font:revert] file:[all:revert]"
@@ -601,7 +583,6 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
                 {{ tipoElegido()?.exigeCertificado ? 'Obligatorio para este tipo' : 'Opcional' }} · hasta 10 MB
               </p>
             </div>
-            }
             @if (error()) {
               <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
             }
@@ -670,8 +651,7 @@ export class AsistenciaEquipoComponent implements OnInit {
   readonly error = signal('');
   private archivo: File | null = null;
   nueva = { idUsuario: null as number | null, idTipoDia: null as number | null,
-            fechaDesde: hoy(), fechaHasta: hoy(), comentario: '',
-            fechaOrigen: hoy(), minutosExtra: null as number | null };
+            fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
   protected readonly hoyTexto = hoy();
   protected readonly detalleRecuperacion = detalleRecuperacion;
   protected readonly aviso = avisoDeCierre('supervisora');
@@ -886,7 +866,8 @@ export class AsistenciaEquipoComponent implements OnInit {
       }
     });
     this.servicio.tiposDeDia().subscribe({
-      next: t => this.tipos.set(t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo))),
+      // La recuperación no se pide: la planifica RR.HH.
+      next: t => this.tipos.set(t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo) && x.codigo !== RECUPERACION)),
       error: () => this.tipos.set([])
     });
   }
@@ -1062,14 +1043,9 @@ export class AsistenciaEquipoComponent implements OnInit {
     return primerDiaPermitido(this.tipoElegido());
   }
 
-  esRecuperacion(): boolean {
-    return this.tipoElegido()?.codigo === RECUPERACION;
-  }
-
   abrirRegistro(): void {
     this.nueva = { idUsuario: this.gente()[0]?.idUsuario ?? null, idTipoDia: this.tipos()[0]?.id ?? null,
-                   fechaDesde: hoy(), fechaHasta: hoy(), comentario: '',
-                   fechaOrigen: hoy(), minutosExtra: null };
+                   fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
     this.archivo = null;
     this.error.set('');
     this.registrando.set(true);
@@ -1094,12 +1070,6 @@ export class AsistenciaEquipoComponent implements OnInit {
       this.error.set(avisoAnticipacion(tipo));
       return;
     }
-    const recupera = tipo.codigo === RECUPERACION;
-    const errorRecuperacion = recupera ? errorDeRecuperacion(this.nueva) : null;
-    if (errorRecuperacion) {
-      this.error.set(errorRecuperacion);
-      return;
-    }
     if (tipo.exigeCertificado && !this.archivo) {
       this.error.set(`${tipo.nombre} necesita certificado adjunto`);
       return;
@@ -1113,9 +1083,7 @@ export class AsistenciaEquipoComponent implements OnInit {
       fechaDesde: this.nueva.fechaDesde,
       fechaHasta: this.nueva.fechaHasta,
       comentario: this.nueva.comentario.trim() || undefined,
-      archivo: recupera ? null : this.archivo,
-      minutosExtra: recupera ? Number(this.nueva.minutosExtra) : null,
-      fechaOrigen: recupera ? this.nueva.fechaOrigen : null
+      archivo: this.archivo
     }).subscribe({
       next: () => {
         this.guardando.set(false);

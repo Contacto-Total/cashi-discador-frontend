@@ -26,6 +26,19 @@ export class AgentService {
     return this.http.post<AgentStatus>(`${this.apiUrl}/${agentId}/status`, request);
   }
 
+  /**
+   * Endpoints de SISTEMA para el ciclo de una llamada. Van por aca y no por
+   * changeAgentStatus porque el endpoint manual rechaza cambios mientras el asesor
+   * esta en llamada o tipificando, que es justo cuando arranca una rellamada.
+   */
+  iniciarLlamadaSistema(agentId: number, notas: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${agentId}/sistema/iniciar-llamada`, { notas });
+  }
+
+  iniciarTipificacionSistema(agentId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${agentId}/sistema/iniciar-tipificacion`, {});
+  }
+
   getAvailableAgents(): Observable<User[]> {
     return this.http.get<User[]>(`${this.apiUrl}/available`);
   }
