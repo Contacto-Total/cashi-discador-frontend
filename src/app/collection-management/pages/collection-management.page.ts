@@ -3069,7 +3069,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       value: data.saldoRestante,
       field: 'saldo_continuidad',
       restriccionFecha: 'SIN_RESTRICCION',
-      generaCartaAcuerdo: false
+      generaCartaAcuerdo: false,
+      maxCuotas: 24
     }];
   });
 
