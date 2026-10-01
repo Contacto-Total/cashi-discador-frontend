@@ -34,9 +34,14 @@ export interface Subcartera {
   descripcion?: string;
   idCartera?: number;
   estaActivo?: boolean;
+  /** Comisiones: carteras que se comisionan aparte (Tramo Propio: ANTIGUA y NUEVA); null en las demás */
+  grupos?: GrupoComision[] | null;
 }
 
 // ==================== PERÍODOS DE COMISIÓN ====================
+
+/** Tramo Propio se comisiona en dos carteras (CP Antigua y CP Nueva); las demás subcarteras son GENERAL */
+export type GrupoComision = 'GENERAL' | 'ANTIGUA' | 'NUEVA';
 
 /** Qué se mide contra la meta: todo lo pagado, o solo lo pagado por clientes CONTENIDO */
 export type TipoMetrica = 'RECAUDO' | 'CONTENCION';
@@ -108,23 +113,12 @@ export interface LineaDesglose {
   monto: number;
 }
 
-/** Rol de Cashi */
-export interface RolDTO {
-  idRol: number;
-  nombreRol: string;
-}
-
-/** Rol de Cashi para elegir el rol de asesores */
-export interface RolCashi {
-  idRol: number;
-  nombreRol: string;
-  asignadoASubcartera: boolean;
-}
-
-/** Candidato a asesor */
-export interface UsuarioCashi {
+/** Candidato a asesor: el personal con la subcartera asignada en el mes */
+export interface CandidatoAsesor {
   idUsuario: number;
   nombre: string | null;
+  /** Tramo Propio: la otra cartera en la que ya es asesor este mes (no se puede elegir); null si está libre */
+  participaEn: string | null;
 }
 
 /** Candidato a supervisor */
@@ -140,10 +134,11 @@ export interface PeriodoComision {
   nombreSubcartera: string;
   anio: number;
   mes: number;
+  grupo: GrupoComision;
   tipoMetrica: TipoMetrica;
   /** Meta INTERNA del reporte de producción */
   metaGrupal: number;
-  /** Meta del mes ajustada solo para comisiones; null = la INTERNA */
+  /** Meta del mes ajustada solo para comisiones; null = la INTERNA. En Tramo Propio, la meta de la cartera escrita a mano */
   metaAjustada: number | null;
   /** La que se usa en el cálculo */
   metaDelMes: number;
@@ -162,7 +157,6 @@ export interface PeriodoComision {
   /** Días hábiles del mes (lunes a viernes, sin feriados) */
   diasHabiles: number;
   totalComisiones: number;
-  rolAsesor: RolDTO | null;
   escalas: EscalaComision[];
   /** Los niveles alcanzados de la escala del asesor se suman */
   escalaAcumulativa: boolean;
@@ -216,6 +210,7 @@ export interface VistaPeriodo {
   nombreSubcartera: string | null;
   anio: number;
   mes: number;
+  grupo: GrupoComision;
   futuro: boolean;
   /** null = el mes no está configurado */
   reporte: ReportePeriodo | null;
@@ -226,9 +221,8 @@ export interface VistaPeriodo {
     /** Hasta qué día llegaron pagos del banco */
     ultimaFechaBanco: string | null;
   };
-  /** Meta INTERNA del reporte de producción; null si no está registrada */
+  /** Meta INTERNA del reporte de producción; null si no está registrada. En Tramo Propio es la de toda la subcartera */
   metaInterna: number | null;
-  rolSugerido: RolDTO | null;
   /** Días hábiles del mes para la subcartera */
   diasHabiles: number;
   /** Feriados del mes que caen de lunes a viernes (yyyy-mm-dd) */
@@ -258,10 +252,11 @@ export interface ConfiguracionPeriodo {
   idSubcartera: number;
   anio: number;
   mes: number;
+  grupo: GrupoComision;
   tipoMetrica: TipoMetrica;
-  idRolAsesor: number;
   asesores: AsesorConfig[];
   idSupervisor: number | null;
+  /** En Tramo Propio es obligatoria: la meta de la cartera, escrita a mano */
   metaAjustada: number | null;
   escalas: EscalaComision[];
   escalaAcumulativa: boolean;
@@ -279,7 +274,8 @@ export interface AgregarParticipanteRequest {
 
 /**
  * Fila de comision_detalle: un pago que suma a un asesor y cómo va el asesor hasta ese pago.
- * RECAUDO llena recaudo y recaudoAcumulado; CONTENCION llena las de contenido.
+ * RECAUDO llena recaudo y recaudoAcumulado. CONTENCION: recaudo = lo pagado (no suma); recaudoContenido =
+ * el capital asignado que suma este pago (el del cliente en su primer pago del mes, 0 en los siguientes).
  */
 export interface DetalleComision {
   idResultado: number;

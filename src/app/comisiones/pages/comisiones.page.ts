@@ -5,10 +5,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AppNumberPipe, AppDateTimePipe } from '@/shared/pipes/format.pipes';
 import { ToastService } from '@/shared/services/toast.service';
 import { ComisionesService } from '../services/comisiones.service';
-import { Cartera, Inquilino, ReportePeriodo, Subcartera, VistaPeriodo } from '../models/comision.model';
+import { Cartera, GrupoComision, Inquilino, ReportePeriodo, Subcartera, VistaPeriodo } from '../models/comision.model';
 import {
-  ESTADO_VISTA_INFO, EstadoVista, METRICA_INFO, codigoPeriodo, descargar, diaMes, estadoDeVista, mensajeError, nombreArchivo, nombreMes,
-  nombreRol
+  ESTADO_VISTA_INFO, EstadoVista, GRUPO_INFO, METRICA_INFO, codigoPeriodo, descargar, diaMes, estadoDeVista, mensajeError, nombreArchivo,
+  nombreConGrupo, nombreMes
 } from '../comisiones.util';
 import { CmxIconComponent } from '../components/cmx-icon.component';
 import { PeriodoPickerComponent } from '../components/periodo-picker.component';
@@ -32,13 +32,26 @@ const VISTAS: { id: Vista; etiqueta: string }[] = [
 const CLAVE_SUBCARTERA = 'cmx.subcartera';
 const REFRESCO_MS = 60_000;
 
+/** Cartera de Tramo Propio leída de la URL o del almacenamiento local */
+function aGrupo(valor: string | null | undefined): GrupoComision | null {
+  return valor === 'ANTIGUA' || valor === 'NUEVA' ? valor : null;
+}
+
+/** Una opción del selector de subcartera: Tramo Propio sale dos veces, una por cartera */
+interface OpcionSubcartera {
+  valor: string;
+  id: number;
+  grupo: GrupoComision | null;
+  etiqueta: string;
+}
+
 /**
  * Módulo de comisiones.
- * Se elige el periodo (mes) y la subcartera (Proveedor → Cartera → Subcartera). Cada mes se configura por
- * su cuenta (pestañas Comisiones y Bonos): al guardar nace el período. El cálculo es manual: el botón
- * Recalcular hace el select de los pagos conciliados y guarda el resultado. Cerrar congela el último
- * recálculo (se puede reabrir).
- * Subcartera, periodo y pestaña viven en la URL.
+ * Se elige el periodo (mes) y la subcartera (Proveedor → Cartera → Subcartera; Tramo Propio en sus dos
+ * carteras, CP Antigua y CP Nueva). Cada mes se configura por su cuenta (pestañas Comisiones y Bonos): al
+ * guardar nace el período. El cálculo es manual: el botón Recalcular hace el select de los pagos conciliados
+ * y guarda el resultado. Cerrar congela el último recálculo (se puede reabrir).
+ * Subcartera, cartera, periodo y pestaña viven en la URL.
  */
 @Component({
   selector: 'app-comisiones',
@@ -70,7 +83,7 @@ const REFRESCO_MS = 60_000;
               <button type="button" class="cmx-arr" (click)="moverMes(-1)" aria-label="Periodo anterior" [attr.title]="codigoVecino(-1)">
                 <cmx-icon name="chevron-left" [size]="16" />
               </button>
-              <cmx-periodo-picker [idSubcartera]="idSubcartera()" [anio]="anio()" [mes]="mes()" [estadoActual]="estado()"
+              <cmx-periodo-picker [idSubcartera]="idSubcartera()" [grupo]="grupo()" [anio]="anio()" [mes]="mes()" [estadoActual]="estado()"
                                   (cambiar)="irA($event.anio, $event.mes)" />
               <button type="button" class="cmx-arr" (click)="moverMes(1)" [disabled]="siguienteEsFuturo()" aria-label="Periodo siguiente"
                       [attr.title]="siguienteEsFuturo() ? codigoVecino(1) + ' se habilita el 01/' + codigoVecino(1).slice(5) : codigoVecino(1)">
@@ -126,8 +139,8 @@ const REFRESCO_MS = 60_000;
               <label for="cmx-f-sub">Subcartera</label>
               <select id="cmx-f-sub" (change)="cambiarSubcartera($any($event.target).value)" [disabled]="!subcarteras().length">
                 @if (!subcarteras().length) { <option value="">—</option> }
-                @for (s of subcarteras(); track s.id) {
-                  <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.nombreSubcartera }}</option>
+                @for (o of opcionesSubcartera(); track o.valor) {
+                  <option [value]="o.valor" [selected]="o.id === idSubcartera() && o.grupo === grupo()">{{ o.etiqueta }}</option>
                 }
               </select>
             </div>
@@ -138,7 +151,7 @@ const REFRESCO_MS = 60_000;
                   @if (!r.periodo.fechaCalculo) { <span class="cmx-fsum-m">Falta recalcular</span> } @else {
                   <span><b class="cmx-num">S/ {{ r.totalComisiones | appNumber:'1.2-2' }}</b> en comisiones@if (r.totalBonos) { · <b class="cmx-num">S/ {{ r.totalBonos | appNumber:'1.2-2' }}</b> en bonos }</span>
                   }
-                  <span class="cmx-fsum-m">{{ nombreRol(r.periodo.rolAsesor?.nombreRol) || 'Sin rol' }} · {{ metricaInfo[r.periodo.tipoMetrica].etiqueta.toLowerCase() }}</span>
+                  <span class="cmx-fsum-m">Midiendo {{ metricaInfo[r.periodo.tipoMetrica].etiqueta.toLowerCase() }}</span>
                 } @else if (estado() === 'SIN_CONFIG') {
                   <span class="cmx-fsum-m">Falta configurar</span>
                 } @else {
@@ -335,9 +348,8 @@ const REFRESCO_MS = 60_000;
                         </div>
                       </div>
                       <div class="cmx-emptycfg-side">
-                        <div><span>Meta interna</span><b class="cmx-num">{{ v.metaInterna != null ? 'S/ ' + (v.metaInterna | appNumber:'1.2-2') : 'Sin registrar' }}</b></div>
-                        <div><span>Conciliado a la fecha</span><b class="cmx-num">S/ {{ v.pagos.total | appNumber:'1.2-2' }}</b></div>
-                        <div><span>Rol sugerido</span><b>{{ nombreRol(v.rolSugerido?.nombreRol) || '—' }}</b></div>
+                        <div><span>{{ grupo() ? 'Meta interna de toda la subcartera' : 'Meta interna' }}</span><b class="cmx-num">{{ v.metaInterna != null ? 'S/ ' + (v.metaInterna | appNumber:'1.2-2') : 'Sin registrar' }}</b></div>
+                        <div><span>{{ grupo() ? 'Conciliado en la subcartera' : 'Conciliado a la fecha' }}</span><b class="cmx-num">S/ {{ v.pagos.total | appNumber:'1.2-2' }}</b></div>
                         <div><span>Pagos hasta</span><b class="cmx-num">{{ v.pagos.ultimaFechaBanco ? diaMes(v.pagos.ultimaFechaBanco) : '—' }}</b></div>
                       </div>
                     </div>
@@ -366,7 +378,6 @@ export class ComisionesPage implements OnInit {
   readonly metricaInfo = METRICA_INFO;
   readonly nombreMes = nombreMes;
   readonly diaMes = diaMes;
-  readonly nombreRol = nombreRol;
 
   private readonly hoy = new Date();
   readonly anio = signal(this.hoy.getFullYear());
@@ -378,6 +389,12 @@ export class ComisionesPage implements OnInit {
   readonly idInquilino = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
+  /** Cartera de Tramo Propio (ANTIGUA / NUEVA); null en las demás subcarteras */
+  readonly grupo = signal<GrupoComision | null>(null);
+
+  readonly opcionesSubcartera = computed(() => this.subcarteras().flatMap<OpcionSubcartera>(s => s.grupos?.length
+    ? s.grupos.map(g => ({ valor: `${s.id}|${g}`, id: s.id, grupo: g, etiqueta: `${s.nombreSubcartera} · ${GRUPO_INFO[g]}` }))
+    : [{ valor: String(s.id), id: s.id, grupo: null, etiqueta: s.nombreSubcartera }]));
 
   readonly vista = signal<VistaPeriodo | null>(null);
   readonly error = signal<string | null>(null);
@@ -403,11 +420,13 @@ export class ComisionesPage implements OnInit {
   });
   readonly estadoInfo = computed(() => ESTADO_VISTA_INFO[this.estado()]);
   readonly codigo = computed(() => codigoPeriodo(this.anio(), this.mes()));
-  readonly nombreSubcartera = computed(() =>
-    this.vista()?.nombreSubcartera ?? this.subcarteras().find(s => s.id === this.idSubcartera())?.nombreSubcartera ?? 'la subcartera');
+  readonly nombreSubcartera = computed(() => nombreConGrupo(
+    this.vista()?.nombreSubcartera ?? this.subcarteras().find(s => s.id === this.idSubcartera())?.nombreSubcartera ?? 'la subcartera',
+    this.grupo()));
   readonly esMesActual = computed(() => this.anio() === this.hoy.getFullYear() && this.mes() === this.hoy.getMonth() + 1);
   readonly siguienteEsFuturo = computed(() => this.anio() * 12 + this.mes() >= this.hoy.getFullYear() * 12 + this.hoy.getMonth() + 1);
-  readonly metaDelMes = computed(() => this.reporte()?.periodo.metaDelMes ?? this.vista()?.metaInterna ?? null);
+  /** En Tramo Propio la meta es la de la cartera (escrita a mano): la INTERNA es de toda la subcartera */
+  readonly metaDelMes = computed(() => this.reporte()?.periodo.metaDelMes ?? (this.grupo() ? null : this.vista()?.metaInterna) ?? null);
 
   /** Lo que el último recálculo no incluye: "3 pagos conciliados nuevos y cambios de configuración" */
   readonly pendientes = computed(() => {
@@ -510,8 +529,10 @@ export class ComisionesPage implements OnInit {
       this.vistaActual.set(vista);
     }
 
-    // Subcartera de la URL o la última usada; si no hay, la primera del primer proveedor
-    const idSub = Number(q.get('subcartera')) || this.subcarteraGuardada();
+    // Subcartera (y cartera de Tramo Propio) de la URL o la última usada; si no hay, la primera del primer proveedor
+    const guardada = this.subcarteraGuardada();
+    const idSub = Number(q.get('subcartera')) || guardada.id;
+    const grupo = q.get('subcartera') ? aGrupo(q.get('grupo')) : guardada.grupo;
     this.service.obtenerInquilinos().subscribe({
       next: lista => {
         this.inquilinos.set(lista);
@@ -519,7 +540,7 @@ export class ComisionesPage implements OnInit {
           this.service.obtenerJerarquiaSubcartera(idSub).subscribe({
             next: j => {
               this.idInquilino.set(j.idInquilino);
-              this.cargarCarteras(j.idInquilino, j.idCartera, idSub);
+              this.cargarCarteras(j.idInquilino, j.idCartera, idSub, grupo);
             },
             error: () => this.elegirPrimeraSubcartera()
           });
@@ -539,7 +560,7 @@ export class ComisionesPage implements OnInit {
       return;
     }
     this.idInquilino.set(id);
-    this.cargarCarteras(id, null, null);
+    this.cargarCarteras(id, null, null, null);
   }
 
   cambiarCartera(valor: string): void {
@@ -547,15 +568,16 @@ export class ComisionesPage implements OnInit {
     if (!id || id === this.idCartera()) {
       return;
     }
-    this.cargarSubcarteras(id, null);
+    this.cargarSubcarteras(id, null, null);
   }
 
+  /** valor = "id" o "id|GRUPO" (Tramo Propio) */
   cambiarSubcartera(valor: string): void {
-    const id = Number(valor);
-    if (!id || id === this.idSubcartera()) {
+    const o = this.opcionesSubcartera().find(x => x.valor === valor);
+    if (!o || (o.id === this.idSubcartera() && o.grupo === this.grupo())) {
       return;
     }
-    this.fijarSubcartera(id);
+    this.fijarSubcartera(o.id, o.grupo);
   }
 
   moverMes(delta: number): void {
@@ -654,7 +676,7 @@ export class ComisionesPage implements OnInit {
     this.service.exportarExcelPeriodo(r.periodo.id).subscribe({
       next: blob => {
         this.descargando.set(false);
-        descargar(blob, nombreArchivo('Comisiones', r.periodo.nombreSubcartera, this.codigo()));
+        descargar(blob, nombreArchivo('Comisiones', nombreConGrupo(r.periodo.nombreSubcartera, r.periodo.grupo), this.codigo()));
       },
       error: e => {
         this.descargando.set(false);
@@ -691,7 +713,7 @@ export class ComisionesPage implements OnInit {
       this.advertencias.set([]);
       this.confirmandoCierre.set(false);
     }
-    this.service.obtenerVista(id, this.anio(), this.mes()).subscribe({
+    this.service.obtenerVista(id, this.anio(), this.mes(), this.grupo()).subscribe({
       next: v => {
         if (pedido === this.pedido) {
           this.vista.set(v);
@@ -723,10 +745,11 @@ export class ComisionesPage implements OnInit {
       return;
     }
     this.idInquilino.set(primero.id);
-    this.cargarCarteras(primero.id, null, null);
+    this.cargarCarteras(primero.id, null, null, null);
   }
 
-  private cargarCarteras(idInquilino: number, idCartera: number | null, idSubcartera: number | null): void {
+  private cargarCarteras(idInquilino: number, idCartera: number | null, idSubcartera: number | null,
+                         grupo: GrupoComision | null): void {
     this.carteras.set([]);
     this.subcarteras.set([]);
     this.service.obtenerCarteras(idInquilino).subscribe({
@@ -740,36 +763,41 @@ export class ComisionesPage implements OnInit {
           this.error.set('El proveedor no tiene carteras.');
           return;
         }
-        this.cargarSubcarteras(cartera.id, idSubcartera);
+        this.cargarSubcarteras(cartera.id, idSubcartera, grupo);
       },
       error: e => this.error.set(mensajeError(e, 'No se pudieron cargar las carteras.'))
     });
   }
 
-  private cargarSubcarteras(idCartera: number, idSubcartera: number | null): void {
+  private cargarSubcarteras(idCartera: number, idSubcartera: number | null, grupo: GrupoComision | null): void {
     this.idCartera.set(idCartera);
     this.subcarteras.set([]);
     this.service.obtenerSubcarteras(idCartera).subscribe({
       next: lista => {
         this.subcarteras.set(lista);
-        const sub = lista.find(s => s.id === idSubcartera) ?? lista[0];
-        if (!sub) {
+        const opciones = this.opcionesSubcartera();
+        const o = opciones.find(x => x.id === idSubcartera && x.grupo === grupo)
+          ?? opciones.find(x => x.id === idSubcartera)
+          ?? opciones[0];
+        if (!o) {
           this.idSubcartera.set(null);
+          this.grupo.set(null);
           this.vista.set(null);
           this.error.set('La cartera no tiene subcarteras.');
           return;
         }
-        this.fijarSubcartera(sub.id);
+        this.fijarSubcartera(o.id, o.grupo);
       },
       error: e => this.error.set(mensajeError(e, 'No se pudieron cargar las subcarteras.'))
     });
   }
 
-  private fijarSubcartera(id: number): void {
+  private fijarSubcartera(id: number, grupo: GrupoComision | null): void {
     this.idSubcartera.set(id);
+    this.grupo.set(grupo);
     this.seleccionSustento.set(null);
     try {
-      localStorage.setItem(CLAVE_SUBCARTERA, String(id));
+      localStorage.setItem(CLAVE_SUBCARTERA, grupo ? `${id}|${grupo}` : String(id));
     } catch {
       // Sin almacenamiento local: se queda solo en la URL
     }
@@ -777,11 +805,12 @@ export class ComisionesPage implements OnInit {
     this.cargarVista();
   }
 
-  private subcarteraGuardada(): number {
+  private subcarteraGuardada(): { id: number; grupo: GrupoComision | null } {
     try {
-      return Number(localStorage.getItem(CLAVE_SUBCARTERA)) || 0;
+      const [id, grupo] = (localStorage.getItem(CLAVE_SUBCARTERA) ?? '').split('|');
+      return { id: Number(id) || 0, grupo: aGrupo(grupo) };
     } catch {
-      return 0;
+      return { id: 0, grupo: null };
     }
   }
 
@@ -791,6 +820,7 @@ export class ComisionesPage implements OnInit {
       replaceUrl: true,
       queryParams: {
         subcartera: this.idSubcartera(),
+        grupo: this.grupo(),
         anio: this.anio(),
         mes: this.mes(),
         vista: this.vistaActual() === 'resultados' ? null : this.vistaActual()

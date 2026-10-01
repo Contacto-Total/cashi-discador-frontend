@@ -4,20 +4,19 @@ import { ToastService } from '@/shared/services/toast.service';
 import { ComisionesService } from '../services/comisiones.service';
 import {
   BonoPeriodo,
+  CandidatoAsesor,
   ConfiguracionPeriodo,
   EscalaComision,
   MetaCantidad,
   ReportePeriodo,
-  RolCashi,
   RolComision,
   SupervisorCashi,
   TipoMetaCantidad,
   TipoMetrica,
-  UsuarioCashi,
   VistaPeriodo
 } from '../models/comision.model';
 import {
-  METRICA_INFO, TIPOS_META, codigoPeriodo, diaMes, diasHabilesDesde, mensajeError, metasParaEditar, nombreRol
+  GRUPO_INFO, METRICA_INFO, TIPOS_META, codigoPeriodo, diaMes, diasHabilesDesde, mensajeError, metasParaEditar
 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -37,12 +36,13 @@ interface MetaEditable {
 let secuencia = 0;
 
 /**
- * Configuración del mes: métrica, rol y asesores que participan (con meta propia si es excepción),
- * supervisor y escala. Con contención (TR3) además: escala por nivel alcanzado o por logros y metas
- * de cantidad del asesor.
- * Cada mes es independiente; "Copiar configuración" trae la métrica, el rol, la escala, las metas
- * de cantidad y los bonos del mes anterior, sin participantes. Guardar no calcula: los resultados
- * cambian al recalcular. Las metas de cantidad se escriben por día hábil.
+ * Configuración del mes: métrica, asesores que participan (el personal con la subcartera asignada en el
+ * mes, con meta propia si es excepción), supervisor y escala. Con contención (TR3) además: escala por
+ * nivel alcanzado o por logros y metas de cantidad del asesor. En Tramo Propio cada cartera (CP Antigua,
+ * CP Nueva) escribe su meta a mano y un asesor va en una sola de las dos.
+ * Cada mes es independiente; "Copiar configuración" trae la métrica, la escala, las metas de cantidad y
+ * los bonos del mes anterior, sin participantes. Guardar no calcula: los resultados cambian al recalcular.
+ * Las metas de cantidad se escriben por día hábil.
  */
 @Component({
   selector: 'cmx-configuracion-tab',
@@ -54,12 +54,12 @@ let secuencia = 0;
       <div>
         @if (copiadoDe()) {
           <div class="cmx-note is-info cmx-enter">
-            Se copió la métrica, el rol, la escala, las metas de cantidad y los bonos de {{ copiadoDe() }}; puedes editarlos.
-            Los participantes y el supervisor no se copian: elígelos para {{ codigo() }}.
+            Se copió la métrica, la escala, las metas de cantidad y los bonos de {{ copiadoDe() }}; puedes editarlos.
+            Los participantes, el supervisor{{ grupo() ? ' y la meta' : '' }} no se copian: elígelos para {{ codigo() }}.
           </div>
         } @else if (esNuevo() && !soloLectura()) {
           <div class="cmx-note cmx-enter">
-            <span style="flex:1;min-width:220px">Empiezas en blanco. Si quieres, trae la métrica, el rol, la escala, las metas y los bonos de {{ codigoAnterior() }} (sin participantes).</span>
+            <span style="flex:1;min-width:220px">Empiezas en blanco. Si quieres, trae la métrica, la escala, las metas y los bonos de {{ codigoAnterior() }} (sin participantes).</span>
             <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="copiando()" (click)="copiarAnterior()">
               <cmx-icon name="copy" [size]="15" /> {{ copiando() ? 'Copiando…' : 'Copiar configuración de ' + codigoAnterior() }}
             </button>
@@ -67,6 +67,26 @@ let secuencia = 0;
         }
 
         <!-- Meta -->
+        @if (grupo(); as g) {
+        <section class="cmx-card cmx-enter">
+          <div class="cmx-card-h">Meta del mes de {{ grupoInfo[g] }}<em>Se escribe a mano: Tramo Propio tiene dos carteras con metas distintas</em></div>
+          <div class="cmx-card-b">
+            <div class="cmx-field">
+              <label for="cmx-meta-grupo">Meta mensual de {{ grupoInfo[g] }} en {{ codigo() }}</label>
+              <span class="cmx-money" style="max-width:240px">
+                <span>S/</span>
+                <input id="cmx-meta-grupo" type="number" min="0" step="100" [value]="metaAjustada()" [disabled]="soloLectura()"
+                       placeholder="Ej. 40200" (input)="cambiarMetaGrupo($any($event.target).value)" />
+              </span>
+              <span class="cmx-muted-txt">
+                El reporte de producción tiene una sola meta para toda la subcartera
+                ({{ vista().metaInterna != null ? 'S/ ' + (vista().metaInterna! | appNumber:'1.2-2') : 'sin registrar' }}); aquí va solo la de
+                {{ grupoInfo[g] }}. Sin meta no se puede recalcular.
+              </span>
+            </div>
+          </div>
+        </section>
+        } @else {
         <section class="cmx-card cmx-enter">
           <div class="cmx-card-h">Meta del mes<em>Meta INTERNA del reporte de producción</em></div>
           <div class="cmx-card-b cmx-metabox">
@@ -83,6 +103,7 @@ let secuencia = 0;
             </span>
           </div>
         </section>
+        }
 
         <!-- Métrica -->
         <section class="cmx-card cmx-enter" style="--i:1">
@@ -101,8 +122,9 @@ let secuencia = 0;
               @if (tipoMetrica() == null) {
                 Elige cómo se mide este periodo. No hay una opción marcada por defecto.
               } @else if (tipoMetrica() === 'CONTENCION') {
-                Se suma el <code>monto_aplicado</code> de cada conciliación ACTIVA del mes cuyo cliente tiene contención =
-                <code>CONTENIDO</code> (columna según la configuración de cabeceras de la subcartera).
+                Por cada cliente con al menos una conciliación ACTIVA del mes y contención = <code>CONTENIDO</code> se suma su
+                <code>SLD_CAPITAL_ASIG</code> de la asignación, <b>una sola vez</b> aunque pague varias cuotas. Lo pagado no suma.
+                Cuenta el día de su primer pago del mes (columnas según la configuración de cabeceras de la subcartera).
               } @else {
                 Se suma el <code>monto_aplicado</code> de cada conciliación ACTIVA con fecha banco en {{ codigo() }}, sin mirar la contención.
               }
@@ -113,36 +135,21 @@ let secuencia = 0;
         <!-- Asesores -->
         <section class="cmx-card cmx-enter" style="--i:2">
           <div class="cmx-card-h">
-            Asesores que participan<em>{{ asesores().size }} de {{ candidatos().length }}{{ rolElegido() ? ' · rol ' + nombreRol(rolElegido()!.nombreRol) : '' }}</em>
-            @if (!soloLectura() && candidatos().length) {
+            Asesores que participan<em>{{ asesores().size }} de {{ disponibles() }}</em>
+            @if (!soloLectura() && disponibles()) {
               <button type="button" class="cmx-btn cmx-btn-link" style="margin-left:auto" (click)="marcarTodos()">Marcar todos</button>
             }
           </div>
           <div class="cmx-card-b">
-            <div class="cmx-rolpick">
-              <div class="cmx-field">
-                <label for="cmx-rol-asesor">Rol de los asesores</label>
-                <select id="cmx-rol-asesor" [disabled]="soloLectura()" (change)="cambiarRol($any($event.target).value)">
-                  <option value="" disabled [selected]="idRol() == null">Elige el rol</option>
-                  @for (r of roles(); track r.idRol) {
-                    <option [value]="r.idRol" [selected]="r.idRol === idRol()">{{ nombreRol(r.nombreRol) }}{{ r.asignadoASubcartera ? '' : ' (no asignado a la subcartera)' }}</option>
-                  }
-                </select>
-              </div>
-              <span class="cmx-rolpick-hint">
-                @if (vista().rolSugerido; as s) {
-                  {{ s.idRol === idRol() ? 'Sugerido para esta subcartera.' : 'El sugerido para esta subcartera es ' + nombreRol(s.nombreRol) + '.' }}
-                }
-                Al cambiarlo se vacía la lista de participantes.
-              </span>
-            </div>
+            <p class="cmx-hint" style="margin:0 0 10px">
+              Salen de <b>Personal</b>: quienes tienen asignada {{ vista().nombreSubcartera }} en algún día de {{ codigo() }} y no cesaron antes del mes.
+              @if (grupo()) { Cada persona va en <b>una sola</b> cartera: quien ya está en la otra aparece bloqueado. }
+            </p>
 
             @if (cargandoCandidatos()) {
               <div style="display:grid;gap:8px">@for (i of [1, 2, 3]; track i) { <div class="cmx-skel" style="height:34px"></div> }</div>
-            } @else if (!idRol()) {
-              <p class="cmx-muted-txt">Elige el rol para ver a los asesores.</p>
             } @else if (!candidatos().length) {
-              <p class="cmx-muted-txt">Nadie tiene el rol {{ nombreRol(rolElegido()?.nombreRol) }} en Cashi.</p>
+              <p class="cmx-muted-txt">Nadie tiene {{ vista().nombreSubcartera }} asignada en Personal en {{ codigo() }}.</p>
             } @else {
               @for (u of candidatos(); track u.idUsuario) {
                 @let dentro = asesores().has(u.idUsuario);
@@ -150,10 +157,13 @@ let secuencia = 0;
                 @let ingreso = ingresos().get(u.idUsuario);
                 <div class="cmx-prow" [class.is-out]="!dentro">
                   <label class="cmx-prow-nm" [for]="'cmx-ase-' + u.idUsuario">
-                    <input type="checkbox" [id]="'cmx-ase-' + u.idUsuario" [checked]="dentro" [disabled]="soloLectura()" (change)="alternarAsesor(u.idUsuario)" />
+                    <input type="checkbox" [id]="'cmx-ase-' + u.idUsuario" [checked]="dentro" [disabled]="soloLectura() || (!!u.participaEn && !dentro)"
+                           (change)="alternarAsesor(u.idUsuario)" />
                     <span>{{ u.nombre || 'Usuario ' + u.idUsuario }}</span>
                   </label>
-                  @if (dentro) {
+                  @if (u.participaEn && !dentro) {
+                    <span class="cmx-prow-st">Participa en {{ u.participaEn }}</span>
+                  } @else if (dentro) {
                     @if (ingreso && propia == null) {
                       <span class="cmx-tag cmx-tag-v">Ingresó {{ diaMes(ingreso) }}</span>
                       <span class="cmx-prow-st">S/ {{ metaIngreso(ingreso) | appNumber:'1.2-2' }} · {{ diasDe(ingreso) }} de {{ vista().diasHabiles }} días hábiles</span>
@@ -303,7 +313,7 @@ let secuencia = 0;
         <div class="cmx-prev cmx-enter" style="--i:2;position:sticky;top:12px">
           <div class="cmx-prev-t">{{ soloLectura() ? 'Configuración congelada' : 'Lo que vas a guardar' }}</div>
           <div class="cmx-prev-r"><span>Métrica</span><b class="is-txt">{{ tipoMetrica() ? metricaInfo[tipoMetrica()!].etiqueta : '—' }}</b></div>
-          <div class="cmx-prev-r"><span>Rol de asesores</span><b class="is-txt">{{ nombreRol(rolElegido()?.nombreRol) || '—' }}</b></div>
+          @if (grupo(); as g) { <div class="cmx-prev-r"><span>Cartera</span><b class="is-txt">{{ grupoInfo[g] }}</b></div> }
           <div class="cmx-prev-r"><span>Asesores</span><b>{{ asesores().size }}@if (conMetaPropiaOIngreso()) { <small class="is-txt"> ({{ conMetaPropiaOIngreso() }} con meta propia o ingreso)</small> }</b></div>
           <div class="cmx-prev-r"><span>Supervisor</span><b class="is-txt">{{ nombreSupervisor() }}</b></div>
           <div class="cmx-prev-r"><span>Meta del mes</span><b>S/ {{ metaDelMes() ?? 0 | appNumber:'1.2-2' }}</b></div>
@@ -341,7 +351,7 @@ export class ConfiguracionTabComponent {
   readonly guardado = output<ReportePeriodo>();
 
   readonly metricaInfo = METRICA_INFO;
-  readonly nombreRol = nombreRol;
+  readonly grupoInfo = GRUPO_INFO;
   readonly diaMes = diaMes;
   readonly metricas: TipoMetrica[] = ['RECAUDO', 'CONTENCION'];
   readonly lados: { rol: RolComision; titulo: string }[] = [
@@ -352,12 +362,12 @@ export class ConfiguracionTabComponent {
   // Borrador
   /** null = todavía no se eligió (mes nuevo sin copiar) */
   readonly tipoMetrica = signal<TipoMetrica | null>(null);
-  readonly idRol = signal<number | null>(null);
   /** idUsuario → meta propia (null = divide la meta del mes) */
   readonly asesores = signal<Map<number, number | null>>(new Map());
   /** idUsuario → fecha de ingreso (yyyy-mm-dd) de quien entró a mitad de mes; se agrega desde Resultados */
   readonly ingresos = signal<Map<number, string>>(new Map());
   readonly idSupervisor = signal<number | null>(null);
+  /** En Tramo Propio, la meta de la cartera escrita a mano */
   readonly metaAjustada = signal<number | null>(null);
   readonly nivelesAsesor = signal<Nivel[]>([]);
   readonly nivelesSupervisor = signal<Nivel[]>([]);
@@ -370,8 +380,7 @@ export class ConfiguracionTabComponent {
   private readonly inicialFirma = signal('');
 
   // Catálogos
-  readonly roles = signal<RolCashi[]>([]);
-  readonly candidatos = signal<UsuarioCashi[]>([]);
+  readonly candidatos = signal<CandidatoAsesor[]>([]);
   readonly supervisores = signal<SupervisorCashi[]>([]);
   readonly cargandoCandidatos = signal(false);
 
@@ -384,8 +393,11 @@ export class ConfiguracionTabComponent {
     return v.mes === 1 ? codigoPeriodo(v.anio - 1, 12) : codigoPeriodo(v.anio, v.mes - 1);
   });
   readonly esNuevo = computed(() => !this.vista().reporte);
-  readonly rolElegido = computed(() => this.roles().find(r => r.idRol === this.idRol()) ?? null);
-  readonly metaDelMes = computed(() => this.metaAjustada() ?? this.vista().metaInterna);
+  /** Cartera de Tramo Propio; null en las demás subcarteras */
+  readonly grupo = computed(() => this.vista().grupo !== 'GENERAL' ? this.vista().grupo : null);
+  readonly metaDelMes = computed(() => this.grupo() ? this.metaAjustada() : this.metaAjustada() ?? this.vista().metaInterna);
+  /** Candidatos que se pueden elegir (sin los que ya están en la otra cartera) */
+  readonly disponibles = computed(() => this.candidatos().filter(u => !u.participaEn || this.asesores().has(u.idUsuario)).length);
   /** Dividen la meta del mes los asesores de mes completo (sin meta propia ni ingreso a mitad de mes) */
   readonly divisor = computed(() => Math.max(
     [...this.asesores().entries()].filter(([id, m]) => m == null && !this.ingresos().has(id)).length, 1));
@@ -407,9 +419,8 @@ export class ConfiguracionTabComponent {
   });
 
   readonly configuracion = computed<ConfiguracionPeriodo | null>(() => {
-    const idRol = this.idRol();
     const tipoMetrica = this.tipoMetrica();
-    if (idRol == null || tipoMetrica == null) {
+    if (tipoMetrica == null) {
       return null;
     }
     const v = this.vista();
@@ -417,8 +428,8 @@ export class ConfiguracionTabComponent {
       idSubcartera: v.idSubcartera,
       anio: v.anio,
       mes: v.mes,
+      grupo: v.grupo,
       tipoMetrica,
-      idRolAsesor: idRol,
       asesores: [...this.asesores().entries()].map(([idUsuario, metaManual]) => ({
         idUsuario,
         metaManual,
@@ -446,9 +457,6 @@ export class ConfiguracionTabComponent {
     if (this.tipoMetrica() == null) {
       f.push('Elige qué se mide: recaudo o contención.');
     }
-    if (this.idRol() == null) {
-      f.push('Elige el rol de los asesores.');
-    }
     if (!this.asesores().size) {
       f.push('Todavía no hay asesores participando: márcalos en «Asesores que participan».');
     }
@@ -464,7 +472,10 @@ export class ConfiguracionTabComponent {
     if (this.repetidos()) {
       f.push('Hay dos niveles con el mismo porcentaje en un lado de la escala.');
     }
-    if (this.metaDelMes() == null) {
+    const grupo = this.grupo();
+    if (grupo && !((this.metaAjustada() ?? 0) > 0)) {
+      f.push(`Escribe la meta del mes de ${GRUPO_INFO[grupo]}.`);
+    } else if (this.metaDelMes() == null) {
       f.push('Falta la meta INTERNA del mes en el reporte de producción.');
     }
     if (this.conLogros() && this.metas().some(m => m.activa && (!(m.monto! > 0) || (m.tipo !== 'META' && !(m.cantidadDia! > 0))))) {
@@ -529,15 +540,9 @@ export class ConfiguracionTabComponent {
 
   // ==================== EDICIÓN ====================
 
-  cambiarRol(valor: string): void {
-    const id = Number(valor);
-    if (!id || id === this.idRol()) {
-      return;
-    }
-    this.idRol.set(id);
-    this.asesores.set(new Map());
-    this.ingresos.set(new Map());
-    this.cargarCandidatos(id);
+  cambiarMetaGrupo(valor: string): void {
+    const n = valor === '' ? null : Number(valor);
+    this.metaAjustada.set(n != null && Number.isFinite(n) ? n : null);
   }
 
   alternarAsesor(idUsuario: number): void {
@@ -556,7 +561,7 @@ export class ConfiguracionTabComponent {
   marcarTodos(): void {
     this.asesores.update(m => {
       const n = new Map(m);
-      this.candidatos().forEach(u => { if (!n.has(u.idUsuario)) { n.set(u.idUsuario, null); } });
+      this.candidatos().forEach(u => { if (!n.has(u.idUsuario) && !u.participaEn) { n.set(u.idUsuario, null); } });
       return n;
     });
   }
@@ -600,7 +605,7 @@ export class ConfiguracionTabComponent {
     const anio = v.mes === 1 ? v.anio - 1 : v.anio;
     const mes = v.mes === 1 ? 12 : v.mes - 1;
     this.copiando.set(true);
-    this.service.obtenerVista(v.idSubcartera, anio, mes).subscribe({
+    this.service.obtenerVista(v.idSubcartera, anio, mes, v.grupo).subscribe({
       next: anterior => {
         this.copiando.set(false);
         const p = anterior.reporte?.periodo;
@@ -609,11 +614,6 @@ export class ConfiguracionTabComponent {
           return;
         }
         this.tipoMetrica.set(p.tipoMetrica);
-        if (p.rolAsesor && p.rolAsesor.idRol !== this.idRol()) {
-          this.idRol.set(p.rolAsesor.idRol);
-          this.asesores.set(new Map());
-          this.cargarCandidatos(p.rolAsesor.idRol);
-        }
         this.nivelesAsesor.set(this.aNiveles(p.escalas, 'ASESOR'));
         this.nivelesSupervisor.set(this.aNiveles(p.escalas, 'SUPERVISOR'));
         this.escalaAcumulativa.set(!!p.escalaAcumulativa);
@@ -661,12 +661,10 @@ export class ConfiguracionTabComponent {
   private cargarBorrador(v: VistaPeriodo): void {
     const p = v.reporte?.periodo ?? null;
     const participantes = v.reporte?.participantes ?? [];
-    const rol = p?.rolAsesor ?? v.rolSugerido;
 
     this.copiadoDe.set(null);
     // Mes nuevo: sin métrica elegida; la trae "Copiar configuración" o la elige quien configura
     this.tipoMetrica.set(p?.tipoMetrica ?? null);
-    this.idRol.set(rol?.idRol ?? null);
     this.asesores.set(new Map(participantes.filter(x => x.rol === 'ASESOR').map(x => [x.idUsuario, x.metaManual])));
     this.ingresos.set(new Map(participantes
       .filter(x => x.rol === 'ASESOR' && x.fechaIngreso)
@@ -680,32 +678,23 @@ export class ConfiguracionTabComponent {
     this.bonosCopiados.set(null);
     this.inicialFirma.set(this.firma(this.configuracion()));
 
-    this.service.listarRolesSubcartera(v.idSubcartera).subscribe({
-      next: r => this.roles.set(r),
-      error: e => this.toast.error(mensajeError(e, 'No se pudieron cargar los roles.'))
-    });
-    if (rol) {
-      this.cargarCandidatos(rol.idRol);
-    } else {
-      this.candidatos.set([]);
-    }
+    this.cargarCandidatos(v);
   }
 
-  private cargarCandidatos(idRol: number): void {
+  /** El personal con la subcartera en el mes (el backend agrega a quien ya participa aunque hoy no esté) */
+  private cargarCandidatos(v: VistaPeriodo): void {
     this.cargandoCandidatos.set(true);
-    this.service.listarUsuariosRol(idRol).subscribe({
-      next: usuarios => {
-        // Quien ya participa sigue en la lista aunque hoy ya no tenga el rol
-        const ids = new Set(usuarios.map(u => u.idUsuario));
-        const extra = (this.vista().reporte?.participantes ?? [])
-          .filter(p => p.rol === 'ASESOR' && !ids.has(p.idUsuario) && this.idRol() === this.vista().reporte?.periodo.rolAsesor?.idRol)
-          .map(p => ({ idUsuario: p.idUsuario, nombre: p.nombre }));
-        this.candidatos.set([...usuarios, ...extra]);
+    this.candidatos.set([]);
+    this.service.listarAsesores(v.idSubcartera, v.anio, v.mes, v.grupo).subscribe({
+      next: candidatos => {
+        if (v === this.vista()) {
+          this.candidatos.set(candidatos);
+        }
         this.cargandoCandidatos.set(false);
       },
       error: e => {
         this.cargandoCandidatos.set(false);
-        this.toast.error(mensajeError(e, 'No se pudieron cargar los asesores del rol.'));
+        this.toast.error(mensajeError(e, 'No se pudo cargar el personal de la subcartera.'));
       }
     });
   }

@@ -3,7 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ParticipanteComision, ReportePeriodo } from '../models/comision.model';
 import {
-  METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, nombreRol, partesComision, siguienteTramo, tramosDe
+  GRUPO_INFO, METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, partesComision, siguienteTramo, tramosDe
 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -47,7 +47,7 @@ import { CmxIconComponent } from './cmx-icon.component';
     <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-res-ases">
       <div class="cmx-block-head">
         <h3 id="cmx-res-ases" class="cmx-block-title">Asesores</h3>
-        <span class="cmx-block-desc">Rol {{ nombreRol(p.rolAsesor?.nombreRol) || '—' }} · midiendo {{ metrica().etiqueta.toLowerCase() }}@if (p.escalaAcumulativa) { · por logros }</span>
+        <span class="cmx-block-desc">{{ p.grupo !== 'GENERAL' ? grupoInfo[p.grupo] + ' · midiendo ' : 'Midiendo ' }}{{ metrica().etiqueta.toLowerCase() }}@if (p.escalaAcumulativa) { · por logros }</span>
         @if (puedeAgregar()) {
           <button type="button" class="cmx-btn cmx-btn-sec cmx-btn-sm" style="margin-left:auto" (click)="agregar.emit()">
             <cmx-icon name="user-plus" [size]="15" /> Agregar participante
@@ -76,7 +76,7 @@ import { CmxIconComponent } from './cmx-icon.component';
                   [attr.aria-label]="'Ver el sustento de ' + a.nombre">
                 <td class="who">
                   {{ a.nombre }}
-                  <span class="cmx-role">{{ nombreRol(p.rolAsesor?.nombreRol) || 'Asesor' }}</span>
+                  <span class="cmx-role">Asesor</span>
                   @if (a.metaManual != null) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">Meta propia · excepción</span> }
                   @else if (a.fechaIngreso) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">Ingresó {{ diaMes(a.fechaIngreso) }} · {{ a.diasHabiles }} de {{ p.diasHabiles }} días hábiles</span> }
                   @if (!a.calculado) { <span class="cmx-tag cmx-tag-off" style="margin-top:3px">Entra al recalcular</span> }
@@ -226,7 +226,7 @@ export class ResultadosTabComponent {
   readonly totalAsesores = computed(() => this.asesores().reduce((s, a) => s + a.logrado, 0));
   readonly comisionAsesores = computed(() => this.asesores().reduce((s, a) => s + a.montoComision, 0));
   readonly conMetaPropia = computed(() => this.asesores().filter(a => a.metaManual != null || !!a.fechaIngreso).length);
-  readonly nombreRol = nombreRol;
+  readonly grupoInfo = GRUPO_INFO;
   readonly diaMes = diaMes;
   readonly divisor = computed(() => Math.max(this.asesores().length - this.conMetaPropia(), 1));
   readonly metaPorAsesor = computed(() => this.reporte().periodo.metaDelMes / this.divisor());

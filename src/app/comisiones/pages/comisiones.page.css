@@ -555,9 +555,6 @@
 .cmx-formula code { font-family: var(--cmx-mono); font-size: .74rem; background: var(--cmx-soft-2); border: 1px solid var(--cmx-line); border-radius: 4px; padding: 0 4px; }
 .cmx-grid2 .cmx-opt + .cmx-opt { margin-top: 0; }
 @media (max-width: 640px) { .cmx-grid2 { grid-template-columns: 1fr; } }
-.cmx-rolpick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 14px; margin-bottom: 12px; }
-.cmx-rolpick .cmx-field { flex: 0 1 300px; }
-.cmx-rolpick-hint { font-size: .72rem; color: var(--cmx-ink-3); padding-bottom: 9px; }
 .cmx-prow { flex-wrap: wrap; }
 .cmx-prow label.cmx-prow-nm { display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 180px; }
 .cmx-prow.is-out .cmx-prow-nm { text-decoration: none; color: var(--cmx-ink-3); }
