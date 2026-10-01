@@ -3072,7 +3072,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       field: 'saldo_continuidad',
       restriccionFecha: 'SIN_RESTRICCION',
       generaCartaAcuerdo: false,
-      maxCuotas: 24
+      maxCuotas: 40
     }];
   });
 
