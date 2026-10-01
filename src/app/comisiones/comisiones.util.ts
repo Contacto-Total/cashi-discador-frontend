@@ -6,6 +6,7 @@ import {
   DetalleComision,
   EscalaComision,
   EstadoPeriodo,
+  GrupoComision,
   LineaDesglose,
   MetaCantidad,
   ParticipanteComision,
@@ -72,9 +73,21 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
   CONTENCION: {
     etiqueta: 'Contención',
     logrado: 'Contención',
-    descripcion: 'Solo suman los pagos de clientes cuya contención es CONTENIDO.'
+    descripcion: 'Cada cliente CONTENIDO con pago conciliado suma su saldo capital asignado, una sola vez.'
   }
 };
+
+/** Cartera de Tramo Propio como se muestra; vacío en GENERAL */
+export const GRUPO_INFO: Record<GrupoComision, string> = {
+  GENERAL: '',
+  ANTIGUA: 'CP Antigua',
+  NUEVA: 'CP Nueva'
+};
+
+/** "TRAMO PROPIO · CP Antigua", o solo el nombre de la subcartera */
+export function nombreConGrupo(nombreSubcartera: string, grupo: GrupoComision | null | undefined): string {
+  return grupo && grupo !== 'GENERAL' ? `${nombreSubcartera} · ${GRUPO_INFO[grupo]}` : nombreSubcartera;
+}
 
 export const ACCION_INFO: Record<AccionAuditoria, string> = {
   CREAR_PERIODO: 'Configuró el período',
@@ -85,14 +98,6 @@ export const ACCION_INFO: Record<AccionAuditoria, string> = {
   CALCULAR: 'Recalculó',
   CAMBIAR_ESTADO: 'Cambió el estado'
 };
-
-/** Nombre del rol de Cashi como se muestra: AGENT es el asesor de Tramo Propio */
-export function nombreRol(nombre: string | null | undefined): string {
-  if (!nombre) {
-    return '';
-  }
-  return nombre.trim().toUpperCase() === 'AGENT' ? 'Asesor Tramo Propio' : nombre;
-}
 
 /**
  * Días hábiles del mes desde un día (inclusive): lunes a viernes, sin feriados (yyyy-mm-dd).
@@ -308,14 +313,16 @@ export function metasParaEditar(metas: MetaCantidad[] | null | undefined): { tip
 
 // ==================== DETALLE ====================
 
-/** Monto del pago según la métrica (recaudo o recaudo contenido) */
+/** Lo que suma el pago según la métrica: el recaudo, o en contención el capital asignado (0 si el cliente ya sumó) */
 export function montoDetalle(d: DetalleComision): number {
-  return d.recaudo ?? d.recaudoContenido ?? 0;
+  return d.recaudoContenido ?? d.recaudo ?? 0;
 }
 
 export interface DiaDetalle {
   fecha: string;
   pagos: DetalleComision[];
+  /** Lo que suma cada pago (por conciliacionId) */
+  sumas: Map<number, number>;
   monto: number;
   acumulado: number;
   porcentaje: number | null;
@@ -327,22 +334,31 @@ export interface DiaDetalle {
 /**
  * Agrupa los pagos por fecha de banco y acumula. base = meta contra la que se mide
  * (la del asesor o la del mes para el supervisor); tramos = su escala.
+ * unaVezPorCliente (contención del supervisor): el capital de un cliente que pagó a dos asesores suma una sola vez.
  */
-export function agruparPorDia(filas: DetalleComision[], base: number | null, tramos: EscalaComision[]): DiaDetalle[] {
+export function agruparPorDia(filas: DetalleComision[], base: number | null, tramos: EscalaComision[],
+                              unaVezPorCliente = false): DiaDetalle[] {
   const ordenadas = [...filas].sort((a, b) =>
     a.fechaBanco.localeCompare(b.fechaBanco) || a.conciliacionId - b.conciliacionId);
   const dias: DiaDetalle[] = [];
+  const contados = new Set<string>();
   let acumulado = 0;
   let nivelAnterior: EscalaComision | null = null;
   for (const d of ordenadas) {
     let dia = dias[dias.length - 1];
     if (!dia || dia.fecha !== d.fechaBanco) {
-      dia = { fecha: d.fechaBanco, pagos: [], monto: 0, acumulado: 0, porcentaje: null, nivel: null, sube: false };
+      dia = { fecha: d.fechaBanco, pagos: [], sumas: new Map(), monto: 0, acumulado: 0, porcentaje: null, nivel: null, sube: false };
       dias.push(dia);
     }
-    const monto = montoDetalle(d);
+    let monto = montoDetalle(d);
+    if (unaVezPorCliente && monto > 0) {
+      const cliente = d.documentoCliente ?? '';
+      monto = contados.has(cliente) ? 0 : monto;
+      contados.add(cliente);
+    }
     acumulado += monto;
     dia.pagos.push(d);
+    dia.sumas.set(d.conciliacionId, monto);
     dia.monto += monto;
     dia.acumulado = acumulado;
   }

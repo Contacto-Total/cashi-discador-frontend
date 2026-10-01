@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, input, output, signal } from '@angular/core';
 import { ComisionesService } from '../services/comisiones.service';
-import { MesPeriodo } from '../models/comision.model';
+import { GrupoComision, MesPeriodo } from '../models/comision.model';
 import { ESTADO_VISTA_INFO, EstadoVista, codigoPeriodo, estadoVista, mensajeError, nombreMes } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -67,6 +67,8 @@ export class PeriodoPickerComponent {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly idSubcartera = input<number | null>(null);
+  /** Cartera de Tramo Propio; null en las demás subcarteras */
+  readonly grupo = input<GrupoComision | null>(null);
   readonly anio = input.required<number>();
   readonly mes = input.required<number>();
   readonly estadoActual = input<EstadoVista>('SIN_PAGOS');
@@ -148,7 +150,7 @@ export class PeriodoPickerComponent {
     }
     this.cargando.set(true);
     this.error.set(null);
-    this.service.listarMeses(id, this.anioVista()).subscribe({
+    this.service.listarMeses(id, this.anioVista(), this.grupo()).subscribe({
       next: meses => {
         this.meses.set(meses);
         this.cargando.set(false);

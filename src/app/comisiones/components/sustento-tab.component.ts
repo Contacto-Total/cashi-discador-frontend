@@ -33,7 +33,8 @@ const B = 28;
 /**
  * Sustento del período: por asesor (contra su meta individual) o por el supervisor (el total de los
  * asesores contra la meta del mes). Gráfico del acumulado por fecha banco, día a día y, en cada día,
- * los pagos con hora, cliente y monto.
+ * los pagos con hora, cliente y monto. En contención cada pago muestra lo pagado y el capital asignado
+ * que suma (solo en el primer pago del cliente).
  */
 @Component({
   selector: 'cmx-sustento-tab',
@@ -163,14 +164,14 @@ const B = 28;
         <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-sus-dias">
           <div class="cmx-block-head">
             <h3 id="cmx-sus-dias" class="cmx-block-title">Día a día</h3>
-            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)</span>
+            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente CONTENIDO suma su capital asignado el día de su primer pago del mes }</span>
           </div>
           <div class="cmx-tw">
             <table class="cmx-table">
               <thead>
                 <tr>
                   <th scope="col">Fecha banco</th>
-                  <th scope="col" class="n">Monto del día</th>
+                  <th scope="col" class="n">{{ porCapital() ? 'Capital del día' : 'Monto del día' }}</th>
                   <th scope="col" class="n">Acumulado</th>
                   <th scope="col" class="n">% de la meta</th>
                   <th scope="col">Nivel</th>
@@ -209,7 +210,12 @@ const B = 28;
                                   <th scope="col">DNI</th>
                                   <th scope="col" class="n">Gestión</th>
                                   <th scope="col" class="n">Cuota</th>
-                                  <th scope="col" class="n">Monto</th>
+                                  @if (porCapital()) {
+                                    <th scope="col" class="n">Pagado</th>
+                                    <th scope="col" class="n">SLD capital asig.</th>
+                                  } @else {
+                                    <th scope="col" class="n">Monto</th>
+                                  }
                                 </tr>
                               </thead>
                               <tbody>
@@ -224,7 +230,17 @@ const B = 28;
                                     <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
                                     <td class="n">{{ pg.idGestion }}</td>
                                     <td class="n">{{ pg.numeroCuota }}</td>
-                                    <td class="n">{{ monto(pg) | appNumber:'1.2-2' }}</td>
+                                    @if (porCapital()) {
+                                      @let suma = d.sumas.get(pg.conciliacionId) ?? 0;
+                                      <td class="n" style="color:var(--cmx-ink-3)">{{ pg.recaudo ?? 0 | appNumber:'1.2-2' }}</td>
+                                      <td class="n" [class.na]="suma <= 0">
+                                        @if (suma > 0) { {{ suma | appNumber:'1.2-2' }} }
+                                        @else if (yaSumo(pg)) { <span title="Su capital ya sumó con su primer pago del mes">ya sumó</span> }
+                                        @else { <span title="El cliente no tiene SLD_CAPITAL_ASIG en la tabla dinámica">sin capital</span> }
+                                      </td>
+                                    } @else {
+                                      <td class="n">{{ pg.recaudo ?? 0 | appNumber:'1.2-2' }}</td>
+                                    }
                                   </tr>
                                 }
                               </tbody>
@@ -262,6 +278,8 @@ export class SustentoTabComponent {
   readonly abiertos = signal<Set<string>>(new Set());
 
   readonly metrica = computed(() => METRICA_INFO[this.reporte().periodo.tipoMetrica]);
+  /** Contención: suma el capital asignado del cliente, no lo pagado */
+  readonly porCapital = computed(() => this.reporte().periodo.tipoMetrica === 'CONTENCION');
 
   readonly personas = computed<Persona[]>(() => {
     const r = this.reporte();
@@ -327,7 +345,7 @@ export class SustentoTabComponent {
 
   readonly dias = computed<DiaDetalle[]>(() => {
     const p = this.persona();
-    return p ? agruparPorDia(p.filas, p.meta, p.tramos) : [];
+    return p ? agruparPorDia(p.filas, p.meta, p.tramos, p.esSupervisor && this.porCapital()) : [];
   });
 
   readonly siguiente = computed(() => {
@@ -427,8 +445,10 @@ export class SustentoTabComponent {
     return [...d.pagos].sort((a, b) => (a.horaBanco ?? '99').localeCompare(b.horaBanco ?? '99') || a.conciliacionId - b.conciliacionId);
   }
 
-  monto(d: DetalleComision): number {
-    return d.recaudo ?? d.recaudoContenido ?? 0;
+  /** El cliente ya tuvo un pago antes en lo que se está viendo: su capital sumó ahí */
+  yaSumo(d: DetalleComision): boolean {
+    return (this.persona()?.filas ?? []).some(f => f.documentoCliente === d.documentoCliente
+      && (f.fechaBanco < d.fechaBanco || (f.fechaBanco === d.fechaBanco && f.conciliacionId < d.conciliacionId)));
   }
 
   /** bcp_pago_detalle.banco: FINANCIERA_OH para los archivos de FOH; el banco (BCP…) para los CREP */

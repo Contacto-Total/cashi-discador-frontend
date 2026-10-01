@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, ou
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ToastService } from '@/shared/services/toast.service';
 import { ComisionesService } from '../services/comisiones.service';
-import { ReportePeriodo, UsuarioCashi } from '../models/comision.model';
-import { TIPOS_META, diaMes, diasHabilesDesde, mensajeError, nombreRol } from '../comisiones.util';
+import { CandidatoAsesor, ReportePeriodo } from '../models/comision.model';
+import { TIPOS_META, diaMes, diasHabilesDesde, mensajeError, nombreConGrupo } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 /**
@@ -23,7 +23,7 @@ import { CmxIconComponent } from './cmx-icon.component';
       <div class="cmx-modal" role="dialog" aria-modal="true" aria-labelledby="cmx-ag-titulo" (click)="$event.stopPropagation()">
         <div class="cmx-modal-h">
           <div>
-            <div class="cmx-eyebrow">{{ p.nombreSubcartera }} · {{ codigo() }}</div>
+            <div class="cmx-eyebrow">{{ nombreSubcartera() }} · {{ codigo() }}</div>
             <b id="cmx-ag-titulo">Agregar participante</b>
           </div>
           <button type="button" class="cmx-icon-btn" (click)="cerrar.emit()" aria-label="Cerrar"><cmx-icon name="x" [size]="16" /></button>
@@ -31,7 +31,7 @@ import { CmxIconComponent } from './cmx-icon.component';
 
         <div class="cmx-modal-b">
           <div class="cmx-field">
-            <label for="cmx-ag-usuario">Asesor con rol {{ rol() }}</label>
+            <label for="cmx-ag-usuario">Asesor con {{ p.nombreSubcartera }} en Personal</label>
             <select id="cmx-ag-usuario" (change)="idUsuario.set($any($event.target).value ? +$any($event.target).value : null)">
               <option value="" [selected]="idUsuario() == null">{{ cargando() ? 'Cargando…' : 'Elige a quién agregar' }}</option>
               @for (u of libres(); track u.idUsuario) {
@@ -39,7 +39,7 @@ import { CmxIconComponent } from './cmx-icon.component';
               }
             </select>
             @if (!cargando() && !libres().length) {
-              <span class="cmx-muted-txt">Todos los usuarios con el rol ya participan.</span>
+              <span class="cmx-muted-txt">Todo el personal con {{ p.nombreSubcartera }} en {{ codigo() }} ya participa.</span>
             }
           </div>
 
@@ -92,13 +92,13 @@ export class AgregarParticipanteModalComponent implements OnInit {
 
   readonly diaMes = diaMes;
 
-  readonly candidatos = signal<UsuarioCashi[]>([]);
+  readonly candidatos = signal<CandidatoAsesor[]>([]);
   readonly cargando = signal(true);
   readonly guardando = signal(false);
   readonly idUsuario = signal<number | null>(null);
   readonly fecha = signal('');
 
-  readonly rol = computed(() => nombreRol(this.reporte().periodo.rolAsesor?.nombreRol) || '—');
+  readonly nombreSubcartera = computed(() => nombreConGrupo(this.reporte().periodo.nombreSubcartera, this.reporte().periodo.grupo));
   readonly primerDia = computed(() => `${this.reporte().periodo.anio}-${String(this.reporte().periodo.mes).padStart(2, '0')}-01`);
   readonly ultimoDia = computed(() => {
     const { anio, mes } = this.reporte().periodo;
@@ -106,7 +106,8 @@ export class AgregarParticipanteModalComponent implements OnInit {
   });
   readonly libres = computed(() => {
     const dentro = new Set(this.reporte().participantes.map(p => p.idUsuario));
-    return this.candidatos().filter(u => !dentro.has(u.idUsuario));
+    // Quien ya es asesor de la otra cartera de Tramo Propio no se puede agregar
+    return this.candidatos().filter(u => !dentro.has(u.idUsuario) && !u.participaEn);
   });
 
   readonly error = computed(() => {
@@ -150,19 +151,15 @@ export class AgregarParticipanteModalComponent implements OnInit {
     const iso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
     this.fecha.set(iso >= this.primerDia() && iso <= this.ultimoDia() ? iso : this.primerDia());
 
-    const rol = this.reporte().periodo.rolAsesor;
-    if (!rol) {
-      this.cargando.set(false);
-      return;
-    }
-    this.service.listarUsuariosRol(rol.idRol).subscribe({
+    const p = this.reporte().periodo;
+    this.service.listarAsesores(p.idSubcartera, p.anio, p.mes, p.grupo).subscribe({
       next: u => {
         this.candidatos.set(u);
         this.cargando.set(false);
       },
       error: e => {
         this.cargando.set(false);
-        this.toast.error(mensajeError(e, 'No se pudieron cargar los asesores del rol.'));
+        this.toast.error(mensajeError(e, 'No se pudo cargar el personal de la subcartera.'));
       }
     });
   }

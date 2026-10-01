@@ -6,18 +6,22 @@ import {
   AgregarParticipanteRequest,
   AuditoriaComision,
   BonoPeriodo,
+  CandidatoAsesor,
   Cartera,
   ConfiguracionPeriodo,
   DetalleComision,
+  GrupoComision,
   Inquilino,
   MesPeriodo,
   ReportePeriodo,
-  RolCashi,
   Subcartera,
   SupervisorCashi,
-  UsuarioCashi,
   VistaPeriodo
 } from '../models/comision.model';
+
+function conGrupo(params: HttpParams, grupo: GrupoComision | null): HttpParams {
+  return grupo && grupo !== 'GENERAL' ? params.set('grupo', grupo) : params;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -49,25 +53,25 @@ export class ComisionesService {
 
   // ==================== PERÍODOS ====================
 
-  /** El período del mes si ya está configurado, y aunque no lo esté: pagos, meta INTERNA y rol sugerido */
-  obtenerVista(idSubcartera: number, anio: number, mes: number): Observable<VistaPeriodo> {
-    const params = new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio).set('mes', mes);
+  /**
+   * El período del mes si ya está configurado, y aunque no lo esté: pagos y meta INTERNA.
+   * grupo: la cartera de Tramo Propio (ANTIGUA / NUEVA); null en las demás subcarteras.
+   */
+  obtenerVista(idSubcartera: number, anio: number, mes: number, grupo: GrupoComision | null): Observable<VistaPeriodo> {
+    const params = conGrupo(new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio).set('mes', mes), grupo);
     return this.http.get<VistaPeriodo>(`${this.baseUrl}/periodos/vista`, { params });
   }
 
-  /** Los 12 meses del año de una subcartera para el selector de período */
-  listarMeses(idSubcartera: number, anio: number): Observable<MesPeriodo[]> {
-    const params = new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio);
+  /** Los 12 meses del año de una subcartera (y cartera, en Tramo Propio) para el selector de período */
+  listarMeses(idSubcartera: number, anio: number, grupo: GrupoComision | null): Observable<MesPeriodo[]> {
+    const params = conGrupo(new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio), grupo);
     return this.http.get<MesPeriodo[]>(`${this.baseUrl}/periodos/meses`, { params });
   }
 
-  listarRolesSubcartera(idSubcartera: number): Observable<RolCashi[]> {
-    return this.http.get<RolCashi[]>(`${this.baseUrl}/subcarteras/${idSubcartera}/roles-disponibles`);
-  }
-
-  /** Candidatos a asesor: usuarios activos con el rol */
-  listarUsuariosRol(idRol: number): Observable<UsuarioCashi[]> {
-    return this.http.get<UsuarioCashi[]>(`${this.baseUrl}/roles/${idRol}/usuarios`);
+  /** Candidatos a asesor del mes: el personal con la subcartera asignada (en Tramo Propio, marca a quien está en la otra cartera) */
+  listarAsesores(idSubcartera: number, anio: number, mes: number, grupo: GrupoComision | null): Observable<CandidatoAsesor[]> {
+    const params = conGrupo(new HttpParams().set('idSubcartera', idSubcartera).set('anio', anio).set('mes', mes), grupo);
+    return this.http.get<CandidatoAsesor[]>(`${this.baseUrl}/periodos/asesores`, { params });
   }
 
   /** Candidatos a supervisor */
