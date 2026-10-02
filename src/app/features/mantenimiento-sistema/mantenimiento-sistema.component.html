@@ -80,7 +80,7 @@
                     <label for="m-hora">Hora de inicio</label>
                     <input id="m-hora" type="time" [value]="hora()" (input)="hora.set($any($event.target).value)">
                   </div>
-                  <div class="m-pie">Aviso 15 min antes. Recordatorio 5 min antes. Espera llamadas y tipificaciones.</div>
+                  <div class="m-pie">Aviso 10 min antes. Recordatorio 5 min antes. Espera llamadas y tipificaciones.</div>
                   <div class="m-bot">
                     <button type="button" class="m-btn" [disabled]="enviando() || !hora()" (click)="programar()">
                       <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.reloj }"></ng-container>Programar

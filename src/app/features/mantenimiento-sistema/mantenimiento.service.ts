@@ -84,7 +84,7 @@ export const EVENTO_503 = 'cashi:mantenimiento';
 
 const SONDEO_NORMAL = 20_000;
 const SONDEO_ACTIVO = 3_000;
-const AVISO = 15 * 60_000;
+const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
 
 export const dosDigitos = (n: number) => String(n).padStart(2, '0');

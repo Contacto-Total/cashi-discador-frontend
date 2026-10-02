@@ -46,7 +46,7 @@ const ICONOS = {
   alerta: 'm21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3 M12 9v4 M12 17h.01'
 };
 
-const AVISO = 15 * 60_000;
+const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
 const REPOSO = 10_000;
 const CADA = 2000;
@@ -254,7 +254,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
       aviso = falta <= RECORDATORIO
         ? paso('aviso', 'Aviso a los usuarios', 'm-run', `Recordatorio enviado ${horaCorta(inicio - RECORDATORIO)}`, '5 min')
         : falta <= AVISO
-          ? paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso enviado ${horaCorta(inicio - AVISO)}`, '15 min')
+          ? paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso enviado ${horaCorta(inicio - AVISO)}`, '10 min')
           : paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso a las ${horaCorta(inicio - AVISO)}`, 'Pendiente');
     } else if (v === 'INMEDIATO') {
       aviso = paso('aviso', 'Aviso a los usuarios', 'm-run', 'Aviso de 60 segundos', `${Math.max(0, Math.ceil(this.falta() / 1000))} s`);
