@@ -8,7 +8,7 @@ import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaReporte, Justificacion, PerfilAsistencia, TipoDia } from './asistencia.models';
+import { AsistenciaReporte, Justificacion, TipoDia } from './asistencia.models';
 import {
   ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
   fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
@@ -200,13 +200,6 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
       </div>
       @if (cargando()) {
         <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando tu equipo…</p>
-      } @else if (sinAsignar()) {
-        <div [class]="estilos.vacio">
-          <strong class="block text-[13.5px]">No tienes subcarteras asignadas</strong>
-          <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Esta vista muestra a los asesores de las subcarteras que supervisas.
-          </span>
-        </div>
       } @else if (!idSubcartera()) {
         <div [class]="estilos.vacio">
           <strong class="block text-[13.5px]">Elige una subcartera</strong>
@@ -617,7 +610,6 @@ export class AsistenciaEquipoComponent implements OnInit {
     { clave: 'TARDANZA', texto: 'Tardanza' }
   ];
 
-  readonly perfil = signal<PerfilAsistencia | null>(null);
   readonly idSubcartera = signal<number | null>(null);
   /** Arranca en la semana en curso: las alertas sirven el mismo día. */
   readonly lunes = signal(lunesDe(new Date()));
@@ -661,27 +653,6 @@ export class AsistenciaEquipoComponent implements OnInit {
   readonly clientes = signal<Tenant[]>([]);
   readonly carteras = signal<Portfolio[]>([]);
   readonly subcarteras = signal<SubPortfolio[]>([]);
-
-  /**
-   * Lo que puede elegir: RR.HH. y ADMIN, todo; la supervisora, solo las
-   * subcarteras que supervisa y, hacia arriba, sus carteras y clientes.
-   */
-  private readonly permitido = computed(() => {
-    const p = this.perfil();
-    if (!p || p.rrhh) {
-      return null;
-    }
-    return {
-      clientes: new Set(p.subcarteras.map(s => s.idCliente)),
-      carteras: new Set(p.subcarteras.map(s => s.idCartera)),
-      subcarteras: new Set(p.subcarteras.map(s => s.id))
-    };
-  });
-
-  readonly sinAsignar = computed(() => {
-    const p = this.perfil();
-    return !!p && !p.rrhh && !p.subcarteras.length;
-  });
 
   readonly sabado = computed(() => sumarDias(this.lunes(), 5));
   readonly esSemanaActual = computed(() => this.lunes() >= lunesDe(new Date()));
@@ -854,17 +825,10 @@ export class AsistenciaEquipoComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.servicio.perfil().subscribe({
-      next: p => {
-        this.perfil.set(p);
-        this.cargando.set(false);
-        this.cargarClientes();
-      },
-      error: () => {
-        this.cargando.set(false);
-        this.toast.error('No se pudo saber qué subcarteras supervisas');
-      }
-    });
+    // Cualquier supervisora elige cliente, cartera y subcartera: el ambito no
+    // depende de las subcarteras de su rol.
+    this.cargando.set(false);
+    this.cargarClientes();
     this.servicio.tiposDeDia().subscribe({
       // La recuperación no se pide: la planifica RR.HH.
       next: t => this.tipos.set(t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo) && x.codigo !== RECUPERACION)),
@@ -878,8 +842,7 @@ export class AsistenciaEquipoComponent implements OnInit {
   private cargarClientes(): void {
     this.clientesServicio.getAllTenants().subscribe({
       next: c => {
-        const permitido = this.permitido();
-        const lista = c.filter(x => !permitido || permitido.clientes.has(x.id))
+        const lista = [...c]
           .sort((a, b) => (a.businessName || a.tenantName).localeCompare(b.businessName || b.tenantName));
         this.clientes.set(lista);
         if (lista.length === 1) {
@@ -902,8 +865,7 @@ export class AsistenciaEquipoComponent implements OnInit {
     }
     this.carterasServicio.getPortfoliosByTenant(id).subscribe({
       next: c => {
-        const permitido = this.permitido();
-        const lista = c.filter(x => !permitido || permitido.carteras.has(x.id))
+        const lista = [...c]
           .sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
         this.carteras.set(lista);
         if (lista.length === 1) {
@@ -924,8 +886,7 @@ export class AsistenciaEquipoComponent implements OnInit {
     }
     this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
       next: s => {
-        const permitido = this.permitido();
-        const lista = s.filter(x => !permitido || permitido.subcarteras.has(x.id))
+        const lista = [...s]
           .sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
         this.subcarteras.set(lista);
         if (lista.length === 1) {
