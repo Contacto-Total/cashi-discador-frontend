@@ -9,6 +9,7 @@ import { SipService } from '../../core/services/sip.service';
 import { GestionLockService } from '../../core/services/gestion-lock.service';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { InactivityService } from '../../core/services/inactivity.service';
+import { MenuPermissionService } from '../../core/services/menu-permission.service';
 import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
 
 export type EstadoMantenimiento = 'OPERATIVO' | 'PROGRAMADO' | 'EN_DETENCION' | 'BLOQUEADO';
@@ -22,7 +23,16 @@ export interface Mantenimiento {
   inicioDetencion: number | null;
   limiteDetencion: number | null;
   inicioBloqueo: number | null;
+  /** Si el discador responde. Solo lo informa el servicio de consulta. */
+  discador?: boolean;
   ahora: number;
+}
+
+export interface ServicioVigilado {
+  nombre: string;
+  arriba: boolean;
+  /** Instante del ultimo cambio entre arriba y sin respuesta. */
+  desde: number;
 }
 
 export interface EnGestion {
@@ -45,6 +55,7 @@ export interface MantenimientoAvance {
   /** Desde cuando no hay nada en curso; null si algo sigue activo. */
   reposoDesde: number | null;
   enGestion: EnGestion[];
+  servicios: ServicioVigilado[];
 }
 
 export interface FilaHistorial {
@@ -93,6 +104,7 @@ const EN_GESTION: AgentState[] = [
   AgentState.EN_LLAMADA, AgentState.TIPIFICANDO, AgentState.GESTION_MANUAL, AgentState.SEGUIMIENTO
 ];
 const COMPROBAR_RECARGA = 3000;
+export const RUTA_MANTENIMIENTO = '/admin/mantenimiento-sistema';
 const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
 
@@ -110,9 +122,12 @@ export const cuenta = (ms: number) => {
  * Estado del mantenimiento para toda la aplicacion.
  *
  * Decide tres cosas por usuario: que aviso previo ve, si su pantalla esta
- * bloqueada y si el backend esta reiniciando. El bloqueo es individual: quien
+ * bloqueada y si el discador esta reiniciando. El bloqueo es individual: quien
  * tiene una llamada o una gestion sin guardar sigue trabajando y se bloquea al
  * terminar.
+ *
+ * El estado se lee de cashi-maintenance-service, que sigue respondiendo
+ * durante un despliegue; las acciones las ejecuta el discador.
  */
 @Injectable({ providedIn: 'root' })
 export class MantenimientoService {
@@ -125,11 +140,15 @@ export class MantenimientoService {
   private readonly inactividad = inject(InactivityService);
   private readonly router = inject(Router);
   private readonly zone = inject(NgZone);
+  private readonly menu = inject(MenuPermissionService);
 
+  /** Acciones: las ejecuta el discador. */
   private readonly api = `${environment.gatewayUrl}/mantenimiento`;
+  /** Lecturas: mismo origen detras de Apache, sin pasar por el gateway. */
+  private readonly lectura = (environment as { mantenimientoUrl?: string }).mantenimientoUrl ?? '/mantenimiento-api';
 
   readonly datos = signal<Mantenimiento | null>(null);
-  /** El backend no responde y lo ultimo que se supo es que habia mantenimiento. */
+  /** Hay mantenimiento y el discador no responde: no se puede liberar ni cambiar de estado. */
   readonly reiniciando = signal(false);
   /** Reloj del servidor, al segundo mientras hay mantenimiento. */
   readonly ahora = signal(Date.now());
@@ -192,6 +211,9 @@ export class MantenimientoService {
     return d.estado === 'BLOQUEADO' || (d.estado === 'EN_DETENCION' && d.entradaCerrada);
   });
 
+  /** En BLOQUEADO el administrador se queda en la vista de mantenimiento, a pantalla completa. */
+  readonly encierraAdmin = computed(() => this.esAdmin() && this.datos()?.estado === 'BLOQUEADO');
+
   constructor() {
     window.addEventListener(EVENTO_503, () => this.zone.run(() => this.consultar()));
   }
@@ -215,8 +237,14 @@ export class MantenimientoService {
         this.agentStatus.getAgentStatus(Number(usuario.id)).subscribe({ error: () => undefined })
       );
     }
+    // Si al cerrar o recargar habia mantenimiento, la pantalla sale desde el primer
+    // instante; la consulta lo confirma o lo corrige enseguida.
+    const ultimo = this.recordado();
+    if (ultimo) {
+      this.datos.set(ultimo);
+    }
     this.consultar();
-    this.fijarReloj(SONDEO_NORMAL);
+    this.fijarReloj(ultimo ? 1000 : SONDEO_NORMAL);
   }
 
   /** Al cerrar sesion. */
@@ -238,11 +266,11 @@ export class MantenimientoService {
   }
 
   avance(): Observable<MantenimientoAvance> {
-    return this.http.get<MantenimientoAvance>(`${this.api}/avance`).pipe(tap(a => this.recibir(a.mantenimiento)));
+    return this.http.get<MantenimientoAvance>(`${this.lectura}/avance`).pipe(tap(a => this.recibir(a.mantenimiento)));
   }
 
   historial(pagina: number, porPagina = 5): Observable<HistorialMantenimiento> {
-    return this.http.get<HistorialMantenimiento>(`${this.api}/historial`, { params: { pagina, porPagina } });
+    return this.http.get<HistorialMantenimiento>(`${this.lectura}/historial`, { params: { pagina, porPagina } });
   }
 
   /** Reloj del servidor en este instante. */
@@ -273,7 +301,7 @@ export class MantenimientoService {
   /** Vuelve a leer el estado; lo usa el panel tras un conflicto entre administradores. */
   consultar(): void {
     this.ultimoSondeo = Date.now();
-    this.http.get<Mantenimiento>(`${this.api}/estado`).subscribe({
+    this.http.get<Mantenimiento>(`${this.lectura}/estado`).subscribe({
       next: d => this.recibir(d),
       error: (e: HttpErrorResponse) => {
         // Tras una recarga no hay estado en memoria: se toma el ultimo recibido.
@@ -285,7 +313,7 @@ export class MantenimientoService {
             this.fijarReloj(1000);
           }
         }
-        // Sin backend en pleno mantenimiento: es el reinicio del despliegue.
+        // Sin respuesta en pleno mantenimiento: se da por reiniciando hasta saber mas.
         if (this.activo()) {
           this.reiniciando.set(true);
           this.evaluar();
@@ -305,9 +333,14 @@ export class MantenimientoService {
 
   private recibir(d: Mantenimiento): void {
     const antes = this.datos();
+    const reiniciaba = this.reiniciando();
     this.desfase = d.ahora - Date.now();
-    this.reiniciando.set(false);
+    this.reiniciando.set(d.estado !== 'OPERATIVO' && d.discador === false);
     this.datos.set(d);
+    // El menu se pide al discador: si la pagina se cargo sin el, se pide al volver.
+    if (reiniciaba && !this.reiniciando()) {
+      this.menu.loadVisibleMenu().subscribe({ error: () => undefined });
+    }
     this.recordar(d);
     this.ahora.set(Date.now() + this.desfase);
     // Tras un bloqueo hubo despliegue: se recarga para tomar la version nueva.
@@ -371,6 +404,10 @@ export class MantenimientoService {
       || estado === AgentState.EN_LLAMADA
       || estado === AgentState.TIPIFICANDO);
     this.enPantallaDeGestion.set(this.router.url.startsWith('/collection-management'));
+
+    if (this.encierraAdmin() && !this.router.url.startsWith(RUTA_MANTENIMIENTO)) {
+      this.router.navigateByUrl(RUTA_MANTENIMIENTO);
+    }
 
     const bloqueado = this.bloqueado();
     if (bloqueado && !this.bloqueoAnterior) {

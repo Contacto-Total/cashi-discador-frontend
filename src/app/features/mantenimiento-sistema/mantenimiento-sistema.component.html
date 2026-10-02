@@ -3,6 +3,12 @@
        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="d"/></svg>
 </ng-template>
 
+<div class="m-nota" role="status" [class.m-ver]="nota()">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.listo"/></svg>
+  <div><strong>El discador ya levantó</strong><span>Ya puedes liberar.</span></div>
+</div>
+
 <header class="m-cab">
   <div>
     <h1>Mantenimiento del sistema</h1>
@@ -58,14 +64,6 @@
               </button>
               <button type="button" class="m-btn m-pel" [disabled]="enviando()" (click)="bloquear()">
                 <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.check }"></ng-container>Confirmar
-              </button>
-            </div>
-          } @else if (mant.reiniciando()) {
-            <div class="m-fila"><span>Backend</span><span>Sin conexión</span></div>
-            <div class="m-fila"><span>Bloqueado desde</span><span>{{ h(mant.datos()?.inicioBloqueo) }}</span></div>
-            <div class="m-bot">
-              <button type="button" class="m-btn" disabled>
-                <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
               </button>
             </div>
           } @else {
@@ -129,7 +127,7 @@
                 <div class="m-fila"><span>Inicio</span><span>{{ h(mant.datos()?.inicioDetencion) }}</span></div>
                 <div class="m-fila"><span>Bloqueado desde</span><span>{{ h(mant.datos()?.inicioBloqueo) }}</span></div>
                 <div class="m-bot">
-                  <button type="button" class="m-btn" [disabled]="enviando()" (click)="liberar()">
+                  <button type="button" class="m-btn" [disabled]="enviando() || mant.reiniciando()" (click)="liberar()">
                     <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
                   </button>
                 </div>
@@ -210,6 +208,22 @@
           <b>{{ avance()?.enPausa ?? '–' }}</b><span>En pausa</span>
         </div>
       </div>
+
+      <section class="m-card">
+        <h2><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.servidor }"></ng-container>Servicios</h2>
+        <div>
+          @for (s of servicios(); track s.nombre) {
+            <div class="m-srv">
+              <span class="m-n">{{ s.nombre }}</span>
+              <span class="m-e" [class.m-ok]="s.arriba" [class.m-caido]="!s.arriba">
+                {{ s.arriba ? 'Arriba' : 'Sin respuesta · ' + sinRespuesta(s) }}
+              </span>
+            </div>
+          } @empty {
+            <div class="m-vacio">Sin datos</div>
+          }
+        </div>
+      </section>
 
       <section class="m-card">
         <div class="m-tit">

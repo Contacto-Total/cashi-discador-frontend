@@ -1,9 +1,9 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  EnGestion, HistorialMantenimiento, Mantenimiento, MantenimientoAvance, MantenimientoService,
+  EnGestion, HistorialMantenimiento, Mantenimiento, MantenimientoAvance, MantenimientoService, ServicioVigilado,
   cuenta, dosDigitos, horaCorta
 } from './mantenimiento.service';
 import { MascotaCascoComponent } from './mascota-casco.component';
@@ -43,13 +43,16 @@ const ICONOS = {
   grupo: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   historial: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5M12 7v5l4 2',
   subida: 'M16 16l-4-4-4 4 M12 12v9 M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3',
-  alerta: 'm21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3 M12 9v4 M12 17h.01'
+  alerta: 'm21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3 M12 9v4 M12 17h.01',
+  servidor: 'M4 2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M4 14h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z M6 6h.01M6 18h.01',
+  listo: 'M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3'
 };
 
 const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
 const REPOSO = 10_000;
-const CADA = 2000;
+const CADA = 1000;
+const NOTA = 6000;
 const POR_PAGINA = 5;
 
 /**
@@ -75,6 +78,8 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   readonly enviando = signal(false);
   readonly error = signal<string | null>(null);
   readonly avisoCerrado = signal(false);
+  /** Aviso de que el discador volvio a responder. */
+  readonly nota = signal(false);
   /** Fila recien agregada al historial, para resaltarla una vez. */
   readonly filaNueva = signal<number | null>(null);
 
@@ -114,6 +119,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
 
   readonly activo = computed(() => this.vista() === 'EN_DETENCION' || this.vista() === 'BLOQUEADO');
   readonly lista = computed<EnGestion[]>(() => this.avance()?.enGestion ?? []);
+  readonly servicios = computed<ServicioVigilado[]>(() => this.avance()?.servicios ?? []);
   readonly bloqueados = computed(() => {
     const a = this.avance();
     return a && this.activo() ? Math.max(0, a.conectados - a.enPausa - a.enGestion.length) : 0;
@@ -122,7 +128,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   readonly listo = computed(() => this.vista() === 'BLOQUEADO');
   readonly listoTexto = computed(() => {
     if (this.mant.reiniciando()) {
-      return 'Backend sin conexión. Liberar se habilita cuando responda.';
+      return 'Discador sin respuesta. Liberar se habilita cuando responda.';
     }
     const desde = this.h(this.mant.datos()?.inicioBloqueo);
     const quedan = this.lista().length;
@@ -174,6 +180,21 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     return this.calcularPasos();
   });
 
+  constructor() {
+    let reiniciaba = false;
+    effect(() => {
+      const reinicia = this.mant.reiniciando();
+      if (reiniciaba && !reinicia && this.mant.datos()?.estado === 'BLOQUEADO') {
+        this.nota.set(true);
+        this.esperas.push(setTimeout(() => this.nota.set(false), NOTA));
+        this.cargarHistorial(this.historial()?.pagina ?? 0);
+      } else if (reinicia) {
+        this.nota.set(false);
+      }
+      reiniciaba = reinicia;
+    }, { allowSignalWrites: true });
+  }
+
   ngOnInit(): void {
     this.pedir();
     this.cargarHistorial(0);
@@ -206,6 +227,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
 
   liberar(): void {
     const pasos = this.calcularPasos();
+    this.nota.set(false);
     this.enviar(this.mant.liberar(), () => {
       this.cierre.set({ pasos, fase: 'run' });
       this.esperas.push(
@@ -236,6 +258,11 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
 
   duracion(segundos: number | null): string {
     return segundos == null ? '–' : cuenta(segundos * 1000);
+  }
+
+  /** Tiempo que lleva un servicio sin responder. */
+  sinRespuesta(s: ServicioVigilado): string {
+    return cuenta(this.ahora() - s.desde);
   }
 
   /** Tiempo que lleva el asesor en su estado. */
