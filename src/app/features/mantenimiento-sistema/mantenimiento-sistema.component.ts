@@ -119,8 +119,11 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     return a && this.activo() ? Math.max(0, a.conectados - a.enPausa - a.enGestion.length) : 0;
   });
 
-  readonly listo = computed(() => this.vista() === 'BLOQUEADO' && !this.mant.reiniciando());
+  readonly listo = computed(() => this.vista() === 'BLOQUEADO');
   readonly listoTexto = computed(() => {
+    if (this.mant.reiniciando()) {
+      return 'Backend sin conexión. Liberar se habilita cuando responda.';
+    }
     const desde = this.h(this.mant.datos()?.inicioBloqueo);
     const quedan = this.lista().length;
     return quedan
@@ -269,6 +272,17 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
       return [aviso, paso('discado', 'Discado detenido'), paso('llamadas', 'Llamadas en curso'),
         paso('gestiones', 'Tipificaciones'), paso('pantallas', 'Pantallas bloqueadas'),
         paso('reposo', 'Reposo verificado'), paso('reanudar', 'Discado reanudado')];
+    }
+
+    // Sin datos del backend se muestran los pasos sin cifras.
+    if (!a) {
+      const hecho = (id: string, titulo: string, val = '') => paso(id, titulo, 'm-ok', '', val);
+      return [aviso, hecho('discado', 'Discado detenido', this.h(d.inicioDetencion)),
+        v === 'BLOQUEADO' ? hecho('llamadas', 'Llamadas en curso') : paso('llamadas', 'Llamadas en curso', 'm-run'),
+        v === 'BLOQUEADO' ? hecho('gestiones', 'Tipificaciones') : paso('gestiones', 'Tipificaciones', 'm-run'),
+        v === 'BLOQUEADO' ? hecho('pantallas', 'Pantallas bloqueadas') : paso('pantallas', 'Pantallas bloqueadas', 'm-run'),
+        v === 'BLOQUEADO' ? hecho('reposo', 'Reposo verificado', this.h(d.inicioBloqueo)) : paso('reposo', 'Reposo verificado'),
+        paso('reanudar', 'Discado reanudado')];
     }
 
     const campanas = a?.campanasDetenidas ?? 0;

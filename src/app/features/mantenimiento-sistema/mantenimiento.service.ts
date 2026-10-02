@@ -1,5 +1,5 @@
 import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, Subscription, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -81,6 +81,10 @@ export const PAUSAS_MANTENIMIENTO: AgentState[] = [
 export const CLAVE_RECARGA = 'cashi_recarga_mantenimiento';
 /** Lo emite el interceptor al recibir un 503 de mantenimiento. */
 export const EVENTO_503 = 'cashi:mantenimiento';
+/** Ultimo mantenimiento recibido: se usa si la pagina se recarga con el backend caido. */
+const CLAVE_ULTIMO = 'cashi_mantenimiento';
+/** Pasado este tiempo lo recordado ya no se considera vigente. */
+const VIGENCIA_ULTIMO = 2 * 60 * 60_000;
 
 const SONDEO_NORMAL = 20_000;
 const SONDEO_ACTIVO = 3_000;
@@ -271,10 +275,20 @@ export class MantenimientoService {
     this.ultimoSondeo = Date.now();
     this.http.get<Mantenimiento>(`${this.api}/estado`).subscribe({
       next: d => this.recibir(d),
-      error: () => {
+      error: (e: HttpErrorResponse) => {
+        // Tras una recarga no hay estado en memoria: se toma el ultimo recibido.
+        const sinServicio = e.status === 0 || e.status >= 500;
+        if (!this.datos() && sinServicio) {
+          const ultimo = this.recordado();
+          if (ultimo) {
+            this.datos.set(ultimo);
+            this.fijarReloj(1000);
+          }
+        }
         // Sin backend en pleno mantenimiento: es el reinicio del despliegue.
         if (this.activo()) {
           this.reiniciando.set(true);
+          this.evaluar();
         }
       }
     });
@@ -294,6 +308,7 @@ export class MantenimientoService {
     this.desfase = d.ahora - Date.now();
     this.reiniciando.set(false);
     this.datos.set(d);
+    this.recordar(d);
     this.ahora.set(Date.now() + this.desfase);
     // Tras un bloqueo hubo despliegue: se recarga para tomar la version nueva.
     if (antes?.estado === 'BLOQUEADO' && d.estado === 'OPERATIVO' && !this.esAdmin()) {
@@ -303,6 +318,27 @@ export class MantenimientoService {
     this.fijarReloj(d.estado === 'OPERATIVO' && !this.recargaPendiente ? SONDEO_NORMAL : 1000);
     this.evaluar();
     this.recargarSiSePuede();
+  }
+
+  private recordar(d: Mantenimiento): void {
+    try {
+      if (d.estado === 'OPERATIVO') {
+        localStorage.removeItem(CLAVE_ULTIMO);
+      } else {
+        localStorage.setItem(CLAVE_ULTIMO, JSON.stringify({ guardado: Date.now(), datos: d }));
+      }
+    } catch {
+      // Sin almacenamiento local no se recuerda; la pantalla depende solo del backend.
+    }
+  }
+
+  private recordado(): Mantenimiento | null {
+    try {
+      const ultimo = JSON.parse(localStorage.getItem(CLAVE_ULTIMO) ?? 'null');
+      return ultimo && Date.now() - ultimo.guardado < VIGENCIA_ULTIMO ? ultimo.datos as Mantenimiento : null;
+    } catch {
+      return null;
+    }
   }
 
   private fijarReloj(periodo: number): void {
