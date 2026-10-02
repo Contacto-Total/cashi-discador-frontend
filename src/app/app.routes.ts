@@ -393,7 +393,12 @@ export const routes: Routes = [
   {
     path: 'comisiones',
     loadComponent: () => import('./comisiones/pages/comisiones.page').then(m => m.ComisionesPage),
-    canActivate: [authGuard, adminGuard]
+    canActivate: [authGuard] // Acceso por configuración de menú (COMISIONES); el backend lo valida igual
+  },
+  {
+    path: 'mis-comisiones',
+    loadComponent: () => import('./comisiones/pages/mis-comisiones.page').then(m => m.MisComisionesPage),
+    canActivate: [authGuard] // Acceso por configuración de menú (MIS_COMISIONES); cada uno ve solo lo suyo
   },
   {
     path: 'dashboard/payments',
