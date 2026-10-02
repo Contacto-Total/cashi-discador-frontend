@@ -333,15 +333,18 @@ export class ControlAsistenciaComponent implements OnInit {
     // atrás a dos adelante, lo mismo que lista la pestaña.
     this.cargarPorAprobar();
 
-    // La gente del ámbito, con la misma consulta que usa la pestaña para su lista.
+    // La gente del ámbito en esa semana. Sale de la lista de personal y no del
+    // reporte: pedir el reporte entero solo para contar lo duplicaba.
     effect(() => {
       const ambito = this.idSubcartera(), desde = this.desde(), hasta = this.hasta();
       untracked(() => this.genteDelAmbito.set(null));
       if (!ambito) {
         return;
       }
-      this.servicio.reporte(desde, hasta, ambito).subscribe({
-        next: r => this.genteDelAmbito.set(new Set(r.agentes.map(a => a.idUsuario))),
+      this.servicio.personal(ambito).subscribe({
+        next: p => this.genteDelAmbito.set(new Set(p
+          .filter(x => (!x.fechaIngreso || x.fechaIngreso <= hasta) && (!x.fechaCese || x.fechaCese >= desde))
+          .map(x => x.idUsuario))),
         error: () => this.genteDelAmbito.set(null)
       });
     });
