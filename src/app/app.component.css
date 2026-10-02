@@ -952,3 +952,16 @@ body.light-theme .sidebar-footer button.sidebar-item:focus-visible {
   position: static !important;
   width: auto !important;
 }
+
+/* Mantenimiento en BLOQUEADO: la vista de Sistemas ocupa toda la pantalla. */
+.app-container.mantenimiento-completa .cashi-sidebar,
+.app-container.mantenimiento-completa .sidebar-toggle,
+.app-container.mantenimiento-completa .mobile-menu-btn,
+.app-container.mantenimiento-completa .mobile-backdrop,
+.app-container.mantenimiento-completa app-peripheral-status-banner {
+  display: none !important;
+}
+.app-container.mantenimiento-completa .main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+}

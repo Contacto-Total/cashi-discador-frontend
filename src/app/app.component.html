@@ -1,4 +1,5 @@
-<div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()" [attr.inert]="mantenimiento.bloqueado() ? '' : null">
+<div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()" [attr.inert]="mantenimiento.bloqueado() ? '' : null"
+     [class.mantenimiento-completa]="mantenimiento.encierraAdmin()">
   <!-- Mobile hamburger button -->
   <button type="button" class="mobile-menu-btn" (click)="toggleMobileSidebar()" title="Menú">
     <lucide-angular name="menu" [size]="22"></lucide-angular>
