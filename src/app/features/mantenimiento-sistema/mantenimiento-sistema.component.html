@@ -21,7 +21,7 @@
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.subida"/></svg>
         </span>
         <div class="m-txt"><strong>Listo para subir el cambio</strong><span>{{ listoTexto() }}</span></div>
-        <button type="button" class="m-btn m-fijo" [disabled]="enviando() || !listo()" (click)="liberar()">
+        <button type="button" class="m-btn m-fijo" [disabled]="enviando() || !listo() || mant.reiniciando()" (click)="liberar()">
           <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
         </button>
       </div>
