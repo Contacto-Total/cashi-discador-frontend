@@ -968,6 +968,11 @@ type EvaluacionConvenio =
                         </div>
                       </div>
                     </div>
+                    @if ((continuidadData()!.montoPagadoVoluntario ?? 0) > 0) {
+                      <div class="text-xs text-green-700 dark:text-green-300 text-center">
+                        Incluye <span class="font-semibold">{{ continuidadData()!.montoPagadoVoluntario | appCurrency }}</span> de pago voluntario
+                      </div>
+                    }
                     @if (continuidadData()!.fechaVencimiento) {
                       <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
                         Promesa venció el: <span class="font-semibold">{{ continuidadData()!.fechaVencimiento }}</span>

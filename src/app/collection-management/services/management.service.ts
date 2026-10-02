@@ -140,7 +140,8 @@ export interface ContinuidadPromesaResponse {
   mensaje: string;
   promesaOrigenUuid?: string;
   montoOriginal?: number;
-  montoPagado?: number;
+  montoPagado?: number;            // Incluye pagos voluntarios posteriores a la promesa
+  montoPagadoVoluntario?: number;  // Parte de montoPagado que vino por pago voluntario
   saldoRestante?: number;
   fechaVencimiento?: string;
   nombreCliente?: string;
