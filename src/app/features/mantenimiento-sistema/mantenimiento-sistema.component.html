@@ -26,7 +26,14 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.subida"/></svg>
         </span>
-        <div class="m-txt"><strong>Listo para subir el cambio</strong><span>{{ listoTexto() }}</span></div>
+        <div class="m-txt">
+          <strong>Listo para subir el cambio</strong><span>{{ listoTexto() }}</span>
+          <div class="m-srvs">
+            @for (s of servicios(); track s.nombre) {
+              <div [class.m-caido]="!s.arriba">{{ s.nombre }}{{ s.arriba ? '' : ' · sin respuesta ' + sinRespuesta(s) }}</div>
+            }
+          </div>
+        </div>
         <button type="button" class="m-btn m-fijo" [disabled]="enviando() || !listo() || mant.reiniciando()" (click)="liberar()">
           <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
         </button>
@@ -208,22 +215,6 @@
           <b>{{ avance()?.enPausa ?? '–' }}</b><span>En pausa</span>
         </div>
       </div>
-
-      <section class="m-card">
-        <h2><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.servidor }"></ng-container>Servicios</h2>
-        <div>
-          @for (s of servicios(); track s.nombre) {
-            <div class="m-srv">
-              <span class="m-n">{{ s.nombre }}</span>
-              <span class="m-e" [class.m-ok]="s.arriba" [class.m-caido]="!s.arriba">
-                {{ s.arriba ? 'Arriba' : 'Sin respuesta · ' + sinRespuesta(s) }}
-              </span>
-            </div>
-          } @empty {
-            <div class="m-vacio">Sin datos</div>
-          }
-        </div>
-      </section>
 
       <section class="m-card">
         <div class="m-tit">
