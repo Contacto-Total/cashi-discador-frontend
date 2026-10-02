@@ -2046,8 +2046,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Rellamada signals
   protected isRellamada = signal(false);          // Flag: rellamada en progreso
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
-  /** La rellamada fue CONTESTADA. rellamadaCallActive ya es true desde que timbra. */
-  protected rellamadaEnLlamada = signal(false);
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   // Evita hacer muchos clicks en rellamada y saturar el SIP
@@ -3375,18 +3373,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
         }
 
-        // Contestaron: recien ahi es EN_LLAMADA. Timbrar no cuenta, igual que en la
-        // predictiva y en la manual. Si nadie contesta, el estado no se toca.
-        if (state === CallState.ACTIVE && !this.rellamadaEnLlamada()) {
-          this.rellamadaEnLlamada.set(true);
-          const usuarioRellamada = this.authService.getCurrentUser();
-          if (usuarioRellamada?.id) {
-            this.agentService.iniciarLlamadaSistema(usuarioRellamada.id, 'Rellamada manual').subscribe({
-              next: () => console.log('✅ [Rellamada] Estado cambiado a EN_LLAMADA'),
-              error: (err: any) => console.error('❌ [Rellamada] Error cambiando a EN_LLAMADA:', err)
-            });
-          }
-        }
+        // El estado NO se marca desde aca: ACTIVE es la pata del asesor, que contesta
+        // apenas FreeSWITCH origina, con el cliente todavia timbrando. EN_LLAMADA y
+        // TIPIFICANDO los marca el backend en CHANNEL_BRIDGE y CHANNEL_HANGUP.
         
         // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
         if((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
@@ -3400,21 +3389,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         return; // No ejecutar lógica normal
       }
 
-      // Cuando la llamada se activa, cambiar estado a EN_LLAMADA
+      // Cuando la llamada se activa: timer y beep. El estado NO se marca aca.
+      //
+      // ACTIVE es el 200 OK de la pata del ASESOR. En una manual el originate llama
+      // primero al asesor y recien despues al cliente, asi que marcar aca ponia
+      // EN_LLAMADA mientras el cliente todavia timbraba (y hasta cuando no contestaba
+      // nunca). Ahora lo marca el backend en CHANNEL_BRIDGE, que es la contestada real.
       if (state === CallState.ACTIVE && !this.callActive()) {
         this.callActive.set(true);
         // El cliente de una predictiva se asigna al cargar su contexto confirmado,
         // nunca a partir de la ficha que estuviera visible al recibir ACTIVE.
         this.startCall(); // Iniciar timer
         this.playCallAlertBeep(); // Beep de alerta al agente
-        // Cambiar estado del agente a EN_LLAMADA
-        const currentUser = this.authService.getCurrentUser();
-        if (currentUser?.id) {
-          this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.EN_LLAMADA }).subscribe({
-            next: () => console.log('✅ Estado cambiado a EN_LLAMADA'),
-            error: (err: any) => console.error('❌ Error cambiando estado:', err)
-          });
-        }
       }
 
       // Cuando la llamada termina, SIEMPRE cambiar estado a TIPIFICANDO
@@ -4889,12 +4875,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.isMuted.set(false);
     this.isOnHold.set(false);
 
-    // Si la rellamada fue contestada hay gestion que guardar, asi que va a TIPIFICANDO
-    // igual que cualquier llamada. Si nunca contestaron, no se toca el estado.
-    const veniaHablando = this.rellamadaEnLlamada();
-    this.rellamadaEnLlamada.set(false);
-
-    if (veniaHablando || this.isTipifying()) {
+    // El TIPIFICANDO del fin de llamada lo marca el backend. Esto queda solo para la
+    // ficha que ya estaba en modo tipificacion antes de la rellamada.
+    if (this.isTipifying()) {
       this.sipService.blockIncomingCallsMode(true);
       const currentUser = this.authService.getCurrentUser();
       if (currentUser?.id) {
