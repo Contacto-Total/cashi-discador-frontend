@@ -38,6 +38,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         router.navigate(['/login']);
       }
 
+      // El backend esta en mantenimiento: se avisa para que la pantalla se actualice.
+      if (error.status === 503 && error.error?.mantenimiento) {
+        window.dispatchEvent(new CustomEvent('cashi:mantenimiento'));
+      }
+
       return throwError(() => error);
     })
   );

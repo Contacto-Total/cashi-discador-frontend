@@ -1,4 +1,4 @@
-<div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()">
+<div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()" [attr.inert]="mantenimiento.bloqueado() ? '' : null">
   <!-- Mobile hamburger button -->
   <button type="button" class="mobile-menu-btn" (click)="toggleMobileSidebar()" title="Menú">
     <lucide-angular name="menu" [size]="22"></lucide-angular>
@@ -84,6 +84,18 @@
         <lucide-angular name="user" [size]="20"></lucide-angular>
         <span class="item-text" *ngIf="!isSidebarCollapsed">{{ (authService.currentUser$ | async)?.username }}</span>
       </div>
+
+      <!-- Mantenimiento del sistema (solo ADMIN) -->
+      <a *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'"
+         routerLink="/admin/mantenimiento-sistema" routerLinkActive="active" class="sidebar-item"
+         [title]="isSidebarCollapsed ? 'Mantenimiento' : ''">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Mantenimiento</span>
+        <span class="punto-mantenimiento" *ngIf="!isSidebarCollapsed" [style.background]="colorMantenimiento()"></span>
+      </a>
 
       <!-- Notificaciones (solo ADMIN) -->
       <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
@@ -210,6 +222,9 @@
 <app-whatsapp-notification-popup *ngIf="!isLoginPage() && authService.isAuthenticated()"></app-whatsapp-notification-popup>
 <!-- Los avisos de la jornada del asesor, en cualquier pantalla -->
 <app-avisos-asistencia *ngIf="!isLoginPage()"></app-avisos-asistencia>
+
+<!-- Pantalla de mantenimiento: tapa la aplicación sin recargarla -->
+<app-mantenimiento-pantalla *ngIf="!isLoginPage() && authService.isAuthenticated()"></app-mantenimiento-pantalla>
 
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">
   <router-outlet></router-outlet>

@@ -48,6 +48,10 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   private boundBeforeUnload = () => {
     // Notificar al backend que la página se está cerrando (beacon disconnect)
     // El backend espera 5s y verifica si el usuario reconectó (refresh = reconecta, cierre = no)
+    // La recarga tras un mantenimiento no avisa: el asesor conserva su estado (p. ej. Comida).
+    if (sessionStorage.getItem('cashi_recarga_mantenimiento')) {
+      return;
+    }
     if (this.userId) {
       const token = localStorage.getItem('callcenter_token');
       if (token) {
