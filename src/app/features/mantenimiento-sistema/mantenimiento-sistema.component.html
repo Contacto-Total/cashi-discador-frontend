@@ -1,0 +1,278 @@
+<ng-template #ic let-d>
+  <svg class="m-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="d"/></svg>
+</ng-template>
+
+<header class="m-cab">
+  <div>
+    <h1>Mantenimiento del sistema</h1>
+    <p>{{ subtitulo() }}</p>
+  </div>
+  <span class="m-est" role="status" [style.background]="etiqueta().fondo" [style.color]="etiqueta().color"
+        [style.border-color]="etiqueta().borde">{{ etiqueta().texto }}</span>
+</header>
+
+<main class="m-cuerpo">
+  <div class="m-listo" [class.m-ver]="listo()">
+    <div>
+      <div class="m-in">
+        <span class="m-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.subida"/></svg>
+        </span>
+        <div class="m-txt"><strong>Listo para subir el cambio</strong><span>{{ listoTexto() }}</span></div>
+        <button type="button" class="m-btn m-fijo" [disabled]="enviando() || !listo()" (click)="liberar()">
+          <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="m-cols">
+    <div class="m-col">
+      <section class="m-card">
+        <h2>
+          <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.llave }"></ng-container>
+          <span>{{ vista() === 'OPERATIVO' ? 'Nuevo mantenimiento' : 'Mantenimiento en curso' }}</span>
+        </h2>
+        <div class="m-pila">
+          @if (error(); as e) {
+            <div class="m-falla" role="alert">{{ e }}</div>
+          }
+
+          @if (confirmando() === 'ahora') {
+            <div class="m-conf" role="alert">El aviso de 60 segundos sale a todos los usuarios libres.</div>
+            <div class="m-bot">
+              <button type="button" class="m-btn m-sec" (click)="confirmando.set(null)">
+                <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.volver }"></ng-container>Volver
+              </button>
+              <button type="button" class="m-btn" [disabled]="enviando()" (click)="iniciarAhora()">
+                <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.check }"></ng-container>Confirmar
+              </button>
+            </div>
+          } @else if (confirmando() === 'bloquear') {
+            <div class="m-conf" role="alert">Se bloquea sin esperar a quienes siguen en gestión.</div>
+            <div class="m-bot">
+              <button type="button" class="m-btn m-sec" (click)="confirmando.set(null)">
+                <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.volver }"></ng-container>Volver
+              </button>
+              <button type="button" class="m-btn m-pel" [disabled]="enviando()" (click)="bloquear()">
+                <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.check }"></ng-container>Confirmar
+              </button>
+            </div>
+          } @else if (mant.reiniciando()) {
+            <div class="m-fila"><span>Backend</span><span>Sin conexión</span></div>
+            <div class="m-fila"><span>Bloqueado desde</span><span>{{ h(mant.datos()?.inicioBloqueo) }}</span></div>
+            <div class="m-bot">
+              <button type="button" class="m-btn" disabled>
+                <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
+              </button>
+            </div>
+          } @else {
+            @switch (vista()) {
+              @case ('OPERATIVO') {
+                <div class="m-seg2">
+                  <button type="button" [attr.aria-pressed]="pestana() === 'prog'" (click)="pestana.set('prog')">Programar</button>
+                  <button type="button" [attr.aria-pressed]="pestana() === 'ya'" (click)="pestana.set('ya')">Iniciar ahora</button>
+                </div>
+                @if (pestana() === 'prog') {
+                  <div class="m-campo">
+                    <label for="m-hora">Hora de inicio</label>
+                    <input id="m-hora" type="time" [value]="hora()" (input)="hora.set($any($event.target).value)">
+                  </div>
+                  <div class="m-pie">Aviso 15 min antes. Recordatorio 5 min antes. Espera llamadas y tipificaciones.</div>
+                  <div class="m-bot">
+                    <button type="button" class="m-btn" [disabled]="enviando() || !hora()" (click)="programar()">
+                      <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.reloj }"></ng-container>Programar
+                    </button>
+                  </div>
+                } @else {
+                  <div class="m-pie">Aviso de 60 segundos. Espera llamadas y tipificaciones.</div>
+                  <div class="m-bot">
+                    <button type="button" class="m-btn" (click)="confirmando.set('ahora')">
+                      <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.play }"></ng-container>Iniciar ahora
+                    </button>
+                  </div>
+                }
+              }
+              @case ('PROGRAMADO') {
+                <div class="m-fila"><span>Tipo</span><span>Programado</span></div>
+                <div class="m-fila"><span>Inicio</span><span>{{ h(mant.datos()?.inicioProgramado) }}</span></div>
+                <div class="m-bot">
+                  <button type="button" class="m-btn m-sec" [disabled]="enviando()" (click)="cancelar()">
+                    <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.x }"></ng-container>Cancelar
+                  </button>
+                </div>
+              }
+              @case ('INMEDIATO') {
+                <div class="m-fila"><span>Tipo</span><span>Inmediato</span></div>
+                <div class="m-fila"><span>Inicio</span><span>en 60 segundos</span></div>
+                <div class="m-bot">
+                  <button type="button" class="m-btn m-sec" [disabled]="enviando()" (click)="cancelar()">
+                    <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.x }"></ng-container>Cancelar
+                  </button>
+                </div>
+              }
+              @case ('EN_DETENCION') {
+                <div class="m-fila"><span>Inicio</span><span>{{ h(mant.datos()?.inicioDetencion) }}</span></div>
+                <div class="m-fila"><span>Tiempo máximo</span><span>{{ tiempoMaximo() }}</span></div>
+                <div class="m-bot">
+                  <button type="button" class="m-btn m-sec" [disabled]="enviando()" (click)="cancelar()">
+                    <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.x }"></ng-container>Cancelar
+                  </button>
+                  <button type="button" class="m-btn m-pel" (click)="confirmando.set('bloquear')">
+                    <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.candado }"></ng-container>Bloquear ahora
+                  </button>
+                </div>
+              }
+              @case ('BLOQUEADO') {
+                <div class="m-fila"><span>Inicio</span><span>{{ h(mant.datos()?.inicioDetencion) }}</span></div>
+                <div class="m-fila"><span>Bloqueado desde</span><span>{{ h(mant.datos()?.inicioBloqueo) }}</span></div>
+                <div class="m-bot">
+                  <button type="button" class="m-btn" [disabled]="enviando()" (click)="liberar()">
+                    <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.abierto }"></ng-container>Liberar
+                  </button>
+                </div>
+              }
+            }
+          }
+        </div>
+      </section>
+
+      <section class="m-card">
+        <h2><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.monitor }"></ng-container>Vista del asesor</h2>
+        <div class="m-mini">
+          <div class="m-lat"></div>
+          <div class="m-zona">
+            <div class="m-sk" style="height:22px"></div>
+            <div style="display:flex;gap:8px"><div class="m-sk" style="height:70px;flex:1"></div><div class="m-sk" style="height:70px;flex:1"></div></div>
+            <div class="m-sk" style="height:60px"></div>
+            <div class="m-sk" style="height:22px;width:60%"></div>
+          </div>
+          <div class="m-mav" [class.m-ver]="!!avisoAsesor()" role="status">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.alerta"/></svg>
+            <div><strong>{{ avisoAsesor()?.titulo }}</strong><span>{{ avisoAsesor()?.texto }}</span></div>
+            @if (avisoAsesor()?.cerrable) {
+              <button type="button" class="m-x" (click)="avisoCerrado.set(true)" aria-label="Cerrar aviso">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" aria-hidden="true"><path [attr.d]="I.x"/></svg>
+              </button>
+            }
+          </div>
+          <div class="m-cubre" [class.m-ver]="asesorBloqueado()">
+            @if (asesorBloqueado()) {
+              <app-mascota-casco [escala]="0.62" [compacta]="true"></app-mascota-casco>
+              <h3>Cashi está en mantenimiento</h3>
+              <p>Tu sesión sigue abierta</p>
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="m-card m-c-flujo">
+      <h2><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.flujo }"></ng-container>Flujo</h2>
+      <ol class="m-pasos">
+        @for (p of pasos(); track p.id) {
+          <li class="m-paso" [class]="'m-paso ' + p.clase">
+            <span class="m-pt">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="I.check"/></svg>
+            </span>
+            <div><strong>{{ p.titulo }}</strong><small>{{ p.sub }}</small></div>
+            @if (p.val) {
+              <span class="m-val">{{ p.val }}</span>
+            }
+            @if (p.barra !== null) {
+              <div class="m-barra m-usa"><i [style.width.%]="p.barra"></i></div>
+            }
+          </li>
+        }
+      </ol>
+    </section>
+
+    <div class="m-col">
+      <div class="m-tiles">
+        <div class="m-tile">
+          <i style="background:#e8f0fe;color:#1d4ed8"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.tel }"></ng-container></i>
+          <b>{{ avance()?.enLlamada ?? '–' }}</b><span>En llamada</span>
+        </div>
+        <div class="m-tile">
+          <i style="background:#fef6e0;color:#92400e"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.nota }"></ng-container></i>
+          <b>{{ avance()?.tipificando ?? '–' }}</b><span>Tipificando</span>
+        </div>
+        <div class="m-tile">
+          <i style="background:#fef2f2;color:#b91c1c"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.candado }"></ng-container></i>
+          <b>{{ avance() ? bloqueados() : '–' }}</b><span>Bloqueados</span>
+        </div>
+        <div class="m-tile">
+          <i style="background:#eef2f7;color:#334155"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.cafe }"></ng-container></i>
+          <b>{{ avance()?.enPausa ?? '–' }}</b><span>En pausa</span>
+        </div>
+      </div>
+
+      <section class="m-card">
+        <div class="m-tit">
+          <h2><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.grupo }"></ng-container>En gestión</h2>
+        </div>
+        <div class="m-lista">
+          @for (a of lista(); track a.idUsuario) {
+            <div class="m-as">
+              <span class="m-n">{{ a.nombre }}</span>
+              <span class="m-d">{{ a.subcartera ? a.subcartera + ' · ' : '' }}{{ lleva(a) }}</span>
+              <span class="m-chip" [class.m-ll]="a.estado === 'EN_LLAMADA'" [class.m-ti]="a.estado === 'TIPIFICANDO'">
+                {{ a.estado === 'EN_LLAMADA' ? 'En llamada' : 'Tipificando' }}
+              </span>
+            </div>
+          } @empty {
+            <div class="m-vacio">Nadie en gestión</div>
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="m-card">
+    <h2><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.historial }"></ng-container>Historial</h2>
+    <div class="m-tabla">
+      <table>
+        <caption class="sr-only">Mantenimientos anteriores, del más reciente al más antiguo</caption>
+        <thead>
+          <tr>
+            <th scope="col">Fecha</th><th scope="col">Tipo</th><th scope="col">Inicio</th><th scope="col">Bloqueo</th>
+            <th scope="col">Fin</th><th scope="col">Detención</th><th scope="col">Usuario</th><th scope="col">Resultado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of historial()?.filas ?? []; track f.id) {
+            <tr [class.m-nueva]="f.id === filaNueva()">
+              <td>{{ fecha(f.fin) }}</td>
+              <td>{{ f.inmediato ? 'Inmediato' : 'Programado' }}</td>
+              <td>{{ h(f.inicio) }}</td>
+              <td>{{ h(f.bloqueo) }}</td>
+              <td>{{ h(f.fin) }}</td>
+              <td>{{ duracion(f.detencionSegundos) }}</td>
+              <td>{{ f.usuario ?? '–' }}</td>
+              <td>{{ f.resultado === 'LIBERADO' ? 'Liberado' : 'Cancelado' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8">Sin mantenimientos registrados</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (historial(); as hi) {
+      <div class="m-pag">
+        <p>Página {{ hi.pagina + 1 }} de {{ hi.paginas }}</p>
+        <div>
+          <button type="button" class="m-mini-btn" [disabled]="hi.pagina === 0" (click)="cargarHistorial(hi.pagina - 1)">
+            <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.izq }"></ng-container>Anterior
+          </button>
+          <button type="button" class="m-mini-btn" [disabled]="hi.pagina >= hi.paginas - 1" (click)="cargarHistorial(hi.pagina + 1)">
+            Siguiente<ng-container *ngTemplateOutlet="ic; context: { $implicit: I.der }"></ng-container>
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+</main>

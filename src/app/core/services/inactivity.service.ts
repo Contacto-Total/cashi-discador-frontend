@@ -16,6 +16,8 @@ export class InactivityService {
   private warningEmitted: boolean = false; // Flag para emitir warning solo una vez
   /** Cuándo se avisó por última vez de que hay actividad. */
   private ultimoAviso = 0;
+  /** Con la pantalla de mantenimiento puesta el tiempo sin actividad no cuenta. */
+  private pausado = false;
 
   // Eventos que resetean el contador de inactividad
   private activityEvents$ = merge(
@@ -69,7 +71,23 @@ export class InactivityService {
     }
   }
 
+  pausar(): void {
+    this.pausado = true;
+  }
+
+  reanudar(): void {
+    if (this.pausado) {
+      this.pausado = false;
+      this.lastActivityTime = Date.now();
+      this.warningEmitted = false;
+    }
+  }
+
   private verificarInactividad(): void {
+    if (this.pausado) {
+      this.lastActivityTime = Date.now();
+      return;
+    }
     const tiempoInactivo = Math.floor((Date.now() - this.lastActivityTime) / 1000);
     const timeoutInactividad = this.sessionConfig.getTimeoutInactividad();
     const timeoutWarning = this.sessionConfig.getTimeoutWarning();

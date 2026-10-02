@@ -343,6 +343,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard]
   },
   {
+    path: 'admin/mantenimiento-sistema',
+    loadComponent: () => import('./features/mantenimiento-sistema/mantenimiento-sistema.component').then(m => m.MantenimientoSistemaComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
     path: 'admin/maintenance/menu-config',
     loadComponent: () => import('./maintenance/components/menu-configuration/menu-configuration.component').then(m => m.MenuConfigurationComponent),
     canActivate: [authGuard, adminGuard]

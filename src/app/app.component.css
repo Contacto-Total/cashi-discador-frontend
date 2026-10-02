@@ -924,3 +924,12 @@ body.light-theme .sidebar-footer button.sidebar-item:focus-visible {
     transition: none;
   }
 }
+
+/* Punto de estado del mantenimiento en el menú lateral */
+.sidebar-footer .sidebar-item .punto-mantenimiento {
+  margin-left: auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}

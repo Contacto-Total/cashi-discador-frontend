@@ -31,6 +31,8 @@ import { Subscription } from 'rxjs';
 import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 import { WhatsAppNotificationPopupComponent } from './features/whatsapp/components/notification-popup/whatsapp-notification-popup.component';
 import { AvisosAsistenciaComponent } from './features/asistencia/avisos-asistencia.component';
+import { MantenimientoService } from './features/mantenimiento-sistema/mantenimiento.service';
+import { MantenimientoPantallaComponent } from './features/mantenimiento-sistema/mantenimiento-pantalla.component';
 
 @Component({
   selector: 'app-root',
@@ -47,7 +49,8 @@ import { AvisosAsistenciaComponent } from './features/asistencia/avisos-asistenc
     PeripheralStatusBannerComponent,
     ToastNotificationComponent,
     WhatsAppNotificationPopupComponent,
-    AvisosAsistenciaComponent
+    AvisosAsistenciaComponent,
+    MantenimientoPantallaComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -105,8 +108,22 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private dialog: MatDialog,
     private router: Router,
     private toast: ToastService,
-    private gestionLock: GestionLockService
+    private gestionLock: GestionLockService,
+    public mantenimiento: MantenimientoService
   ) {}
+
+  /** Color del punto del menú según la etapa del mantenimiento. */
+  colorMantenimiento(): string {
+    if (this.mantenimiento.reiniciando()) {
+      return '#8491a3';
+    }
+    switch (this.mantenimiento.datos()?.estado) {
+      case 'PROGRAMADO': return '#2563eb';
+      case 'EN_DETENCION': return '#d97706';
+      case 'BLOQUEADO': return '#dc2626';
+      default: return '#10b981';
+    }
+  }
 
   // Notificaciones methods
   toggleNotificacionesDropdown(): void {
@@ -202,6 +219,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         this.websocketService.connect();
         this.subscribeForceLogout();
         this.iniciarMonitoreoInactividad();
+        this.mantenimiento.iniciar();
 
         // Cargar menú dinámico según el rol del usuario
         this.menuPermissionService.loadVisibleMenu().subscribe({
@@ -229,6 +247,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       } else {
         // Usuario no autenticado - detener servicios
+        this.mantenimiento.detener();
         this.inactivityService.detener();
         this.websocketService.disconnect();
         this.sipService.unregister();

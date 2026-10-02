@@ -18,6 +18,11 @@ export enum CallState {
 export class SipService {
   private ua: any | null = null;
   private currentSession: any | null = null;
+
+  /** Hay una llamada establecida o en curso de establecerse. */
+  get enLlamada(): boolean {
+    return !!this.currentSession;
+  }
   private currentCallState: CallState = CallState.IDLE;
   private remoteAudio: HTMLAudioElement | null = null;
   private ringtoneAudio: HTMLAudioElement | null = null;

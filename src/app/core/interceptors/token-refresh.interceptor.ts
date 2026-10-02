@@ -47,8 +47,12 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (req, next) => {
       }),
       catchError((error) => {
         isRefreshing = false;
-        // Si falla después de reintentos, cerrar sesión
-        authService.logout();
+        // Sin red o con el servicio caido no se cierra la sesion: cerrar cuelga la
+        // llamada del softphone. Solo se cierra si el servidor rechazo la renovacion.
+        const sinServicio = error?.status === 0 || error?.status >= 500;
+        if (!sinServicio) {
+          authService.logout();
+        }
         return throwError(() => error);
       })
     );

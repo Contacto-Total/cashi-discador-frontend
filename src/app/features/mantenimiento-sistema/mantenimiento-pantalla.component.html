@@ -1,0 +1,27 @@
+@if (mant.bloqueado()) {
+  <div class="cubre" role="alertdialog" aria-modal="true" aria-labelledby="mant-titulo">
+    <div class="pantalla">
+      <div class="mascota">
+        <app-mascota-casco [escala]="1.15"></app-mascota-casco>
+      </div>
+      <h3 id="mant-titulo">Cashi está en mantenimiento</h3>
+      <p>{{ texto() }}</p>
+      @if (inicio(); as hora) {
+        <div class="inicio">Inicio {{ hora }}</div>
+      }
+      @if (verSelector()) {
+        <div class="estado">
+          <label for="mant-estado">Estado</label>
+          <select id="mant-estado" [disabled]="mant.reiniciando() || guardando()" (change)="cambiar($event)">
+            @for (e of pausas; track e) {
+              <option [value]="e" [selected]="e === actual()">{{ etiquetas[e] }}</option>
+            }
+          </select>
+          @if (desde(); as d) {
+            <span>desde {{ d }}</span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
