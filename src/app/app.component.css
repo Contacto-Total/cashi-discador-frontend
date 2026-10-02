@@ -933,3 +933,22 @@ body.light-theme .sidebar-footer button.sidebar-item:focus-visible {
   border-radius: 50%;
   flex: none;
 }
+
+/* Pila de avisos. Los avisos de asistencia fijan su propia posición (asi funcionan
+   solos); dentro de la pila se les quita para que se apilen debajo del aviso de
+   mantenimiento en lugar de encimarse en el mismo punto. */
+.pila-avisos {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 1300;
+  width: min(400px, calc(100vw - 40px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+.pila-avisos app-avisos-asistencia > div {
+  position: static !important;
+  width: auto !important;
+}

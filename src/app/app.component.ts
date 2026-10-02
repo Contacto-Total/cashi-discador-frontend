@@ -33,6 +33,7 @@ import { WhatsAppNotificationPopupComponent } from './features/whatsapp/componen
 import { AvisosAsistenciaComponent } from './features/asistencia/avisos-asistencia.component';
 import { MantenimientoService } from './features/mantenimiento-sistema/mantenimiento.service';
 import { MantenimientoPantallaComponent } from './features/mantenimiento-sistema/mantenimiento-pantalla.component';
+import { MantenimientoAvisoComponent } from './features/mantenimiento-sistema/mantenimiento-aviso.component';
 
 @Component({
   selector: 'app-root',
@@ -50,7 +51,8 @@ import { MantenimientoPantallaComponent } from './features/mantenimiento-sistema
     ToastNotificationComponent,
     WhatsAppNotificationPopupComponent,
     AvisosAsistenciaComponent,
-    MantenimientoPantallaComponent
+    MantenimientoPantallaComponent,
+    MantenimientoAvisoComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
