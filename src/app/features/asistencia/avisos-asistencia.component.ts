@@ -6,7 +6,6 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/services/auth.service';
 import { AsistenciaService } from './asistencia.service';
 import { AvisoAsistencia } from './asistencia.models';
-import { MantenimientoService } from '../mantenimiento-sistema/mantenimiento.service';
 
 /** Cada minuto: es la resolución del aviso («empieza en 5 minutos») y no hace falta más. */
 const CADA = 60_000;
@@ -33,23 +32,8 @@ const CADA = 60_000;
     @media (prefers-reduced-motion: reduce) { .noti { animation: none; } }
   `],
   template: `
-    @if (!enGestion() && (avisos().length || mantenimiento.aviso())) {
+    @if (!enGestion() && avisos().length) {
       <div class="pointer-events-none fixed right-5 top-4 z-[1300] flex w-[min(400px,calc(100vw-40px))] flex-col gap-3 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif]">
-        <!-- El aviso de mantenimiento va primero y es para cualquier rol. -->
-        @if (mantenimiento.aviso(); as m) {
-          <div [class]="tarjeta + ' border-[#f59e0b]'" role="status">
-            <lucide-angular name="alert-triangle" [size]="18" class="mt-[1px] block shrink-0 text-[#f59e0b]"></lucide-angular>
-            <div class="min-w-0 flex-1">
-              <strong [class]="titulo">{{ m.titulo }}</strong>
-              <span [class]="detalle + ' tabular-nums'">{{ m.texto }}</span>
-            </div>
-            @if (m.cerrable) {
-              <button type="button" [class]="cerrar" (click)="mantenimiento.cerrarAviso()" aria-label="Cerrar aviso">
-                <lucide-angular name="x" [size]="14" class="block"></lucide-angular>
-              </button>
-            }
-          </div>
-        }
         @for (a of avisos(); track a.titulo) {
           <div [class]="tarjeta + (a.tipo === 'aviso' ? ' border-[#f59e0b]' : ' border-[#10b981]')" role="status">
             <lucide-angular [name]="a.tipo === 'aviso' ? 'alert-triangle' : 'check-circle'" [size]="18"
@@ -72,7 +56,6 @@ export class AvisosAsistenciaComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly servicio = inject(AsistenciaService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly mantenimiento = inject(MantenimientoService);
   private readonly router = inject(Router);
 
   protected readonly tarjeta = 'noti pointer-events-auto flex items-start gap-2.5 rounded-lg border bg-white py-3.5 pl-4 pr-3 text-[13px] leading-[1.45] shadow-[0_4px_12px_rgba(15,23,42,0.12)] dark:bg-slate-900';
