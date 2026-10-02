@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
-import { DetalleComision, EscalaComision, LineaDesglose, ReportePeriodo, VistaPeriodo } from '../models/comision.model';
+import { Observable } from 'rxjs';
+import { DetalleComision, EscalaComision, LineaDesglose, ReportePeriodo, VistaSustento } from '../models/comision.model';
 import { DiaDetalle, METRICA_INFO, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -61,13 +62,15 @@ const B = 28;
         <p>Elige a los asesores en la pestaña Comisiones.</p>
       </div>
     } @else {
-      <div class="cmx-who" role="group" aria-label="Persona">
-        @for (p of personas(); track p.clave) {
-          @if (p.esSupervisor) { <span class="cmx-who-sep" aria-hidden="true"></span> }
-          <button type="button" [class.is-sup]="p.esSupervisor" [attr.aria-pressed]="p.clave === seleccion()"
-                  (click)="elegir(p.clave)">{{ p.nombre }}{{ p.esSupervisor ? ' · supervisor' : '' }}</button>
-        }
-      </div>
+      @if (personas().length > 1) {
+        <div class="cmx-who" role="group" aria-label="Persona">
+          @for (p of personas(); track p.clave) {
+            @if (p.esSupervisor) { <span class="cmx-who-sep" aria-hidden="true"></span> }
+            <button type="button" [class.is-sup]="p.esSupervisor" [attr.aria-pressed]="p.clave === seleccion()"
+                    (click)="elegir(p.clave)">{{ p.nombre }}{{ p.esSupervisor ? ' · supervisor' : '' }}</button>
+          }
+        </div>
+      }
 
       @if (persona(); as p) {
         <section class="cmx-block cmx-enter" aria-labelledby="cmx-sus-nombre">
@@ -75,7 +78,7 @@ const B = 28;
             <h3 id="cmx-sus-nombre" class="cmx-block-title">{{ p.nombre }}</h3>
             <span class="cmx-block-desc">
               @if (p.esSupervisor) {
-                {{ metrica().logrado }} total de los {{ personas().length - 1 }} asesores contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
+                {{ metrica().logrado }} total de los {{ totalAsesores() }} asesores contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
               } @else {
                 {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
               }
@@ -266,7 +269,9 @@ export class SustentoTabComponent {
   private readonly service = inject(ComisionesService);
 
   readonly reporte = input.required<ReportePeriodo>();
-  readonly vista = input.required<VistaPeriodo>();
+  readonly vista = input.required<VistaSustento>();
+  /** De dónde sale el detalle pago a pago; por defecto, el del período completo (módulo de comisiones) */
+  readonly fuenteDetalle = input<(idPeriodo: number) => Observable<DetalleComision[]>>();
   /** Persona elegida: id de usuario del asesor o 'sup' */
   readonly seleccion = model<number | 'sup' | null>(null);
 
@@ -337,6 +342,12 @@ export class SustentoTabComponent {
     }
     return partes.join(' + ');
   }
+
+  /** Asesores que suma el supervisor (en Mis comisiones solo llega su fila: se cuentan en el detalle) */
+  readonly totalAsesores = computed(() => {
+    const n = this.reporte().participantes.filter(p => p.rol === 'ASESOR').length;
+    return n || new Set(this.filas().map(f => f.idUsuario)).size;
+  });
 
   readonly persona = computed(() => {
     const lista = this.personas();
@@ -412,7 +423,8 @@ export class SustentoTabComponent {
   cargar(): void {
     this.cargando.set(true);
     this.error.set(null);
-    this.service.obtenerDetalle(this.reporte().periodo.id).subscribe({
+    const fuente = this.fuenteDetalle() ?? ((id: number) => this.service.obtenerDetalle(id));
+    fuente(this.reporte().periodo.id).subscribe({
       next: filas => {
         this.filas.set(filas);
         this.cargando.set(false);

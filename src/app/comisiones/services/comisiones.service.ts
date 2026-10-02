@@ -13,6 +13,7 @@ import {
   GrupoComision,
   Inquilino,
   MesPeriodo,
+  MiPeriodoComision,
   ReportePeriodo,
   Subcartera,
   SupervisorCashi,
@@ -127,5 +128,22 @@ export class ComisionesService {
 
   exportarExcelParticipante(id: number, idResultado: number): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/excel`, { responseType: 'blob' });
+  }
+
+  // ==================== MIS COMISIONES (solo lo del usuario de la sesión) ====================
+
+  /** Períodos recalculados en los que participa, del más reciente al más antiguo */
+  misPeriodos(): Observable<MiPeriodoComision[]> {
+    return this.http.get<MiPeriodoComision[]>(`${this.baseUrl}/mis`);
+  }
+
+  /** El período con solo su fila */
+  miPeriodo(id: number): Observable<ReportePeriodo> {
+    return this.http.get<ReportePeriodo>(`${this.baseUrl}/mis/${id}`);
+  }
+
+  /** Su detalle pago a pago (el supervisor, el de sus asesores) */
+  miDetalle(id: number): Observable<DetalleComision[]> {
+    return this.http.get<DetalleComision[]>(`${this.baseUrl}/mis/${id}/detalle`);
   }
 }

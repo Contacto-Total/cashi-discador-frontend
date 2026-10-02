@@ -229,6 +229,27 @@ export interface VistaPeriodo {
   feriados: string[];
 }
 
+/** Lo que el sustento usa de la vista: el mes y hasta qué día entran los pagos */
+export interface VistaSustento {
+  anio: number;
+  mes: number;
+  pagos: { ultimaFechaBanco: string | null };
+}
+
+/** Mis comisiones: un período recalculado en el que participa el usuario de la sesión */
+export interface MiPeriodoComision {
+  idPeriodo: number;
+  anio: number;
+  mes: number;
+  idSubcartera: number;
+  nombreSubcartera: string;
+  grupo: GrupoComision;
+  estado: EstadoPeriodo;
+  rol: RolComision;
+  montoComision: number;
+  montoBonos: number;
+}
+
 /** Un mes del selector de período */
 export interface MesPeriodo {
   anio: number;

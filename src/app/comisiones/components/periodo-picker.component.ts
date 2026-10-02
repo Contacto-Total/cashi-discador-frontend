@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, input, output, signal } from '@angular/core';
 import { ComisionesService } from '../services/comisiones.service';
-import { GrupoComision, MesPeriodo } from '../models/comision.model';
+import { GrupoComision, MesPeriodo, MiPeriodoComision } from '../models/comision.model';
 import { ESTADO_VISTA_INFO, EstadoVista, codigoPeriodo, estadoVista, mensajeError, nombreMes } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -8,6 +8,7 @@ import { CmxIconComponent } from './cmx-icon.component';
  * Selector de período: el bloque "Periodo 2026-09" abre una grilla con los 12 meses del año
  * (como un calendario, pero por meses) y el estado de cada uno en la subcartera elegida.
  * Los meses que todavía no empiezan no se pueden elegir.
+ * Con «propios» (Mis comisiones) la grilla sale de los períodos del usuario: solo se eligen esos.
  */
 @Component({
   selector: 'cmx-periodo-picker',
@@ -26,7 +27,7 @@ import { CmxIconComponent } from './cmx-icon.component';
       @if (abierto()) {
         <div class="cmx-pop" role="dialog" aria-label="Elegir periodo">
           <div class="cmx-pop-yh">
-            <button type="button" (click)="moverAnio(-1)" aria-label="Año anterior"><cmx-icon name="chevron-left" [size]="15" /></button>
+            <button type="button" (click)="moverAnio(-1)" [disabled]="anioVista() <= anioMinimo()" aria-label="Año anterior"><cmx-icon name="chevron-left" [size]="15" /></button>
             <b>{{ anioVista() }}</b>
             <button type="button" (click)="moverAnio(1)" [disabled]="anioVista() >= anioHoy" aria-label="Año siguiente">
               <cmx-icon name="chevron-right" [size]="15" />
@@ -37,7 +38,7 @@ import { CmxIconComponent } from './cmx-icon.component';
           }
           <div class="cmx-pgrid">
             @for (m of celdas(); track m.mes) {
-              <button type="button" [disabled]="m.futuro" [attr.aria-current]="m.actual"
+              <button type="button" [disabled]="m.futuro || m.bloqueado" [attr.aria-current]="m.actual"
                       [attr.title]="nombreMes(m.mes) + ' ' + m.anio" (click)="elegir(m.anio, m.mes)">
                 <span class="cmx-pgrid-c">{{ m.codigo }}</span>
                 <span class="cmx-pgrid-s">
@@ -55,7 +56,7 @@ import { CmxIconComponent } from './cmx-icon.component';
           <div class="cmx-pop-f">
             <span><span class="cmx-mdot is-ab"></span>Abierto</span>
             <span><span class="cmx-mdot is-ce"></span>Cerrado</span>
-            <span><span class="cmx-mdot is-no"></span>Sin configurar</span>
+            <span><span class="cmx-mdot is-no"></span>{{ propios() ? 'Sin comisión' : 'Sin configurar' }}</span>
           </div>
         </div>
       }
@@ -72,6 +73,8 @@ export class PeriodoPickerComponent {
   readonly anio = input.required<number>();
   readonly mes = input.required<number>();
   readonly estadoActual = input<EstadoVista>('SIN_PAGOS');
+  /** Mis comisiones: los períodos del usuario; los demás meses salen «Sin comisión» y no se eligen */
+  readonly propios = input<MiPeriodoComision[] | null>(null);
 
   readonly cambiar = output<{ anio: number; mes: number }>();
 
@@ -86,22 +89,42 @@ export class PeriodoPickerComponent {
 
   readonly codigo = computed(() => codigoPeriodo(this.anio(), this.mes()));
   readonly puntoActual = computed(() => ESTADO_VISTA_INFO[this.estadoActual()].punto);
+  /** Con períodos propios no se retrocede antes del primero */
+  readonly anioMinimo = computed(() => {
+    const propios = this.propios();
+    return propios?.length ? Math.min(...propios.map(p => p.anio)) : Number.NEGATIVE_INFINITY;
+  });
 
   readonly celdas = computed(() => {
     const hoy = new Date();
     const claveHoy = hoy.getFullYear() * 12 + hoy.getMonth() + 1;
     const anio = this.anioVista();
     const porMes = new Map(this.meses().filter(m => m.anio === anio).map(m => [m.mes, m]));
+    const propios = this.propios();
     return Array.from({ length: 12 }, (_, i) => {
       const mes = i + 1;
-      const m = porMes.get(mes);
-      const ev = estadoVista(m?.estado ?? null, m?.pagos ?? 0);
-      return {
+      const base = {
         anio,
         mes,
         codigo: codigoPeriodo(anio, mes),
         futuro: anio * 12 + mes > claveHoy,
-        actual: anio === this.anio() && mes === this.mes(),
+        actual: anio === this.anio() && mes === this.mes()
+      };
+      if (propios) {
+        const p = propios.find(x => x.anio === anio && x.mes === mes);
+        const ev: EstadoVista = p?.estado === 'CERRADO' ? 'CERRADO' : 'ABIERTO';
+        return {
+          ...base,
+          bloqueado: !p,
+          etiqueta: p ? ESTADO_VISTA_INFO[ev].etiqueta : 'Sin comisión',
+          punto: p ? ESTADO_VISTA_INFO[ev].punto : 'is-no'
+        };
+      }
+      const m = porMes.get(mes);
+      const ev = estadoVista(m?.estado ?? null, m?.pagos ?? 0);
+      return {
+        ...base,
+        bloqueado: false,
         etiqueta: ESTADO_VISTA_INFO[ev].etiqueta,
         punto: ESTADO_VISTA_INFO[ev].punto
       };
@@ -144,6 +167,9 @@ export class PeriodoPickerComponent {
 
   private cargar(): void {
     const id = this.idSubcartera();
+    if (this.propios()) {
+      return;
+    }
     if (id == null) {
       this.meses.set([]);
       return;
