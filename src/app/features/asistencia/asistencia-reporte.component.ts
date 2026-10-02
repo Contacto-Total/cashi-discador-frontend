@@ -135,16 +135,16 @@ const COLOR_DIA: Record<string, string> = {
                   @if (cintaCompacta()) {
                     <div class="flex w-full flex-wrap gap-[2px]">
                       @for (d of diasCinta(); track d.fecha) {
-                        <span class="h-2.5 w-2.5 rounded-[2px]" [class]="COLOR_DIA[estadoVisible(d)]"
-                              [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[estadoVisible(d)].texto)"></span>
+                        <span class="h-2.5 w-2.5 rounded-[2px]" [class]="COLOR_DIA[d.estado]"
+                              [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[d.estado].texto)"></span>
                       }
                     </div>
                   } @else {
                     <div class="flex w-full gap-[5px]">
                       @for (d of diasCinta(); track d.fecha) {
                         <span class="flex h-[26px] flex-1 items-center justify-center rounded-md text-[11px] font-bold text-white"
-                              [class]="COLOR_DIA[estadoVisible(d)]"
-                              [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[estadoVisible(d)].texto)">
+                              [class]="COLOR_DIA[d.estado]"
+                              [title]="(d.fecha | date: 'dd/MM') + ' ' + d.nombreDia + ' · ' + (d.tipoDia ?? ESTADOS[d.estado].texto)">
                           {{ d.nombreDia.slice(0, 2) }}
                         </span>
                       }
@@ -413,10 +413,14 @@ export class AsistenciaReporteComponent {
   /** Más de una semana: cuadritos sin letra, del mismo alto. */
   readonly cintaCompacta = computed(() => this.diasCinta().length > 7);
 
-  /** Los días que tocaba trabajar, los puntuales y las faltas: los mismos que se ven en la cinta. */
+  /**
+   * Los días que tocaba trabajar, los puntuales y las faltas: los mismos que se
+   * ven en la cinta. La puntualidad es la de la entrada: un día al que le falta
+   * otra marca sigue siendo puntual o tarde, aunque en la tabla salga incompleto.
+   */
   readonly diasLaborables = computed(() => this.diasCinta().filter(d => d.estado !== 'NO_LABORABLE').length);
-  readonly diasPuntuales = computed(() => this.diasCinta().filter(d => estadoVisible(d) === 'PUNTUAL').length);
-  readonly diasFalta = computed(() => this.diasCinta().filter(d => estadoVisible(d) === 'FALTA').length);
+  readonly diasPuntuales = computed(() => this.diasCinta().filter(d => d.estado === 'PUNTUAL').length);
+  readonly diasFalta = computed(() => this.diasCinta().filter(d => d.estado === 'FALTA').length);
 
   readonly puntualidad = computed(() => {
     const base = this.diasLaborables();

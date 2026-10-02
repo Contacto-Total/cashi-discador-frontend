@@ -1,6 +1,7 @@
 import { Component, HostListener, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
+import { catchError, forkJoin, of } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import {
@@ -202,7 +203,10 @@ interface FilaResumen {
     </div>
 
     <div class="px-7 pb-12 pt-5">
-    <div class="aparecer">
+    @if (cargando()) {
+      <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando la semana…</p>
+    }
+    <div class="aparecer" [style.display]="cargando() ? 'none' : null">
 
       <div class="kpis">
         <!-- La semana: seis días, en ámbar los que tienen marcas a medias. -->
@@ -592,6 +596,9 @@ export class AsistenciaCierreComponent {
 
   readonly cierres = signal<CierreSemana[]>([]);
   readonly reporte = signal<AsistenciaReporte | null>(null);
+  /** Mientras llegan las consultas de la semana. */
+  readonly cargando = signal(false);
+  private pedido = 0;
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly recuperado = signal<Record<number, { recuperado: number; pedido: number }>>({});
   readonly detalle = signal<CierreSemana | null>(null);
@@ -756,22 +763,34 @@ export class AsistenciaCierreComponent {
       this.pagina.set(1);
       this.paginaResumen.set(1);
       if (!ambito) {
+        this.pedido++;
+        this.cargando.set(false);
         this.reporte.set(null);
         this.solicitudes.set([]);
         this.recuperado.set({});
         return;
       }
-      this.servicio.reporte(lunes, sabado, ambito).subscribe({
-        next: r => this.reporte.set(r),
-        error: () => this.toast.error('No se pudo cargar la semana')
-      });
-      this.servicio.justificaciones(lunes, sabado).subscribe({
-        next: j => this.solicitudes.set(j),
-        error: () => this.solicitudes.set([])
-      });
-      this.servicio.recuperadoEnSemana(lunes, ambito).subscribe({
-        next: r => this.recuperado.set(r),
-        error: () => this.recuperado.set({})
+      // Las tres consultas se pintan juntas: de una en una, la pantalla pasaba
+      // por «sin datos» antes de mostrar la semana.
+      const pedido = ++this.pedido;
+      this.cargando.set(true);
+      forkJoin({
+        reporte: this.servicio.reporte(lunes, sabado, ambito).pipe(catchError(() => {
+          this.toast.error('No se pudo cargar la semana');
+          return of(null);
+        })),
+        solicitudes: this.servicio.justificaciones(lunes, sabado).pipe(catchError(() => of([] as Justificacion[]))),
+        recuperado: this.servicio.recuperadoEnSemana(lunes, ambito).pipe(
+          catchError(() => of({} as Record<number, { recuperado: number; pedido: number }>)))
+      }).subscribe(r => {
+        // Si ya se pidió otra semana u otro ámbito, esta respuesta llegó tarde.
+        if (pedido !== this.pedido) {
+          return;
+        }
+        this.reporte.set(r.reporte);
+        this.solicitudes.set(r.solicitudes);
+        this.recuperado.set(r.recuperado);
+        this.cargando.set(false);
       });
     });
   }
