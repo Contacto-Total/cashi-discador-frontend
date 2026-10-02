@@ -84,6 +84,11 @@ export const EVENTO_503 = 'cashi:mantenimiento';
 
 const SONDEO_NORMAL = 20_000;
 const SONDEO_ACTIVO = 3_000;
+/** Estados en los que el agente puede tener una gestion sin guardar. */
+const EN_GESTION: AgentState[] = [
+  AgentState.EN_LLAMADA, AgentState.TIPIFICANDO, AgentState.GESTION_MANUAL, AgentState.SEGUIMIENTO
+];
+const COMPROBAR_RECARGA = 3000;
 const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
 
@@ -137,6 +142,8 @@ export class MantenimientoService {
   private ultimoSondeo = 0;
   private suscripciones: Subscription[] = [];
   private recargaPendiente = false;
+  private comprobandoRecarga = false;
+  private ultimaComprobacion = 0;
   private bloqueoAnterior = false;
 
   readonly activo = computed(() => {
@@ -196,6 +203,14 @@ export class MantenimientoService {
       this.ws.subscribe('/topic/mantenimiento').subscribe(d => this.recibir(d as Mantenimiento)),
       this.agentStatus.currentStatus$.subscribe(s => this.estadoAgente.set(s))
     );
+    // El estado del agente se sigue en todas las pantallas, no solo en la de agente:
+    // de el depende que no se le bloquee la pantalla en plena tipificacion.
+    if (usuario?.role === 'AGENT') {
+      this.suscripciones.push(
+        this.agentStatus.subscribeToStatusUpdates(Number(usuario.id)).subscribe(),
+        this.agentStatus.getAgentStatus(Number(usuario.id)).subscribe({ error: () => undefined })
+      );
+    }
     this.consultar();
     this.fijarReloj(SONDEO_NORMAL);
   }
@@ -280,14 +295,14 @@ export class MantenimientoService {
     this.reiniciando.set(false);
     this.datos.set(d);
     this.ahora.set(Date.now() + this.desfase);
-    this.fijarReloj(d.estado === 'OPERATIVO' ? SONDEO_NORMAL : 1000);
-    this.evaluar();
-
     // Tras un bloqueo hubo despliegue: se recarga para tomar la version nueva.
     if (antes?.estado === 'BLOQUEADO' && d.estado === 'OPERATIVO' && !this.esAdmin()) {
       this.recargaPendiente = true;
-      this.recargarSiSePuede();
     }
+    // Con una recarga pendiente el reloj sigue al segundo, para recargar en cuanto se pueda.
+    this.fijarReloj(d.estado === 'OPERATIVO' && !this.recargaPendiente ? SONDEO_NORMAL : 1000);
+    this.evaluar();
+    this.recargarSiSePuede();
   }
 
   private fijarReloj(periodo: number): void {
@@ -346,6 +361,10 @@ export class MantenimientoService {
     this.agentStatus.getAgentStatus(Number(usuario.id)).subscribe({
       next: r => {
         const actual = r.estadoActual as AgentState;
+        // Con una llamada o una tipificacion abierta no se toca el estado.
+        if (actual === AgentState.EN_LLAMADA || actual === AgentState.TIPIFICANDO) {
+          return;
+        }
         if (!PAUSAS_MANTENIMIENTO.includes(actual) && actual !== AgentState.DESCONECTADO) {
           this.cambiarEstadoAgente(AgentState.SOPORTE).subscribe({ error: () => undefined });
         }
@@ -354,10 +373,44 @@ export class MantenimientoService {
     });
   }
 
+  /**
+   * Recarga para tomar la version desplegada, pero nunca con una gestion abierta:
+   * el formulario de tipificacion vive en memoria y una recarga lo borra, dejando
+   * al agente en TIPIFICANDO sin forma de cerrarlo. Se espera a que termine.
+   */
   private recargarSiSePuede(): void {
-    if (!this.recargaPendiente || this.sip.enLlamada || this.gestionLock.isLocked) {
+    if (!this.recargaPendiente || this.comprobandoRecarga || this.gestionAbierta()) {
       return;
     }
+    const usuario = this.auth.getCurrentUser();
+    if (!usuario || usuario.role !== 'AGENT') {
+      this.recargar();
+      return;
+    }
+    if (Date.now() - this.ultimaComprobacion < COMPROBAR_RECARGA) {
+      return;
+    }
+    // El estado en memoria puede estar atrasado: se confirma con el backend antes de recargar.
+    this.ultimaComprobacion = Date.now();
+    this.comprobandoRecarga = true;
+    this.agentStatus.getAgentStatus(Number(usuario.id)).subscribe({
+      next: r => {
+        this.comprobandoRecarga = false;
+        if (!EN_GESTION.includes(r.estadoActual as AgentState) && !this.gestionAbierta()) {
+          this.recargar();
+        }
+      },
+      error: () => { this.comprobandoRecarga = false; }
+    });
+  }
+
+  private gestionAbierta(): boolean {
+    return this.sip.enLlamada
+      || this.gestionLock.isLocked
+      || this.router.url.startsWith('/collection-management');
+  }
+
+  private recargar(): void {
     this.recargaPendiente = false;
     sessionStorage.setItem(CLAVE_RECARGA, '1');
     window.location.reload();
