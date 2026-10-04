@@ -3,7 +3,7 @@ import { ModoReloj } from './reloj-estado';
 
 /**
  * Escala del tiempo de un estado: tramo verde, ámbar y rojo, con una marca en el tiempo actual.
- * Los tres límites van en segundos.
+ * Los tres límites van en segundos. La pista no recorta: el redondeo va en los tramos de los extremos.
  */
 @Component({
   selector: 'app-escala-tiempo',
@@ -13,10 +13,10 @@ import { ModoReloj } from './reloj-estado';
   template: `
     <p class="m-0 mb-[.625rem] text-[12px] font-medium text-muted-foreground">Escala de este estado</p>
     <div class="relative">
-      <div class="flex h-2.5 gap-[2px] overflow-hidden rounded-full bg-muted">
-        <span class="h-full bg-nivel-verde/85" [style.width.%]="parte(verde)"></span>
+      <div class="flex h-2.5 gap-[2px] rounded-full bg-muted">
+        <span class="h-full rounded-l-full bg-nivel-verde/85" [style.width.%]="parte(verde)"></span>
         <span class="h-full bg-nivel-ambar/85" [style.width.%]="parte(ambar - verde)"></span>
-        <span class="h-full bg-nivel-rojo/85" [style.width.%]="parte(tope - ambar)"></span>
+        <span class="h-full rounded-r-full bg-nivel-rojo/85" [style.width.%]="parte(tope - ambar)"></span>
       </div>
       <span class="absolute top-1/2 size-[1.0625rem] -translate-x-1/2 -translate-y-1/2 rounded-full"
             [class]="modo === 'fuera' ? 'opacity-0 transition-opacity duration-[140ms] ease-in' : modo === 'oculta' ? 'opacity-0 transition-none' : modo === 'quieta' ? 'transition-none' : '[transition:left_1s_linear,background-color_1s,box-shadow_1s,opacity_.22s_ease-out]'"

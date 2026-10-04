@@ -43,11 +43,15 @@ export const ESTADOS_PANEL: Record<AgentState, EstadoPanel> = {
 /** Estados que dejan al asesor atendiendo; el resto de los que elige a mano son pausas. */
 export const ESTADOS_OPERATIVOS: ReadonlySet<AgentState> = new Set([AgentState.DISPONIBLE, AgentState.GESTION_MANUAL]);
 
-/** Nivel del semáforo de tiempo: [color de trazo, color de texto, icono, leyenda]. */
+/**
+ * Nivel del semáforo de tiempo. El rojo es el último tramo antes del tope, no haberlo pasado:
+ * `excedido` empieza al superar el tope, que es lo que el backend llama exceder el tiempo máximo.
+ */
 export const NIVELES = {
   verde: { trazo: 'var(--nivel-verde)', tinta: 'var(--nivel-verde)', icono: 'circle-check', leyenda: 'Dentro del margen' },
   ambar: { trazo: 'var(--nivel-ambar)', tinta: 'var(--nivel-ambar-texto)', icono: 'circle-alert', leyenda: 'Acercándose al tope' },
-  rojo: { trazo: 'var(--nivel-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Tiempo excedido' }
+  rojo: { trazo: 'var(--nivel-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Al límite' },
+  excedido: { trazo: 'var(--nivel-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Tiempo excedido' }
 } as const;
 
 export type Nivel = keyof typeof NIVELES;

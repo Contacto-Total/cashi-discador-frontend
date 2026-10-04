@@ -35,6 +35,7 @@ import { MantenimientoService } from './features/mantenimiento-sistema/mantenimi
 import { MantenimientoPantallaComponent } from './features/mantenimiento-sistema/mantenimiento-pantalla.component';
 import { MantenimientoAvisoComponent } from './features/mantenimiento-sistema/mantenimiento-aviso.component';
 import { CuentaSidebar, SidebarComponent } from './shared/ui/sidebar/sidebar.component';
+import { CajaTarjetasDirective } from './shared/ui/caja-tarjetas.directive';
 
 @Component({
   selector: 'app-root',
@@ -54,7 +55,8 @@ import { CuentaSidebar, SidebarComponent } from './shared/ui/sidebar/sidebar.com
     AvisosAsistenciaComponent,
     MantenimientoPantallaComponent,
     MantenimientoAvisoComponent,
-    SidebarComponent
+    SidebarComponent,
+    CajaTarjetasDirective
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],

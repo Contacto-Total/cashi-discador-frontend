@@ -1,24 +1,27 @@
-<aside class="font-cashi group/sb fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-sidebar-border! bg-sidebar! text-[14px] leading-[1.5] text-sidebar-foreground antialiased transition-[width,translate] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] max-md:w-[17.5rem]"
+<aside class="font-cashi group/sb fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-sidebar-border! bg-sidebar! md:inset-y-3 md:left-3 md:rounded-xl md:border md:shadow-[0_1px_2px_rgb(0_0_0/.05)] text-[14px] leading-[1.5] text-sidebar-foreground antialiased transition-[width,translate] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] max-md:w-[17.5rem]"
        [ngClass]="[plegado ? 'w-[4.75rem]' : 'w-[17.5rem]', movilAbierto ? 'max-md:translate-x-0' : 'max-md:-translate-x-full']"
        [attr.data-plegado]="plegado ? '' : null"
        aria-label="Menú principal">
 
-  <!-- Marca: mide lo mismo que la cabecera de pantalla y lleva su mismo borde, para que la raya empalme. -->
-  <div class="flex h-20 flex-none items-center justify-center gap-3 overflow-clip border-b border-sidebar-border px-3.5 transition-[gap] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:gap-0">
+  <!-- Marca -->
+  <div class="flex h-20 flex-none items-center justify-center gap-3 overflow-clip px-3.5 transition-[gap] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:gap-0">
     <app-cashi-mascota [escala]="0.44" [plana]="true"></app-cashi-mascota>
     <span class="max-w-24 overflow-hidden text-[16px] leading-none font-bold tracking-[.08em] whitespace-nowrap transition-[max-width,opacity] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:max-w-0 group-data-[plegado]/sb:opacity-0">CASHI</span>
   </div>
 
-  <!-- Buscador. Campo y lupa ocupan el mismo sitio y se relevan con un fundido: nada se mueve. -->
-  <div *ngIf="conBuscador" class="relative px-3.5 pt-3.5 pb-[.75rem]">
+  <!-- Buscador. Campo y lupa ocupan el mismo sitio y se relevan con un fundido: nada se mueve.
+       Plegado, la raya de la primera sección va aquí, fija bajo la lupa, y no dentro de la lista: así no
+       desaparece al desplazar el menú. Lo que gana este bloque lo cede el primer rótulo. -->
+  <div *ngIf="conBuscador" class="relative px-3.5 pt-3.5 pb-[.75rem] group-data-[plegado]/sb:pb-[1.375rem] after:absolute after:inset-x-3.5 after:bottom-0 after:border-t after:border-transparent after:content-[''] group-data-[plegado]/sb:after:border-sidebar-border">
     <div class="relative transition-opacity delay-[120ms] duration-[140ms] group-data-[plegado]/sb:opacity-0 group-data-[plegado]/sb:delay-0" [attr.inert]="plegado ? '' : null">
       <lucide-angular [ngClass]="'pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground'" name="search" [size]="14"></lucide-angular>
-      <input #campoBuscar type="search" [(ngModel)]="filtro" placeholder="Buscar pantalla…" aria-label="Buscar pantalla"
-             class="font-cashi h-9 w-full rounded-lg border! border-border! bg-background/60! pr-3 pl-[2.125rem] text-[14px] text-foreground! outline-none placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
+      <input #campoBuscar type="search" [(ngModel)]="filtro" placeholder="Buscar…" aria-label="Buscar pantalla"
+             class="font-cashi h-9 w-full rounded-lg border! border-border! bg-background/60! pr-[3.75rem] pl-[2.125rem] text-[14px] text-foreground! outline-none placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
+      <kbd class="font-cashi pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-transparent px-1.5 py-0.5 text-[11px] leading-[1.2] font-semibold text-muted-foreground">Ctrl K</kbd>
     </div>
     <button type="button" [class]="FILA + ' ' + FILA_REPOSO"
             class="absolute! top-3.5 left-3.5 h-9 w-[calc(4.75rem-1.75rem-1px)]! py-0! pointer-events-none opacity-0 transition-[opacity,background-color,color] duration-[140ms] group-data-[plegado]/sb:pointer-events-auto group-data-[plegado]/sb:opacity-100 group-data-[plegado]/sb:delay-[120ms]"
-            aria-label="Buscar pantalla" appTip="Buscar pantalla" [appTipActivo]="plegado" [attr.tabindex]="plegado ? 0 : -1" (click)="abrirBuscador()">
+            aria-label="Buscar pantalla" appTip="Buscar" [appTipActivo]="plegado" [attr.tabindex]="plegado ? 0 : -1" (click)="abrirBuscador()">
       <lucide-angular name="search" [size]="19.2" [ngClass]="'flex-none ' + (ICONO_REPOSO)"></lucide-angular>
     </button>
   </div>
@@ -27,7 +30,7 @@
   <nav class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3.5 pb-[.75rem]" [class.pt-3.5]="!conBuscador">
     <!-- Resultado de la búsqueda -->
     <ng-container *ngIf="resultados as hallados; else menuCompleto">
-      <ul *ngIf="hallados.length; else sinResultados" class="m-0 flex list-none flex-col gap-1 p-0">
+      <ul *ngIf="hallados.length; else sinResultados" class="m-0 flex list-none flex-col gap-0.5 p-0">
         <li *ngFor="let item of hallados">
           <ng-container *ngTemplateOutlet="enlace; context: { $implicit: item, hija: false }"></ng-container>
         </li>
@@ -37,15 +40,19 @@
       </ng-template>
     </ng-container>
 
+    <!-- Menú por secciones. Plegado, el rótulo se vuelve una raya: la sección se sigue leyendo sin texto
+         y nada cambia de alto. -->
     <ng-template #menuCompleto>
-      <ul class="m-0 flex list-none flex-col gap-1 p-0">
-        <li *ngFor="let item of menu">
+      <ng-container *ngFor="let seccion of secciones">
+      <p [class]="SECCION" [ngClass]="conBuscador ? SECCION_BAJO_LUPA : ''"><span [class]="TEXTO">{{ seccion.nombre }}</span></p>
+      <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+        <li *ngFor="let item of seccion.items">
           <ng-container *ngIf="!esGrupo(item)">
             <ng-container *ngTemplateOutlet="enlace; context: { $implicit: item, hija: false }"></ng-container>
           </ng-container>
 
           <ng-container *ngIf="esGrupo(item)">
-            <button type="button" [class]="FILA" [ngClass]="dentro(item) ? 'bg-transparent text-sidebar-foreground! hover:bg-sidebar-accent/60' : FILA_REPOSO"
+            <button type="button" [class]="FILA + ' ' + FILA_MENU" [ngClass]="dentro(item) ? 'bg-transparent text-sidebar-foreground! hover:bg-sidebar-accent/60' : FILA_REPOSO"
                     [attr.aria-expanded]="abierto(item) && !plegado" [appTip]="item.etiqueta + ' · ' + item.children.length + ' pantallas'" [appTipActivo]="plegado"
                     (click)="alternarGrupo(item)">
               <lucide-angular [name]="icono(item)" [size]="19.2" [ngClass]="'flex-none ' + (ICONO_REPOSO)"></lucide-angular>
@@ -53,7 +60,7 @@
               <lucide-angular [ngClass]="'flex-none text-[color-mix(in_srgb,currentColor_50%,transparent)] transition-[rotate,opacity] duration-200 group-data-[plegado]/sb:opacity-0'" name="chevron-right" [size]="14" [class.rotate-90]="abierto(item)"></lucide-angular>
             </button>
             <div class="grid transition-[grid-template-rows] duration-200 ease-out" [ngClass]="abierto(item) && !plegado ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'">
-              <ul class="m-0 ml-6 flex min-h-0 list-none flex-col gap-1 overflow-hidden border-l border-sidebar-border/70 p-0 pl-2" [class.my-1]="abierto(item) && !plegado">
+              <ul class="m-0 ml-6 flex min-h-0 list-none flex-col gap-0.5 overflow-hidden border-l border-sidebar-border/70 p-0 pl-2" [class.my-1]="abierto(item) && !plegado">
                 <li *ngFor="let hija of item.children">
                   <ng-container *ngTemplateOutlet="enlace; context: { $implicit: hija, hija: true }"></ng-container>
                 </li>
@@ -62,7 +69,8 @@
           </ng-container>
         </li>
       </ul>
-      <div *ngIf="menu.length === 0" [class]="FILA + ' ' + FILA_REPOSO" class="cursor-default! opacity-50">
+      </ng-container>
+      <div *ngIf="menu.length === 0" [class]="FILA + ' ' + FILA_MENU + ' ' + FILA_REPOSO" class="cursor-default! opacity-50">
         <lucide-angular [ngClass]="'flex-none animate-spin'" name="loader-2" [size]="19.2"></lucide-angular>
         <span [class]="TEXTO">Cargando menú…</span>
       </div>
@@ -76,8 +84,9 @@
   </button>
 
   <!-- Pie: la cuenta y, al costado, el tema, las notificaciones y la salida. Mantenimiento y Configuración
-       se despliegan sobre la cuenta al pulsarla, igual abierto que plegado (plegado, solo sus iconos). -->
-  <div class="group/pie overflow-clip border-t border-sidebar-border py-3.5 pr-2 pl-3.5" data-cuenta [attr.data-abierta]="cuentaAbierta ? '' : null">
+       se despliegan sobre la cuenta al pulsarla, igual abierto que plegado (plegado, solo sus iconos).
+       La raya de arriba mide lo que una fila, como las de sección: no cruza el menú de lado a lado. -->
+  <div class="group/pie relative overflow-clip py-3.5 pr-2 pl-3.5 before:absolute before:inset-x-3.5 before:top-0 before:border-t before:border-sidebar-border before:content-['']" data-cuenta [attr.data-abierta]="cuentaAbierta ? '' : null">
     <div *ngIf="esAdmin" class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out group-data-[abierta]/pie:grid-rows-[1fr]">
       <div class="invisible min-h-0 overflow-hidden transition-[visibility] delay-200 duration-0 group-data-[abierta]/pie:visible group-data-[abierta]/pie:delay-0">
         <ul id="sb-opciones" class="m-0 mb-[.5rem] flex w-[15.6875rem] list-none flex-col gap-1 p-0 group-data-[plegado]/sb:w-12">
@@ -150,7 +159,7 @@
 
 <!-- Fila del menú: enlace a una pantalla. -->
 <ng-template #enlace let-item let-hija="hija">
-  <a [routerLink]="item.ruta" [class]="FILA + (hija ? ' ' + FILA_HIJA : '')" [ngClass]="activa(item.ruta) ? FILA_ACTIVA : FILA_REPOSO"
+  <a [routerLink]="item.ruta" [class]="FILA + ' ' + (hija ? FILA_HIJA : FILA_MENU)" [ngClass]="activa(item.ruta) ? FILA_ACTIVA : FILA_REPOSO"
      [attr.aria-current]="activa(item.ruta) ? 'page' : null" [appTip]="item.etiqueta" [appTipActivo]="plegado" (click)="alNavegar()">
     <lucide-angular [name]="icono(item)" [size]="19.2" [strokeWidth]="activa(item.ruta) ? 2.3 : 2" [ngClass]="'flex-none ' + (activa(item.ruta) ? ICONO_ACTIVO : ICONO_REPOSO)"></lucide-angular>
     <span [class]="TEXTO">{{ item.etiqueta }}</span>
