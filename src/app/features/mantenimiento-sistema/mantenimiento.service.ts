@@ -159,6 +159,7 @@ export class MantenimientoService {
 
   private desfase = 0;
   private esAdmin = signal(false);
+  private esAgente = signal(false);
   private avisoCerrado = signal<number | null>(null);
   private reloj?: ReturnType<typeof setInterval>;
   private periodo = 0;
@@ -208,6 +209,12 @@ export class MantenimientoService {
     if (!d || this.esAdmin() || this.ocupado()) {
       return false;
     }
+    // Tras una recarga el estado del asesor tarda un instante en llegar: hasta saber
+    // si esta tipificando no se le tapa la pantalla. Con el discador caido ese estado
+    // no llega, y ahi si se tapa.
+    if (this.esAgente() && !this.estadoAgente() && !this.reiniciando()) {
+      return false;
+    }
     return d.estado === 'BLOQUEADO' || (d.estado === 'EN_DETENCION' && d.entradaCerrada);
   });
 
@@ -223,6 +230,7 @@ export class MantenimientoService {
     this.detener();
     const usuario = this.auth.getCurrentUser();
     this.esAdmin.set(usuario?.role === 'ADMIN');
+    this.esAgente.set(usuario?.role === 'AGENT');
     sessionStorage.removeItem(CLAVE_RECARGA);
 
     this.suscripciones.push(
@@ -399,11 +407,15 @@ export class MantenimientoService {
   /** Recalcula lo que depende de servicios sin señales: llamada, gestion y ruta. */
   private evaluar(): void {
     const estado = this.estadoAgente()?.estadoActual;
-    this.ocupado.set(this.sip.enLlamada
+    const enPantallaDeGestion = this.router.url.startsWith('/collection-management');
+    // La pantalla de tipificacion se abre al asignarse la llamada, unos segundos antes
+    // de que el backend marque EN_LLAMADA: estar en ella ya cuenta como gestion.
+    this.ocupado.set(enPantallaDeGestion
+      || this.sip.enLlamada
       || this.gestionLock.isLocked
       || estado === AgentState.EN_LLAMADA
       || estado === AgentState.TIPIFICANDO);
-    this.enPantallaDeGestion.set(this.router.url.startsWith('/collection-management'));
+    this.enPantallaDeGestion.set(enPantallaDeGestion);
 
     if (this.encierraAdmin() && !this.router.url.startsWith(RUTA_MANTENIMIENTO)) {
       this.router.navigateByUrl(RUTA_MANTENIMIENTO);
