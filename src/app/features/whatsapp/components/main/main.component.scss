@@ -3,16 +3,16 @@
   display: flex;
   position: fixed;
   top: 0;
-  left: 240px; /* Offset del sidebar global */
+  left: 17.5rem; /* Ancho del menú lateral global (app-sidebar) */
   right: 0;
   bottom: 0;
   height: 100vh;
-  width: calc(100% - 240px); /* Descontar el sidebar global */
+  width: calc(100% - 17.5rem);
   overflow: hidden;
   background: #0A0E27;
   margin: 0;
   padding: 0;
-  transition: left 0.3s ease, width 0.3s ease;
+  transition: left 0.28s cubic-bezier(.4, 0, .2, 1), width 0.28s cubic-bezier(.4, 0, .2, 1);
 }
 
 .sidebar {
@@ -36,7 +36,7 @@
 }
 
 /* Ajuste cuando el sidebar global está colapsado */
-:host-context(.cashi-sidebar.collapsed) .app-container {
-  left: 64px;
-  width: calc(100% - 64px);
+:host-context(.menu-plegado) .app-container {
+  left: 4.75rem;
+  width: calc(100% - 4.75rem);
 }

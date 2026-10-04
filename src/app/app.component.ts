@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -34,6 +34,7 @@ import { AvisosAsistenciaComponent } from './features/asistencia/avisos-asistenc
 import { MantenimientoService } from './features/mantenimiento-sistema/mantenimiento.service';
 import { MantenimientoPantallaComponent } from './features/mantenimiento-sistema/mantenimiento-pantalla.component';
 import { MantenimientoAvisoComponent } from './features/mantenimiento-sistema/mantenimiento-aviso.component';
+import { CuentaSidebar, SidebarComponent } from './shared/ui/sidebar/sidebar.component';
 
 @Component({
   selector: 'app-root',
@@ -52,13 +53,14 @@ import { MantenimientoAvisoComponent } from './features/mantenimiento-sistema/ma
     WhatsAppNotificationPopupComponent,
     AvisosAsistenciaComponent,
     MantenimientoPantallaComponent,
-    MantenimientoAvisoComponent
+    MantenimientoAvisoComponent,
+    SidebarComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'Call Center';
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
@@ -90,8 +92,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Dynamic menu from backend
   menuItems: MenuItem[] = [];
-  // Track which dropdowns are open by their codigo
-  openDropdowns: Set<string> = new Set();
 
   constructor(
     public authService: AuthService,
@@ -114,17 +114,28 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     public mantenimiento: MantenimientoService
   ) {}
 
-  /** Color del punto del menú según la etapa del mantenimiento. */
-  colorMantenimiento(): string {
-    if (this.mantenimiento.reiniciando()) {
-      return '#8491a3';
+  /** ADMIN ve notificaciones, tema, modo mantenimiento y las opciones de la cuenta en el menú lateral. */
+  get esAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'ADMIN';
+  }
+
+  private cuentaDe: unknown = null;
+  private cuentaCalculada: CuentaSidebar | null = null;
+
+  /** Lo que el pie del menú lateral muestra de la sesión. Se recalcula solo si cambia el usuario. */
+  get cuentaSidebar(): CuentaSidebar | null {
+    const u = this.authService.getCurrentUser();
+    if (u !== this.cuentaDe) {
+      this.cuentaDe = u;
+      const letras = `${u?.firstName?.trim()?.[0] ?? ''}${u?.lastName?.trim()?.[0] ?? ''}` || (u?.username ?? '').slice(0, 2);
+      this.cuentaCalculada = u ? {
+        usuario: u.username,
+        rol: u.role === 'AGENT' ? 'ASESOR' : u.role,
+        anexo: u.sipExtension || null,
+        iniciales: letras.toUpperCase()
+      } : null;
     }
-    switch (this.mantenimiento.datos()?.estado) {
-      case 'PROGRAMADO': return '#2563eb';
-      case 'EN_DETENCION': return '#d97706';
-      case 'BLOQUEADO': return '#dc2626';
-      default: return '#10b981';
-    }
+    return this.cuentaCalculada;
   }
 
   // Notificaciones methods
@@ -260,13 +271,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  ngAfterViewInit(): void {
-    // Detectar texto que se desborda y necesita scroll animation
-    setTimeout(() => {
-      this.checkTextOverflow();
-    }, 100);
-  }
-
   ngOnDestroy(): void {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
@@ -280,37 +284,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       clearTimeout(this.navigationTimeout);
       this.navigationTimeout = null;
     }
-  }
-
-  @HostListener('window:resize')
-  onResize(): void {
-    // Re-detectar overflow cuando cambia el tamaño de la ventana
-    this.checkTextOverflow();
-  }
-
-  private checkTextOverflow(): void {
-    // Seleccionar todos los elementos de texto en el sidebar (nav, submenu y footer)
-    const textElements = document.querySelectorAll('.item-text');
-
-    textElements.forEach((el) => {
-      const element = el as HTMLElement;
-
-      // Solo detectar overflow en elementos visibles (no ocultos por *ngIf o display:none)
-      if (element.offsetParent === null) {
-        return; // Skip invisible elements
-      }
-
-      // Verificar si el contenido desborda el contenedor
-      const isOverflowing = element.scrollWidth > element.clientWidth;
-
-      // Si el ancho del contenido (scrollWidth) es mayor que el ancho visible (clientWidth),
-      // significa que el texto está truncado
-      if (isOverflowing) {
-        element.classList.add('text-overflowing');
-      } else {
-        element.classList.remove('text-overflowing');
-      }
-    });
   }
 
   private forceLogoutSubscription?: Subscription;
@@ -779,14 +752,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Sidebar methods
-  toggleSidebar(): void {
-    this.isSidebarCollapsed = !this.isSidebarCollapsed;
-    // Re-detectar overflow después de colapsar/expandir sidebar
-    setTimeout(() => {
-      this.checkTextOverflow();
-    }, 350); // Esperar a que termine la transición CSS (0.3s)
-  }
-
   toggleMobileSidebar(): void {
     this.isMobileSidebarOpen = !this.isMobileSidebarOpen;
   }
@@ -809,10 +774,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isReportesDropdownOpen = false;
     this.isBlacklistDropdownOpen = false;
     this.isCartasDropdownOpen = false;
-    // Re-detectar overflow después de abrir dropdown
-    setTimeout(() => {
-      this.checkTextOverflow();
-    }, 50);
   }
 
   toggleCargaDatosDropdown(): void {
@@ -828,10 +789,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isReportesDropdownOpen = false;
     this.isBlacklistDropdownOpen = false;
     this.isCartasDropdownOpen = false;
-    // Re-detectar overflow después de abrir dropdown
-    setTimeout(() => {
-      this.checkTextOverflow();
-    }, 50);
   }
 
   toggleMantenimientoDropdown(): void {
@@ -847,10 +804,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isReportesDropdownOpen = false;
     this.isBlacklistDropdownOpen = false;
     this.isCartasDropdownOpen = false;
-    // Re-detectar overflow después de abrir dropdown
-    setTimeout(() => {
-      this.checkTextOverflow();
-    }, 50);
   }
 
   toggleCampanasDropdown(): void {
@@ -866,7 +819,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isReportesDropdownOpen = false;
     this.isBlacklistDropdownOpen = false;
     this.isCartasDropdownOpen = false;
-    setTimeout(() => this.checkTextOverflow(), 50);
   }
 
   toggleReportesDropdown(): void {
@@ -882,7 +834,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isCampanasDropdownOpen = false;
     this.isBlacklistDropdownOpen = false;
     this.isCartasDropdownOpen = false;
-    setTimeout(() => this.checkTextOverflow(), 50);
   }
 
   toggleBlacklistDropdown(): void {
@@ -898,7 +849,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isCampanasDropdownOpen = false;
     this.isReportesDropdownOpen = false;
     this.isCartasDropdownOpen = false;
-    setTimeout(() => this.checkTextOverflow(), 50);
   }
 
   toggleCartasDropdown(): void {
@@ -914,7 +864,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isCampanasDropdownOpen = false;
     this.isReportesDropdownOpen = false;
     this.isBlacklistDropdownOpen = false;
-    setTimeout(() => this.checkTextOverflow(), 50);
   }
 
   closeDropdowns(): void {
@@ -975,56 +924,5 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     const currentUser = this.authService.getCurrentUser();
     const agentRoles = ['AGENT', 'ASESOR'];
     return currentUser?.role ? agentRoles.includes(currentUser.role) : false;
-  }
-
-  // ============== Dynamic Menu Methods ==============
-
-  /**
-   * Toggle a specific dropdown menu by its codigo
-   */
-  toggleDynamicDropdown(codigo: string): void {
-    // Auto-expand sidebar if collapsed
-    if (this.isSidebarCollapsed) {
-      this.isSidebarCollapsed = false;
-    }
-
-    if (this.openDropdowns.has(codigo)) {
-      this.openDropdowns.delete(codigo);
-    } else {
-      // Close all other dropdowns first (optional: remove this to allow multiple open)
-      this.openDropdowns.clear();
-      this.openDropdowns.add(codigo);
-    }
-
-    // Re-detectar overflow después de abrir dropdown
-    setTimeout(() => this.checkTextOverflow(), 50);
-  }
-
-  /**
-   * Check if a dropdown is open
-   */
-  isDropdownOpen(codigo: string): boolean {
-    return this.openDropdowns.has(codigo);
-  }
-
-  /**
-   * Check if a menu item's route is currently active
-   */
-  isMenuItemActive(item: MenuItem): boolean {
-    if (item.ruta) {
-      return this.router.url.startsWith(item.ruta);
-    }
-    // For dropdown, check if any child is active
-    if (item.children && item.children.length > 0) {
-      return item.children.some(child => child.ruta && this.router.url.startsWith(child.ruta));
-    }
-    return false;
-  }
-
-  /**
-   * Close all dynamic dropdowns
-   */
-  closeAllDynamicDropdowns(): void {
-    this.openDropdowns.clear();
   }
 }
