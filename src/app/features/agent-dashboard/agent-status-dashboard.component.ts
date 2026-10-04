@@ -38,7 +38,7 @@ interface Umbral { verde: number; ambar: number; tope: number; }
     AnilloTiempoComponent, EscalaTiempoComponent, BotonEstadoComponent, BotonDirective
   ],
   templateUrl: './agent-status-dashboard.component.html',
-  host: { class: 'flex min-h-full flex-col' }
+  host: { class: 'cashi-pantalla flex flex-1 flex-col' }
 })
 export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   currentStatus: AgentStatus | null = null;
@@ -394,6 +394,11 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     return !e ? 'var(--muted-foreground)' : this.tema.isDarkMode() ? e.oscuro ?? e.tono : e.tinta ?? e.tono;
   }
 
+  /** Hay promesas por llamar: «Llamada manual» y «Seguimiento» pasan a tarjetas aparte. */
+  get conSeguimiento(): boolean {
+    return this.recordatoriosPendientes > 0;
+  }
+
   /** Lo controla el sistema: no se cambia a mano. */
   get enEstadoDeSistema(): boolean {
     const e = this.currentStatus?.estadoActual;
@@ -413,7 +418,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
   get nivel(): Nivel | null {
     const u = this.umbral;
-    return !u ? null : this.segundos > u.ambar ? 'rojo' : this.segundos > u.verde ? 'ambar' : 'verde';
+    return !u ? null : this.segundos > u.tope ? 'excedido' : this.segundos > u.ambar ? 'rojo' : this.segundos > u.verde ? 'ambar' : 'verde';
   }
 
   get semaforo() {

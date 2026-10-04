@@ -3,11 +3,11 @@
   display: flex;
   position: fixed;
   top: 0;
-  left: 17.5rem; /* Ancho del menú lateral global (app-sidebar) */
+  left: calc(17.5rem + 1.5rem); /* Ancho del menú lateral global (app-sidebar) más sus dos huecos */
   right: 0;
   bottom: 0;
   height: 100vh;
-  width: calc(100% - 17.5rem);
+  width: calc(100% - 17.5rem - 1.5rem);
   overflow: hidden;
   background: #0A0E27;
   margin: 0;
@@ -37,6 +37,6 @@
 
 /* Ajuste cuando el sidebar global está colapsado */
 :host-context(.menu-plegado) .app-container {
-  left: 4.75rem;
-  width: calc(100% - 4.75rem);
+  left: calc(4.75rem + 1.5rem);
+  width: calc(100% - 4.75rem - 1.5rem);
 }
