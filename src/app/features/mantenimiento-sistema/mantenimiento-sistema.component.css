@@ -13,7 +13,8 @@
 .m-titulo{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .m-est{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 12px 4px 10px;border:1px solid transparent;font-variant-numeric:tabular-nums;transition:background .3s,color .3s,border-color .3s}
 .m-est::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
-.m-cuerpo{padding:20px 28px 40px;display:flex;flex-direction:column;gap:16px;max-width:1500px;margin:0 auto}
+/* El contenido ocupa todo el ancho de la vista y arranca en la misma línea que el título de la cabecera. */
+.m-cuerpo{padding:20px 28px 40px;display:flex;flex-direction:column;gap:16px}
 .m-card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.04);padding:16px;min-width:0}
 .m-card h2{margin:0 0 12px;font-size:15px;font-weight:800}
 .m-cols{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.2fr) minmax(320px,1fr);gap:16px;align-items:stretch}
@@ -35,15 +36,26 @@
 .m-listo .m-txt{flex:1;min-width:200px}
 
 /* Formulario */
-.m-seg2{display:grid;grid-template-columns:1fr 1fr;background:#eef2f7;border-radius:9px;padding:3px;gap:3px}
-.m-seg2 button{font-size:13px;font-weight:600;color:var(--mut);background:transparent;border:0;border-radius:7px;padding:7px 6px}
-.m-seg2 button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.14)}
+.m-seg2{display:grid;grid-template-columns:1fr 1fr;background:#edf2f0;border-radius:8px;padding:3px;gap:3px}
+.m-seg2 button{font-size:13px;font-weight:500;color:rgb(27 36 34 / .6);background:transparent;border:0;border-radius:6px;padding:7px 6px;transition:background-color .15s,color .15s}
+.m-seg2 button[aria-pressed="true"]{background:#fff;color:#1b2422;box-shadow:0 1px 2px rgb(0 0 0 / .08)}
 .m-pila{display:flex;flex-direction:column;gap:12px}
 .m-campo{display:flex;flex-direction:column;gap:5px}
 .m-campo label{font-size:12px;font-weight:600;color:var(--ink2)}
 .m-campo input{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1.5px solid #8491a3;border-radius:10px;padding:9px 12px;width:100%;font-variant-numeric:tabular-nums}
 .m-campo input:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px rgba(37,99,235,.2)}
 .m-pie{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+/* Las dos pestañas se apilan en la misma celda: la tarjeta mide siempre lo que la más alta
+   y no cambia de alto al alternar. La que no se ve queda fuera del foco y del lector. */
+.m-tabs{display:grid}
+.m-tab{grid-area:1/1;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0}
+.m-tab.m-oculto{visibility:hidden}
+.m-tab>div:first-child{display:flex;flex-direction:column;gap:12px}
+/* Las dos pestañas tienen dos filas del mismo alto: ninguna deja hueco ni cambia el tamaño de la tarjeta. */
+.m-tab .m-fila{min-height:36px;align-items:center}
+.m-fila label{color:var(--mut);margin:0;font-weight:400}
+:host .m-fila input{font-family:inherit;font-size:14px !important;font-weight:600;color:#0f172a !important;background:#fff !important;border:1px solid #c3cfcb !important;border-radius:8px;height:36px;padding:0 10px;margin:0 !important;width:auto;font-variant-numeric:tabular-nums}
+:host .m-fila input:focus{outline:none;border-color:#10b981 !important;box-shadow:0 0 0 3px rgb(16 185 129 / .3)}
 .m-conf{border:1px solid #f3dcb4;background:#fffdf7;border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:600;color:var(--am)}
 .m-bot{display:flex;gap:8px;flex-wrap:wrap}
 /* Botones de cashi-frontend-v2 (components/ui/button.m-tsx): destello en diagonal al pasar el ratón,
@@ -162,7 +174,7 @@ tr.m-nueva td{animation:entra .6s ease}
 :host .m-tabla td{background:transparent !important;color:#0f172a !important;padding:9px 12px !important;font-size:12.5px !important;border:0 !important;border-bottom:1px solid #eef1f5 !important}
 :host .m-tabla tr:last-child td{border-bottom:0 !important}
 :host .m-tabla table,:host .m-tabla thead,:host .m-tabla tbody,:host .m-tabla tr{background:transparent !important}
-:host .m-seg2 button{font-size:13px;font-weight:600}
+:host .m-seg2 button{font-size:13px;font-weight:500}
 :host .m-falla{border:1px solid #fecaca;background:#fef2f2;border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:600;color:#b91c1c}
 :host .m-ic{width:16px;height:16px;flex:none}
 :host .m-barra i{transition:width 1s linear}
