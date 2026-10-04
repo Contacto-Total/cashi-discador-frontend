@@ -1,91 +1,91 @@
-<div class="font-cashi flex flex-1 flex-col bg-background text-[14px] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)">
-  <app-page-header icono="headset" titulo="Panel del asesor" subtitulo="Estado actual, tiempo y cambio de estado">
-    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border border-border bg-muted px-[.75rem] py-[.25rem] text-[12px] font-semibold whitespace-nowrap text-muted-foreground"
-          [attr.title]="isDiscando && campaignName ? campaignName : null">
-      <span *ngIf="isDiscando" class="size-1.5 rounded-full bg-ring"></span>
-      {{ isDiscando ? 'Discando' : 'Sin campaña' }}
-    </span>
-  </app-page-header>
-
-  <!-- Cargando el estado por primera vez -->
-  <p *ngIf="loading && !currentStatus" class="m-0 flex flex-1 items-center justify-center gap-2 text-muted-foreground">
-    <lucide-angular [ngClass]="'animate-spin'" name="loader-2" [size]="16"></lucide-angular>Cargando estado…
-  </p>
-
+<div class="font-cashi flex flex-1 flex-col gap-3 text-[14px] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)">
   <!-- Error -->
-  <div *ngIf="error" role="alert" class="mx-8 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-nivel-rojo/30 bg-nivel-rojo/8 px-4 py-[.75rem] text-nivel-rojo max-md:mx-4">
+  <div *ngIf="error" role="alert" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-nivel-rojo/30 bg-nivel-rojo/8 px-4 py-[.75rem] text-nivel-rojo">
     <span class="flex items-center gap-2 font-medium"><lucide-angular name="triangle-alert" [size]="16"></lucide-angular>{{ error }}</span>
     <button type="button" appBoton="secundario" (click)="loadAgentStatus(currentStatus?.idUsuario || 0)">Reintentar</button>
   </div>
 
-  <div *ngIf="currentStatus && estado as e" class="@container/panel grid flex-1 grid-rows-[1fr_auto] gap-[clamp(.75rem,1.6vh,1rem)] px-8 py-[clamp(.875rem,2.4vh,1.5rem)] [--anillo:clamp(8rem,19vh,12rem)] max-md:p-4">
-    <!-- Estado actual -->
-    <div appTarjetaLuz [principal]="true">
-      <div class="mb-[clamp(.5rem,2vh,1.75rem)]">
-        <span class="block text-[14px] leading-[1.25] font-semibold">{{ agentName }}</span>
-        <span *ngIf="anexo" class="text-[12px] text-muted-foreground tabular-nums">Anexo {{ anexo }}</span>
-      </div>
+  <!-- Sin estado todavía: la tarjeta del título, con el aviso de carga -->
+  <div *ngIf="!currentStatus || !estado" appTarjetaLuz [principal]="true" class="flex-1">
+    <ng-container *ngTemplateOutlet="cabecera"></ng-container>
+    <p *ngIf="loading" class="m-0 flex flex-1 items-center justify-center gap-2 text-muted-foreground">
+      <lucide-angular [ngClass]="'animate-spin'" name="loader-2" [size]="16"></lucide-angular>Cargando estado…
+    </p>
+  </div>
 
-      <div class="flex flex-1 flex-wrap items-center gap-10">
-        <div class="flex flex-none flex-col items-center gap-[.75rem]">
-          <app-anillo-tiempo [segundos]="segundos" [tope]="tope"
-                             [color]="semaforo?.trazo ?? 'var(--muted-foreground)'" [tinta]="semaforo?.tinta ?? 'var(--muted-foreground)'"
-                             [segundosArco]="vistaSegundos" [colorArco]="vistaTrazo" [modo]="modoReloj"></app-anillo-tiempo>
-          <span *ngIf="semaforo as s" role="status"
-                class="inline-flex items-center gap-1.5 rounded-full px-[.75rem] py-[.25rem] text-[12px] font-semibold transition-[color,background-color,box-shadow] duration-500"
-                [style.color]="s.tinta"
-                [style.background]="'color-mix(in oklab,' + s.trazo + ' 13%,transparent)'"
-                [style.box-shadow]="'inset 0 0 0 1px color-mix(in oklab,' + s.trazo + ' 26%,transparent)'">
-            <lucide-angular [ngClass]="'flex-none'" [name]="s.icono" [size]="14"></lucide-angular>{{ s.leyenda }}
-          </span>
+  <div *ngIf="currentStatus && estado as e" class="@container/panel grid flex-1 grid-rows-[minmax(min-content,1fr)_minmax(min-content,34%)] gap-3 [--anillo:clamp(8rem,19vh,12rem)]">
+    <div class="grid gap-3" [ngClass]="conSeguimiento ? 'grid-cols-[minmax(0,1fr)_19rem] @max-[58rem]/panel:grid-cols-[minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]'">
+      <!-- Estado actual. Abre con el título de la pantalla. -->
+      <div appTarjetaLuz [principal]="true">
+        <ng-container *ngTemplateOutlet="cabecera"></ng-container>
+
+        <div class="mb-[clamp(.5rem,2vh,1.75rem)]">
+          <span class="block text-[14px] leading-[1.25] font-semibold">{{ agentName }}</span>
+          <span *ngIf="anexo" class="text-[12px] text-muted-foreground tabular-nums">Anexo {{ anexo }}</span>
         </div>
 
-        <div class="min-w-[min(100%,15rem)] flex-1">
-          <p class="m-0 text-[12px] font-medium text-muted-foreground">Estado actual</p>
-          <p role="heading" aria-level="2" class="m-0 mt-[.5rem] text-[36px] leading-[1.1] font-bold transition-colors duration-500" [style.color]="tinta(e)">{{ e.nombre }}</p>
-          <app-escala-tiempo *ngIf="umbral as u; else sinEscala" class="mt-[clamp(.875rem,2.4vh,2rem)] max-w-[32rem]"
-                             [verde]="u.verde" [ambar]="u.ambar" [tope]="u.tope" [segundos]="vistaSegundos" [color]="vistaTrazo" [modo]="modoReloj"></app-escala-tiempo>
-          <ng-template #sinEscala>
-            <p class="m-0 mt-6 text-[14px] text-muted-foreground">{{ e.sinTope || 'Sin tope de tiempo' }}</p>
-          </ng-template>
-        </div>
-
-        <!-- Acciones, en la mitad derecha de la tarjeta. «Llamada manual» está siempre; «Seguimiento» se
-             suma debajo solo dentro de la franja horaria de la subcartera y con promesas por llamar. -->
-        <div class="ml-auto w-[19rem] flex-none self-center border-l border-[color-mix(in_oklab,var(--tono)_25%,transparent)] pl-8 @max-[58rem]/panel:ml-0 @max-[58rem]/panel:w-full @max-[58rem]/panel:border-t @max-[58rem]/panel:border-l-0 @max-[58rem]/panel:pt-4 @max-[58rem]/panel:pl-0">
-          <div>
-            <app-titulo-tarjeta icono="phone-outgoing" titulo="Llamada manual"></app-titulo-tarjeta>
-            <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Entra en modo manual para marcar tú el número.</p>
-            <p *ngIf="currentStatus.estadoActual === AgentState.EN_MANUAL" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Modo manual activo. Las llamadas se hacen desde el softphone.</p>
-            <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full"
-                    [disabled]="loading || enEstadoDeSistema" (click)="enterManualMode()">
-              <lucide-angular name="phone-outgoing" [size]="16"></lucide-angular>Llamar manual
-            </button>
+        <div class="flex flex-1 flex-wrap items-center gap-10">
+          <div class="flex flex-none flex-col items-center gap-[.75rem]">
+            <app-anillo-tiempo [segundos]="segundos" [tope]="tope"
+                               [color]="semaforo?.trazo ?? 'var(--muted-foreground)'" [tinta]="semaforo?.tinta ?? 'var(--muted-foreground)'"
+                               [segundosArco]="vistaSegundos" [colorArco]="vistaTrazo" [modo]="modoReloj"></app-anillo-tiempo>
+            <span *ngIf="semaforo as s" role="status"
+                  class="inline-flex items-center gap-1.5 rounded-full px-[.75rem] py-[.25rem] text-[12px] font-semibold transition-[color,background-color,box-shadow] duration-500"
+                  [style.color]="s.tinta"
+                  [style.background]="'color-mix(in oklab,' + s.trazo + ' 13%,transparent)'"
+                  [style.box-shadow]="'inset 0 0 0 1px color-mix(in oklab,' + s.trazo + ' 26%,transparent)'">
+              <lucide-angular [ngClass]="'flex-none'" [name]="s.icono" [size]="14"></lucide-angular>{{ s.leyenda }}
+            </span>
           </div>
 
-          <div *ngIf="recordatoriosPendientes > 0" class="mt-5 border-t border-border pt-5">
+          <div class="min-w-[min(100%,15rem)] flex-1">
+            <p class="m-0 text-[12px] font-medium text-muted-foreground">Estado actual</p>
+            <p role="heading" aria-level="2" class="m-0 mt-[.5rem] text-[36px] leading-[1.1] font-bold transition-colors duration-500" [style.color]="tinta(e)">{{ e.nombre }}</p>
+            <app-escala-tiempo *ngIf="umbral as u; else sinEscala" class="mt-[clamp(.875rem,2.4vh,2rem)] max-w-[32rem]"
+                               [verde]="u.verde" [ambar]="u.ambar" [tope]="u.tope" [segundos]="vistaSegundos" [color]="vistaTrazo" [modo]="modoReloj"></app-escala-tiempo>
+            <ng-template #sinEscala>
+              <p class="m-0 mt-6 text-[14px] text-muted-foreground">{{ e.sinTope || 'Sin tope de tiempo' }}</p>
+            </ng-template>
+          </div>
+
+          <!-- Sin seguimiento, «Llamada manual» va aquí, en la mitad derecha de la tarjeta. -->
+          <div *ngIf="!conSeguimiento" class="ml-auto w-[19rem] flex-none self-center border-l border-border pl-8 @max-[58rem]/panel:ml-0 @max-[58rem]/panel:w-full @max-[58rem]/panel:border-t @max-[58rem]/panel:border-l-0 @max-[58rem]/panel:pt-4 @max-[58rem]/panel:pl-0">
+            <ng-container *ngTemplateOutlet="llamadaManual"></ng-container>
+          </div>
+        </div>
+
+        <!-- En pantallas bajas cede antes de que aparezca una barra de desplazamiento. -->
+        <dl class="m-0 mt-[clamp(.75rem,2.4vh,2rem)] flex flex-wrap gap-x-12 gap-y-[.75rem] border-t border-border pt-[clamp(.625rem,1.6vh,1.25rem)] [@media(max-height:800px)]:hidden">
+          <div>
+            <dt class="m-0 text-[12px] font-medium text-muted-foreground">Estado previo</dt>
+            <dd class="m-0 mt-[.25rem] text-[14px] font-semibold">{{ estadoPrevio }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Con el seguimiento activo (franja horaria de la subcartera y promesas por llamar), las dos
+           acciones pasan a tarjetas aparte, a la derecha de la del estado. -->
+      <div *ngIf="conSeguimiento" class="flex flex-col gap-3 @max-[58rem]/panel:flex-row @max-[36rem]/panel:flex-col">
+        <div appTarjetaLuz class="flex-1 justify-between">
+          <ng-container *ngTemplateOutlet="llamadaManual"></ng-container>
+        </div>
+        <div appTarjetaLuz class="flex-1 justify-between">
+          <div>
             <app-titulo-tarjeta icono="bell-ring" titulo="Seguimiento de promesas"></app-titulo-tarjeta>
             <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Clientes con promesas de pago pendientes de cobrar.</p>
             <p *ngIf="!recordatoriosHabilitado" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Fuera del horario de seguimiento</p>
-            <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full"
-                    [disabled]="!recordatoriosHabilitado || loading || enEstadoDeSistema" (click)="enterSeguimiento()">
-              <lucide-angular name="bell-ring" [size]="16"></lucide-angular>Seguimiento ({{ recordatoriosPendientes }})
-            </button>
           </div>
+          <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full"
+                  [disabled]="!recordatoriosHabilitado || loading || enEstadoDeSistema" (click)="enterSeguimiento()">
+            <lucide-angular name="bell-ring" [size]="16"></lucide-angular>Seguimiento ({{ recordatoriosPendientes }})
+          </button>
         </div>
       </div>
-
-      <!-- En pantallas bajas cede antes de que aparezca una barra de desplazamiento. -->
-      <dl class="m-0 mt-[clamp(.75rem,2.4vh,2rem)] flex flex-wrap gap-x-12 gap-y-[.75rem] border-t border-[color-mix(in_oklab,var(--tono)_25%,transparent)] pt-[clamp(.625rem,1.6vh,1.25rem)] [@media(max-height:800px)]:hidden">
-        <div>
-          <dt class="m-0 text-[12px] font-medium text-muted-foreground">Estado previo</dt>
-          <dd class="m-0 mt-[.25rem] text-[14px] font-semibold">{{ estadoPrevio }}</dd>
-        </div>
-      </dl>
     </div>
 
     <!-- Cambiar estado. Operativo en una columna y Pausas en cuatro: los nueve botones salen del mismo
-         ancho. El reparto depende del ancho de la tarjeta, no de la ventana. -->
+         ancho. El reparto depende del ancho de la tarjeta, no de la ventana. Los botones llenan el alto
+         que le toca a la tarjeta: crecen ellos, no los huecos. -->
     <div appTarjetaLuz class="@container/estados">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <app-titulo-tarjeta icono="repeat" titulo="Cambiar estado"></app-titulo-tarjeta>
@@ -94,18 +94,18 @@
         </p>
       </div>
 
-      <div class="mt-[clamp(.5rem,1.4vh,1rem)] grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-4 @min-[58rem]/estados:grid-cols-[calc((100%-1.5rem-1.875rem)/5)_minmax(0,1fr)] @min-[58rem]/estados:gap-x-6">
-        <div>
+      <div class="mt-[clamp(.5rem,1.4vh,1rem)] grid flex-1 grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-4 @min-[58rem]/estados:grid-cols-[calc((100%-1.5rem-1.875rem)/5)_minmax(0,1fr)] @min-[58rem]/estados:gap-x-6">
+        <div class="flex flex-col">
           <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[12px] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Operativo</p>
-          <div class="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[minmax(0,1fr)]">
+          <div class="grid flex-1 auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[minmax(0,1fr)]">
             <app-boton-estado *ngFor="let s of operativos" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
                               [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
                               (elegir)="changeStatus(s)"></app-boton-estado>
           </div>
         </div>
-        <div>
+        <div class="flex flex-col">
           <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[12px] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Pausas</p>
-          <div class="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[repeat(4,minmax(0,1fr))]">
+          <div class="grid flex-1 auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[repeat(4,minmax(0,1fr))]">
             <app-boton-estado *ngFor="let s of pausas" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
                               [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
                               (elegir)="changeStatus(s)"></app-boton-estado>
@@ -115,3 +115,27 @@
     </div>
   </div>
 </div>
+
+<!-- Título de la pantalla: abre la primera tarjeta. -->
+<ng-template #cabecera>
+  <app-page-header titulo="Panel del asesor" subtitulo="Estado actual, tiempo y cambio de estado">
+    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border border-border bg-muted px-[.75rem] py-[.25rem] text-[12px] font-semibold whitespace-nowrap text-muted-foreground"
+          [attr.title]="isDiscando && campaignName ? campaignName : null">
+      <span *ngIf="isDiscando" class="size-1.5 rounded-full bg-ring"></span>
+      {{ isDiscando ? 'Discando' : 'Sin campaña' }}
+    </span>
+  </app-page-header>
+</ng-template>
+
+<!-- «Llamada manual»: el mismo bloque dentro de la tarjeta del estado o en su propia tarjeta. -->
+<ng-template #llamadaManual>
+  <div>
+    <app-titulo-tarjeta icono="phone-outgoing" titulo="Llamada manual"></app-titulo-tarjeta>
+    <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Entra en modo manual para marcar tú el número.</p>
+    <p *ngIf="currentStatus?.estadoActual === AgentState.EN_MANUAL" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Modo manual activo. Las llamadas se hacen desde el softphone.</p>
+  </div>
+  <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full"
+          [disabled]="loading || enEstadoDeSistema" (click)="enterManualMode()">
+    <lucide-angular name="phone-outgoing" [size]="16"></lucide-angular>Llamar manual
+  </button>
+</ng-template>
