@@ -28,6 +28,15 @@ export interface Mantenimiento {
   ahora: number;
 }
 
+export interface LlamadasPendientes {
+  idCampana: number;
+  campana: string;
+  /** Llamadas que ya se marcaban al detener el discado y aun timbran. */
+  timbrando: number;
+  /** Clientes que contestaron y esperan a un agente libre. */
+  enCola: number;
+}
+
 export interface ServicioVigilado {
   nombre: string;
   arriba: boolean;
@@ -52,6 +61,8 @@ export interface MantenimientoAvance {
   tipificando: number;
   campanasDetenidas: number;
   colasDetenidas: number;
+  /** Lo que cada campaña tiene aun timbrando o en cola tras detener el discado. */
+  pendientes: LlamadasPendientes[];
   /** Desde cuando no hay nada en curso; null si algo sigue activo. */
   reposoDesde: number | null;
   enGestion: EnGestion[];
@@ -107,6 +118,15 @@ const COMPROBAR_RECARGA = 3000;
 export const RUTA_MANTENIMIENTO = '/admin/mantenimiento-sistema';
 const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
+
+/**
+ * «Iniciar ahora» detiene el discado en el acto y avisa 60 segundos antes de
+ * bloquear: mientras dura ese aviso la etapa ya es EN_DETENCION, con la entrada
+ * abierta e `inicioProgramado` como fin del aviso.
+ */
+export const enAvisoInmediato = (d: Mantenimiento | null, ahora: number): boolean =>
+  !!d && d.estado === 'EN_DETENCION' && d.inmediato && !d.entradaCerrada
+  && !!d.inicioProgramado && d.inicioProgramado > ahora;
 
 export const dosDigitos = (n: number) => String(n).padStart(2, '0');
 export const horaCorta = (ms: number) => {
@@ -178,27 +198,26 @@ export class MantenimientoService {
   /** Aviso previo. No sale a administradores ni a quien esta en una gestion. */
   readonly aviso = computed<AvisoMantenimiento | null>(() => {
     const d = this.datos();
-    if (!d || d.estado !== 'PROGRAMADO' || !d.inicioProgramado || this.esAdmin()
-        || this.ocupado() || this.enPantallaDeGestion()) {
+    if (!d || !d.inicioProgramado || this.esAdmin() || this.ocupado() || this.enPantallaDeGestion()) {
       return null;
     }
     const falta = d.inicioProgramado - this.ahora();
-    if (falta <= 0) {
-      return null;
-    }
-    if (d.inmediato) {
+    if (enAvisoInmediato(d, this.ahora())) {
       return {
-        titulo: 'Entramos en mantenimiento en 60 segundos',
-        texto: `No inicies una gestión nueva. Quedan ${cuenta(falta)}.`,
+        titulo: 'Mantenimiento en 60 segundos',
+        texto: `Bloqueo de pantalla en ${cuenta(falta)}`,
         cerrable: false
       };
     }
+    if (d.estado !== 'PROGRAMADO' || falta <= 0) {
+      return null;
+    }
     const hora = horaCorta(d.inicioProgramado);
     if (falta <= RECORDATORIO) {
-      return { titulo: 'Mantenimiento en 5 minutos', texto: `A las ${hora} se bloqueará la pantalla.`, cerrable: false };
+      return { titulo: 'Mantenimiento en 5 minutos', texto: `Inicio ${hora}`, cerrable: false };
     }
     if (falta <= AVISO && this.avisoCerrado() !== d.inicioProgramado) {
-      return { titulo: `Mantenimiento a las ${hora}`, texto: 'A esa hora se bloqueará la pantalla.', cerrable: true };
+      return { titulo: 'Mantenimiento programado', texto: `Inicio ${hora}`, cerrable: true };
     }
     return null;
   });

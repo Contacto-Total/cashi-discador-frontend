@@ -27,8 +27,8 @@ export class MantenimientoPantallaComponent {
   readonly guardando = signal(false);
 
   readonly texto = computed(() => this.mant.reiniciando()
-    ? 'El sistema se está reiniciando. En unos minutos podrás cambiar tu estado.'
-    : 'El sistema se está actualizando. Tu sesión sigue abierta; no cierres ni recargues esta pestaña.');
+    ? 'Servicio en reinicio. Cambio de estado no disponible.'
+    : 'Sesión activa. No cierre ni recargue la pestaña.');
 
   readonly inicio = computed(() => {
     const d = this.mant.datos();
