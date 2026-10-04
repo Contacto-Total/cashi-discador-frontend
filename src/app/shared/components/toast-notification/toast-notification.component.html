@@ -1,19 +1,15 @@
-<div class="toast-container">
-  <div
-    *ngFor="let toast of toasts"
-    class="toast"
-    [class.toast-success]="toast.type === 'success'"
-    [class.toast-error]="toast.type === 'error'"
-    [class.toast-warning]="toast.type === 'warning'"
-    [class.toast-info]="toast.type === 'info'"
-    [@glowPulse]="{ value: toast.glowCount, params: { glow: glowColor(toast.type) } }">
-
-    <lucide-angular [name]="getIcon(toast.type)" [size]="20" class="toast-icon"></lucide-angular>
-
-    <span class="toast-message">{{ toast.message }}</span>
-
-    <button class="toast-close" (click)="remove(toast.id)">
-      <lucide-angular name="x" [size]="16"></lucide-angular>
+<!-- Arriba a la derecha, en la esquina. Si la pila de avisos del armazón tiene avisos, los emergentes
+     salen debajo de ella: su alto llega en --alto-avisos. -->
+<div class="fixed top-[calc(16px_+_var(--alto-avisos,0px))] right-5 z-[10000] flex max-w-[min(400px,calc(100vw-40px))] flex-col items-end gap-3">
+  <div *ngFor="let toast of toasts" role="status"
+       class="font-cashi flex max-w-full animate-[cashi-noti_.3s_ease] items-start gap-2.5 rounded-lg border bg-card py-3 pr-3 pl-3.5 text-[14px] leading-[1.45] text-foreground antialiased shadow-[0_4px_12px_rgb(15_23_42/.12)] motion-reduce:animate-none dark:shadow-[0_4px_12px_rgb(0_0_0/.55)]"
+       [ngClass]="BORDE[toast.type]"
+       [@glowPulse]="{ value: toast.glowCount, params: { glow: glowColor(toast.type) } }">
+    <lucide-angular [name]="getIcon(toast.type)" [size]="18" [ngClass]="'mt-px flex-none ' + TINTA[toast.type]"></lucide-angular>
+    <span class="min-w-0 flex-1 font-semibold">{{ toast.message }}</span>
+    <button type="button" class="flex flex-none cursor-pointer rounded-[5px] border-0 bg-transparent p-0.5 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+            (click)="remove(toast.id)" aria-label="Cerrar aviso">
+      <lucide-angular name="x" [size]="14"></lucide-angular>
     </button>
   </div>
 </div>
