@@ -183,3 +183,12 @@ tr.m-nueva td{animation:entra .6s ease}
 :host .m-nota strong{display:block;font-size:13px !important;font-weight:700 !important;color:#0f172a !important}
 .m-nota span{display:block;font-size:12px;color:var(--mut)}
 @media (prefers-reduced-motion:reduce){.m-nota{transition:none}.m-srvs div.m-caido::before{animation:none}}
+
+/* Ramas de «Llamadas en curso»: lo que cada campaña aun tiene timbrando o en cola */
+.m-ramas{list-style:none;margin:6px 0 0;padding:0}
+.m-ramas li{position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:3px 0 3px 20px;font-size:12px;font-variant-numeric:tabular-nums}
+.m-ramas li::before{content:'';position:absolute;left:3px;top:0;bottom:0;border-left:1.5px solid var(--am-ln)}
+.m-ramas li:last-child::before{bottom:50%}
+.m-ramas li::after{content:'';position:absolute;left:3px;top:50%;width:11px;border-top:1.5px solid var(--am-ln)}
+.m-ramas .m-c{font-weight:600;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-ramas .m-d{color:var(--am);white-space:nowrap}

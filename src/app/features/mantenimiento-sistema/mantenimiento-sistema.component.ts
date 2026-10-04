@@ -4,21 +4,25 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   EnGestion, HistorialMantenimiento, Mantenimiento, MantenimientoAvance, MantenimientoService, ServicioVigilado,
-  cuenta, dosDigitos, horaCorta
+  cuenta, dosDigitos, enAvisoInmediato, horaCorta
 } from './mantenimiento.service';
 import { MascotaCascoComponent } from './mascota-casco.component';
 
-type Vista = 'OPERATIVO' | 'PROGRAMADO' | 'INMEDIATO' | 'EN_DETENCION' | 'BLOQUEADO';
+type Vista = 'OPERATIVO' | 'PROGRAMADO' | 'EN_DETENCION' | 'BLOQUEADO';
 type Confirmacion = 'ahora' | 'bloquear' | null;
 type ClasePaso = 'm-idle' | 'm-run' | 'm-ok' | 'm-skip';
 
-interface Paso { id: string; titulo: string; clase: ClasePaso; sub: string; val: string; barra: number | null; }
+/** Una campaña con llamadas que aun no terminan de entrar. */
+interface Rama { id: number; nombre: string; detalle: string; }
+interface Paso {
+  id: string; titulo: string; clase: ClasePaso; sub: string; val: string; barra: number | null;
+  ramas?: Rama[];
+}
 interface Etiqueta { texto: string; fondo: string; color: string; borde: string; }
 
 const ETIQUETAS: Record<Vista, Etiqueta> = {
   OPERATIVO: { texto: 'Operativo', fondo: 'var(--ok-bg)', color: 'var(--ok)', borde: 'var(--ok-ln)' },
   PROGRAMADO: { texto: 'Programado', fondo: '#e8f0fe', color: '#1d4ed8', borde: '#c7d9fb' },
-  INMEDIATO: { texto: '', fondo: '#e8f0fe', color: '#1d4ed8', borde: '#c7d9fb' },
   EN_DETENCION: { texto: 'En detención', fondo: 'var(--am-bg)', color: 'var(--am)', borde: 'var(--am-ln)' },
   BLOQUEADO: { texto: 'Bloqueado', fondo: 'var(--ro-bg)', color: 'var(--ro)', borde: 'var(--ro-ln)' }
 };
@@ -97,19 +101,19 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     if (!d) {
       return 'OPERATIVO';
     }
-    return d.estado === 'PROGRAMADO' && d.inmediato ? 'INMEDIATO' : d.estado;
+    return d.estado;
   });
 
-  readonly etiqueta = computed<Etiqueta>(() => {
-    const base = ETIQUETAS[this.vista()];
-    return this.vista() === 'INMEDIATO' ? { ...base, texto: `Inicia en ${cuenta(this.falta())}` } : base;
-  });
+  readonly etiqueta = computed<Etiqueta>(() => ETIQUETAS[this.vista()]);
+
+  /** Corre el aviso de 60 segundos de «Iniciar ahora»: el discado ya se detuvo y aun no se bloquea a nadie. */
+  readonly enAviso = computed(() => enAvisoInmediato(this.mant.datos(), this.ahora()));
+  readonly faltaAviso = computed(() => cuenta(this.falta()));
 
   readonly subtitulo = computed(() => {
     const d = this.mant.datos();
     switch (this.vista()) {
       case 'PROGRAMADO': return `Sistemas · programado para las ${this.h(d?.inicioProgramado)}`;
-      case 'INMEDIATO': return 'Sistemas · inicio inmediato';
       case 'EN_DETENCION': return `Sistemas · detención iniciada ${this.h(d?.inicioDetencion)}`;
       case 'BLOQUEADO': return `Sistemas · bloqueado desde ${this.h(d?.inicioBloqueo)}`;
       default: return 'Sistemas · sin mantenimiento programado';
@@ -121,19 +125,19 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   readonly servicios = computed<ServicioVigilado[]>(() => this.avance()?.servicios ?? []);
   readonly bloqueados = computed(() => {
     const a = this.avance();
-    return a && this.activo() ? Math.max(0, a.conectados - a.enPausa - a.enGestion.length) : 0;
+    return a && this.asesorBloqueado() ? Math.max(0, a.conectados - a.enPausa - a.enGestion.length) : 0;
   });
 
   readonly listo = computed(() => this.vista() === 'BLOQUEADO');
   readonly listoTexto = computed(() => {
     if (this.mant.reiniciando()) {
-      return 'Discador sin respuesta. Liberar se habilita cuando responda.';
+      return 'Discador sin respuesta · Liberar no disponible';
     }
     const desde = this.h(this.mant.datos()?.inicioBloqueo);
     const quedan = this.lista().length;
     return quedan
-      ? `Bloqueado desde ${desde}. Siguen en gestión: ${quedan}.`
-      : `Sin llamadas ni tipificaciones en curso desde ${desde}.`;
+      ? `Bloqueado ${desde} · En gestión: ${quedan}`
+      : `Sin actividad desde ${desde}`;
   });
 
   readonly tiempoMaximo = computed(() => {
@@ -148,6 +152,9 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   });
   readonly avisoAsesor = computed<{ titulo: string; texto: string; cerrable: boolean } | null>(() => {
     const d = this.mant.datos();
+    if (this.enAviso()) {
+      return { titulo: 'Mantenimiento en 60 segundos', texto: `Bloqueo de pantalla en ${this.faltaAviso()}`, cerrable: false };
+    }
     if (!d || d.estado !== 'PROGRAMADO' || !d.inicioProgramado) {
       return null;
     }
@@ -155,15 +162,12 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     if (falta <= 0) {
       return null;
     }
-    if (d.inmediato) {
-      return { titulo: 'Entramos en mantenimiento en 60 segundos', texto: 'No inicies una gestión nueva.', cerrable: false };
-    }
     const hora = horaCorta(d.inicioProgramado);
     if (falta <= RECORDATORIO) {
-      return { titulo: 'Mantenimiento en 5 minutos', texto: `A las ${hora} se bloqueará la pantalla.`, cerrable: false };
+      return { titulo: 'Mantenimiento en 5 minutos', texto: `Inicio ${hora}`, cerrable: false };
     }
     if (falta <= AVISO && !this.avisoCerrado()) {
-      return { titulo: `Mantenimiento a las ${hora}`, texto: 'A esa hora se bloqueará la pantalla.', cerrable: true };
+      return { titulo: 'Mantenimiento programado', texto: `Inicio ${hora}`, cerrable: true };
     }
     return null;
   });
@@ -172,8 +176,8 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     const cierre = this.cierre();
     if (cierre) {
       const ultimo: Paso = cierre.fase === 'run'
-        ? { id: 'reanudar', titulo: 'Discado reanudado', clase: 'm-run', sub: 'Encendiendo campañas y colas', val: '', barra: null }
-        : { id: 'reanudar', titulo: 'Discado reanudado', clase: 'm-ok', sub: 'Campañas y colas encendidas', val: 'Ahora', barra: null };
+        ? { id: 'reanudar', titulo: 'Discado reanudado', clase: 'm-run', sub: 'Reanudando campañas y colas', val: '', barra: null }
+        : { id: 'reanudar', titulo: 'Discado reanudado', clase: 'm-ok', sub: 'Campañas y colas reanudadas', val: 'Ahora', barra: null };
       return [...cierre.pasos.slice(0, -1), ultimo];
     }
     return this.calcularPasos();
@@ -285,7 +289,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
         : falta <= AVISO
           ? paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso enviado ${horaCorta(inicio - AVISO)}`, '10 min')
           : paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso a las ${horaCorta(inicio - AVISO)}`, 'Pendiente');
-    } else if (v === 'INMEDIATO') {
+    } else if (this.enAviso()) {
       aviso = paso('aviso', 'Aviso a los usuarios', 'm-run', 'Aviso de 60 segundos', `${Math.max(0, Math.ceil(this.falta() / 1000))} s`);
     } else if (d && this.activo()) {
       const inicio = d.inicioProgramado ?? 0;
@@ -303,7 +307,8 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     // Sin datos del backend se muestran los pasos sin cifras.
     if (!a) {
       const hecho = (id: string, titulo: string, val = '') => paso(id, titulo, 'm-ok', '', val);
-      return [aviso, hecho('discado', 'Discado detenido', this.h(d.inicioDetencion)),
+      const detenido = hecho('discado', 'Discado detenido', this.h(d.inicioDetencion));
+      return [...(d.inmediato ? [detenido, aviso] : [aviso, detenido]),
         v === 'BLOQUEADO' ? hecho('llamadas', 'Llamadas en curso') : paso('llamadas', 'Llamadas en curso', 'm-run'),
         v === 'BLOQUEADO' ? hecho('gestiones', 'Tipificaciones') : paso('gestiones', 'Tipificaciones', 'm-run'),
         v === 'BLOQUEADO' ? hecho('pantallas', 'Pantallas bloqueadas') : paso('pantallas', 'Pantallas bloqueadas', 'm-run'),
@@ -317,32 +322,51 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
       `${campanas} ${campanas === 1 ? 'campaña' : 'campañas'} y ${colas} ${colas === 1 ? 'cola' : 'colas'} del bot`,
       this.h(d.inicioDetencion));
 
+    // Llamadas que ya estaban en camino al detener el discado: una rama por campaña.
+    const ramas: Rama[] = v === 'EN_DETENCION'
+      ? (a.pendientes ?? []).filter(p => p.timbrando || p.enCola).map(p => ({
+          id: p.idCampana,
+          nombre: p.campana,
+          detalle: [p.timbrando ? `${p.timbrando} timbrando` : '', p.enCola ? `${p.enCola} en cola` : '']
+            .filter(Boolean).join(' · ')
+        }))
+      : [];
+    const porEntrar = v === 'EN_DETENCION'
+      ? (a.pendientes ?? []).reduce((n, p) => n + p.timbrando + p.enCola, 0) : 0;
+
     const ll = a?.enLlamada ?? 0;
     const ti = a?.tipificando ?? 0;
     const enGestion = a?.enGestion.length ?? 0;
     const conectados = a?.conectados ?? 0;
-    const llamadas = ll
-      ? paso('llamadas', 'Llamadas en curso', 'm-run', `${ll} en llamada`, String(ll))
-      : paso('llamadas', 'Llamadas en curso', 'm-ok', 'Sin llamadas en curso', '0');
-    const gestiones = ll || ti
+    const llamadas: Paso = ll || porEntrar
+      ? { ...paso('llamadas', 'Llamadas en curso', 'm-run',
+            [ll ? `${ll} con asesor` : '', porEntrar ? `${porEntrar} por entrar` : ''].filter(Boolean).join(' · '),
+            String(ll + porEntrar)), ramas }
+      : paso('llamadas', 'Llamadas en curso', 'm-ok', 'Sin llamadas', '0');
+    const gestiones = ll || ti || porEntrar
       ? paso('gestiones', 'Tipificaciones', 'm-run', `${ti} tipificando`, String(ti))
-      : paso('gestiones', 'Tipificaciones', 'm-ok', 'Sin tipificaciones abiertas', '0');
-    const pantallas = enGestion
-      ? paso('pantallas', 'Pantallas bloqueadas', 'm-run', 'Cada usuario se bloquea al terminar', `${Math.max(0, conectados - enGestion)} de ${conectados}`)
-      : paso('pantallas', 'Pantallas bloqueadas', 'm-ok', 'Todas las pantallas bloqueadas', `${conectados} de ${conectados}`);
+      : paso('gestiones', 'Tipificaciones', 'm-ok', 'Sin tipificaciones', '0');
+    const pantallas = v === 'EN_DETENCION' && !d.entradaCerrada
+      ? paso('pantallas', 'Pantallas bloqueadas', 'm-idle',
+          this.enAviso() ? 'Pendiente: fin del aviso' : 'Pendiente: llamadas por entrar')
+      : enGestion
+      ? paso('pantallas', 'Pantallas bloqueadas', 'm-run', 'Bloqueo al cerrar gestión', `${Math.max(0, conectados - enGestion)} de ${conectados}`)
+      : paso('pantallas', 'Pantallas bloqueadas', 'm-ok', 'Completo', `${conectados} de ${conectados}`);
 
     let reposo = paso('reposo', 'Reposo verificado');
     if (v === 'BLOQUEADO') {
       reposo = enGestion
-        ? paso('reposo', 'Reposo verificado', 'm-skip', 'Bloqueo sin esperar', 'Forzado')
-        : paso('reposo', 'Reposo verificado', 'm-ok', 'Nada en curso durante 10 s', this.h(d.inicioBloqueo));
+        ? paso('reposo', 'Reposo verificado', 'm-skip', 'Bloqueo forzado', 'Forzado')
+        : paso('reposo', 'Reposo verificado', 'm-ok', '10 s sin actividad', this.h(d.inicioBloqueo));
     } else if (a?.reposoDesde) {
       const lleva = Math.min(REPOSO, Math.max(0, this.ahora() - a.reposoDesde));
-      reposo = paso('reposo', 'Reposo verificado', 'm-run', 'Sin actividad durante 10 s',
+      reposo = paso('reposo', 'Reposo verificado', 'm-run', 'Verificando 10 s sin actividad',
         `${Math.ceil((REPOSO - lleva) / 1000)} s`, Math.round(lleva / REPOSO * 100));
     }
 
-    return [aviso, discado, llamadas, gestiones, pantallas, reposo, paso('reanudar', 'Discado reanudado')];
+    // En el inmediato el discado se detiene antes de que termine el aviso: ese paso va primero.
+    const inicio = d.inmediato ? [discado, aviso] : [aviso, discado];
+    return [...inicio, llamadas, gestiones, pantallas, reposo, paso('reanudar', 'Discado reanudado')];
   }
 
   private falta(): number {
