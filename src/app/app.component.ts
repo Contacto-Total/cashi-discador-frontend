@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -273,7 +273,32 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Los avisos emergentes (app-toast-notification) salen en la misma esquina que la pila de avisos.
+   * Para que no se encimen, se les pasa el alto de la pila en --alto-avisos: cero si está vacía o si
+   * no existe (pantalla de ingreso).
+   */
+  @ViewChild('pilaAvisos')
+  set pilaAvisos(pila: ElementRef<HTMLElement> | undefined) {
+    this.vigiaAvisos?.disconnect();
+    const raiz = document.documentElement;
+    if (!pila) {
+      raiz.style.removeProperty('--alto-avisos');
+      return;
+    }
+    const caja = pila.nativeElement;
+    const medir = () => {
+      const conAvisos = Array.from(caja.children).some(h => h.getBoundingClientRect().height > 0);
+      raiz.style.setProperty('--alto-avisos', conAvisos ? `${caja.getBoundingClientRect().height + 12}px` : '0px');
+    };
+    this.vigiaAvisos = new ResizeObserver(medir);
+    this.vigiaAvisos.observe(caja);
+    medir();
+  }
+  private vigiaAvisos?: ResizeObserver;
+
   ngOnDestroy(): void {
+    this.vigiaAvisos?.disconnect();
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
     this.callStatusSubscription?.unsubscribe();
