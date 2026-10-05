@@ -20,6 +20,18 @@ import {
 } from './asistencia.estilos';
 
 const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DESCANSO_MEDICO = 'DESCANSO_MEDICO';
+
+/** Un día del rango de la solicitud, con lo que hoy figura en él. */
+interface DiaQueCubre {
+  fecha: string;
+  etiqueta: string;
+  texto: string;
+  clase: string;
+  marcable: boolean;
+  /** Tiene entrada y marcarlo lo deja como no trabajado: sale sin marcar. */
+  sinMarcar: boolean;
+}
 /** Los meses escritos, en minúscula: el navegador en es-PE da «Setiembre» con mayúscula. */
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const minutosDe = (h: string | null | undefined): number => (h ? Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)) : 0);
@@ -455,7 +467,7 @@ const ESTILOS = {
 
               <p class="nota-panel">Sirve para días pasados y para días futuros.</p>
 
-              <!-- Los días del rango con lo que hoy figura: el trabajado se ve pero no se marca. -->
+              <!-- Los días del rango con lo que hoy figura: el trabajado se ve y solo lo marca el descanso médico. -->
               <div class="flex flex-col gap-1.5">
                 <span class="text-[13px]">Días que cubre</span>
                 <div class="tarjeta !px-3.5 !py-2.5">
@@ -465,7 +477,7 @@ const ESTILOS = {
                         <li>
                           <label class="flex items-center gap-[9px] text-[13px]" [style.opacity]="f.marcable ? null : .55">
                             <input type="checkbox" class="casilla-dia" [disabled]="!f.marcable"
-                                   [checked]="f.marcable && !desmarcados().has(f.fecha)" (change)="alternarDia(f.fecha)">
+                                   [checked]="marcado(f)" (change)="alternarDia(f)">
                             <span>{{ f.etiqueta }}</span>
                           </label>
                           <span [class]="'pastilla ' + f.clase">{{ f.texto }}</span>
@@ -562,6 +574,10 @@ export class MiAsistenciaComponent implements OnInit {
   readonly diasConocidos = signal(new Map<string, AsistenciaDia>());
   /** Los días que la persona desmarcó: la solicitud no los cubre. */
   readonly desmarcados = signal(new Set<string>());
+  /** Los días con entrada que la persona marcó: salen sin marcar y solo el descanso médico los cubre. */
+  readonly conEntradaMarcados = signal(new Set<string>());
+  /** El tipo elegido, como signal: de él depende que un día con entrada se pueda marcar. */
+  readonly idTipoNuevo = signal<number | null>(null);
 
   /** El lunes de la semana que se está viendo. */
   readonly lunes = signal(this.lunesDe(new Date()));
@@ -615,21 +631,25 @@ export class MiAsistenciaComponent implements OnInit {
     }
     const conocidos = this.diasConocidos();
     const hoy = this.hoy();
-    const filas: { fecha: string; etiqueta: string; texto: string; clase: string; marcable: boolean }[] = [];
+    // El descanso médico manda sobre las marcas: también cubre el día en que se entró y hubo que salir.
+    const esDescansoMedico = this.tipos().find(t => t.id === this.idTipoNuevo())?.codigo === DESCANSO_MEDICO;
+    const filas: DiaQueCubre[] = [];
     for (let f = desde; f <= hasta && filas.length < 31; f = this.sumarDias(f, 1)) {
       const diaSemana = new Date(f + 'T00:00:00').getDay();
       if (diaSemana === 0 || diaSemana === 6) {
         continue;  // sábado y domingo: no se espera a nadie, no hay nada que cubrir
       }
       const d = conocidos.get(f);
+      const conEntrada = f <= hoy && !!d && (d.estado === 'PUNTUAL' || d.estado === 'TARDE' || d.estado === 'INCOMPLETO');
       // La tardanza sí se cubre: una cita médica a primera hora hace llegar tarde.
       const [texto, clase, marcable]: [string, string, boolean] = f > hoy ? ['Aún no llega', 'p-neutro', true]
         : !d || d.estado === 'FALTA' ? ['No trabajado', 'p-falta', true]
         : d.estado === 'TARDE' ? ['Llegó tarde', 'p-tarde', true]
         : d.estado === 'NO_LABORABLE' ? [d.tipoDia ?? 'No laborable', 'p-neutro', false]
         : d.estado === 'JUSTIFICADO' ? [d.tipoDia ?? 'Justificado', 'p-neutro', false]
-        : ['Trabajado', 'p-ok', false];
-      filas.push({ fecha: f, etiqueta: `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`, texto, clase, marcable });
+        : ['Trabajado', 'p-ok', esDescansoMedico];
+      filas.push({ fecha: f, etiqueta: `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`, texto, clase, marcable,
+        sinMarcar: esDescansoMedico && conEntrada });
     }
     return filas;
   });
@@ -793,6 +813,7 @@ export class MiAsistenciaComponent implements OnInit {
         const deAusencia = t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo) && x.codigo !== RECUPERACION);
         this.tipos.set(deAusencia);
         this.nuevo.idTipoDia = deAusencia[0]?.id ?? null;
+        this.idTipoNuevo.set(this.nuevo.idTipoDia);
       },
       error: () => this.toast.error('No se pudieron cargar los tipos de solicitud')
     });
@@ -856,6 +877,7 @@ export class MiAsistenciaComponent implements OnInit {
       fechaHasta: this.hoy(),
       comentario: ''
     };
+    this.idTipoNuevo.set(this.nuevo.idTipoDia);
     // Lo de la semana a la vista ya está: se usa mientras llega lo del rango.
     this.diasConocidos.set(new Map(this.dias().map(d => [d.fecha, d])));
     this.cargarRango();
@@ -869,6 +891,7 @@ export class MiAsistenciaComponent implements OnInit {
     const { fechaDesde: desde, fechaHasta: hasta } = this.nuevo;
     this.rango.set({ desde, hasta });
     this.desmarcados.set(new Set());
+    this.conEntradaMarcados.set(new Set());
     if (!desde || !hasta || hasta < desde) {
       return;
     }
@@ -883,10 +906,15 @@ export class MiAsistenciaComponent implements OnInit {
     });
   }
 
-  alternarDia(fecha: string): void {
-    this.desmarcados.update(s => {
+  /** Si la solicitud cubre ese día. */
+  marcado(f: DiaQueCubre): boolean {
+    return f.marcable && (f.sinMarcar ? this.conEntradaMarcados().has(f.fecha) : !this.desmarcados().has(f.fecha));
+  }
+
+  alternarDia(f: DiaQueCubre): void {
+    (f.sinMarcar ? this.conEntradaMarcados : this.desmarcados).update(s => {
       const copia = new Set(s);
-      copia.has(fecha) ? copia.delete(fecha) : copia.add(fecha);
+      copia.has(f.fecha) ? copia.delete(f.fecha) : copia.add(f.fecha);
       return copia;
     });
     this.error.set('');
@@ -895,7 +923,8 @@ export class MiAsistenciaComponent implements OnInit {
   /**
    * Los tramos seguidos de días marcados. Uno desmarcado en medio parte la
    * solicitud en dos; lo trabajado o no laborable no corta, porque en esos
-   * días la solicitud no cambia nada.
+   * días la solicitud no cambia nada. Con descanso médico, el día con entrada
+   * sin marcar sí corta: dentro del tramo contaría como no trabajado.
    */
   private tramos(): { desde: string; hasta: string }[] {
     const tramos: { desde: string; hasta: string }[] = [];
@@ -904,7 +933,7 @@ export class MiAsistenciaComponent implements OnInit {
       if (!f.marcable) {
         continue;
       }
-      if (this.desmarcados().has(f.fecha)) {
+      if (!this.marcado(f)) {
         actual = null;
       } else if (actual) {
         actual.hasta = f.fecha;
@@ -932,6 +961,8 @@ export class MiAsistenciaComponent implements OnInit {
 
   elegirTipo(id: number): void {
     this.nuevo.idTipoDia = id;
+    this.idTipoNuevo.set(id);
+    this.conEntradaMarcados.set(new Set());
     this.error.set('');
   }
 
