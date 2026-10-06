@@ -41,6 +41,31 @@
     </div>
   </div>
 
+  <!-- Aviso: la campaña elegida terminó (por vueltas o detenida a mano) -->
+  <div class="campana-completada" *ngIf="campanaCompletada" [class.campana-completada-manual]="!vueltasCumplidas">
+    <span class="campana-completada-icono">
+      <lucide-angular [name]="vueltasCumplidas ? 'check' : 'square'" [size]="20"></lucide-angular>
+    </span>
+    <div class="campana-completada-texto">
+      <ng-container *ngIf="vueltasCumplidas; else detenidaManual">
+        <strong>Campaña completada · {{ (autoDialerStats?.vueltasMaximas ?? 0) === 1 ? 'se cumplió' : 'se cumplieron' }} {{ textoVueltas }}</strong>
+        <p>No quedan contactos con intentos disponibles. El discador la cerró automáticamente.</p>
+      </ng-container>
+      <ng-template #detenidaManual>
+        <strong>Campaña detenida manualmente</strong>
+        <p>Todavía hay contactos con intentos disponibles: no terminó {{ textoVueltas }}.</p>
+      </ng-template>
+    </div>
+    <div class="campana-completada-vueltas" *ngIf="vueltasCumplidas && segmentosVueltas.length > 0">
+      <div class="campana-completada-segmentos">
+        <i *ngFor="let v of segmentosVueltas"></i>
+      </div>
+      <div class="campana-completada-etiquetas">
+        <span *ngFor="let v of segmentosVueltas; let ultima = last">V{{ v }}{{ ultima ? ' ✓' : '' }}</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Row: Tiempo Real + Vueltas lado a lado -->
   <div class="top-metrics-row" *ngIf="autoDialerStats">
     <!-- Actividad en Tiempo Real -->

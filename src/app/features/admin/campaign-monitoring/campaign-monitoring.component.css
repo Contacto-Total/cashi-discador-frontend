@@ -1710,3 +1710,128 @@ body.light-theme .agente-tiempo {
   .metric-item.card-warning  { border-left: 3px solid #D97706; }
   .metric-item.card-danger   { border-left: 3px solid #DC2626; }
   .metric-item.card-time     { border-left: 3px solid #7C3AED; }
+
+/* ============================================
+   AVISO: CAMPAÑA COMPLETADA (cierre por vueltas)
+   Base oscura; el claro va con body.light-theme
+   ============================================ */
+.campana-completada {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 0.75rem;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #12284a;
+  border: 1px solid #2f5fa3;
+  color: #e8edf6;
+}
+
+.campana-completada-icono {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.campana-completada-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.campana-completada-texto strong {
+  display: block;
+  font-size: 15px;
+}
+
+.campana-completada-texto p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: #bcd0ee;
+}
+
+.campana-completada-vueltas {
+  flex: none;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.campana-completada-segmentos {
+  display: flex;
+  gap: 5px;
+}
+
+.campana-completada-segmentos i {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: #3b82f6;
+}
+
+.campana-completada-etiquetas {
+  display: flex;
+  justify-content: space-between;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  color: #93b0da;
+}
+
+.campana-completada-manual {
+  background: #232c40;
+  border-color: #46536e;
+}
+
+.campana-completada-manual .campana-completada-icono {
+  background: #64748b;
+}
+
+.campana-completada-manual .campana-completada-texto p {
+  color: #b4bfd2;
+}
+
+body.light-theme .campana-completada {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #0f172a;
+}
+
+body.light-theme .campana-completada-texto strong {
+  color: #1e3a8a;
+}
+
+body.light-theme .campana-completada-texto p {
+  color: #475569;
+}
+
+body.light-theme .campana-completada-etiquetas {
+  color: #64748b;
+}
+
+body.light-theme .campana-completada-manual {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+body.light-theme .campana-completada-manual .campana-completada-texto strong {
+  color: #334155;
+}
+
+body.light-theme .campana-completada-manual .campana-completada-texto p {
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .campana-completada {
+    flex-wrap: wrap;
+  }
+
+  .campana-completada-vueltas {
+    width: 100%;
+  }
+}
