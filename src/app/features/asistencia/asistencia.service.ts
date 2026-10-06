@@ -19,6 +19,7 @@ import {
   Horario,
   HorarioBase,
   CambioHorarioBase,
+  DeudaSolicitud,
   Justificacion,
   MarcacionManual,
   MiPlan,
@@ -278,6 +279,9 @@ export class AsistenciaService {
     archivo?: File | null;
     minutosExtra?: number | null;
     fechaOrigen?: string | null;
+    /** Permiso por horas: las horas que sí trabaja ese día, «HH:mm». */
+    trabajaDesde?: string | null;
+    trabajaHasta?: string | null;
   }): Observable<{ id: number }> {
     const cuerpo = new FormData();
     cuerpo.append('idTipoDia', String(datos.idTipoDia));
@@ -295,6 +299,10 @@ export class AsistenciaService {
     if (datos.minutosExtra) {
       cuerpo.append('minutosExtra', String(datos.minutosExtra));
     }
+    if (datos.trabajaDesde && datos.trabajaHasta) {
+      cuerpo.append('trabajaDesde', datos.trabajaDesde);
+      cuerpo.append('trabajaHasta', datos.trabajaHasta);
+    }
     if (datos.fechaOrigen) {
       cuerpo.append('fechaOrigen', datos.fechaOrigen);
     }
@@ -309,6 +317,11 @@ export class AsistenciaService {
   /** Paso 2: RR.HH. decide. Solo sobre lo que ya revisó la supervisora. */
   resolverJustificacion(id: number, aprobada: boolean, motivo?: string): Observable<void> {
     return this.http.post<void>(`${this.url}/justificaciones/${id}/resolver`, { aprobada, motivo });
+  }
+
+  /** Lo que la solicitud abriría de deuda al aprobarse. */
+  deudaDe(id: number): Observable<DeudaSolicitud> {
+    return this.http.get<DeudaSolicitud>(`${this.url}/justificaciones/${id}/deuda`);
   }
 
   /** El certificado con su tipo (imagen o PDF), para verlo o bajarlo con su nombre. */

@@ -154,6 +154,14 @@ export interface TipoDia {
   diasAnticipacion: number | null;
 }
 
+/** Lo que una solicitud abriría de deuda al aprobarse. */
+export interface DeudaSolicitud {
+  seRecupera: boolean;
+  minutos: number;
+  /** Los días que todavía no se pueden calcular: les faltan marcas. */
+  sinCalcular: string[];
+}
+
 export interface Justificacion {
   id: number;
   idUsuario: number;
@@ -170,6 +178,9 @@ export interface Justificacion {
   fechaHasta: string;
   dias: number;
   comentario: string | null;
+  /** Solo en un permiso por horas: las horas que sí trabaja ese día. */
+  trabajaDesde?: string | null;
+  trabajaHasta?: string | null;
   /** Solo en una recuperación: minutos más a la salida cada día y el día que recupera. */
   minutosExtra: number | null;
   fechaOrigen: string | null;

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { Justificacion } from './asistencia.models';
+import { DeudaSolicitud, Justificacion } from './asistencia.models';
 import { ESTADO_SOLICITUD, ESTILOS, descargarArchivo, hoy, sumarDias } from './asistencia.estilos';
 import { Visor, VisorArchivoComponent } from './visor-archivo.component';
 import { PaginadorComponent, pagina } from './paginador.component';
@@ -176,7 +176,15 @@ const esDeRrhh = (j: Justificacion): boolean =>
           <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
             <dl class="ficha">
               <dt>Persona</dt><dd>{{ j.nombreAgente }}@if (j.subcartera) { · {{ j.subcartera }}}</dd>
-              <dt>Días</dt><dd>{{ j.fechaDesde | date: 'dd/MM' }}@if (j.fechaHasta !== j.fechaDesde) { – {{ j.fechaHasta | date: 'dd/MM' }}}@if (j.minutosExtra) { · +{{ j.minutosExtra }} min}</dd>
+              <dt>Días</dt><dd>{{ j.fechaDesde | date: 'dd/MM' }}@if (j.fechaHasta !== j.fechaDesde) { – {{ j.fechaHasta | date: 'dd/MM' }}}@if (j.minutosExtra) { · +{{ j.minutosExtra }} min}@if (j.trabajaDesde && j.trabajaHasta) { · trabaja de {{ j.trabajaDesde.slice(0, 5) }} a {{ j.trabajaHasta.slice(0, 5) }}}</dd>
+              @if (deuda(); as d) {
+                <dt>Al aprobar</dt>
+                <dd>
+                  @if (d.minutos > 0) { Debe {{ enHoras(d.minutos) }} }
+                  @if (d.sinCalcular.length) { <span class="text-[#b91c1c] dark:text-red-300">Faltan marcas del {{ fechasCortas(d.sinCalcular) }}: complétalas antes de aprobar</span> }
+                  @if (!d.minutos && !d.sinCalcular.length) { No queda nada por recuperar }
+                </dd>
+              }
               <dt>Solicitada</dt><dd>{{ j.solicitadaEn | date: 'dd/MM' }}@if (j.solicitadaPor) { por {{ j.solicitadaPor }}}</dd>
               <dt>Estado</dt>
               <dd><span class="inline-flex items-center rounded-full px-[9px] py-0.5 text-[11.5px] font-bold" [class]="ESTADO_SOLICITUD[j.estado].clase">{{ ESTADO_SOLICITUD[j.estado].texto }}</span></dd>
@@ -310,6 +318,8 @@ export class AsistenciaJustificacionesComponent {
 
 
   readonly abierta = signal<Justificacion | null>(null);
+  /** Lo que abriría de deuda la solicitud abierta, si su tipo se recupera y todavía no se resolvió. */
+  readonly deuda = signal<DeudaSolicitud | null>(null);
   readonly vistaPrevia = signal<string | null>(null);
   readonly conforme = signal(true);
   /** Al pulsar «Rechazar» aparece el motivo; el segundo clic confirma. */
@@ -406,10 +416,31 @@ export class AsistenciaJustificacionesComponent {
       && (!texto || (j.nombreAgente ?? '').toLowerCase().includes(texto))));
   }
 
+  /** «3:42 h»: minutos dichos en horas. */
+  enHoras(minutos: number): string {
+    return `${Math.floor(minutos / 60)}:${String(minutos % 60).padStart(2, '0')} h`;
+  }
+
+  /** «02/10, 05/10»: las fechas de una lista, cortas. */
+  fechasCortas(fechas: string[]): string {
+    return fechas.map(f => `${f.slice(8, 10)}/${f.slice(5, 7)}`).join(', ');
+  }
+
   // ==================== DECISIÓN ====================
 
   abrir(j: Justificacion): void {
     this.abierta.set(j);
+    this.deuda.set(null);
+    if (j.recuperable && (j.estado === 'PENDIENTE' || j.estado === 'REVISADA')) {
+      this.servicio.deudaDe(j.id).subscribe({
+        next: d => {
+          if (this.abierta()?.id === j.id && d.seRecupera) {
+            this.deuda.set(d);
+          }
+        },
+        error: () => { /* sin la deuda, la solicitud se revisa igual */ }
+      });
+    }
     this.motivo = '';
     this.error.set('');
     this.conforme.set(true);
