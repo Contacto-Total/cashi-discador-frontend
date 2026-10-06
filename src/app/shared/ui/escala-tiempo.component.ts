@@ -11,7 +11,7 @@ import { ModoReloj } from './reloj-estado';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <p class="m-0 mb-[.625rem] text-[12px] font-medium text-muted-foreground">Escala de este estado</p>
+    <p class="m-0 mb-[.625rem] text-[.75rem] font-medium text-muted-foreground">Escala de este estado</p>
     <div class="relative">
       <div class="flex h-2.5 gap-[2px] rounded-full bg-muted">
         <span class="h-full rounded-l-full bg-nivel-verde/85" [style.width.%]="parte(verde)"></span>
@@ -23,7 +23,7 @@ import { ModoReloj } from './reloj-estado';
             [style.left.%]="parte(segundos)" [style.background]="color"
             [style.box-shadow]="'0 2px 8px -1px color-mix(in oklab,' + color + ' 55%,transparent)'"></span>
     </div>
-    <div class="mt-[.5rem] flex justify-between text-[12px] text-muted-foreground tabular-nums">
+    <div class="mt-[.5rem] flex justify-between text-[.75rem] text-muted-foreground tabular-nums">
       <span>Verde · {{ minutos(verde) }} min</span><span>Ámbar · {{ minutos(ambar) }} min</span><span>Rojo · {{ minutos(tope) }} min</span>
     </div>
   `

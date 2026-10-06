@@ -113,5 +113,7 @@ export class FontSizeService {
 
     // Also set a CSS custom property for components that might need it
     html.style.setProperty('--app-font-size', `${size}px`);
+    // La misma medida como factor respecto del tamaño por defecto, para lo que no se mide en rem.
+    html.style.setProperty('--app-font-scale', String(size / this.DEFAULT_SIZE));
   }
 }

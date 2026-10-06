@@ -12,7 +12,7 @@ import { LucideAngularModule } from 'lucide-angular';
     <span class="grid size-7 flex-none place-items-center rounded-lg bg-[color-mix(in_oklab,var(--tono,var(--brand))_14%,transparent)] text-[color:var(--tono,var(--brand))] transition-colors duration-500">
       <lucide-angular [name]="icono" [size]="14"></lucide-angular>
     </span>
-    <p role="heading" aria-level="2" class="m-0 text-[16px] font-bold text-foreground">{{ titulo }}</p>
+    <p role="heading" aria-level="2" class="m-0 text-[1rem] font-bold text-foreground">{{ titulo }}</p>
   `
 })
 export class TituloTarjetaComponent {

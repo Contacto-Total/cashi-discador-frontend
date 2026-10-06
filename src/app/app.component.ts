@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './shared/services/theme.service';
+import { FontSizeService } from './core/services/font-size.service';
 import { WebsocketService } from './core/services/websocket.service';
 import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
@@ -113,7 +114,9 @@ export class AppComponent implements OnInit, OnDestroy {
     private router: Router,
     private toast: ToastService,
     private gestionLock: GestionLockService,
-    public mantenimiento: MantenimientoService
+    public mantenimiento: MantenimientoService,
+    // Se pide aquí para que exista desde el arranque: al crearse aplica el tamaño de texto guardado.
+    private fontSizeService: FontSizeService
   ) {}
 
   /** ADMIN ve notificaciones, tema, modo mantenimiento y las opciones de la cuenta en el menú lateral. */
@@ -289,7 +292,8 @@ export class AppComponent implements OnInit, OnDestroy {
     const caja = pila.nativeElement;
     const medir = () => {
       const conAvisos = Array.from(caja.children).some(h => h.getBoundingClientRect().height > 0);
-      raiz.style.setProperty('--alto-avisos', conAvisos ? `${caja.getBoundingClientRect().height + 12}px` : '0px');
+      const hueco = parseFloat(getComputedStyle(caja).rowGap) || 0;
+      raiz.style.setProperty('--alto-avisos', conAvisos ? `${caja.getBoundingClientRect().height + hueco}px` : '0px');
     };
     this.vigiaAvisos = new ResizeObserver(medir);
     this.vigiaAvisos.observe(caja);

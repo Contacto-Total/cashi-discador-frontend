@@ -23,7 +23,7 @@ const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
     </svg>
     <div class="absolute grid place-items-center text-center">
       <span class="text-[clamp(1.625rem,3.8vh,2.25rem)] leading-none font-bold tabular-nums transition-colors duration-500" [style.color]="tinta">{{ hora }}</span>
-      <span class="mt-[.25rem] text-[12px] text-muted-foreground tabular-nums">{{ tope ? 'de ' + horaTope : 'sin límite' }}</span>
+      <span class="mt-[.25rem] text-[.75rem] text-muted-foreground tabular-nums">{{ tope ? 'de ' + horaTope : 'sin límite' }}</span>
     </div>
   `
 })

@@ -7,31 +7,31 @@
 <div role="status"
      class="font-cashi pointer-events-none fixed top-4 right-4 z-[9000] flex w-[min(calc(100vw-2rem),20rem)] items-start gap-2.5 rounded-lg border border-(--ok-pt) bg-card py-3 pr-3 pl-3.5 shadow-[0_4px_12px_var(--sombra)] transition-[translate,opacity] duration-[350ms] ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none"
      [ngClass]="nota() ? 'translate-x-0 opacity-100' : 'translate-x-[calc(100%+1.5rem)] opacity-0'">
-  <svg class="mt-px size-[18px] flex-none text-(--ok-pt)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  <svg class="mt-px size-[1.125rem] flex-none text-(--ok-pt)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.listo"/></svg>
   <div>
-    <span class="block text-[14px] font-semibold text-foreground">Discador en línea</span>
-    <span class="block text-[12px] text-muted-foreground">Liberar disponible</span>
+    <span class="block text-[.875rem] font-semibold text-foreground">Discador en línea</span>
+    <span class="block text-[.75rem] text-muted-foreground">Liberar disponible</span>
   </div>
 </div>
 
-<div class="font-cashi flex flex-col gap-3 text-[14px] leading-[1.5] text-foreground antialiased">
+<div class="font-cashi flex flex-col gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased">
   <!-- Listo para subir el cambio. Plegado no deja su hueco: la primera tarjeta empieza a la altura del menú. -->
   <div class="grid transition-[grid-template-rows,margin-bottom] duration-[450ms] motion-reduce:transition-none"
        [ngClass]="listo() ? 'mb-0 grid-rows-[1fr]' : '-mb-3 grid-rows-[0fr]'">
     <div class="min-h-0 overflow-hidden">
-      <div class="flex flex-wrap items-center gap-3.5 rounded-xl border border-(--ok-ln) bg-(--ok-bg) px-[18px] py-4 text-(--ok)">
+      <div class="flex flex-wrap items-center gap-3.5 rounded-xl border border-(--ok-ln) bg-(--ok-bg) px-[1.125rem] py-4 text-(--ok)">
         <span class="relative flex size-11 flex-none items-center justify-center rounded-full bg-card motion-reduce:animate-none"
               [ngClass]="listo() ? 'animate-[cashi-halo_1.8s_ease-out_infinite]' : ''">
-          <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          <svg class="size-[1.375rem]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.subida"/></svg>
         </span>
-        <div class="min-w-[200px] flex-1">
-          <span class="block text-[16px] font-bold">Listo para subir el cambio</span>
-          <span class="text-[12px] tabular-nums">{{ listoTexto() }}</span>
+        <div class="min-w-[12.5rem] flex-1">
+          <span class="block text-[1rem] font-bold">Listo para subir el cambio</span>
+          <span class="text-[.75rem] tabular-nums">{{ listoTexto() }}</span>
           <div class="mt-2.5 flex flex-wrap gap-1.5 empty:hidden">
             @for (s of servicios(); track s.nombre) {
-              <span class="inline-flex items-center gap-1.5 rounded-full border bg-card py-[3px] pr-2.5 pl-2 text-[12px] font-semibold whitespace-nowrap tabular-nums before:size-[7px] before:rounded-full before:content-['']"
+              <span class="inline-flex items-center gap-1.5 rounded-full border bg-card py-[.1875rem] pr-2.5 pl-2 text-[.75rem] font-semibold whitespace-nowrap tabular-nums before:size-[.4375rem] before:rounded-full before:content-['']"
                     [ngClass]="s.arriba
                       ? 'border-(--ok-ln) text-(--ok) before:bg-(--ok-pt)'
                       : 'border-(--ro-ln) text-(--ro) before:animate-[cashi-late_1s_ease-in-out_infinite] before:bg-(--ro-pt) motion-reduce:before:animate-none'">
@@ -47,13 +47,13 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-[minmax(0,2.35fr)_minmax(320px,1fr)] items-stretch gap-3 max-[1150px]:grid-cols-[minmax(0,1fr)]">
+  <div class="grid grid-cols-[minmax(0,2.35fr)_minmax(20rem,1fr)] items-stretch gap-3 max-[1150px]:grid-cols-[minmax(0,1fr)]">
     <!-- La primera tarjeta lleva el título y lo principal de la pantalla: el formulario con la vista del
          asesor a un lado y el flujo al otro. Los indicadores y «En gestión» van aparte, a su derecha. -->
     <section appTarjeta class="flex flex-col px-6 py-5">
       <app-page-header titulo="Mantenimiento del sistema" [subtitulo]="subtitulo()">
         <span role="status"
-              class="inline-flex flex-none items-center gap-1.5 rounded-full border py-1 pr-3 pl-2.5 text-[12px] font-semibold tabular-nums transition-[background-color,color,border-color] duration-300 before:size-[7px] before:rounded-full before:bg-current before:content-['']"
+              class="inline-flex flex-none items-center gap-1.5 rounded-full border py-1 pr-3 pl-2.5 text-[.75rem] font-semibold tabular-nums transition-[background-color,color,border-color] duration-300 before:size-[.4375rem] before:rounded-full before:bg-current before:content-['']"
               [style.background]="etiqueta().fondo" [style.color]="etiqueta().color" [style.border-color]="etiqueta().borde">{{ etiqueta().texto }}</span>
       </app-page-header>
 
@@ -65,11 +65,11 @@
                                 [titulo]="vista() === 'OPERATIVO' ? 'Nuevo mantenimiento' : 'Mantenimiento en curso'"></app-titulo-tarjeta>
             <div class="flex flex-col gap-3">
               @if (error(); as e) {
-                <div role="alert" class="rounded-[10px] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[14px] font-medium text-(--ro)">{{ e }}</div>
+                <div role="alert" class="rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--ro)">{{ e }}</div>
               }
 
               @if (confirmando() === 'ahora') {
-                <div role="alert" class="rounded-[10px] border border-(--aviso-ln) bg-(--aviso-bg) px-3 py-2.5 text-[14px] font-medium text-(--am)">Confirmar inicio inmediato</div>
+                <div role="alert" class="rounded-[.625rem] border border-(--aviso-ln) bg-(--aviso-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--am)">Confirmar inicio inmediato</div>
                 <div class="flex flex-wrap gap-2">
                   <button type="button" appBoton="secundario" class="min-w-max flex-1" (click)="confirmando.set(null)">
                     <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.volver }"></ng-container>Volver
@@ -79,7 +79,7 @@
                   </button>
                 </div>
               } @else if (confirmando() === 'bloquear') {
-                <div role="alert" class="rounded-[10px] border border-(--aviso-ln) bg-(--aviso-bg) px-3 py-2.5 text-[14px] font-medium text-(--am)">Confirmar bloqueo con gestiones abiertas</div>
+                <div role="alert" class="rounded-[.625rem] border border-(--aviso-ln) bg-(--aviso-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--am)">Confirmar bloqueo con gestiones abiertas</div>
                 <div class="flex flex-wrap gap-2">
                   <button type="button" appBoton="secundario" class="min-w-max flex-1" (click)="confirmando.set(null)">
                     <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.volver }"></ng-container>Volver
@@ -91,7 +91,7 @@
               } @else {
                 @switch (vista()) {
                   @case ('OPERATIVO') {
-                    <div class="grid grid-cols-2 gap-[3px] rounded-lg bg-muted p-[3px]">
+                    <div class="grid grid-cols-2 gap-[.1875rem] rounded-lg bg-muted p-[.1875rem]">
                       <button type="button" [class]="PESTANA" [ngClass]="pestana() === 'prog' ? PESTANA_ACTIVA : PESTANA_REPOSO"
                               [attr.aria-pressed]="pestana() === 'prog'" (click)="pestana.set('prog')">Programar</button>
                       <button type="button" [class]="PESTANA" [ngClass]="pestana() === 'ya' ? PESTANA_ACTIVA : PESTANA_REPOSO"
@@ -105,7 +105,7 @@
                           <div [class]="FILA + ' min-h-9 items-center'">
                             <label for="m-hora" class="m-0 font-normal text-muted-foreground">Hora de inicio</label>
                             <input id="m-hora" type="time" [value]="hora()" (input)="hora.set($any($event.target).value)"
-                                   class="font-cashi m-0! h-9 w-auto rounded-lg border! border-(--campo-ln)! bg-(--campo)! px-2.5! text-[14px]! font-semibold text-foreground! tabular-nums outline-none focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
+                                   class="font-cashi m-0! h-9 w-auto rounded-lg border! border-(--campo-ln)! bg-(--campo)! px-2.5! text-[.875rem]! font-semibold text-foreground! tabular-nums outline-none focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
                           </div>
                           <div [class]="FILA + ' min-h-9 items-center'"><span class="text-muted-foreground">Aviso a los usuarios</span><span class="text-right font-semibold">10 y 5 min antes</span></div>
                         </div>
@@ -213,20 +213,20 @@
           <app-titulo-tarjeta class="mb-[.75rem]" icono="list-checks" titulo="Flujo"></app-titulo-tarjeta>
           <ol class="m-0 flex flex-1 list-none flex-col p-0">
             @for (p of pasos(); track p.id) {
-              <li class="relative grid flex-1 grid-cols-[32px_minmax(0,1fr)_auto] content-start gap-x-3.5 rounded-[10px] py-3 pr-3 pl-2 [&:not(:last-child)]:before:absolute [&:not(:last-child)]:before:top-11 [&:not(:last-child)]:before:-bottom-3 [&:not(:last-child)]:before:left-[23px] [&:not(:last-child)]:before:z-[1] [&:not(:last-child)]:before:w-0.5 [&:not(:last-child)]:before:bg-border [&:not(:last-child)]:before:transition-colors [&:not(:last-child)]:before:duration-[400ms] [&:not(:last-child)]:before:content-['']"
+              <li class="relative grid flex-1 grid-cols-[2rem_minmax(0,1fr)_auto] content-start gap-x-3.5 rounded-[.625rem] py-3 pr-3 pl-2 [&:not(:last-child)]:before:absolute [&:not(:last-child)]:before:top-11 [&:not(:last-child)]:before:-bottom-3 [&:not(:last-child)]:before:left-[1.4375rem] [&:not(:last-child)]:before:z-[1] [&:not(:last-child)]:before:w-0.5 [&:not(:last-child)]:before:bg-border [&:not(:last-child)]:before:transition-colors [&:not(:last-child)]:before:duration-[400ms] [&:not(:last-child)]:before:content-['']"
                   [ngClass]="PASO[p.clase].fila">
                 <span class="relative z-[1] flex size-8 items-center justify-center rounded-full border-2 transition-[border-color,background-color] duration-300" [ngClass]="PASO[p.clase].punto">
-                  <svg class="size-[15px] fill-none stroke-white stroke-[3] transition-[opacity,scale] duration-300 [stroke-linecap:round] [stroke-linejoin:round]" [ngClass]="PASO[p.clase].check"
+                  <svg class="size-[.9375rem] fill-none stroke-white stroke-[3] transition-[opacity,scale] duration-300 [stroke-linecap:round] [stroke-linejoin:round]" [ngClass]="PASO[p.clase].check"
                        viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="I.check"/></svg>
                 </span>
                 <div class="relative z-[1] min-w-0">
-                  <span class="block text-[14px] font-semibold" [ngClass]="PASO[p.clase].titulo">{{ p.titulo }}</span>
-                  <span class="block min-h-[18px] text-[12px] tabular-nums" [ngClass]="PASO[p.clase].detalle">{{ p.sub }}</span>
+                  <span class="block text-[.875rem] font-semibold" [ngClass]="PASO[p.clase].titulo">{{ p.titulo }}</span>
+                  <span class="block min-h-[1.125rem] text-[.75rem] tabular-nums" [ngClass]="PASO[p.clase].detalle">{{ p.sub }}</span>
                   @if (p.ramas?.length) {
                     <!-- Lo que cada campaña aún tiene timbrando o en cola -->
                     <div class="mt-1.5">
                       @for (r of p.ramas; track r.id) {
-                        <div class="relative flex items-baseline justify-between gap-3 py-[3px] pl-5 text-[12px] tabular-nums before:absolute before:top-0 before:bottom-0 before:left-[3px] before:border-l-[1.5px] before:border-(--am-ln) before:content-[''] last:before:bottom-1/2 after:absolute after:top-1/2 after:left-[3px] after:w-[11px] after:border-t-[1.5px] after:border-(--am-ln) after:content-['']">
+                        <div class="relative flex items-baseline justify-between gap-3 py-[.1875rem] pl-5 text-[.75rem] tabular-nums before:absolute before:top-0 before:bottom-0 before:left-[.1875rem] before:border-l-[1.5px] before:border-(--am-ln) before:content-[''] last:before:bottom-1/2 after:absolute after:top-1/2 after:left-[.1875rem] after:w-[.6875rem] after:border-t-[1.5px] after:border-(--am-ln) after:content-['']">
                           <span class="overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-foreground/80">{{ r.nombre }}</span>
                           <span class="whitespace-nowrap text-(--am)">{{ r.detalle }}</span>
                         </div>
@@ -235,7 +235,7 @@
                   }
                 </div>
                 @if (p.val) {
-                  <span class="relative z-[1] mt-[5px] self-start rounded-full px-2.5 py-[3px] text-[12px] font-semibold whitespace-nowrap tabular-nums" [ngClass]="PASO[p.clase].valor">{{ p.val }}</span>
+                  <span class="relative z-[1] mt-[.3125rem] self-start rounded-full px-2.5 py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap tabular-nums" [ngClass]="PASO[p.clase].valor">{{ p.val }}</span>
                 }
                 @if (p.barra !== null && p.clase === 'run') {
                   <div class="relative z-[1] col-[2/4] mt-1.5 h-1 overflow-hidden rounded-[2px] bg-[rgb(217_119_6/.2)]">
@@ -253,20 +253,20 @@
       <!-- Indicadores -->
       <div class="grid grid-cols-2 gap-3">
         <div appTarjeta class="flex flex-col gap-0.5 px-3.5 py-3">
-          <span class="absolute top-2.5 right-2.5 flex size-[30px] items-center justify-center rounded-lg bg-(--info-bg) text-(--info)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.tel }"></ng-container></span>
-          <span class="text-[24px] leading-[1.15] font-bold tabular-nums">{{ avance()?.enLlamada ?? '–' }}</span><span class="text-[12px] text-muted-foreground">En llamada</span>
+          <span class="absolute top-2.5 right-2.5 flex size-[1.875rem] items-center justify-center rounded-lg bg-(--info-bg) text-(--info)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.tel }"></ng-container></span>
+          <span class="text-[1.5rem] leading-[1.15] font-bold tabular-nums">{{ avance()?.enLlamada ?? '–' }}</span><span class="text-[.75rem] text-muted-foreground">En llamada</span>
         </div>
         <div appTarjeta class="flex flex-col gap-0.5 px-3.5 py-3">
-          <span class="absolute top-2.5 right-2.5 flex size-[30px] items-center justify-center rounded-lg bg-(--am-bg) text-(--am)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.nota }"></ng-container></span>
-          <span class="text-[24px] leading-[1.15] font-bold tabular-nums">{{ avance()?.tipificando ?? '–' }}</span><span class="text-[12px] text-muted-foreground">Tipificando</span>
+          <span class="absolute top-2.5 right-2.5 flex size-[1.875rem] items-center justify-center rounded-lg bg-(--am-bg) text-(--am)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.nota }"></ng-container></span>
+          <span class="text-[1.5rem] leading-[1.15] font-bold tabular-nums">{{ avance()?.tipificando ?? '–' }}</span><span class="text-[.75rem] text-muted-foreground">Tipificando</span>
         </div>
         <div appTarjeta class="flex flex-col gap-0.5 px-3.5 py-3">
-          <span class="absolute top-2.5 right-2.5 flex size-[30px] items-center justify-center rounded-lg bg-(--ro-bg) text-(--ro)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.candado }"></ng-container></span>
-          <span class="text-[24px] leading-[1.15] font-bold tabular-nums">{{ avance() ? bloqueados() : '–' }}</span><span class="text-[12px] text-muted-foreground">Bloqueados</span>
+          <span class="absolute top-2.5 right-2.5 flex size-[1.875rem] items-center justify-center rounded-lg bg-(--ro-bg) text-(--ro)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.candado }"></ng-container></span>
+          <span class="text-[1.5rem] leading-[1.15] font-bold tabular-nums">{{ avance() ? bloqueados() : '–' }}</span><span class="text-[.75rem] text-muted-foreground">Bloqueados</span>
         </div>
         <div appTarjeta class="flex flex-col gap-0.5 px-3.5 py-3">
-          <span class="absolute top-2.5 right-2.5 flex size-[30px] items-center justify-center rounded-lg bg-(--gris-bg) text-(--gris)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.cafe }"></ng-container></span>
-          <span class="text-[24px] leading-[1.15] font-bold tabular-nums">{{ avance()?.enPausa ?? '–' }}</span><span class="text-[12px] text-muted-foreground">En pausa</span>
+          <span class="absolute top-2.5 right-2.5 flex size-[1.875rem] items-center justify-center rounded-lg bg-(--gris-bg) text-(--gris)"><ng-container *ngTemplateOutlet="ic; context: { $implicit: I.cafe }"></ng-container></span>
+          <span class="text-[1.5rem] leading-[1.15] font-bold tabular-nums">{{ avance()?.enPausa ?? '–' }}</span><span class="text-[.75rem] text-muted-foreground">En pausa</span>
         </div>
       </div>
 
@@ -275,16 +275,16 @@
         <app-titulo-tarjeta class="mb-2.5" icono="users" titulo="En gestión"></app-titulo-tarjeta>
         <div class="flex flex-col">
           @for (a of lista(); track a.idUsuario) {
-            <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 border-t border-(--line2) py-[9px] first:border-t-0">
-              <span class="overflow-hidden text-[14px] font-semibold text-ellipsis whitespace-nowrap">{{ a.nombre }}</span>
-              <span class="col-start-1 text-[12px] text-muted-foreground tabular-nums">{{ a.subcartera ? a.subcartera + ' · ' : '' }}{{ lleva(a) }}</span>
-              <span class="col-start-2 row-span-2 row-start-1 rounded-full px-[9px] py-[3px] text-[12px] font-semibold whitespace-nowrap"
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 border-t border-(--line2) py-[.5625rem] first:border-t-0">
+              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ a.nombre }}</span>
+              <span class="col-start-1 text-[.75rem] text-muted-foreground tabular-nums">{{ a.subcartera ? a.subcartera + ' · ' : '' }}{{ lleva(a) }}</span>
+              <span class="col-start-2 row-span-2 row-start-1 rounded-full px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap"
                     [ngClass]="a.estado === 'EN_LLAMADA' ? 'bg-(--info-bg) text-(--info)' : 'bg-(--am-bg) text-(--am)'">
                 {{ a.estado === 'EN_LLAMADA' ? 'En llamada' : 'Tipificando' }}
               </span>
             </div>
           } @empty {
-            <div class="rounded-[10px] border border-dashed border-(--paso-ln) px-3 py-[18px] text-center text-[14px] text-muted-foreground">Sin gestiones abiertas</div>
+            <div class="rounded-[.625rem] border border-dashed border-(--paso-ln) px-3 py-[1.125rem] text-center text-[.875rem] text-muted-foreground">Sin gestiones abiertas</div>
           }
         </div>
       </section>
@@ -324,7 +324,7 @@
     </div>
     @if (historial(); as hi) {
       <div class="mt-[.75rem] flex flex-wrap items-center justify-between gap-3">
-        <p class="m-0 text-[12px] text-muted-foreground tabular-nums">Página {{ hi.pagina + 1 }} de {{ hi.paginas }}</p>
+        <p class="m-0 text-[.75rem] text-muted-foreground tabular-nums">Página {{ hi.pagina + 1 }} de {{ hi.paginas }}</p>
         <div class="flex gap-2">
           <button type="button" appBoton="secundario" appBotonAlto="chico" [disabled]="hi.pagina === 0" (click)="cargarHistorial(hi.pagina - 1)">
             <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.izq }"></ng-container>Anterior

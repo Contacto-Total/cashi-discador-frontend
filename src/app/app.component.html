@@ -38,7 +38,7 @@
   <div *ngIf="isNotificacionesDropdownOpen && (authService.currentUser$ | async)?.role === 'ADMIN'"
        class="notif-panel fixed z-[9999]"
        [style.bottom.px]="16"
-       [style.left.px]="isSidebarCollapsed ? 96 : 300">
+       [style.left.rem]="isSidebarCollapsed ? 6 : 18.75">
 
     <!-- Backdrop para cerrar -->
     <div class="fixed inset-0 z-[-1]" (click)="isNotificacionesDropdownOpen = false"></div>

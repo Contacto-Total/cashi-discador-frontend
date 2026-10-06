@@ -15,8 +15,8 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   template: `
     <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
       <div class="min-w-0">
-        <p role="heading" aria-level="1" class="m-0 text-[24px] leading-[1.25] font-bold">{{ titulo }}</p>
-        <p class="m-0 mt-[.125rem] overflow-hidden text-[14px] leading-[1.3] text-ellipsis whitespace-nowrap text-muted-foreground">{{ subtitulo }}</p>
+        <p role="heading" aria-level="1" class="m-0 text-[1.5rem] leading-[1.25] font-bold">{{ titulo }}</p>
+        <p class="m-0 mt-[.125rem] overflow-hidden text-[.875rem] leading-[1.3] text-ellipsis whitespace-nowrap text-muted-foreground">{{ subtitulo }}</p>
       </div>
       <ng-content></ng-content>
     </div>

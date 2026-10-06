@@ -1,4 +1,4 @@
-<div class="font-cashi flex flex-1 flex-col gap-3 text-[14px] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)">
+<div class="font-cashi flex flex-1 flex-col gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)">
   <!-- Error -->
   <div *ngIf="error" role="alert" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-nivel-rojo/30 bg-nivel-rojo/8 px-4 py-[.75rem] text-nivel-rojo">
     <span class="flex items-center gap-2 font-medium"><lucide-angular name="triangle-alert" [size]="16"></lucide-angular>{{ error }}</span>
@@ -20,8 +20,8 @@
         <ng-container *ngTemplateOutlet="cabecera"></ng-container>
 
         <div class="mb-[clamp(.5rem,2vh,1.75rem)]">
-          <span class="block text-[14px] leading-[1.25] font-semibold">{{ agentName }}</span>
-          <span *ngIf="anexo" class="text-[12px] text-muted-foreground tabular-nums">Anexo {{ anexo }}</span>
+          <span class="block text-[.875rem] leading-[1.25] font-semibold">{{ agentName }}</span>
+          <span *ngIf="anexo" class="text-[.75rem] text-muted-foreground tabular-nums">Anexo {{ anexo }}</span>
         </div>
 
         <div class="flex flex-1 flex-wrap items-center gap-10">
@@ -30,7 +30,7 @@
                                [color]="semaforo?.trazo ?? 'var(--muted-foreground)'" [tinta]="semaforo?.tinta ?? 'var(--muted-foreground)'"
                                [segundosArco]="vistaSegundos" [colorArco]="vistaTrazo" [modo]="modoReloj"></app-anillo-tiempo>
             <span *ngIf="semaforo as s" role="status"
-                  class="inline-flex items-center gap-1.5 rounded-full px-[.75rem] py-[.25rem] text-[12px] font-semibold transition-[color,background-color,box-shadow] duration-500"
+                  class="inline-flex items-center gap-1.5 rounded-full px-[.75rem] py-[.25rem] text-[.75rem] font-semibold transition-[color,background-color,box-shadow] duration-500"
                   [style.color]="s.tinta"
                   [style.background]="'color-mix(in oklab,' + s.trazo + ' 13%,transparent)'"
                   [style.box-shadow]="'inset 0 0 0 1px color-mix(in oklab,' + s.trazo + ' 26%,transparent)'">
@@ -39,12 +39,12 @@
           </div>
 
           <div class="min-w-[min(100%,15rem)] flex-1">
-            <p class="m-0 text-[12px] font-medium text-muted-foreground">Estado actual</p>
-            <p role="heading" aria-level="2" class="m-0 mt-[.5rem] text-[36px] leading-[1.1] font-bold transition-colors duration-500" [style.color]="tinta(e)">{{ e.nombre }}</p>
+            <p class="m-0 text-[.75rem] font-medium text-muted-foreground">Estado actual</p>
+            <p role="heading" aria-level="2" class="m-0 mt-[.5rem] text-[2.25rem] leading-[1.1] font-bold transition-colors duration-500" [style.color]="tinta(e)">{{ e.nombre }}</p>
             <app-escala-tiempo *ngIf="umbral as u; else sinEscala" class="mt-[clamp(.875rem,2.4vh,2rem)] max-w-[32rem]"
                                [verde]="u.verde" [ambar]="u.ambar" [tope]="u.tope" [segundos]="vistaSegundos" [color]="vistaTrazo" [modo]="modoReloj"></app-escala-tiempo>
             <ng-template #sinEscala>
-              <p class="m-0 mt-6 text-[14px] text-muted-foreground">{{ e.sinTope || 'Sin tope de tiempo' }}</p>
+              <p class="m-0 mt-6 text-[.875rem] text-muted-foreground">{{ e.sinTope || 'Sin tope de tiempo' }}</p>
             </ng-template>
           </div>
 
@@ -57,8 +57,8 @@
         <!-- En pantallas bajas cede antes de que aparezca una barra de desplazamiento. -->
         <dl class="m-0 mt-[clamp(.75rem,2.4vh,2rem)] flex flex-wrap gap-x-12 gap-y-[.75rem] border-t border-border pt-[clamp(.625rem,1.6vh,1.25rem)] [@media(max-height:800px)]:hidden">
           <div>
-            <dt class="m-0 text-[12px] font-medium text-muted-foreground">Estado previo</dt>
-            <dd class="m-0 mt-[.25rem] text-[14px] font-semibold">{{ estadoPrevio }}</dd>
+            <dt class="m-0 text-[.75rem] font-medium text-muted-foreground">Estado previo</dt>
+            <dd class="m-0 mt-[.25rem] text-[.875rem] font-semibold">{{ estadoPrevio }}</dd>
           </div>
         </dl>
       </div>
@@ -72,8 +72,8 @@
         <div appTarjetaLuz class="flex-1 justify-between">
           <div>
             <app-titulo-tarjeta icono="bell-ring" titulo="Seguimiento de promesas"></app-titulo-tarjeta>
-            <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Clientes con promesas de pago pendientes de cobrar.</p>
-            <p *ngIf="!recordatoriosHabilitado" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Fuera del horario de seguimiento</p>
+            <p class="m-0 mt-[.75rem] text-[.875rem] text-muted-foreground">Clientes con promesas de pago pendientes de cobrar.</p>
+            <p *ngIf="!recordatoriosHabilitado" class="m-0 mt-[.5rem] text-[.75rem] text-muted-foreground">Fuera del horario de seguimiento</p>
           </div>
           <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full"
                   [disabled]="!recordatoriosHabilitado || loading || enEstadoDeSistema" (click)="enterSeguimiento()">
@@ -89,14 +89,14 @@
     <div appTarjetaLuz class="@container/estados">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <app-titulo-tarjeta icono="repeat" titulo="Cambiar estado"></app-titulo-tarjeta>
-        <p *ngIf="enEstadoDeSistema" class="m-0 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+        <p *ngIf="enEstadoDeSistema" class="m-0 flex items-center gap-1.5 text-[.75rem] text-muted-foreground">
           <lucide-angular name="lock" [size]="14"></lucide-angular>Estás en {{ e.nombre }}: lo controla el sistema y no se cambia a mano.
         </p>
       </div>
 
       <div class="mt-[clamp(.5rem,1.4vh,1rem)] grid flex-1 grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-4 @min-[58rem]/estados:grid-cols-[calc((100%-1.5rem-1.875rem)/5)_minmax(0,1fr)] @min-[58rem]/estados:gap-x-6">
         <div class="flex flex-col">
-          <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[12px] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Operativo</p>
+          <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[.75rem] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Operativo</p>
           <div class="grid flex-1 auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[minmax(0,1fr)]">
             <app-boton-estado *ngFor="let s of operativos" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
                               [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
@@ -104,7 +104,7 @@
           </div>
         </div>
         <div class="flex flex-col">
-          <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[12px] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Pausas</p>
+          <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[.75rem] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Pausas</p>
           <div class="grid flex-1 auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[repeat(4,minmax(0,1fr))]">
             <app-boton-estado *ngFor="let s of pausas" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
                               [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
@@ -119,7 +119,7 @@
 <!-- Título de la pantalla: abre la primera tarjeta. -->
 <ng-template #cabecera>
   <app-page-header titulo="Panel del asesor" subtitulo="Estado actual, tiempo y cambio de estado">
-    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border border-border bg-muted px-[.75rem] py-[.25rem] text-[12px] font-semibold whitespace-nowrap text-muted-foreground"
+    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border border-border bg-muted px-[.75rem] py-[.25rem] text-[.75rem] font-semibold whitespace-nowrap text-muted-foreground"
           [attr.title]="isDiscando && campaignName ? campaignName : null">
       <span *ngIf="isDiscando" class="size-1.5 rounded-full bg-ring"></span>
       {{ isDiscando ? 'Discando' : 'Sin campaña' }}
@@ -131,8 +131,8 @@
 <ng-template #llamadaManual>
   <div>
     <app-titulo-tarjeta icono="phone-outgoing" titulo="Llamada manual"></app-titulo-tarjeta>
-    <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Entra en modo manual para marcar tú el número.</p>
-    <p *ngIf="currentStatus?.estadoActual === AgentState.EN_MANUAL" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Modo manual activo. Las llamadas se hacen desde el softphone.</p>
+    <p class="m-0 mt-[.75rem] text-[.875rem] text-muted-foreground">Entra en modo manual para marcar tú el número.</p>
+    <p *ngIf="currentStatus?.estadoActual === AgentState.EN_MANUAL" class="m-0 mt-[.5rem] text-[.75rem] text-muted-foreground">Modo manual activo. Las llamadas se hacen desde el softphone.</p>
   </div>
   <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full"
           [disabled]="loading || enEstadoDeSistema" (click)="enterManualMode()">

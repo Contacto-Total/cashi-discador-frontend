@@ -38,7 +38,7 @@ const PASO: Record<ClasePaso, { fila: string; punto: string; check: string; titu
     titulo: 'text-muted-foreground', detalle: 'text-muted-foreground', valor: 'bg-(--gris-bg) text-muted-foreground'
   },
   run: {
-    fila: "after:absolute after:inset-x-0 after:inset-y-1 after:z-0 after:rounded-[10px] after:bg-(--am-bg) after:content-['']",
+    fila: "after:absolute after:inset-x-0 after:inset-y-1 after:z-0 after:rounded-[.625rem] after:bg-(--am-bg) after:content-['']",
     punto: 'animate-[spin_.9s_linear_infinite] border-(--am-ln) border-t-(--am-pt) bg-card motion-reduce:animate-none', check: 'scale-[.4] opacity-0',
     titulo: 'text-foreground', detalle: 'text-(--am)', valor: 'border border-(--am-ln) bg-card text-(--am)'
   },
@@ -99,13 +99,13 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   readonly I = ICONOS;
   readonly PASO = PASO;
   /** Fila «rótulo — valor» del formulario. */
-  readonly FILA = 'flex justify-between gap-3 text-[14px] tabular-nums';
-  readonly PESTANA = 'font-cashi cursor-pointer rounded-md border-0 px-1.5 py-[7px] text-[14px] font-medium transition-colors duration-150';
+  readonly FILA = 'flex justify-between gap-3 text-[.875rem] tabular-nums';
+  readonly PESTANA = 'font-cashi cursor-pointer rounded-md border-0 px-1.5 py-[.4375rem] text-[.875rem] font-medium transition-colors duration-150';
   readonly PESTANA_ACTIVA = 'bg-(--seg-activo) text-foreground shadow-[0_1px_2px_rgb(0_0_0/.08)]';
   readonly PESTANA_REPOSO = 'bg-transparent text-foreground/60';
   readonly COLUMNAS = ['Fecha', 'Tipo', 'Inicio', 'Bloqueo', 'Fin', 'Detención', 'Usuario', 'Resultado'];
-  readonly CELDA_CABECERA = 'border-0! border-b! border-border! bg-transparent! px-3! py-2.5! text-left text-[12px]! font-medium! tracking-normal! whitespace-nowrap text-muted-foreground! normal-case!';
-  readonly CELDA = 'border-0! border-b! border-(--line2)! bg-transparent! px-3! py-[9px]! text-[14px]! whitespace-nowrap text-foreground! tabular-nums';
+  readonly CELDA_CABECERA = 'border-0! border-b! border-border! bg-transparent! px-3! py-2.5! text-left text-[.75rem]! font-medium! tracking-normal! whitespace-nowrap text-muted-foreground! normal-case!';
+  readonly CELDA = 'border-0! border-b! border-(--line2)! bg-transparent! px-3! py-[.5625rem]! text-[.875rem]! whitespace-nowrap text-foreground! tabular-nums';
 
   readonly avance = signal<MantenimientoAvance | null>(null);
   readonly historial = signal<HistorialMantenimiento | null>(null);
