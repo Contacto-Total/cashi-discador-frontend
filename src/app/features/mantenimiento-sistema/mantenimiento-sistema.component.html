@@ -80,33 +80,25 @@
                   <button type="button" [attr.aria-pressed]="pestana() === 'prog'" (click)="pestana.set('prog')">Programar</button>
                   <button type="button" [attr.aria-pressed]="pestana() === 'ya'" (click)="pestana.set('ya')">Iniciar ahora</button>
                 </div>
-                <div class="m-tabs">
-                  <div class="m-tab" [class.m-oculto]="pestana() !== 'prog'">
-                    <div>
-                      <div class="m-fila">
-                        <label for="m-hora">Hora de inicio</label>
-                        <input id="m-hora" type="time" [value]="hora()" (input)="hora.set($any($event.target).value)">
-                      </div>
-                      <div class="m-fila"><span>Aviso a los usuarios</span><span>10 y 5 min antes</span></div>
-                    </div>
-                    <div class="m-bot">
-                      <button type="button" class="m-btn" [disabled]="enviando() || !hora()" (click)="programar()">
-                        <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.reloj }"></ng-container>Programar
-                      </button>
-                    </div>
+                @if (pestana() === 'prog') {
+                  <div class="m-campo">
+                    <label for="m-hora">Hora de inicio</label>
+                    <input id="m-hora" type="time" [value]="hora()" (input)="hora.set($any($event.target).value)">
                   </div>
-                  <div class="m-tab" [class.m-oculto]="pestana() !== 'ya'">
-                    <div>
-                      <div class="m-fila"><span>Detención de discado</span><span>Inmediata</span></div>
-                      <div class="m-fila"><span>Bloqueo de pantallas</span><span>En 60 s</span></div>
-                    </div>
-                    <div class="m-bot">
-                      <button type="button" class="m-btn" (click)="confirmando.set('ahora')">
-                        <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.play }"></ng-container>Iniciar ahora
-                      </button>
-                    </div>
+                  <div class="m-pie">Aviso: 10 min · Recordatorio: 5 min</div>
+                  <div class="m-bot">
+                    <button type="button" class="m-btn" [disabled]="enviando() || !hora()" (click)="programar()">
+                      <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.reloj }"></ng-container>Programar
+                    </button>
                   </div>
-                </div>
+                } @else {
+                  <div class="m-pie">Detención de discado: inmediata · Bloqueo: 60 s</div>
+                  <div class="m-bot">
+                    <button type="button" class="m-btn" (click)="confirmando.set('ahora')">
+                      <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.play }"></ng-container>Iniciar ahora
+                    </button>
+                  </div>
+                }
               }
               @case ('PROGRAMADO') {
                 <div class="m-fila"><span>Tipo</span><span>Programado</span></div>

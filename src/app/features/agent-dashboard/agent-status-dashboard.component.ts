@@ -15,35 +15,17 @@ import {
   MANUAL_STATES
 } from '../../core/models/agent-status.model';
 import { environment } from '../../../environments/environment';
-import { ThemeService } from '../../shared/services/theme.service';
-import { UmbralesEstadoService } from '../../maintenance/services/umbrales-estado.service';
-import { PageHeaderComponent } from '../../shared/ui/page-header.component';
-import { TarjetaLuzDirective } from '../../shared/ui/tarjeta-luz.directive';
-import { TituloTarjetaComponent } from '../../shared/ui/titulo-tarjeta.component';
-import { AnilloTiempoComponent } from '../../shared/ui/anillo-tiempo.component';
-import { EscalaTiempoComponent } from '../../shared/ui/escala-tiempo.component';
-import { BotonEstadoComponent } from '../../shared/ui/boton-estado.component';
-import { BotonDirective } from '../../shared/ui/boton.directive';
-import { ModoReloj } from '../../shared/ui/reloj-estado';
-import { ESTADOS_OPERATIVOS, ESTADOS_PANEL, EstadoPanel, NIVELES, Nivel } from './estados-panel';
-
-/** Tramos del semáforo de un estado, en segundos. */
-interface Umbral { verde: number; ambar: number; tope: number; }
 
 @Component({
   selector: 'app-agent-status-dashboard',
   standalone: true,
-  imports: [
-    CommonModule, LucideAngularModule, PageHeaderComponent, TarjetaLuzDirective, TituloTarjetaComponent,
-    AnilloTiempoComponent, EscalaTiempoComponent, BotonEstadoComponent, BotonDirective
-  ],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './agent-status-dashboard.component.html',
-  host: { class: 'flex min-h-full flex-col' }
+  styleUrls: ['./agent-status-dashboard.component.css']
 })
 export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   currentStatus: AgentStatus | null = null;
   agentName: string = '';
-  anexo: string = '';
   loading: boolean = false;
   error: string | null = null;
 
@@ -60,19 +42,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   private wsStatusSubscription?: Subscription;
   private campaignStatusSubscription?: Subscription;
   private recordatoriosSubscription?: Subscription;
-  // Reloj del estado. `segundos` es el tiempo real; `vista*` es lo que dibujan el arco del anillo
-  // y la marca de la escala, que al cambiar de estado se apagan antes de saltar al inicio.
-  segundos = 0;
-  vistaSegundos = 0;
-  vistaTrazo = 'var(--muted-foreground)';
-  modoReloj: ModoReloj = 'quieta';
-  private baseSegundos = 0;
-  private baseEn = Date.now();
-  private estadoPintado: AgentState | null = null;
-  private tic?: ReturnType<typeof setInterval>;
-  private relevo?: ReturnType<typeof setTimeout>;
-  private umbrales = new Map<string, Umbral>();
-
   private userId: number | null = null;
   private subPortfolioId: number | null = null;
   private previousState: AgentState | null = null;
@@ -103,8 +72,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   AgentState = AgentState;
   stateLabels = AGENT_STATE_LABELS;
   manualStates = MANUAL_STATES;
-  readonly operativos = MANUAL_STATES.filter(e => ESTADOS_OPERATIVOS.has(e));
-  readonly pausas = MANUAL_STATES.filter(e => !ESTADOS_OPERATIVOS.has(e));
 
   constructor(
     private agentStatusService: AgentStatusService,
@@ -112,9 +79,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     private campaignService: CampaignService,
     private recordatoriosService: RecordatoriosService,
     private router: Router,
-    private sipService: SipService,
-    private umbralesService: UmbralesEstadoService,
-    private tema: ThemeService
+    private sipService: SipService
   ) {}
 
   ngOnInit(): void {
@@ -127,19 +92,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.userId = user.id;
     this.subPortfolioId = user.subPortfolioId || null;
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
-    this.anexo = user.sipExtension || '';
-
-    // Tramos del semáforo por estado. Si no llegan, el panel funciona igual: sin escala.
-    this.umbralesService.getActivos().subscribe({
-      next: lista => {
-        lista.forEach(u => this.umbrales.set(u.estado, {
-          verde: u.umbralVerdeSegundos, ambar: u.umbralAmarilloSegundos, tope: u.tiempoMaximoSegundos
-        }));
-        this.pintarReloj();
-      },
-      error: () => {}
-    });
-    this.tic = setInterval(() => this.pintarReloj(), 1000);
 
     // No aceptar SIP hasta conocer el estado durable del agente.
     this.sipService.blockIncomingCallsMode(true);
@@ -179,8 +131,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.boundBeforeUnload);
-    clearInterval(this.tic);
-    clearTimeout(this.relevo);
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
     }
@@ -221,12 +171,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           timestampCambio: response.timestampCambio,
           tiempoEnEstadoMinutos: response.tiempoEnEstadoMinutos,
           notas: response.notas,
-          sessionId: response.sessionId,
-          segundosEnEstado: response.segundosEnEstado,
-          tiempoMaximoSegundos: response.tiempoMaximoSegundos
+          sessionId: response.sessionId
         };
         this.loading = false;
-        this.fijarReloj(this.currentStatus);
 
         const releaseKey = `tipification-release-pending-${userId}`;
         if (response.estadoActual !== AgentState.TIPIFICANDO) {
@@ -273,7 +220,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
         this.previousState = status.estadoActual;
         this.currentStatus = status;
-        this.fijarReloj(status);
       }
     });
   }
@@ -359,6 +305,29 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  getStateColor(state: AgentState): string {
+    const colors: Record<AgentState, string> = {
+      [AgentState.DISPONIBLE]: '#4caf50',
+      [AgentState.EN_REUNION]: '#ff9800',
+      [AgentState.REFRIGERIO]: '#2196f3',
+      [AgentState.SSHH]: '#9c27b0',
+      [AgentState.EN_LLAMADA]: '#f44336',
+      [AgentState.TIPIFICANDO]: '#ff5722',
+      [AgentState.EN_MANUAL]: '#607d8b',
+      [AgentState.DESCONECTADO]: '#9e9e9e',
+      [AgentState.GESTION_MANUAL]: '#009688',
+      [AgentState.SEGUIMIENTO]: '#E91E63',
+      [AgentState.WHATSAPP]: '#25D366',
+      [AgentState.EN_LINEA]: '#78909c',
+      [AgentState.CAPACITACION]: '#3f51b5',
+      [AgentState.CONSULTA_TIEMPOS]: '#795548',
+      [AgentState.COMIDA]: '#ef6c00',
+      [AgentState.AUSENTE]: '#c62828',
+      [AgentState.SOPORTE]: '#00838f'
+    };
+    return colors[state] || '#757575';
+  }
+
   isCurrentState(state: AgentState): boolean {
     return this.currentStatus?.estadoActual === state;
   }
@@ -373,98 +342,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     return this.manualStates.includes(state);
   }
 
-  // ----------------------------------------------------------------- Presentación
-
-  /** Cómo se muestra el estado actual. */
-  get estado(): EstadoPanel | null {
-    return this.currentStatus ? ESTADOS_PANEL[this.currentStatus.estadoActual] ?? null : null;
-  }
-
-  ficha(e: AgentState): EstadoPanel {
-    return ESTADOS_PANEL[e];
-  }
-
-  /** Color del estado para bordes, foco y baldosas. */
-  tono(e: EstadoPanel | null): string {
-    return !e ? 'var(--muted-foreground)' : this.tema.isDarkMode() && e.oscuro ? e.oscuro : e.tono;
-  }
-
-  /** El mismo color en su versión legible, para el titular y los iconos. */
-  tinta(e: EstadoPanel | null): string {
-    return !e ? 'var(--muted-foreground)' : this.tema.isDarkMode() ? e.oscuro ?? e.tono : e.tinta ?? e.tono;
-  }
-
-  /** Lo controla el sistema: no se cambia a mano. */
-  get enEstadoDeSistema(): boolean {
-    const e = this.currentStatus?.estadoActual;
-    return e === AgentState.EN_LLAMADA || e === AgentState.TIPIFICANDO;
-  }
-
-  get umbral(): Umbral | null {
-    const e = this.currentStatus?.estadoActual;
-    const u = e ? this.umbrales.get(e) : undefined;
-    return u && u.tope > 0 ? u : null;
-  }
-
-  /** Tope del anillo: el del umbral, o el que manda el backend con el estado. */
-  get tope(): number | null {
-    return this.umbral?.tope ?? this.currentStatus?.tiempoMaximoSegundos ?? null;
-  }
-
-  get nivel(): Nivel | null {
-    const u = this.umbral;
-    return !u ? null : this.segundos > u.ambar ? 'rojo' : this.segundos > u.verde ? 'ambar' : 'verde';
-  }
-
-  get semaforo() {
-    return this.nivel ? NIVELES[this.nivel] : null;
-  }
-
-  get estadoPrevio(): string {
-    const e = this.currentStatus?.estadoAnterior;
-    return e ? ESTADOS_PANEL[e]?.nombre ?? this.stateLabels[e] : '—';
-  }
-
-  // ----------------------------------------------------------------- Reloj
-
-  /** Toma el tiempo que manda el backend como base y sigue contando en local. */
-  private fijarReloj(status: AgentStatus): void {
-    const desdeCambio = (Date.now() - Date.parse(status.timestampCambio)) / 1000;
-    this.baseSegundos = status.segundosEnEstado ?? (Number.isFinite(desdeCambio) ? Math.max(0, desdeCambio) : 0);
-    this.baseEn = Date.now();
-    this.pintarReloj();
-  }
-
-  /**
-   * El arco y la marca solo se deslizan de un segundo al siguiente. Si el tiempo salta (se volvió a
-   * la pantalla, llegó una corrección) se colocan de golpe; al cambiar de estado se apagan en su
-   * sitio y aparecen en el nuevo, en vez de retroceder por la barra.
-   */
-  private pintarReloj(): void {
-    const estado = this.currentStatus?.estadoActual ?? null;
-    const antes = this.segundos;
-    this.segundos = Math.max(0, Math.floor(this.baseSegundos + (Date.now() - this.baseEn) / 1000));
-    const trazo = this.semaforo?.trazo ?? 'var(--muted-foreground)';
-
-    if (estado !== this.estadoPintado && this.estadoPintado !== null) {
-      this.estadoPintado = estado;
-      this.modoReloj = 'fuera';
-      clearTimeout(this.relevo);
-      this.relevo = setTimeout(() => {
-        this.relevo = undefined;
-        this.vistaSegundos = this.segundos;
-        this.vistaTrazo = this.semaforo?.trazo ?? 'var(--muted-foreground)';
-        this.modoReloj = 'oculta';
-        requestAnimationFrame(() => requestAnimationFrame(() => { this.modoReloj = 'suave'; }));
-      }, 150);
-      return;
-    }
-    this.estadoPintado = estado;
-    if (this.relevo || this.modoReloj === 'oculta') {
-      return;
-    }
-    this.modoReloj = this.segundos - antes === 1 ? 'suave' : 'quieta';
-    this.vistaSegundos = this.segundos;
-    this.vistaTrazo = trazo;
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }

@@ -1,0 +1,572 @@
+/* CASHI Design - Dashboard de Agente */
+.dashboard-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.dashboard-header {
+  background: #1E293B;
+  border-bottom: 1px solid #334155;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  padding: 0.8rem 1.5rem;
+}
+
+.header-content {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.header-separator {
+  color: #475569;
+  font-weight: 300;
+  font-size: 1.2rem;
+}
+
+/* Campaign Status Indicator */
+.campaign-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.campaign-status.discando {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.campaign-status.inactivo {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+}
+
+.campaign-status .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.campaign-status.discando .status-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulseGreen 1.5s ease-in-out infinite;
+}
+
+.campaign-status.inactivo .status-dot {
+  background: #64748b;
+}
+
+@keyframes pulseGreen {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+    transform: scale(1.1);
+  }
+}
+
+.campaign-status .status-text {
+  white-space: nowrap;
+}
+
+.agent-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.agent-name {
+  font-size: 1rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.logout-btn {
+  display: none; /* Oculto porque ya hay logout en navbar */
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+}
+
+/* Main Content */
+.dashboard-main {
+  flex: 1;
+  padding: 1rem;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #94a3b8;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #334155;
+  border-top-color: #10B981;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.error-state {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  text-align: center;
+}
+
+.error-state button {
+  margin-top: 1rem;
+  background: #10B981;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.error-state button:hover {
+  background: #059669;
+}
+
+/* Status Dashboard */
+.status-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Action Cards Row */
+.action-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Status Card - Prominente */
+.status-card {
+  background: linear-gradient(135deg, #1E293B 0%, #0f172a 100%);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.status-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-card h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+}
+
+.current-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.75rem 2.5rem;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  animation: statusPulse 3s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* Change Status Section */
+.change-status-section {
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.change-status-section h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.section-subtitle {
+  margin: 0 0 1rem 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.status-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.status-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #0A0E27;
+  border: 2px solid #334155;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #94a3b8;
+  transition: all 0.25s ease;
+}
+
+.status-btn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.status-btn.active {
+  border-width: 2px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.status-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status-btn-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Manual Calling Section */
+.manual-calling-section {
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.manual-calling-section h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.manual-call-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: auto;
+  transition: all 0.25s ease;
+}
+
+.manual-call-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+}
+
+.manual-call-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+}
+
+.manual-call-note {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-left: 3px solid #10B981;
+  border-radius: 6px;
+  color: #10B981;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .status-dashboard {
+    gap: 1rem;
+  }
+
+  .action-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .dashboard-header {
+    padding: 1rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .header-title {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .campaign-status {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+  }
+
+  .dashboard-main {
+    padding: 1rem;
+  }
+
+  .status-buttons {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .status-badge {
+    font-size: 1.1rem;
+    padding: 0.7rem 2rem;
+  }
+
+  .status-card {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .status-badge {
+    font-size: 1rem;
+    padding: 0.6rem 1.5rem;
+  }
+}
+
+/* ===============================================
+   LIGHT MODE - Usando :host-context para detectar tema
+   =============================================== */
+
+/* Contenedor principal */
+:host-context(body.light-theme) .dashboard-container,
+:host-context(html:not(.dark)) .dashboard-container {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #f8fafc);
+}
+
+/* Header */
+:host-context(body.light-theme) .dashboard-header,
+:host-context(html:not(.dark)) .dashboard-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+:host-context(body.light-theme) .dashboard-header h1,
+:host-context(html:not(.dark)) .dashboard-header h1 {
+  color: #0f172a;
+}
+
+:host-context(body.light-theme) .agent-name,
+:host-context(html:not(.dark)) .agent-name {
+  color: #475569;
+}
+
+:host-context(body.light-theme) .header-separator,
+:host-context(html:not(.dark)) .header-separator {
+  color: #cbd5e1;
+}
+
+:host-context(body.light-theme) .campaign-status.discando,
+:host-context(html:not(.dark)) .campaign-status.discando {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+:host-context(body.light-theme) .campaign-status.inactivo,
+:host-context(html:not(.dark)) .campaign-status.inactivo {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+}
+
+/* Cards */
+:host-context(body.light-theme) .status-card,
+:host-context(html:not(.dark)) .status-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+:host-context(body.light-theme) .change-status-section,
+:host-context(body.light-theme) .manual-calling-section,
+:host-context(html:not(.dark)) .change-status-section,
+:host-context(html:not(.dark)) .manual-calling-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Títulos en cards */
+:host-context(body.light-theme) .status-card h2,
+:host-context(html:not(.dark)) .status-card h2 {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .change-status-section h2,
+:host-context(body.light-theme) .manual-calling-section h2,
+:host-context(html:not(.dark)) .change-status-section h2,
+:host-context(html:not(.dark)) .manual-calling-section h2 {
+  color: #0f172a;
+}
+
+/* Subtítulos */
+:host-context(body.light-theme) .section-subtitle,
+:host-context(html:not(.dark)) .section-subtitle {
+  color: #94a3b8;
+}
+
+/* Botones de estado */
+:host-context(body.light-theme) .status-btn,
+:host-context(html:not(.dark)) .status-btn {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  color: #475569;
+}
+
+:host-context(body.light-theme) .status-btn:hover:not(.disabled),
+:host-context(html:not(.dark)) .status-btn:hover:not(.disabled) {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+}
+
+:host-context(body.light-theme) .status-btn.active,
+:host-context(html:not(.dark)) .status-btn.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
+}
+
+/* Manual call note */
+:host-context(body.light-theme) .manual-call-note,
+:host-context(html:not(.dark)) .manual-call-note {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+}
+
+/* Loading state */
+:host-context(body.light-theme) .loading-state,
+:host-context(html:not(.dark)) .loading-state {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .spinner,
+:host-context(html:not(.dark)) .spinner {
+  border: 4px solid #e2e8f0;
+  border-top-color: #10B981;
+}
+
+/* Error state */
+:host-context(body.light-theme) .error-state,
+:host-context(html:not(.dark)) .error-state {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}

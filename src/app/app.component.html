@@ -1,23 +1,140 @@
 <div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()" [attr.inert]="mantenimiento.bloqueado() ? '' : null"
-     [class.mantenimiento-completa]="mantenimiento.encierraAdmin()" [class.menu-plegado]="isSidebarCollapsed">
-  <!-- Botón de menú en pantallas angostas -->
+     [class.mantenimiento-completa]="mantenimiento.encierraAdmin()">
+  <!-- Mobile hamburger button -->
   <button type="button" class="mobile-menu-btn" (click)="toggleMobileSidebar()" title="Menú">
     <lucide-angular name="menu" [size]="22"></lucide-angular>
   </button>
+
+  <!-- Mobile backdrop -->
   <div class="mobile-backdrop" [class.visible]="isMobileSidebarOpen" (click)="closeMobileSidebar()"></div>
 
-  <app-sidebar [menu]="menuItems"
-               [cuenta]="cuentaSidebar"
-               [esAdmin]="esAdmin"
-               [conBuscador]="isAdminOrSupervisor()"
-               [(plegado)]="isSidebarCollapsed"
-               [movilAbierto]="isMobileSidebarOpen"
-               [notificaciones]="notificacionesCount"
-               [temaOscuro]="isDarkMode()"
-               (navegar)="closeMobileSidebar()"
-               (notificacionesAbrir)="toggleNotificacionesDropdown()"
-               (temaCambiar)="toggleTheme()"
-               (salir)="logout()"></app-sidebar>
+  <!-- Toggle Button (fuera del sidebar para evitar overflow) -->
+  <button type="button" class="sidebar-toggle" [class.collapsed]="isSidebarCollapsed" (click)="toggleSidebar()" [title]="isSidebarCollapsed ? 'Expandir' : 'Colapsar'">
+    <lucide-angular [name]="isSidebarCollapsed ? 'chevron-right' : 'chevron-left'" [size]="16"></lucide-angular>
+  </button>
+
+  <!-- CASHI Sidebar -->
+  <aside class="cashi-sidebar" [class.collapsed]="isSidebarCollapsed" [class.mobile-open]="isMobileSidebarOpen">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <lucide-angular name="wallet" [size]="20"></lucide-angular>
+      </div>
+      <span class="logo-text" *ngIf="!isSidebarCollapsed">CASHI</span>
+    </div>
+
+    <!-- Navigation Menu - Dynamic from Backend -->
+    <nav class="sidebar-nav">
+      <!-- Dynamic Menu Items -->
+      <ng-container *ngFor="let item of menuItems">
+        <!-- LINK type - Simple navigation item -->
+        <ng-container *ngIf="item.tipo === 'LINK'">
+          <a [routerLink]="item.ruta"
+             routerLinkActive="active"
+             class="sidebar-item"
+             (click)="closeMobileSidebar()"
+             [title]="isSidebarCollapsed ? item.etiqueta : ''">
+            <lucide-angular [name]="item.icono" [size]="20"></lucide-angular>
+            <span class="item-text" *ngIf="!isSidebarCollapsed">{{ item.etiqueta }}</span>
+          </a>
+        </ng-container>
+
+        <!-- DROPDOWN type - Expandable group -->
+        <ng-container *ngIf="item.tipo === 'DROPDOWN'">
+          <div class="sidebar-group">
+            <button type="button"
+                    class="sidebar-item"
+                    [class.active]="isMenuItemActive(item)"
+                    (click)="toggleDynamicDropdown(item.codigo)"
+                    [title]="isSidebarCollapsed ? item.etiqueta : ''">
+              <lucide-angular [name]="item.icono" [size]="20"></lucide-angular>
+              <span class="item-text" *ngIf="!isSidebarCollapsed">{{ item.etiqueta }}</span>
+              <lucide-angular class="dropdown-arrow"
+                              *ngIf="!isSidebarCollapsed"
+                              [class.rotated]="isDropdownOpen(item.codigo)"
+                              name="chevron-down"
+                              [size]="18"></lucide-angular>
+            </button>
+
+            <div class="sidebar-submenu" [class.show]="isDropdownOpen(item.codigo) && !isSidebarCollapsed">
+              <ng-container *ngFor="let child of item.children">
+                <a [routerLink]="child.ruta"
+                   routerLinkActive="active"
+                   class="sidebar-subitem"
+                   (click)="closeAllDynamicDropdowns(); closeMobileSidebar()">
+                  <lucide-angular [name]="child.icono" [size]="18"></lucide-angular>
+                  <span class="item-text" [title]="child.etiqueta">{{ child.etiqueta }}</span>
+                </a>
+              </ng-container>
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- Fallback: Show loading indicator if no menu items -->
+      <div *ngIf="menuItems.length === 0 && authService.isAuthenticated()" class="sidebar-item opacity-50">
+        <lucide-angular name="loader-2" [size]="20" class="animate-spin"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Cargando menú...</span>
+      </div>
+    </nav>
+
+    <!-- Bottom Actions -->
+    <div class="sidebar-footer">
+      <!-- User Profile -->
+      <div class="sidebar-item user-profile" [title]="isSidebarCollapsed ? (authService.currentUser$ | async)?.username : ''">
+        <lucide-angular name="user" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">{{ (authService.currentUser$ | async)?.username }}</span>
+      </div>
+
+      <!-- Mantenimiento del sistema (solo ADMIN) -->
+      <a *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'"
+         routerLink="/admin/mantenimiento-sistema" routerLinkActive="active" class="sidebar-item"
+         [title]="isSidebarCollapsed ? 'Mantenimiento' : ''">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Mantenimiento</span>
+        <span class="punto-mantenimiento" *ngIf="!isSidebarCollapsed" [style.background]="colorMantenimiento()"></span>
+      </a>
+
+      <!-- Notificaciones (solo ADMIN) -->
+      <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" (click)="toggleNotificacionesDropdown()" [title]="isSidebarCollapsed ? 'Notificaciones' : ''">
+          <div class="relative">
+            <lucide-angular name="bell" [size]="20"></lucide-angular>
+            <span *ngIf="notificacionesCount > 0"
+                  class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+              {{ notificacionesCount > 9 ? '9+' : notificacionesCount }}
+            </span>
+          </div>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Notificaciones</span>
+        </button>
+      </div>
+
+      <!-- Settings -->
+      <a routerLink="/settings" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Configuración' : ''">
+        <lucide-angular name="sliders" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Configuración</span>
+      </a>
+
+      <!-- Theme Toggle (solo ADMIN) -->
+      <button *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'"
+              type="button" class="sidebar-item" (click)="toggleTheme()" [title]="isSidebarCollapsed ? (isDarkMode() ? 'Modo Claro' : 'Modo Oscuro') : ''">
+        <lucide-angular *ngIf="isDarkMode(); else lightMode" name="sun" [size]="20"></lucide-angular>
+        <ng-template #lightMode>
+          <lucide-angular name="moon" [size]="20"></lucide-angular>
+        </ng-template>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">{{ isDarkMode() ? 'Modo Claro' : 'Modo Oscuro' }}</span>
+      </button>
+
+      <!-- Logout -->
+      <button type="button" class="sidebar-item logout-btn" (click)="logout()" [title]="isSidebarCollapsed ? 'Cerrar Sesión' : ''">
+        <lucide-angular name="log-out" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Cerrar Sesión</span>
+      </button>
+    </div>
+  </aside>
 
   <!-- Main Content -->
   <main class="main-content">
@@ -38,7 +155,7 @@
   <div *ngIf="isNotificacionesDropdownOpen && (authService.currentUser$ | async)?.role === 'ADMIN'"
        class="notif-panel fixed z-[9999]"
        [style.bottom.px]="16"
-       [style.left.px]="isSidebarCollapsed ? 84 : 288">
+       [style.left.px]="isSidebarCollapsed ? 72 : 248">
 
     <!-- Backdrop para cerrar -->
     <div class="fixed inset-0 z-[-1]" (click)="isNotificacionesDropdownOpen = false"></div>

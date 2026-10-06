@@ -29,11 +29,6 @@ export class UmbralesEstadoService {
     return this.http.get<ConfigUmbralEstado[]>(this.apiUrl);
   }
 
-  /** Solo los umbrales activos: los que rigen el semáforo del asesor. */
-  getActivos(): Observable<ConfigUmbralEstado[]> {
-    return this.http.get<ConfigUmbralEstado[]>(`${this.apiUrl}/activos`);
-  }
-
   update(id: number, data: Partial<ConfigUmbralEstado>): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}`, data);
   }

@@ -1,123 +1,114 @@
-<div class="font-cashi flex flex-1 flex-col bg-background text-[14px] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)">
-  <app-page-header icono="headset" titulo="Panel del asesor" subtitulo="Estado actual, tiempo y cambio de estado">
-    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border border-border bg-muted px-[.75rem] py-[.25rem] text-[12px] font-semibold whitespace-nowrap text-muted-foreground"
-          [attr.title]="isDiscando && campaignName ? campaignName : null">
-      <span *ngIf="isDiscando" class="size-1.5 rounded-full bg-ring"></span>
-      {{ isDiscando ? 'Discando' : 'Sin campaña' }}
-    </span>
-  </app-page-header>
-
-  <!-- Cargando el estado por primera vez -->
-  <p *ngIf="loading && !currentStatus" class="m-0 flex flex-1 items-center justify-center gap-2 text-muted-foreground">
-    <lucide-angular [ngClass]="'animate-spin'" name="loader-2" [size]="16"></lucide-angular>Cargando estado…
-  </p>
-
-  <!-- Error -->
-  <div *ngIf="error" role="alert" class="mx-8 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-nivel-rojo/30 bg-nivel-rojo/8 px-4 py-[.75rem] text-nivel-rojo max-md:mx-4">
-    <span class="flex items-center gap-2 font-medium"><lucide-angular name="triangle-alert" [size]="16"></lucide-angular>{{ error }}</span>
-    <button type="button" appBoton="secundario" (click)="loadAgentStatus(currentStatus?.idUsuario || 0)">Reintentar</button>
-  </div>
-
-  <div *ngIf="currentStatus && estado as e" class="@container/panel grid flex-1 grid-rows-[1fr_auto] gap-[clamp(.75rem,1.6vh,1rem)] px-8 py-[clamp(.875rem,2.4vh,1.5rem)] [--anillo:clamp(8rem,19vh,12rem)] max-md:p-4">
-    <div class="grid grid-cols-[minmax(0,1fr)_19rem] gap-[clamp(.75rem,1.6vh,1rem)] @max-[58rem]/panel:grid-cols-[minmax(0,1fr)]">
-
-      <!-- Estado actual -->
-      <div appTarjetaLuz [principal]="true">
-        <div class="mb-[clamp(.5rem,2vh,1.75rem)]">
-          <span class="block text-[14px] leading-[1.25] font-semibold">{{ agentName }}</span>
-          <span *ngIf="anexo" class="text-[12px] text-muted-foreground tabular-nums">Anexo {{ anexo }}</span>
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>Panel de Asesor</h1>
+        <span class="header-separator">│</span>
+        <div class="campaign-status" [class.discando]="isDiscando" [class.inactivo]="!isDiscando">
+          <span class="status-dot"></span>
+          <span class="status-text">{{ isDiscando ? 'Discando' : 'Sin Campaña' }}</span>
         </div>
-
-        <div class="flex flex-1 flex-wrap items-center gap-10">
-          <div class="flex flex-none flex-col items-center gap-[.75rem]">
-            <app-anillo-tiempo [segundos]="segundos" [tope]="tope"
-                               [color]="semaforo?.trazo ?? 'var(--muted-foreground)'" [tinta]="semaforo?.tinta ?? 'var(--muted-foreground)'"
-                               [segundosArco]="vistaSegundos" [colorArco]="vistaTrazo" [modo]="modoReloj"></app-anillo-tiempo>
-            <span *ngIf="semaforo as s" role="status"
-                  class="inline-flex items-center gap-1.5 rounded-full px-[.75rem] py-[.25rem] text-[12px] font-semibold transition-[color,background-color,box-shadow] duration-500"
-                  [style.color]="s.tinta"
-                  [style.background]="'color-mix(in oklab,' + s.trazo + ' 13%,transparent)'"
-                  [style.box-shadow]="'inset 0 0 0 1px color-mix(in oklab,' + s.trazo + ' 26%,transparent)'">
-              <lucide-angular [ngClass]="'flex-none'" [name]="s.icono" [size]="14"></lucide-angular>{{ s.leyenda }}
-            </span>
-          </div>
-
-          <div class="min-w-[min(100%,15rem)] flex-1">
-            <p class="m-0 text-[12px] font-medium text-muted-foreground">Estado actual</p>
-            <p role="heading" aria-level="2" class="m-0 mt-[.5rem] text-[36px] leading-[1.1] font-bold transition-colors duration-500" [style.color]="tinta(e)">{{ e.nombre }}</p>
-            <app-escala-tiempo *ngIf="umbral as u; else sinEscala" class="mt-[clamp(.875rem,2.4vh,2rem)] max-w-[32rem]"
-                               [verde]="u.verde" [ambar]="u.ambar" [tope]="u.tope" [segundos]="vistaSegundos" [color]="vistaTrazo" [modo]="modoReloj"></app-escala-tiempo>
-            <ng-template #sinEscala>
-              <p class="m-0 mt-6 text-[14px] text-muted-foreground">{{ e.sinTope || 'Sin tope de tiempo' }}</p>
-            </ng-template>
-          </div>
-        </div>
-
-        <!-- En pantallas bajas cede antes de que aparezca una barra de desplazamiento. -->
-        <dl class="m-0 mt-[clamp(.75rem,2.4vh,2rem)] flex flex-wrap gap-x-12 gap-y-[.75rem] border-t border-[color-mix(in_oklab,var(--tono)_25%,transparent)] pt-[clamp(.625rem,1.6vh,1.25rem)] [@media(max-height:800px)]:hidden">
-          <div>
-            <dt class="m-0 text-[12px] font-medium text-muted-foreground">Estado previo</dt>
-            <dd class="m-0 mt-[.25rem] text-[14px] font-semibold">{{ estadoPrevio }}</dd>
-          </div>
-        </dl>
       </div>
-
-      <!-- Acciones -->
-      <div class="flex flex-col gap-4 @max-[58rem]/panel:flex-row @max-[36rem]/panel:flex-col">
-        <div appTarjetaLuz class="flex-1 justify-between">
-          <div>
-            <app-titulo-tarjeta icono="phone-outgoing" titulo="Llamada manual"></app-titulo-tarjeta>
-            <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Entra en modo manual para marcar tú el número.</p>
-            <p *ngIf="currentStatus.estadoActual === AgentState.EN_MANUAL" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Modo manual activo. Las llamadas se hacen desde el softphone.</p>
-          </div>
-          <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full flex-none"
-                  [disabled]="loading || enEstadoDeSistema" (click)="enterManualMode()">
-            <lucide-angular name="phone-outgoing" [size]="16"></lucide-angular>Llamar manual
-          </button>
-        </div>
-
-        <div *ngIf="recordatoriosPendientes > 0" appTarjetaLuz class="flex-1 justify-between">
-          <div>
-            <app-titulo-tarjeta icono="bell-ring" titulo="Seguimiento de promesas"></app-titulo-tarjeta>
-            <p class="m-0 mt-[.75rem] text-[14px] text-muted-foreground">Clientes con promesas de pago pendientes de cobrar.</p>
-            <p *ngIf="!recordatoriosHabilitado" class="m-0 mt-[.5rem] text-[12px] text-muted-foreground">Fuera del horario de seguimiento</p>
-          </div>
-          <button type="button" appBoton appBotonAlto="grande" class="mt-[.75rem] w-full flex-none"
-                  [disabled]="!recordatoriosHabilitado || loading || enEstadoDeSistema" (click)="enterSeguimiento()">
-            <lucide-angular name="bell-ring" [size]="16"></lucide-angular>Seguimiento ({{ recordatoriosPendientes }})
-          </button>
-        </div>
+      <div class="agent-info">
+        <span class="agent-name">{{ agentName }}</span>
+        <button class="logout-btn" (click)="logout()">
+          <span>Cerrar Sesión</span>
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Cambiar estado. Operativo en una columna y Pausas en cuatro: los nueve botones salen del mismo
-         ancho. El reparto depende del ancho de la tarjeta, no de la ventana. -->
-    <div appTarjetaLuz class="@container/estados">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <app-titulo-tarjeta icono="repeat" titulo="Cambiar estado"></app-titulo-tarjeta>
-        <p *ngIf="enEstadoDeSistema" class="m-0 flex items-center gap-1.5 text-[12px] text-muted-foreground">
-          <lucide-angular name="lock" [size]="14"></lucide-angular>Estás en {{ e.nombre }}: lo controla el sistema y no se cambia a mano.
-        </p>
-      </div>
+  <!-- Main Content -->
+  <div class="dashboard-main">
+    <!-- Loading State -->
+    <div *ngIf="loading && !currentStatus" class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando estado...</p>
+    </div>
 
-      <div class="mt-[clamp(.5rem,1.4vh,1rem)] grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-4 @min-[58rem]/estados:grid-cols-[calc((100%-1.5rem-1.875rem)/5)_minmax(0,1fr)] @min-[58rem]/estados:gap-x-6">
-        <div>
-          <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[12px] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Operativo</p>
-          <div class="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[minmax(0,1fr)]">
-            <app-boton-estado *ngFor="let s of operativos" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
-                              [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
-                              (elegir)="changeStatus(s)"></app-boton-estado>
+    <!-- Error State -->
+    <div *ngIf="error" class="error-state">
+      <p>{{ error }}</p>
+      <button (click)="loadAgentStatus(currentStatus?.idUsuario || 0)">
+        Reintentar
+      </button>
+    </div>
+
+    <!-- Status Dashboard -->
+    <div *ngIf="currentStatus && !loading" class="status-dashboard">
+
+      <!-- Current Status Card - Prominente arriba -->
+      <div class="status-card">
+        <div class="status-card-content">
+          <h2>Estado Actual</h2>
+          <div class="current-status">
+            <div class="status-badge" [style.background-color]="getStateColor(currentStatus.estadoActual)">
+              {{ stateLabels[currentStatus.estadoActual] }}
+            </div>
           </div>
         </div>
-        <div>
-          <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[12px] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Pausas</p>
-          <div class="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[repeat(4,minmax(0,1fr))]">
-            <app-boton-estado *ngFor="let s of pausas" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
-                              [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
-                              (elegir)="changeStatus(s)"></app-boton-estado>
+      </div>
+
+      <!-- Action Cards Row -->
+      <div class="action-cards">
+        <!-- Change Status Section -->
+        <div class="change-status-section">
+          <h2>Cambiar Estado</h2>
+          <p class="section-subtitle">Selecciona tu estado actual</p>
+
+          <div class="status-buttons">
+            <button
+              *ngFor="let state of manualStates"
+              class="status-btn"
+              [class.active]="isCurrentState(state)"
+              [class.disabled]="!canChangeToState(state) || loading"
+              [disabled]="!canChangeToState(state) || loading"
+              [style.border-color]="getStateColor(state)"
+              (click)="changeStatus(state)">
+              <div class="status-btn-icon" [style.background-color]="getStateColor(state)"></div>
+              <span>{{ stateLabels[state] }}</span>
+            </button>
           </div>
         </div>
+
+        <!-- Manual Calling Section -->
+        <div class="manual-calling-section">
+          <h2>Llamadas Manuales</h2>
+          <p class="section-subtitle">Inicia el modo manual para realizar llamadas</p>
+
+          <button
+            class="manual-call-btn"
+            [disabled]="loading || currentStatus.estadoActual === AgentState.EN_LLAMADA || currentStatus.estadoActual === AgentState.TIPIFICANDO"
+            (click)="enterManualMode()">
+            <span class="btn-icon"><lucide-angular name="phone-call" [size]="20"></lucide-angular></span>
+            <span>LLAMAR MANUAL</span>
+          </button>
+
+          <p class="manual-call-note" *ngIf="currentStatus.estadoActual === AgentState.EN_MANUAL">
+            Estás en modo manual. Ve al softphone para hacer llamadas.
+          </p>
+        </div>
+
+        <!-- Seguimiento Section -->
+        <div class="manual-calling-section" *ngIf="recordatoriosPendientes > 0">
+          <h2>Seguimiento de Promesas</h2>
+          <p class="section-subtitle">Llamar a clientes con promesas de pago pendientes</p>
+
+          <button
+            class="manual-call-btn"
+            [disabled]="!recordatoriosHabilitado || loading || currentStatus.estadoActual === AgentState.EN_LLAMADA || currentStatus.estadoActual === AgentState.TIPIFICANDO"
+            (click)="enterSeguimiento()">
+            <span class="btn-icon"><lucide-angular name="bell-ring" [size]="20"></lucide-angular></span>
+            <span>SEGUIMIENTO ({{ recordatoriosPendientes }})</span>
+          </button>
+
+          <p class="manual-call-note" *ngIf="!recordatoriosHabilitado && recordatoriosPendientes > 0">
+            Fuera de horario de seguimiento
+          </p>
+        </div>
       </div>
+
     </div>
   </div>
 </div>
