@@ -37,7 +37,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
   imports: [LucideAngularModule, CartaNoAdeudoListaWidgetComponent, ClienteResumenConciliacionLecturaWidget],
   template: `
     <div class="min-h-screen bg-slate-50 p-4 dark:bg-slate-900">
-      <div class="mx-auto max-w-7xl">
+      <div class="mx-auto w-full">
         <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 class="text-base font-semibold text-slate-800 dark:text-white">Emisión de cartas por correo</h1>
           <div class="flex items-center gap-2">
@@ -371,7 +371,7 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                         <p class="text-xs text-slate-500 dark:text-slate-400"><span class="font-medium text-slate-600 dark:text-slate-300">Para:</span> {{ clienteCorreo()?.correo || 'Sin correo registrado' }}</p>
                       </div>
                       @if (correoSeguroHtml(); as html) {
-                        <iframe [srcdoc]="html" title="Cuerpo del correo" class="h-[28rem] w-full border-0 bg-white"></iframe>
+                        <iframe [srcdoc]="html" title="Cuerpo del correo" class="h-[max(28rem,calc(100vh_-_24rem))] w-full border-0 bg-white"></iframe>
                         @if (correoAdjuntoRender()) {
                           <div class="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
                             <lucide-angular name="file-text" [size]="14"></lucide-angular>
@@ -382,14 +382,14 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                     </div>
                   } @else {
                     @if (cargandoVistaPrevia()) {
-                      <div class="flex h-[28rem] flex-col items-center justify-center text-slate-500 dark:text-slate-400">
+                      <div class="flex h-[max(28rem,calc(100vh_-_24rem))] flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                         <div class="h-7 w-7 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
                         <p class="mt-3 text-sm">Generando carta...</p>
                       </div>
                     } @else if (vistaPreviaUrl(); as url) {
-                      <iframe [src]="url" title="Carta de no adeudo" class="h-[28rem] w-full rounded border-0 bg-white"></iframe>
+                      <iframe [src]="url" title="Carta de no adeudo" class="h-[max(28rem,calc(100vh_-_24rem))] w-full rounded border-0 bg-white"></iframe>
                     } @else {
-                      <div class="flex h-[28rem] flex-col items-center justify-center text-center text-slate-400">
+                      <div class="flex h-[max(28rem,calc(100vh_-_24rem))] flex-col items-center justify-center text-center text-slate-400">
                         <lucide-angular name="file-text" [size]="32"></lucide-angular>
                         <p class="mt-2 text-sm">No se pudo cargar la carta.</p>
                       </div>
@@ -656,10 +656,10 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                       <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ data.nombreCliente || 'Cliente' }}</p>
                       <p class="text-xs text-slate-500">Documento: {{ data.documento }}</p>
                     </div>
-                    @for (solicitud of data.solicitudes; track solicitud.idSolicitud) {
+                    @for (solicitud of data.solicitudes; track $index) {
                       <div class="mb-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                         <div class="mb-3 flex items-center justify-between gap-2">
-                          <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">Solicitud #{{ solicitud.idSolicitud }}</p>
+                          <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">{{ solicitud.idSolicitud ? 'Solicitud #' + solicitud.idSolicitud : 'Carga histórica (sin cliente en el sistema)' }}</p>
                           <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                             {{ solicitud.tipoSolicitud === 'COPIA_PERDIDA' ? 'Copia' : 'Original' }} · {{ solicitud.estado }}
                           </span>
@@ -706,9 +706,12 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   private readonly bcpPagosService = inject(BcpPagosService);
   private readonly authService = inject(AuthService);
 
-  readonly puedeCorreo = this.authService.hasAnyRole('ADMIN', 'SUPERVISOR TRAMO PROPIO');
-  readonly puedePagos = this.authService.hasAnyRole('ADMIN', 'SUPERVISOR');
-  readonly puedeHistorial = this.authService.hasAnyRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR TRAMO PROPIO');
+  // Temporal: los dos responsables comparten rol, así que el acceso va por usuario. ADMIN ve todo.
+  private readonly esAdmin = this.authService.hasAnyRole('ADMIN');
+  private readonly usuario = (this.authService.getCurrentUser()?.username ?? '').trim().toUpperCase();
+  readonly puedeCorreo = this.esAdmin || this.usuario === 'RTAPIA';
+  readonly puedePagos = this.esAdmin || this.usuario === 'ESAENZ';
+  readonly puedeHistorial = this.puedeCorreo || this.puedePagos;
   readonly tieneAcceso = this.puedeCorreo || this.puedePagos || this.puedeHistorial;
 
   readonly activeTab = signal<PestanaCarta>('correo');

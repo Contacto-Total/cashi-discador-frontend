@@ -44,7 +44,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
           </div>
         </div>
 
-        <div class="max-h-[34rem] divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700">
+        <div class="max-h-[max(34rem,calc(100vh_-_22rem))] divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700">
           @for (cliente of clientesFiltrados; track cliente.idSolicitud ?? cliente.idCliente) {
             <button
               type="button"
@@ -102,7 +102,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
         }
       </div>
 
-      <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-4 shadow-sm xl:h-[34rem] xl:overflow-y-auto dark:border-slate-700 dark:bg-slate-800">
+      <article class="min-h-[34rem] rounded-xl border border-slate-200 bg-white p-4 shadow-sm xl:h-[max(34rem,calc(100vh_-_14rem))] xl:overflow-y-auto dark:border-slate-700 dark:bg-slate-800">
         <ng-content select="[correoControls]"></ng-content>
         <ng-content select="[detalleDerecho]"></ng-content>
 
@@ -143,7 +143,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
             <iframe
               [srcdoc]="correoCuerpoHtml"
               title="Vista previa del correo"
-              class="h-[28rem] w-full border-0 bg-white">
+              class="h-[max(28rem,calc(100vh_-_24rem))] w-full border-0 bg-white">
             </iframe>
             @if (correoAdjuntoNombre) {
               <div class="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
@@ -156,7 +156,7 @@ import { CartaNoAdeudoClienteCorreo } from '../../../models/carta-no-adeudo.mode
           <iframe
             [src]="vistaPreviaUrl"
             title="Vista previa de carta de no adeudo"
-            class="h-[28rem] w-full rounded border-0 bg-white">
+            class="h-[max(28rem,calc(100vh_-_24rem))] w-full rounded border-0 bg-white">
           </iframe>
         } @else {
           <div class="flex h-full min-h-[28rem] flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">

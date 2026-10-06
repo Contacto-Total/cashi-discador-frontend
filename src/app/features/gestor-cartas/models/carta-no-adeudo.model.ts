@@ -172,7 +172,7 @@ export interface CartaNoAdeudoSeguimientoEvento {
 }
 
 export interface CartaNoAdeudoSeguimientoSolicitud {
-  idSolicitud: number;
+  idSolicitud: number | null;
   tipoSolicitud: CartaNoAdeudoTipoSolicitud;
   estado: CartaNoAdeudoEstado | string;
   correoDestino: string;
