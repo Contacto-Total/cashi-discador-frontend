@@ -5,15 +5,12 @@ import { trigger, transition, animate, keyframes, style } from '@angular/animati
 import { Subscription } from 'rxjs';
 import { ToastService, Toast } from '../../services/toast.service';
 
-/**
- * Avisos emergentes de la aplicación. Siguen la guía de notificaciones de Cashi, la misma del aviso de
- * mantenimiento: fondo de tarjeta, color solo en el borde y el icono, entrada desde la derecha.
- */
 @Component({
   selector: 'app-toast-notification',
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
   templateUrl: './toast-notification.component.html',
+  styleUrls: ['./toast-notification.component.scss'],
   animations: [
     // Pulso de brillo del borde. Se re-dispara cada vez que glowCount aumenta
     // (:increment), es decir, en cada reintento de navegación mientras la toast
@@ -21,10 +18,10 @@ import { ToastService, Toast } from '../../services/toast.service';
     trigger('glowPulse', [
       transition(':increment', [
         animate('650ms ease-out', keyframes([
-          style({ boxShadow: '0 4px 12px rgba(15, 23, 42, 0.12)', offset: 0 }),
+          style({ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)', offset: 0 }),
           style({ boxShadow: '0 0 0 3px {{ glow }}, 0 0 18px 2px {{ glow }}', offset: 0.35 }),
           style({ boxShadow: '0 0 0 3px {{ glow }}, 0 0 18px 2px {{ glow }}', offset: 0.6 }),
-          style({ boxShadow: '0 4px 12px rgba(15, 23, 42, 0.12)', offset: 1 })
+          style({ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)', offset: 1 })
         ]))
       ], { params: { glow: 'rgba(245, 158, 11, 0.85)' } })
     ])
@@ -32,9 +29,6 @@ import { ToastService, Toast } from '../../services/toast.service';
 })
 export class ToastNotificationComponent implements OnInit, OnDestroy {
   toasts: Toast[] = [];
-  /** Color de cada tipo: va en el borde y en el icono. */
-  readonly BORDE: Record<Toast['type'], string> = { success: 'border-[#10b981]', error: 'border-[#ef4444]', warning: 'border-[#f59e0b]', info: 'border-[#3b82f6]' };
-  readonly TINTA: Record<Toast['type'], string> = { success: 'text-[#10b981]', error: 'text-[#ef4444]', warning: 'text-[#f59e0b]', info: 'text-[#3b82f6]' };
   private subscription!: Subscription;
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
 

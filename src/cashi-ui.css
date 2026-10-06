@@ -98,10 +98,8 @@
   --sombra: rgb(0 0 0 / .55);
 }
 
-/* Animaciones que las utilidades citan por nombre: el halo de «listo», la fila nueva de una tabla, el
-   punto de un servicio caído y la entrada de un aviso emergente. El parpadeo va en el color y no en
-   `opacity`. */
-@keyframes cashi-noti { from { transform: translateX(400px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Animaciones que las utilidades citan por nombre: el halo de «listo», la fila nueva de una tabla y
+   el punto de un servicio caído. El parpadeo va en el color y no en `opacity`. */
 @keyframes cashi-halo { 0% { box-shadow: 0 0 0 0 rgb(16 185 129 / .5); } 70%, 100% { box-shadow: 0 0 0 13px rgb(16 185 129 / 0); } }
 @keyframes cashi-entra { from { background-color: var(--ok-bg); } to { background-color: transparent; } }
 @keyframes cashi-late { 50% { background-color: color-mix(in srgb, var(--ro-pt) 25%, transparent); } }

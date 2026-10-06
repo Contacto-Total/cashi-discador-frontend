@@ -105,7 +105,7 @@
 
 <app-whatsapp-notification-popup *ngIf="!isLoginPage() && authService.isAuthenticated()"></app-whatsapp-notification-popup>
 <!-- Pila de avisos, arriba a la derecha: el de mantenimiento primero y debajo los de la jornada del asesor -->
-<div class="pila-avisos" *ngIf="!isLoginPage()" #pilaAvisos>
+<div class="pila-avisos" *ngIf="!isLoginPage()">
   <app-mantenimiento-aviso *ngIf="authService.isAuthenticated()"></app-mantenimiento-aviso>
   <app-avisos-asistencia></app-avisos-asistencia>
 </div>
