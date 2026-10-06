@@ -310,6 +310,10 @@ export interface DetalleComision {
   documentoCliente: string | null;
   nombreCliente: string | null;
   idGestion: number;
+  /** Origen de la PDP (registros_gestion.campo_monto_origen) */
+  origenPdp: string | null;
+  /** Solo contención: si ese origen suma el capital del cliente (LTD, bajas); null en recaudo */
+  origenSuma: boolean | null;
   fechaGestion: string;
   numeroCuota: number;
   fechaVencimientoCuota: string;
