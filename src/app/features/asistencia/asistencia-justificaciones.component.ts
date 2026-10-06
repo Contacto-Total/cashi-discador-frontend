@@ -77,7 +77,7 @@ const esDeRrhh = (j: Justificacion): boolean =>
     <div class="px-7 py-5">
     <div class="aparecer">
 
-      @if (cargando()) {
+      @if (cargando() || cargandoGente()) {
         <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando solicitudes…</p>
       } @else {
         <div [class]="estilos.panel">
@@ -288,6 +288,10 @@ export class AsistenciaJustificacionesComponent {
   /** La gente del ámbito elegido; NULL sin subcartera (se ve toda la empresa). */
   readonly roster = signal<Set<number> | null>(null);
   readonly sinGente = computed(() => this.roster()?.size === 0);
+  /** Mientras llega la gente de la subcartera recién elegida no se enseña la de otra. */
+  readonly cargandoGente = signal(false);
+  /** El último pedido de gente: la respuesta de una subcartera que ya se dejó no se usa. */
+  private pedidoGente = 0;
 
   readonly solicitudes = signal<Justificacion[]>([]);
   /** De 10 en 10, como la Auditoría: la bandeja trae tres meses. */
@@ -324,21 +328,41 @@ export class AsistenciaJustificacionesComponent {
     // adelante, la misma ventana que usa la supervisora.
     this.cargarBandeja();
 
-    // La gente del ámbito: la bandeja muestra solo sus solicitudes.
+    // La gente del ámbito: la bandeja muestra solo sus solicitudes. Sale de
+    // las fichas de Personal y no del reporte, que tarda y depende del rango.
     effect(() => {
       const ambito = this.idSubcartera();
-      untracked(() => this.paginaActual.set(1));
-      if (!ambito) {
-        this.roster.set(null);
-        this.aplicarFiltro();
-        return;
-      }
-      this.servicio.reporte(this.desde(), this.hasta(), ambito).subscribe({
-        next: r => {
-          this.roster.set(new Set(r.agentes.map(a => a.idUsuario)));
+      untracked(() => {
+        this.paginaActual.set(1);
+        const pedido = ++this.pedidoGente;
+        if (!ambito) {
+          this.cargandoGente.set(false);
+          this.roster.set(null);
           this.aplicarFiltro();
-        },
-        error: () => this.roster.set(null)
+          return;
+        }
+        // Hasta que llegue su gente la lista queda vacía: ni lo de la
+        // subcartera anterior ni lo de toda la empresa.
+        this.cargandoGente.set(true);
+        this.roster.set(new Set());
+        this.aplicarFiltro();
+        this.servicio.personal(ambito).subscribe({
+          next: gente => {
+            if (pedido !== this.pedidoGente) {
+              return;
+            }
+            this.roster.set(new Set(gente.map(p => p.idUsuario)));
+            this.cargandoGente.set(false);
+            this.aplicarFiltro();
+          },
+          error: () => {
+            if (pedido !== this.pedidoGente) {
+              return;
+            }
+            this.cargandoGente.set(false);
+            this.toast.error('No se pudo cargar la gente de la subcartera');
+          }
+        });
       });
     });
     effect(() => {
