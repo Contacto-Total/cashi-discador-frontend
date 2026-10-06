@@ -58,6 +58,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   // WebSocket real-time push
   private wsSubscription?: Subscription;
+  private campaignsWsSubscription?: Subscription;
   private fallbackSubscription?: Subscription;
   private refreshTrigger$ = new Subject<void>();
   private statsTrigger$ = new Subject<number | undefined>();
@@ -210,6 +211,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.wsSubscription?.unsubscribe();
+    this.campaignsWsSubscription?.unsubscribe();
     this.fallbackSubscription?.unsubscribe();
     this.statsSubscription?.unsubscribe();
     this.localTimerSubscription?.unsubscribe();
@@ -291,6 +293,54 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
         }
       });
     console.log('[Monitor] WebSocket suscrito a /topic/campaign-monitoring');
+
+    // Cambios de estado de campañas (pausa, activación, cierre por vueltas). Llegan por otro
+    // topic: sin esto el selector seguía en (ACTIVE) hasta recargar la página.
+    this.campaignsWsSubscription = this.websocketService.subscribe('/topic/campaigns')
+      .subscribe({
+        next: (evt) => {
+          this.actualizarEstadoCampana(evt?.campaignId, evt?.data?.status, evt?.data?.estaDiscando);
+          if (evt?.campaignId != null && Number(evt.campaignId) === Number(this.selectedCampaignId)) {
+            this.refreshAllData();
+          }
+        },
+        error: (err) => {
+          console.error('[Monitor] Error en WebSocket campaigns:', err);
+        }
+      });
+  }
+
+  /** Mantiene al día el estado que muestra el selector, sin recargar la lista de campañas. */
+  private actualizarEstadoCampana(campaignId: unknown, status?: Campaign['status'], estaDiscando?: boolean): void {
+    if (campaignId == null || !status) return;
+    const campana = this.campaigns.find(c => Number(c.id) === Number(campaignId));
+    if (!campana) return;
+    campana.status = status;
+    if (estaDiscando !== undefined) {
+      campana.estaDiscando = estaDiscando;
+    }
+  }
+
+  /** La campaña elegida terminó (por vueltas o detenida a mano). */
+  get campanaCompletada(): boolean {
+    return this.autoDialerStats?.estadoCampana === 'COMPLETED';
+  }
+
+  /** Completada porque ya no le quedan contactos con intentos, no porque la detuvieron. */
+  get vueltasCumplidas(): boolean {
+    return this.campanaCompletada && this.autoDialerStats?.contactosConIntentos === 0;
+  }
+
+  /** "sus 3 vueltas" / "su única vuelta" para el texto del aviso. */
+  get textoVueltas(): string {
+    const total = this.autoDialerStats?.vueltasMaximas ?? 0;
+    return total === 1 ? 'su única vuelta' : `sus ${total} vueltas`;
+  }
+
+  /** Un segmento por vuelta para la barra del aviso. */
+  get segmentosVueltas(): number[] {
+    const total = this.autoDialerStats?.vueltasMaximas ?? 0;
+    return Array.from({ length: Math.min(Math.max(total, 0), 20) }, (_, i) => i + 1);
   }
 
   /**
@@ -320,6 +370,8 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     ).subscribe((stats) => {
       if (stats) {
         this.autoDialerStats = stats;
+        // El poll también corrige el selector por si se perdió el aviso del websocket.
+        this.actualizarEstadoCampana(this.selectedCampaignId, stats.estadoCampana as Campaign['status']);
       }
     });
   }

@@ -11,7 +11,8 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { AppDatePipe, AppDateTimePipe, AppTimePipe } from '@/shared/pipes/format.pipes';
-import { catchError, forkJoin, of } from 'rxjs';
+import { WebsocketService } from '../../../core/services/websocket.service';
+import { Subscription, catchError, forkJoin, of } from 'rxjs';
 
 const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
 
@@ -59,18 +60,42 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
   private subPortfolioNames = new Map<number, string>();
+  private campaignsWsSubscription?: Subscription;
 
   constructor(
     private campaignService: CampaignAdminService,
     private authService: AuthService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
+    private websocketService: WebsocketService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.loadCampaigns();
     this.loadTenants();
+    this.escucharCambiosDeCampanas();
+  }
+
+  /**
+   * El backend avisa por /topic/campaigns cuando una campaña cambia de estado; entre otros,
+   * cuando el discador la cierra al terminar sus vueltas (acción COMPLETED). Se actualiza solo
+   * esa fila: antes seguía en "Activa · Discando" hasta recargar la página.
+   */
+  private escucharCambiosDeCampanas(): void {
+    this.campaignsWsSubscription = this.websocketService.subscribe('/topic/campaigns').subscribe({
+      next: (evt) => {
+        const data = evt?.data;
+        if (evt?.campaignId == null || !data?.status) return;
+        const campana = this.campaigns.find(c => Number(c.id) === Number(evt.campaignId));
+        if (!campana) return;
+        campana.status = data.status;
+        if (data.estaDiscando !== undefined) {
+          campana.estaDiscando = data.estaDiscando;
+        }
+      },
+      error: (err) => console.error('Error en WebSocket de campañas:', err)
+    });
   }
 
   loadTenants(): void {
@@ -113,7 +138,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Cleanup if needed
+    this.campaignsWsSubscription?.unsubscribe();
   }
 
   /**

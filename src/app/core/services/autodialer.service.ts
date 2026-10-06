@@ -60,6 +60,11 @@ export interface AutoDialerEstadisticas {
     completada: boolean;
     tasaContactabilidad: number;
   }[];
+
+  // Cierre por vueltas (solo cuando se pide por campaña; no depende del SP)
+  estadoCampana?: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'DELETED';
+  vueltasMaximas?: number;
+  contactosConIntentos?: number;
 }
 
 export interface AgenteMonitoreo {
