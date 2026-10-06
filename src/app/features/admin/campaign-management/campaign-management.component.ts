@@ -28,6 +28,8 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   loading: boolean = false;
   error: string | null = null;
   successMessage: string | null = null;
+  /** Play sobre una campaña que ya completó sus vueltas: tiene su propio aviso, aparte de `error`. */
+  avisoVueltas: string | null = null;
 
   showCreateModal: boolean = false;
   showImportModal: boolean = false;
@@ -261,6 +263,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     if (!campaign.id) return;
 
     this.error = null;
+    this.avisoVueltas = null;
 
     this.campaignService.toggleCampaign(campaign.id).subscribe({
       next: (updated) => {
@@ -276,7 +279,13 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error toggling campaign:', err);
-        this.error = err.error?.message || err.error?.error || 'Error al cambiar estado de la campaña';
+        const mensaje: string = err.error?.message || err.error?.error || 'Error al cambiar estado de la campaña';
+        // Texto que arma CampaignService.asegurarContactosParaDiscar cuando no quedan intentos.
+        if (mensaje.startsWith('La campaña ya completó')) {
+          this.avisoVueltas = mensaje;
+        } else {
+          this.error = mensaje;
+        }
       }
     });
   }
