@@ -442,20 +442,29 @@ type OrigenEnvio = 'pagos' | 'fallidos';
         }
 
         @if (activeTab() === 'historial' && puedeHistorial) {
-          <div class="mb-3 flex w-full max-w-md gap-2">
-            <input
-              #correoBusqueda
-              type="search"
-              placeholder="Buscar por correo"
-              [value]="busquedaCorreoHistorial()"
-              (input)="busquedaCorreoHistorial.set(correoBusqueda.value)"
-              (keyup.enter)="buscarEnviadas(correoBusqueda.value)"
-              class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+          <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex w-full max-w-md gap-2">
+              <input
+                #historialBusqueda
+                type="search"
+                placeholder="Buscar por correo o documento"
+                [value]="busquedaHistorial()"
+                (input)="busquedaHistorial.set(historialBusqueda.value)"
+                (keyup.enter)="buscarEnviadas(historialBusqueda.value)"
+                class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+              <button
+                type="button"
+                (click)="buscarEnviadas(historialBusqueda.value)"
+                class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-white transition-colors hover:bg-blue-700">
+                <lucide-angular name="search" [size]="16"></lucide-angular>
+              </button>
+            </div>
             <button
               type="button"
-              (click)="buscarEnviadas(correoBusqueda.value)"
-              class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-white transition-colors hover:bg-blue-700">
-              <lucide-angular name="search" [size]="16"></lucide-angular>
+              (click)="abrirDialogoReporte()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 dark:bg-slate-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
+              <lucide-angular name="file-spreadsheet" [size]="16"></lucide-angular>
+              Reporte mensual
             </button>
           </div>
           <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -529,6 +538,37 @@ type OrigenEnvio = 'pagos' | 'fallidos';
                     Enviando...
                   } @else {
                     Aceptar
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (dialogReporte()) {
+          <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4" (click)="cerrarDialogoReporte()">
+            <div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-800" (click)="$event.stopPropagation()">
+              <h2 class="text-base font-semibold text-slate-800 dark:text-white">Reporte mensual</h2>
+              <p class="mt-1 text-xs text-slate-500">Cartas enviadas en el mes, originales y copias, con su deuda y pago total.</p>
+              <label class="mt-4 block text-xs font-medium text-slate-600 dark:text-slate-300">Periodo</label>
+              <input
+                #periodoReporteInput
+                type="month"
+                [value]="periodoReporte()"
+                (input)="periodoReporte.set(periodoReporteInput.value)"
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+              @if (errorReporte()) {
+                <p class="mt-2 text-xs text-red-600 dark:text-red-400">{{ errorReporte() }}</p>
+              }
+              <div class="mt-5 flex justify-end gap-2">
+                <button type="button" class="rounded-lg px-3 py-2 text-sm text-slate-600 disabled:opacity-40 dark:text-slate-300" [disabled]="descargandoReporte()" (click)="cerrarDialogoReporte()">Cancelar</button>
+                <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" [disabled]="descargandoReporte() || !periodoReporte()" (click)="descargarReporte()">
+                  @if (descargandoReporte()) {
+                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                    Generando...
+                  } @else {
+                    <lucide-angular name="download" [size]="14"></lucide-angular>
+                    Descargar
                   }
                 </button>
               </div>
@@ -717,7 +757,11 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   readonly enviandoCopia = signal(false);
   readonly copiaSolicitud = signal<CartaNoAdeudoEnviada | null>(null);
   readonly correoCopia = signal('');
-  readonly busquedaCorreoHistorial = signal('');
+  readonly busquedaHistorial = signal('');
+  readonly dialogReporte = signal(false);
+  readonly periodoReporte = signal('');
+  readonly descargandoReporte = signal(false);
+  readonly errorReporte = signal<string | null>(null);
   readonly sidenavAbierto = signal(false);
   readonly busquedaSeguimiento = signal('');
   readonly seguimiento = signal<CartaNoAdeudoSeguimiento | null>(null);
@@ -1063,7 +1107,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   }
 
   listarEnviadas(page = 0): void {
-    this.cartaNoAdeudoService.listarEnviadas(page, 20, this.busquedaCorreoHistorial()).subscribe({
+    this.cartaNoAdeudoService.listarEnviadas(page, 20, this.busquedaHistorial()).subscribe({
       next: response => {
         this.enviadas.set(response.content);
         this.paginaEnviadas.set(response.page);
@@ -1075,9 +1119,50 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  buscarEnviadas(correo: string): void {
-    this.busquedaCorreoHistorial.set(correo.trim());
+  buscarEnviadas(termino: string): void {
+    this.busquedaHistorial.set(termino.trim());
     this.listarEnviadas(0);
+  }
+
+  abrirDialogoReporte(): void {
+    // Por defecto el mes anterior: el reporte se pide al cierre del periodo.
+    const hoy = new Date();
+    const anterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    this.periodoReporte.set(`${anterior.getFullYear()}-${String(anterior.getMonth() + 1).padStart(2, '0')}`);
+    this.errorReporte.set(null);
+    this.dialogReporte.set(true);
+  }
+
+  cerrarDialogoReporte(): void {
+    if (this.descargandoReporte()) return;
+    this.dialogReporte.set(false);
+  }
+
+  descargarReporte(): void {
+    const [anio, mes] = this.periodoReporte().split('-').map(Number);
+    if (!anio || !mes) {
+      this.errorReporte.set('Selecciona un periodo válido.');
+      return;
+    }
+    this.descargandoReporte.set(true);
+    this.errorReporte.set(null);
+    this.cartaNoAdeudoService.descargarReporte(anio, mes).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `RAC_NO_ADEUDO_${this.periodoReporte()}.xlsx`;
+        enlace.click();
+        URL.revokeObjectURL(url);
+        this.descargandoReporte.set(false);
+        this.dialogReporte.set(false);
+      },
+      error: error => {
+        console.error('No se pudo generar el reporte de cartas de no adeudo', error);
+        this.errorReporte.set('No se pudo generar el reporte. Intenta nuevamente.');
+        this.descargandoReporte.set(false);
+      }
+    });
   }
 
   observacionesDe(cliente: CartaNoAdeudoClienteCorreo): CartaNoAdeudoObservacion[] {
@@ -1142,6 +1227,8 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
         return evento.numeroIntento ? `Envío iniciado (intento ${evento.numeroIntento})` : 'Envío iniciado';
       case 'ENVIO_EXITOSO':
         return 'Carta enviada';
+      case 'CARGA_HISTORICA':
+        return 'Carta enviada antes del módulo (carga histórica)';
       case 'ENVIO_FALLIDO':
         return 'Error al enviar la carta';
       default:
@@ -1152,6 +1239,7 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   tonoEvento(evento: CartaNoAdeudoSeguimientoEvento): 'info' | 'ok' | 'warn' | 'error' {
     switch (evento.tipoEvento) {
       case 'ENVIO_EXITOSO':
+      case 'CARGA_HISTORICA':
         return 'ok';
       case 'ENVIO_FALLIDO':
         return 'error';

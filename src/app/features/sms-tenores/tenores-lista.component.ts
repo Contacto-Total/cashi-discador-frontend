@@ -533,11 +533,8 @@ const ESTILOS = {
                 <span class="flex items-center gap-1.5 tabular-nums"><lucide-angular name="filter" [size]="12" class="block text-[#5f6c80]"></lucide-angular>{{ r.columna }}: {{ r.min === null ? 'sin mínimo' : miles(r.min) }} – {{ r.max === null ? 'sin máximo' : miles(r.max) }}</span>
               }
               @if (t.restricciones.sinPromesaVigente) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin promesa vigente</span> }
-              @if (t.restricciones.sinListaNegra) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin lista negra</span> }
+              <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin lista negra, pago cumplido ni saldo en cero</span>
               @if (t.restricciones.soloNoContenido) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin los clientes contenidos</span> }
-              @if (!t.rangos.length && !t.restricciones.sinPromesaVigente && !t.restricciones.sinListaNegra && !t.restricciones.soloNoContenido) {
-                <span class="text-[#5f6c80] dark:text-slate-400">Sin rangos ni restricciones.</span>
-              }
             </div>
 
             <div class="flex flex-wrap items-center gap-1">

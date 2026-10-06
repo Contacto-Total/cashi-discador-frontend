@@ -133,6 +133,23 @@ export interface EnviarCartasNoAdeudoResponse {
   resultados: ResultadoEnvioSolicitud[];
 }
 
+export interface ResultadoCargaHistoricaFila {
+  fila: number;
+  documento: string;
+  periodo: string;
+  fechaEnvio: string | null;
+  estado: 'CON_MATCH' | 'SIN_MATCH' | 'OMITIDA';
+  mensaje: string;
+}
+
+export interface CargaHistoricaCartasNoAdeudoResponse {
+  total: number;
+  conMatch: number;
+  sinMatch: number;
+  omitidas: number;
+  resultados: ResultadoCargaHistoricaFila[];
+}
+
 export interface CartaNoAdeudoObservacion {
   justificacion: string;
   fecha: string;
