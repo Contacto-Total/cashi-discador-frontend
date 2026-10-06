@@ -23,8 +23,8 @@ import { LucideAngularModule } from 'lucide-angular';
         <lucide-angular [name]="icono" [size]="17.6"></lucide-angular>
       </span>
       <span class="min-w-0 flex-1">
-        <span class="block overflow-hidden text-[14px] font-semibold text-ellipsis whitespace-nowrap">{{ nombre }}</span>
-        <span class="mt-[.125rem] block text-[12px] leading-[1.3] text-muted-foreground">{{ detalle }}</span>
+        <span class="block overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ nombre }}</span>
+        <span class="mt-[.125rem] block text-[.75rem] leading-[1.3] text-muted-foreground">{{ detalle }}</span>
       </span>
       @if (actual) {
         <span class="size-2 flex-none rounded-full bg-(--tono)"></span>

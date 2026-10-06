@@ -64,11 +64,11 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   private rutaAbierta = '';
 
   /** Fila: la misma para enlaces, grupos y opciones de la cuenta. Las del menú van más bajas. */
-  readonly FILA = 'nav-item group/fila relative flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 px-3.5 py-2.5 text-left text-[14px] font-medium whitespace-nowrap no-underline! transition-colors duration-150';
+  readonly FILA = 'nav-item group/fila relative flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 px-3.5 py-2.5 text-left text-[.875rem] font-medium whitespace-nowrap no-underline! transition-colors duration-150';
   readonly FILA_MENU = 'py-[.4375rem]!';
   readonly FILA_HIJA = 'px-2.5! gap-2.5! py-[.375rem]!';
   readonly FILA_REPOSO = 'bg-transparent text-sidebar-foreground/65! hover:bg-sidebar-accent/60 hover:text-sidebar-foreground!';
-  readonly FILA_ACTIVA = "bg-sidebar-accent text-sidebar-foreground! font-semibold! before:absolute before:top-1/2 before:left-0 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-['']";
+  readonly FILA_ACTIVA = "bg-sidebar-accent text-sidebar-foreground! font-semibold! before:absolute before:top-1/2 before:left-0 before:h-5 before:w-[.1875rem] before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-['']";
   /**
    * Las clases de un <lucide-angular> van siempre por [ngClass]: las del atributo `class` la librería
    * las copia también al <svg> de dentro, y posición, giro o color terminan aplicados dos veces.
@@ -80,7 +80,7 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   readonly ICONO_ACTIVO = 'text-brand';
   readonly TEXTO = 'min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-[180ms] group-data-[plegado]/sb:opacity-0';
   /** Rótulo de sección. Plegado se vuelve una raya del ancho de una fila. */
-  readonly SECCION = "relative m-0 mt-[1.125rem] mb-[.375rem] flex h-4 items-center px-3.5 text-[12px] font-semibold whitespace-nowrap text-muted-foreground first:mt-[.125rem] "
+  readonly SECCION = "relative m-0 mt-[1.125rem] mb-[.375rem] flex h-4 items-center px-3.5 text-[.75rem] font-semibold whitespace-nowrap text-muted-foreground first:mt-[.125rem] "
     + "after:absolute after:inset-x-0 after:top-1/2 after:border-t after:border-transparent after:transition-[border-color] after:duration-[180ms] after:content-[''] group-data-[plegado]/sb:after:border-sidebar-border";
   /** Con buscador, la raya de la primera sección la pone el buscador, fija bajo la lupa. */
   readonly SECCION_BAJO_LUPA = 'group-data-[plegado]/sb:first:mt-0 group-data-[plegado]/sb:first:h-2 group-data-[plegado]/sb:first:overflow-hidden group-data-[plegado]/sb:first:after:hidden';

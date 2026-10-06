@@ -1,4 +1,4 @@
-<aside class="font-cashi group/sb fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-sidebar-border! bg-sidebar! md:inset-y-3 md:left-3 md:rounded-xl md:border md:shadow-[0_1px_2px_rgb(0_0_0/.05)] text-[14px] leading-[1.5] text-sidebar-foreground antialiased transition-[width,translate] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] max-md:w-[17.5rem]"
+<aside class="font-cashi group/sb fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-sidebar-border! bg-sidebar! md:inset-y-3 md:left-3 md:rounded-xl md:border md:shadow-[0_1px_2px_rgb(0_0_0/.05)] text-[.875rem] leading-[1.5] text-sidebar-foreground antialiased transition-[width,translate] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] max-md:w-[17.5rem]"
        [ngClass]="[plegado ? 'w-[4.75rem]' : 'w-[17.5rem]', movilAbierto ? 'max-md:translate-x-0' : 'max-md:-translate-x-full']"
        [attr.data-plegado]="plegado ? '' : null"
        aria-label="Menú principal">
@@ -6,7 +6,7 @@
   <!-- Marca -->
   <div class="flex h-20 flex-none items-center justify-center gap-3 overflow-clip px-3.5 transition-[gap] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:gap-0">
     <app-cashi-mascota [escala]="0.44" [plana]="true"></app-cashi-mascota>
-    <span class="max-w-24 overflow-hidden text-[16px] leading-none font-bold tracking-[.08em] whitespace-nowrap transition-[max-width,opacity] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:max-w-0 group-data-[plegado]/sb:opacity-0">CASHI</span>
+    <span class="max-w-24 overflow-hidden text-[1rem] leading-none font-bold tracking-[.08em] whitespace-nowrap transition-[max-width,opacity] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:max-w-0 group-data-[plegado]/sb:opacity-0">CASHI</span>
   </div>
 
   <!-- Buscador. Campo y lupa ocupan el mismo sitio y se relevan con un fundido: nada se mueve.
@@ -16,8 +16,8 @@
     <div class="relative transition-opacity delay-[120ms] duration-[140ms] group-data-[plegado]/sb:opacity-0 group-data-[plegado]/sb:delay-0" [attr.inert]="plegado ? '' : null">
       <lucide-angular [ngClass]="'pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground'" name="search" [size]="14"></lucide-angular>
       <input #campoBuscar type="search" [(ngModel)]="filtro" placeholder="Buscar…" aria-label="Buscar pantalla"
-             class="font-cashi h-9 w-full rounded-lg border! border-border! bg-background/60! pr-[3.75rem] pl-[2.125rem] text-[14px] text-foreground! outline-none placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
-      <kbd class="font-cashi pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-transparent px-1.5 py-0.5 text-[11px] leading-[1.2] font-semibold text-muted-foreground">Ctrl K</kbd>
+             class="font-cashi h-9 w-full rounded-lg border! border-border! bg-background/60! pr-[3.75rem] pl-[2.125rem] text-[.875rem] text-foreground! outline-none placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
+      <kbd class="font-cashi pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-transparent px-1.5 py-0.5 text-[.6875rem] leading-[1.2] font-semibold text-muted-foreground">Ctrl K</kbd>
     </div>
     <button type="button" [class]="FILA + ' ' + FILA_REPOSO"
             class="absolute! top-3.5 left-3.5 h-9 w-[calc(4.75rem-1.75rem-1px)]! py-0! pointer-events-none opacity-0 transition-[opacity,background-color,color] duration-[140ms] group-data-[plegado]/sb:pointer-events-auto group-data-[plegado]/sb:opacity-100 group-data-[plegado]/sb:delay-[120ms]"
@@ -36,7 +36,7 @@
         </li>
       </ul>
       <ng-template #sinResultados>
-        <p class="m-0 px-2.5 py-2 text-[12px] text-muted-foreground">Sin resultados para «{{ filtro }}»</p>
+        <p class="m-0 px-2.5 py-2 text-[.75rem] text-muted-foreground">Sin resultados para «{{ filtro }}»</p>
       </ng-template>
     </ng-container>
 
@@ -79,7 +79,7 @@
 
   <!-- Plegar o desplegar: la manija flota sobre el canto, a media altura. -->
   <button type="button" (click)="alternarPlegado()" [attr.aria-label]="plegado ? 'Expandir menú' : 'Contraer menú'"
-          class="absolute top-1/2 -right-3.5 z-[8] grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-full border-0 bg-primary text-white shadow-[0_4px_6px_-1px_rgb(0_0_0/.1),0_0_0_4px_var(--sidebar)] transition-colors duration-150 hover:bg-[#036c4e] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-ring max-md:hidden">
+          class="absolute top-1/2 -right-3.5 z-[8] grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-full border-0 bg-primary text-white shadow-[0_4px_6px_-1px_rgb(0_0_0/.1),0_0_0_4px_var(--sidebar)] transition-colors duration-150 hover:bg-[#036c4e] focus-visible:outline-2 focus-visible:outline-offset-[.1875rem] focus-visible:outline-ring max-md:hidden">
     <lucide-angular [ngClass]="'transition-[rotate] duration-200'" name="chevron-left" [size]="16" [strokeWidth]="2.5" [class.rotate-180]="plegado"></lucide-angular>
   </button>
 
@@ -115,11 +115,11 @@
               [attr.aria-expanded]="esAdmin ? cuentaAbierta : null" [attr.aria-controls]="esAdmin ? 'sb-opciones' : null"
               [appTip]="cuenta ? cuenta.usuario + ' · ' + cuenta.rol : ''" [appTipActivo]="plegado" (click)="alternarCuenta()">
         <!-- El avatar solo se ve con el menú plegado: ocupa el sitio del nombre y se relevan con un fundido. -->
-        <span class="absolute top-1/2 left-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-brand/12 text-[12px] font-bold text-brand opacity-0 transition-[opacity,box-shadow] duration-[140ms] group-data-[plegado]/sb:opacity-100 group-data-[plegado]/sb:delay-[120ms]"
+        <span class="absolute top-1/2 left-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-brand/12 text-[.75rem] font-bold text-brand opacity-0 transition-[opacity,box-shadow] duration-[140ms] group-data-[plegado]/sb:opacity-100 group-data-[plegado]/sb:delay-[120ms]"
               [ngClass]="esAdmin ? 'group-data-[plegado]/sb:group-hover/yo:shadow-[0_0_0_2px_color-mix(in_srgb,var(--brand)_35%,transparent)] group-data-[plegado]/sb:group-data-[abierta]/pie:shadow-[0_0_0_2px_color-mix(in_srgb,var(--brand)_35%,transparent)]' : ''">{{ cuenta?.iniciales }}</span>
         <span class="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap transition-opacity duration-[180ms] group-data-[plegado]/sb:opacity-0">
-          <span class="block overflow-hidden text-[14px] leading-[1.35] font-semibold text-ellipsis whitespace-nowrap">{{ cuenta?.usuario }}</span>
-          <span class="block overflow-hidden text-[12px] leading-[1.35] text-ellipsis whitespace-nowrap text-muted-foreground tabular-nums">{{ cuenta?.rol }}<ng-container *ngIf="cuenta?.anexo"> · {{ cuenta?.anexo }}</ng-container></span>
+          <span class="block overflow-hidden text-[.875rem] leading-[1.35] font-semibold text-ellipsis whitespace-nowrap">{{ cuenta?.usuario }}</span>
+          <span class="block overflow-hidden text-[.75rem] leading-[1.35] text-ellipsis whitespace-nowrap text-muted-foreground tabular-nums">{{ cuenta?.rol }}<ng-container *ngIf="cuenta?.anexo"> · {{ cuenta?.anexo }}</ng-container></span>
         </span>
         <lucide-angular [ngClass]="'flex-none text-muted-foreground transition-[opacity,rotate] duration-200 group-data-[abierta]/pie:rotate-180 group-data-[plegado]/sb:opacity-0'" *ngIf="esAdmin" name="chevron-up" [size]="14"></lucide-angular>
       </button>
@@ -132,7 +132,7 @@
         <button *ngIf="esAdmin" type="button" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_NEUTRO" aria-label="Notificaciones"
                 appTip="Notificaciones" appTipLado="arriba" (click)="$event.stopPropagation(); notificacionesAbrir.emit()">
           <lucide-angular name="bell" [size]="16"></lucide-angular>
-          <span *ngIf="notificaciones > 0" class="absolute top-px right-px h-3.5 min-w-3.5 rounded-full bg-[#a63e30] px-[.2rem] text-center text-[10px] leading-[.875rem] font-bold text-white">{{ notificaciones > 9 ? '9+' : notificaciones }}</span>
+          <span *ngIf="notificaciones > 0" class="absolute top-px right-px h-3.5 min-w-3.5 rounded-full bg-[#a63e30] px-[.2rem] text-center text-[.625rem] leading-[.875rem] font-bold text-white">{{ notificaciones > 9 ? '9+' : notificaciones }}</span>
         </button>
         <a *ngIf="!esAdmin" routerLink="/settings" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_NEUTRO" class="nav-item" [ngClass]="activa('/settings') ? 'bg-sidebar-accent! text-brand!' : ''"
            aria-label="Configuración" appTip="Configuración" appTipLado="arriba" (click)="alNavegar()">

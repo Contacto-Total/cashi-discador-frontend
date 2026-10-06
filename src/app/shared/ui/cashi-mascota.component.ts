@@ -3,15 +3,16 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 /**
  * Cashi, la mascota. El dibujo está en `cashi-ui.css` (bloque MASCOTA); aquí solo va el marcado.
  * `plana` la deja quieta y sin sombras, para tamaños chicos como la marca del menú lateral.
+ * Sigue al ajuste «Tamaño de texto»: la caja va en rem y el dibujo se escala con `--app-font-scale`.
  */
 @Component({
   selector: 'app-cashi-mascota',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="cashi-mascota grid flex-none place-items-center" [style.width.px]="110 * escala" [style.height.px]="100 * escala" aria-hidden="true">
-      <div [style.transform]="'translateY(' + 18 * escala + 'px)'">
-        <div class="mascot-container" [class.mascot-plano]="plana" [style.--mascot-scale]="escala" [style.animation]="plana ? 'none' : null">
+    <div class="cashi-mascota grid flex-none place-items-center" [style.width.rem]="110 * escala / 16" [style.height.rem]="100 * escala / 16" aria-hidden="true">
+      <div [style.transform]="'translateY(' + 18 * escala / 16 + 'rem)'">
+        <div class="mascot-container" [class.mascot-plano]="plana" [style.--mascot-scale]="'calc(' + escala + ' * var(--app-font-scale, 1))'" [style.animation]="plana ? 'none' : null">
           <div class="mascot-figure" [style.animation]="plana ? 'none' : null">
             <div class="mascot-body">
               <div class="mascot-antenna"></div>

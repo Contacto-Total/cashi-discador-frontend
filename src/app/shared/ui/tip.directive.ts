@@ -28,7 +28,7 @@ export class TipDirective implements OnDestroy {
     const arriba = this.appTipLado === 'arriba';
     const caja = this.caja ?? document.createElement('div');
     caja.setAttribute('role', 'tooltip');
-    caja.className = 'font-cashi pointer-events-none fixed z-[1200] rounded-md bg-tooltip px-2.5 py-[7px] text-[12px] font-medium leading-none whitespace-nowrap text-tooltip-foreground antialiased '
+    caja.className = 'font-cashi pointer-events-none fixed z-[1200] rounded-md bg-tooltip px-2.5 py-[.4375rem] text-[.75rem] font-medium leading-none whitespace-nowrap text-tooltip-foreground antialiased '
       + (arriba ? '-translate-x-1/2 -translate-y-full' : '-translate-y-1/2');
     caja.textContent = this.texto;
     caja.style.left = arriba ? `${r.left + r.width / 2}px` : `${r.right + 10}px`;
