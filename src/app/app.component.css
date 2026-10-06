@@ -8,19 +8,6 @@
   background-color: #0A0E27;
 }
 
-/* El armazón: el menú lateral y las tarjetas flotan sobre el lienzo, separados entre sí y del borde
-   de la ventana por el mismo hueco. El tema antiguo fija el fondo de .app-container con !important;
-   de ahí la especificidad. */
-html body .app-container.cashi-marco {
-  --menu: 17.5rem;
-  --hueco: .75rem;
-  background-color: var(--lienzo) !important;
-}
-
-html body .app-container.cashi-marco.menu-plegado {
-  --menu: 4.75rem;
-}
-
 
 input[type="datetime-local"] {
   font-family: monospace;
@@ -33,8 +20,8 @@ input[type="datetime-local"]:lang(es) {
    MAIN CONTENT
    ======================================== */
 
-/* El menú lateral (app-sidebar) mide 17.5rem abierto y 4.75rem plegado. El contenido se corre lo
-   mismo y con el mismo ritmo. */
+/* El menú lateral (app-sidebar) es fijo: 17.5rem abierto y 4.75rem plegado. El contenido se
+   corre lo mismo y con el mismo ritmo. */
 .main-content {
   margin-left: 17.5rem;
   width: calc(100% - 17.5rem);
@@ -49,29 +36,6 @@ input[type="datetime-local"]:lang(es) {
 .app-container.menu-plegado .main-content {
   margin-left: 4.75rem;
   width: calc(100% - 4.75rem);
-}
-
-/* El menú flota a un hueco del borde de la ventana: la caja de contenido del armazón empieza después
-   del menú y de sus dos huecos. Va solo sobre la caja del armazón, no sobre las .main-content que
-   algunas pantallas antiguas tienen dentro. */
-.app-container.cashi-marco > .main-content {
-  margin-left: calc(var(--menu) + var(--hueco) * 2);
-  width: calc(100% - var(--menu) - var(--hueco) * 2);
-}
-
-/* Pantallas con el diseño nuevo (su componente lleva la clase cashi-pantalla): la caja con
-   desplazamiento empieza donde termina el menú y mide lo mismo de alto, así las tarjetas arrancan y
-   acaban a su altura. No pinta fondo: las tarjetas van sobre el lienzo. Es una columna flexible para
-   que la pantalla pueda repartir el alto disponible. Las pantallas antiguas conservan su caja a toda
-   la altura y su fondo. */
-html body .app-container.cashi-marco > .main-content:has(> .cashi-pantalla) {
-  display: flex;
-  flex-direction: column;
-  margin: var(--hueco) 0 var(--hueco) calc(var(--menu) + var(--hueco));
-  width: calc(100% - var(--menu) - var(--hueco));
-  height: calc(100vh - var(--hueco) * 2);
-  padding: 0 var(--hueco);
-  background: transparent !important;
 }
 
 html:not(.dark) .main-content,
@@ -149,12 +113,6 @@ body.dark-theme .main-content {
   .main-content {
     margin-left: 0 !important;
     width: 100% !important;
-  }
-
-  /* El botón del menú queda encima de la primera tarjeta: se le deja su sitio. */
-  html body .app-container.cashi-marco > .main-content:has(> .cashi-pantalla) {
-    margin-top: 3.75rem;
-    height: calc(100vh - 3.75rem - var(--hueco));
   }
 }
 

@@ -1,4 +1,4 @@
-<div class="app-container cashi-marco" *ngIf="!isLoginPage() && authService.isAuthenticated()" [attr.inert]="mantenimiento.bloqueado() ? '' : null"
+<div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()" [attr.inert]="mantenimiento.bloqueado() ? '' : null"
      [class.mantenimiento-completa]="mantenimiento.encierraAdmin()" [class.menu-plegado]="isSidebarCollapsed">
   <!-- Botón de menú en pantallas angostas -->
   <button type="button" class="mobile-menu-btn" (click)="toggleMobileSidebar()" title="Menú">
@@ -20,7 +20,7 @@
                (salir)="logout()"></app-sidebar>
 
   <!-- Main Content -->
-  <main class="main-content" appCajaTarjetas>
+  <main class="main-content">
     <app-peripheral-status-banner></app-peripheral-status-banner>
     <router-outlet></router-outlet>
   </main>
@@ -38,7 +38,7 @@
   <div *ngIf="isNotificacionesDropdownOpen && (authService.currentUser$ | async)?.role === 'ADMIN'"
        class="notif-panel fixed z-[9999]"
        [style.bottom.px]="16"
-       [style.left.px]="isSidebarCollapsed ? 96 : 300">
+       [style.left.px]="isSidebarCollapsed ? 84 : 288">
 
     <!-- Backdrop para cerrar -->
     <div class="fixed inset-0 z-[-1]" (click)="isNotificacionesDropdownOpen = false"></div>

@@ -9,7 +9,6 @@ import { MenuItem } from '../../../core/services/menu-permission.service';
 import { CashiMascotaComponent } from '../cashi-mascota.component';
 import { TipDirective } from '../tip.directive';
 import { iconoDeMenu } from '../menu-iconos';
-import { SeccionMenu, seccionesDeMenu } from '../menu-secciones';
 
 /** Lo que el pie del menú muestra de la sesión. */
 export interface CuentaSidebar {
@@ -20,9 +19,8 @@ export interface CuentaSidebar {
 }
 
 /**
- * Menú lateral flotante, con las pantallas agrupadas por secciones. Solo presenta: el menú, la cuenta
- * y el estado plegado llegan por entradas, y lo que el usuario pide (plegar, salir, tema,
- * notificaciones) sale por eventos.
+ * Menú lateral. Solo presenta: el menú, la cuenta y el estado plegado llegan por entradas, y lo que
+ * el usuario pide (plegar, salir, tema, notificaciones) sale por eventos.
  *
  * Al plegar nada cambia de sitio: los iconos se quedan en su columna, el texto se desvanece y el
  * ancho lo recorta. Por eso las filas del pie miden siempre lo mismo.
@@ -54,7 +52,6 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   @ViewChild('campoBuscar') private campoBuscar?: ElementRef<HTMLInputElement>;
 
   filtro = '';
-  secciones: SeccionMenu[] = [];
   cuentaAbierta = false;
   url = '';
   private readonly abiertos = new Set<string>();
@@ -63,10 +60,9 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   private rutas?: Subscription;
   private rutaAbierta = '';
 
-  /** Fila: la misma para enlaces, grupos y opciones de la cuenta. Las del menú van más bajas. */
+  /** Fila del menú: la misma para enlaces, grupos y opciones de la cuenta. */
   readonly FILA = 'nav-item group/fila relative flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 px-3.5 py-2.5 text-left text-[14px] font-medium whitespace-nowrap no-underline! transition-colors duration-150';
-  readonly FILA_MENU = 'py-[.4375rem]!';
-  readonly FILA_HIJA = 'px-2.5! gap-2.5! py-[.375rem]!';
+  readonly FILA_HIJA = 'px-2.5! gap-2.5!';
   readonly FILA_REPOSO = 'bg-transparent text-sidebar-foreground/65! hover:bg-sidebar-accent/60 hover:text-sidebar-foreground!';
   readonly FILA_ACTIVA = "bg-sidebar-accent text-sidebar-foreground! font-semibold! before:absolute before:top-1/2 before:left-0 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-['']";
   /**
@@ -79,11 +75,6 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   readonly ICONO_REPOSO = 'text-[color-mix(in_srgb,currentColor_80%,transparent)] group-hover/fila:text-current';
   readonly ICONO_ACTIVO = 'text-brand';
   readonly TEXTO = 'min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-[180ms] group-data-[plegado]/sb:opacity-0';
-  /** Rótulo de sección. Plegado se vuelve una raya del ancho de una fila. */
-  readonly SECCION = "relative m-0 mt-[1.125rem] mb-[.375rem] flex h-4 items-center px-3.5 text-[12px] font-semibold whitespace-nowrap text-muted-foreground first:mt-[.125rem] "
-    + "after:absolute after:inset-x-0 after:top-1/2 after:border-t after:border-transparent after:transition-[border-color] after:duration-[180ms] after:content-[''] group-data-[plegado]/sb:after:border-sidebar-border";
-  /** Con buscador, la raya de la primera sección la pone el buscador, fija bajo la lupa. */
-  readonly SECCION_BAJO_LUPA = 'group-data-[plegado]/sb:first:mt-0 group-data-[plegado]/sb:first:h-2 group-data-[plegado]/sb:first:overflow-hidden group-data-[plegado]/sb:first:after:hidden';
   readonly BOTON_ICONO = 'relative grid size-7 flex-none cursor-pointer place-items-center rounded-lg border-0 bg-transparent transition-colors duration-150';
   readonly BOTON_ICONO_NEUTRO = 'text-muted-foreground hover:bg-muted hover:text-foreground';
   readonly BOTON_ICONO_SALIR = 'text-danger hover:bg-danger/12 hover:text-danger-strong';
@@ -98,7 +89,6 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(): void {
-    this.secciones = seccionesDeMenu(this.menu);
     this.abrirGrupoDeLaRuta();
     if (!this.esAdmin) {
       this.cuentaAbierta = false;
@@ -167,20 +157,6 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   abrirBuscador(): void {
     this.plegadoChange.emit(false);
     setTimeout(() => this.campoBuscar?.nativeElement.focus(), 300);
-  }
-
-  /** Ctrl K (o ⌘ K) lleva al buscador desde cualquier pantalla. */
-  @HostListener('document:keydown', ['$event'])
-  alAtajo(ev: KeyboardEvent): void {
-    if (!this.conBuscador || !(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== 'k') {
-      return;
-    }
-    ev.preventDefault();
-    if (this.plegado) {
-      this.abrirBuscador();
-    } else {
-      this.campoBuscar?.nativeElement.focus();
-    }
   }
 
   alternarCuenta(): void {

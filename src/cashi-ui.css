@@ -1,15 +1,13 @@
 /* ============================================================================
    SISTEMA DE DISEÑO NUEVO — estilo de cashi-frontend-v2
    ----------------------------------------------------------------------------
-   Lo consumen el menú lateral y las pantallas con el diseño nuevo. Los componentes no llevan
+   Lo consumen el menú lateral y el Panel del asesor. Los componentes no llevan
    CSS propio: usan utilidades de Tailwind sobre estos tokens (bg-card,
    text-foreground, border-border…). Las pantallas antiguas siguen con las
    variables de styles.css (--bg-primary, --text-primary…) y no leen estas.
    ============================================================================ */
 :root {
   --background: #f7f9f8;
-  /* Fondo sobre el que flotan el menú y las tarjetas: un punto más oscuro que ellas, para que se despeguen. */
-  --lienzo: color-mix(in srgb, var(--muted) 62%, var(--background));
   --foreground: #1b2422;
   --card: #ffffff;
   --popover: #ffffff;
@@ -40,12 +38,11 @@
 
 /* Tema oscuro. El neutro es gris sin velo verde. El relleno de marca se queda en el verde profundo
    con texto blanco; lo que se lee en verde pasa al brillante, porque el profundo sobre casi negro
-   no llega a 3,5:1. Menú y tarjetas son la misma superficie, como en claro. */
+   no llega a 3,5:1. */
 .dark {
   --background: #0b0b0c;
-  --lienzo: var(--background);
   --foreground: #ececee;
-  --card: #101012;
+  --card: #141416;
   --popover: #17171a;
   --brand: #10b981;
   --muted: #1e1e21;
@@ -65,48 +62,8 @@
   --tooltip-foreground: #0b0b0c;
 }
 
-/* Colores de estado (correcto, aviso, peligro, información) y superficies menores. Van solo dentro
-   de las pantallas con el diseño nuevo (.cashi-pantalla): fuera, estos nombres cortos podrían cruzarse
-   con variables de pantallas antiguas. Cada color trae su texto, su fondo, su borde y su punto. */
-.cashi-pantalla {
-  --ok: #166534; --ok-bg: #e8f5ec; --ok-ln: #bfe3c8; --ok-pt: #10b981;
-  --am: #92400e; --am-bg: #fef6e0; --am-ln: #f3d9a4; --am-pt: #d97706;
-  --ro: #b91c1c; --ro-bg: #fef2f2; --ro-ln: #fecaca; --ro-pt: #dc2626;
-  --info: #1d4ed8; --info-bg: #e8f0fe; --info-ln: #c7d9fb;
-  --gris: #334155; --gris-bg: #eef2f7;
-  --campo: #ffffff; --campo-ln: #c3cfcb;
-  --aviso-bg: #fffdf7; --aviso-ln: #f3dcb4;
-  --esq: #e6eaf0; --esq-lat: #f8fafc; --esq-ln: #e2e8f0;
-  --paso-ln: #cbd5e1;
-  --seg-activo: #ffffff;
-  --line2: #edf2f0;
-  --sombra: rgb(15 23 42 / .12);
-}
-
-.dark .cashi-pantalla {
-  --ok: #34d399; --ok-bg: #10241d; --ok-ln: #1f4a3a; --ok-pt: #10b981;
-  --am: #e8bb5c; --am-bg: #2a2110; --am-ln: #4d3c17; --am-pt: #e8a33c;
-  --ro: #ef9d8c; --ro-bg: #2b1614; --ro-ln: #56261f; --ro-pt: #ef5f4a;
-  --info: #8fb0e8; --info-bg: #18223a; --info-ln: #2c3d63;
-  --gris: #c4c4cc; --gris-bg: #232327;
-  --campo: #0f0f11; --campo-ln: #3a3a40;
-  --aviso-bg: #231c0e; --aviso-ln: #4d3c17;
-  --esq: #232327; --esq-lat: #101012; --esq-ln: #2a2a2e;
-  --paso-ln: #3a3a40;
-  --seg-activo: #2f2f34;
-  --line2: #232327;
-  --sombra: rgb(0 0 0 / .55);
-}
-
-/* Animaciones que las utilidades citan por nombre: el halo de «listo», la fila nueva de una tabla y
-   el punto de un servicio caído. El parpadeo va en el color y no en `opacity`. */
-@keyframes cashi-halo { 0% { box-shadow: 0 0 0 0 rgb(16 185 129 / .5); } 70%, 100% { box-shadow: 0 0 0 13px rgb(16 185 129 / 0); } }
-@keyframes cashi-entra { from { background-color: var(--ok-bg); } to { background-color: transparent; } }
-@keyframes cashi-late { 50% { background-color: color-mix(in srgb, var(--ro-pt) 25%, transparent); } }
-
 @theme inline {
   --color-background: var(--background);
-  --color-lienzo: var(--lienzo);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-popover: var(--popover);

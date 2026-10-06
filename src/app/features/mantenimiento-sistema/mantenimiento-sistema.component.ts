@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { NgClass, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
@@ -7,14 +7,10 @@ import {
   cuenta, dosDigitos, enAvisoInmediato, horaCorta
 } from './mantenimiento.service';
 import { MascotaCascoComponent } from './mascota-casco.component';
-import { PageHeaderComponent } from '../../shared/ui/page-header.component';
-import { TituloTarjetaComponent } from '../../shared/ui/titulo-tarjeta.component';
-import { TarjetaDirective } from '../../shared/ui/tarjeta.directive';
-import { BotonDirective } from '../../shared/ui/boton.directive';
 
 type Vista = 'OPERATIVO' | 'PROGRAMADO' | 'EN_DETENCION' | 'BLOQUEADO';
 type Confirmacion = 'ahora' | 'bloquear' | null;
-type ClasePaso = 'idle' | 'run' | 'ok' | 'skip';
+type ClasePaso = 'm-idle' | 'm-run' | 'm-ok' | 'm-skip';
 
 /** Una campaña con llamadas que aun no terminan de entrar. */
 interface Rama { id: number; nombre: string; detalle: string; }
@@ -26,30 +22,9 @@ interface Etiqueta { texto: string; fondo: string; color: string; borde: string;
 
 const ETIQUETAS: Record<Vista, Etiqueta> = {
   OPERATIVO: { texto: 'Operativo', fondo: 'var(--ok-bg)', color: 'var(--ok)', borde: 'var(--ok-ln)' },
-  PROGRAMADO: { texto: 'Programado', fondo: 'var(--info-bg)', color: 'var(--info)', borde: 'var(--info-ln)' },
+  PROGRAMADO: { texto: 'Programado', fondo: '#e8f0fe', color: '#1d4ed8', borde: '#c7d9fb' },
   EN_DETENCION: { texto: 'En detención', fondo: 'var(--am-bg)', color: 'var(--am)', borde: 'var(--am-ln)' },
   BLOQUEADO: { texto: 'Bloqueado', fondo: 'var(--ro-bg)', color: 'var(--ro)', borde: 'var(--ro-ln)' }
-};
-
-/** Aspecto de cada paso del flujo según su estado: el punto, el título, el detalle y el valor. */
-const PASO: Record<ClasePaso, { fila: string; punto: string; check: string; titulo: string; detalle: string; valor: string }> = {
-  idle: {
-    fila: '', punto: 'border-(--paso-ln) bg-card', check: 'scale-[.4] opacity-0',
-    titulo: 'text-muted-foreground', detalle: 'text-muted-foreground', valor: 'bg-(--gris-bg) text-muted-foreground'
-  },
-  run: {
-    fila: "after:absolute after:inset-x-0 after:inset-y-1 after:z-0 after:rounded-[10px] after:bg-(--am-bg) after:content-['']",
-    punto: 'animate-[spin_.9s_linear_infinite] border-(--am-ln) border-t-(--am-pt) bg-card motion-reduce:animate-none', check: 'scale-[.4] opacity-0',
-    titulo: 'text-foreground', detalle: 'text-(--am)', valor: 'border border-(--am-ln) bg-card text-(--am)'
-  },
-  ok: {
-    fila: '[&:not(:last-child)]:before:bg-(--ok-pt)', punto: 'border-(--ok-pt) bg-(--ok-pt)', check: 'scale-100 opacity-100',
-    titulo: 'text-foreground', detalle: 'text-muted-foreground', valor: 'bg-(--ok-bg) text-(--ok)'
-  },
-  skip: {
-    fila: '', punto: 'border-dashed border-(--paso-ln) bg-card', check: 'scale-[.4] opacity-0',
-    titulo: 'text-muted-foreground', detalle: 'text-muted-foreground', valor: 'bg-(--gris-bg) text-muted-foreground'
-  }
 };
 
 /** Trazos de los iconos (lucide), uno por icono. */
@@ -90,22 +65,13 @@ const POR_PAGINA = 5;
 @Component({
   selector: 'app-mantenimiento-sistema',
   standalone: true,
-  imports: [NgClass, NgTemplateOutlet, MascotaCascoComponent, PageHeaderComponent, TituloTarjetaComponent, TarjetaDirective, BotonDirective],
+  imports: [NgTemplateOutlet, MascotaCascoComponent],
   templateUrl: './mantenimiento-sistema.component.html',
-  host: { class: 'cashi-pantalla flex flex-1 flex-col' }
+  styleUrl: './mantenimiento-sistema.component.css'
 })
 export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   readonly mant = inject(MantenimientoService);
   readonly I = ICONOS;
-  readonly PASO = PASO;
-  /** Fila «rótulo — valor» del formulario. */
-  readonly FILA = 'flex justify-between gap-3 text-[14px] tabular-nums';
-  readonly PESTANA = 'font-cashi cursor-pointer rounded-md border-0 px-1.5 py-[7px] text-[14px] font-medium transition-colors duration-150';
-  readonly PESTANA_ACTIVA = 'bg-(--seg-activo) text-foreground shadow-[0_1px_2px_rgb(0_0_0/.08)]';
-  readonly PESTANA_REPOSO = 'bg-transparent text-foreground/60';
-  readonly COLUMNAS = ['Fecha', 'Tipo', 'Inicio', 'Bloqueo', 'Fin', 'Detención', 'Usuario', 'Resultado'];
-  readonly CELDA_CABECERA = 'border-0! border-b! border-border! bg-transparent! px-3! py-2.5! text-left text-[12px]! font-medium! tracking-normal! whitespace-nowrap text-muted-foreground! normal-case!';
-  readonly CELDA = 'border-0! border-b! border-(--line2)! bg-transparent! px-3! py-[9px]! text-[14px]! whitespace-nowrap text-foreground! tabular-nums';
 
   readonly avance = signal<MantenimientoAvance | null>(null);
   readonly historial = signal<HistorialMantenimiento | null>(null);
@@ -210,8 +176,8 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     const cierre = this.cierre();
     if (cierre) {
       const ultimo: Paso = cierre.fase === 'run'
-        ? { id: 'reanudar', titulo: 'Discado reanudado', clase: 'run', sub: 'Reanudando campañas y colas', val: '', barra: null }
-        : { id: 'reanudar', titulo: 'Discado reanudado', clase: 'ok', sub: 'Campañas y colas reanudadas', val: 'Ahora', barra: null };
+        ? { id: 'reanudar', titulo: 'Discado reanudado', clase: 'm-run', sub: 'Reanudando campañas y colas', val: '', barra: null }
+        : { id: 'reanudar', titulo: 'Discado reanudado', clase: 'm-ok', sub: 'Campañas y colas reanudadas', val: 'Ahora', barra: null };
       return [...cierre.pasos.slice(0, -1), ultimo];
     }
     return this.calcularPasos();
@@ -311,7 +277,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     const d = this.mant.datos();
     const a = this.avance();
     const v = this.vista();
-    const paso = (id: string, titulo: string, clase: ClasePaso = 'idle', sub = '', val = '', barra: number | null = null): Paso =>
+    const paso = (id: string, titulo: string, clase: ClasePaso = 'm-idle', sub = '', val = '', barra: number | null = null): Paso =>
       ({ id, titulo, clase, sub, val, barra });
 
     let aviso = paso('aviso', 'Aviso a los usuarios');
@@ -319,15 +285,15 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
       const inicio = d.inicioProgramado ?? 0;
       const falta = this.falta();
       aviso = falta <= RECORDATORIO
-        ? paso('aviso', 'Aviso a los usuarios', 'run', `Recordatorio enviado ${horaCorta(inicio - RECORDATORIO)}`, '5 min')
+        ? paso('aviso', 'Aviso a los usuarios', 'm-run', `Recordatorio enviado ${horaCorta(inicio - RECORDATORIO)}`, '5 min')
         : falta <= AVISO
-          ? paso('aviso', 'Aviso a los usuarios', 'run', `Aviso enviado ${horaCorta(inicio - AVISO)}`, '10 min')
-          : paso('aviso', 'Aviso a los usuarios', 'run', `Aviso a las ${horaCorta(inicio - AVISO)}`, 'Pendiente');
+          ? paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso enviado ${horaCorta(inicio - AVISO)}`, '10 min')
+          : paso('aviso', 'Aviso a los usuarios', 'm-run', `Aviso a las ${horaCorta(inicio - AVISO)}`, 'Pendiente');
     } else if (this.enAviso()) {
-      aviso = paso('aviso', 'Aviso a los usuarios', 'run', 'Aviso de 60 segundos', `${Math.max(0, Math.ceil(this.falta() / 1000))} s`);
+      aviso = paso('aviso', 'Aviso a los usuarios', 'm-run', 'Aviso de 60 segundos', `${Math.max(0, Math.ceil(this.falta() / 1000))} s`);
     } else if (d && this.activo()) {
       const inicio = d.inicioProgramado ?? 0;
-      aviso = paso('aviso', 'Aviso a los usuarios', 'ok',
+      aviso = paso('aviso', 'Aviso a los usuarios', 'm-ok',
         d.inmediato ? 'Aviso de 60 segundos' : `Aviso ${horaCorta(inicio - AVISO)} · recordatorio ${horaCorta(inicio - RECORDATORIO)}`,
         'Enviado');
     }
@@ -340,19 +306,19 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
 
     // Sin datos del backend se muestran los pasos sin cifras.
     if (!a) {
-      const hecho = (id: string, titulo: string, val = '') => paso(id, titulo, 'ok', '', val);
+      const hecho = (id: string, titulo: string, val = '') => paso(id, titulo, 'm-ok', '', val);
       const detenido = hecho('discado', 'Discado detenido', this.h(d.inicioDetencion));
       return [...(d.inmediato ? [detenido, aviso] : [aviso, detenido]),
-        v === 'BLOQUEADO' ? hecho('llamadas', 'Llamadas en curso') : paso('llamadas', 'Llamadas en curso', 'run'),
-        v === 'BLOQUEADO' ? hecho('gestiones', 'Tipificaciones') : paso('gestiones', 'Tipificaciones', 'run'),
-        v === 'BLOQUEADO' ? hecho('pantallas', 'Pantallas bloqueadas') : paso('pantallas', 'Pantallas bloqueadas', 'run'),
+        v === 'BLOQUEADO' ? hecho('llamadas', 'Llamadas en curso') : paso('llamadas', 'Llamadas en curso', 'm-run'),
+        v === 'BLOQUEADO' ? hecho('gestiones', 'Tipificaciones') : paso('gestiones', 'Tipificaciones', 'm-run'),
+        v === 'BLOQUEADO' ? hecho('pantallas', 'Pantallas bloqueadas') : paso('pantallas', 'Pantallas bloqueadas', 'm-run'),
         v === 'BLOQUEADO' ? hecho('reposo', 'Reposo verificado', this.h(d.inicioBloqueo)) : paso('reposo', 'Reposo verificado'),
         paso('reanudar', 'Discado reanudado')];
     }
 
     const campanas = a?.campanasDetenidas ?? 0;
     const colas = a?.colasDetenidas ?? 0;
-    const discado = paso('discado', 'Discado detenido', 'ok',
+    const discado = paso('discado', 'Discado detenido', 'm-ok',
       `${campanas} ${campanas === 1 ? 'campaña' : 'campañas'} y ${colas} ${colas === 1 ? 'cola' : 'colas'} del bot`,
       this.h(d.inicioDetencion));
 
@@ -373,28 +339,28 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     const enGestion = a?.enGestion.length ?? 0;
     const conectados = a?.conectados ?? 0;
     const llamadas: Paso = ll || porEntrar
-      ? { ...paso('llamadas', 'Llamadas en curso', 'run',
+      ? { ...paso('llamadas', 'Llamadas en curso', 'm-run',
             [ll ? `${ll} con asesor` : '', porEntrar ? `${porEntrar} por entrar` : ''].filter(Boolean).join(' · '),
             String(ll + porEntrar)), ramas }
-      : paso('llamadas', 'Llamadas en curso', 'ok', 'Sin llamadas', '0');
+      : paso('llamadas', 'Llamadas en curso', 'm-ok', 'Sin llamadas', '0');
     const gestiones = ll || ti || porEntrar
-      ? paso('gestiones', 'Tipificaciones', 'run', `${ti} tipificando`, String(ti))
-      : paso('gestiones', 'Tipificaciones', 'ok', 'Sin tipificaciones', '0');
+      ? paso('gestiones', 'Tipificaciones', 'm-run', `${ti} tipificando`, String(ti))
+      : paso('gestiones', 'Tipificaciones', 'm-ok', 'Sin tipificaciones', '0');
     const pantallas = v === 'EN_DETENCION' && !d.entradaCerrada
-      ? paso('pantallas', 'Pantallas bloqueadas', 'idle',
+      ? paso('pantallas', 'Pantallas bloqueadas', 'm-idle',
           this.enAviso() ? 'Pendiente: fin del aviso' : 'Pendiente: llamadas por entrar')
       : enGestion
-      ? paso('pantallas', 'Pantallas bloqueadas', 'run', 'Bloqueo al cerrar gestión', `${Math.max(0, conectados - enGestion)} de ${conectados}`)
-      : paso('pantallas', 'Pantallas bloqueadas', 'ok', 'Completo', `${conectados} de ${conectados}`);
+      ? paso('pantallas', 'Pantallas bloqueadas', 'm-run', 'Bloqueo al cerrar gestión', `${Math.max(0, conectados - enGestion)} de ${conectados}`)
+      : paso('pantallas', 'Pantallas bloqueadas', 'm-ok', 'Completo', `${conectados} de ${conectados}`);
 
     let reposo = paso('reposo', 'Reposo verificado');
     if (v === 'BLOQUEADO') {
       reposo = enGestion
-        ? paso('reposo', 'Reposo verificado', 'skip', 'Bloqueo forzado', 'Forzado')
-        : paso('reposo', 'Reposo verificado', 'ok', '10 s sin actividad', this.h(d.inicioBloqueo));
+        ? paso('reposo', 'Reposo verificado', 'm-skip', 'Bloqueo forzado', 'Forzado')
+        : paso('reposo', 'Reposo verificado', 'm-ok', '10 s sin actividad', this.h(d.inicioBloqueo));
     } else if (a?.reposoDesde) {
       const lleva = Math.min(REPOSO, Math.max(0, this.ahora() - a.reposoDesde));
-      reposo = paso('reposo', 'Reposo verificado', 'run', 'Verificando 10 s sin actividad',
+      reposo = paso('reposo', 'Reposo verificado', 'm-run', 'Verificando 10 s sin actividad',
         `${Math.ceil((REPOSO - lleva) / 1000)} s`, Math.round(lleva / REPOSO * 100));
     }
 
