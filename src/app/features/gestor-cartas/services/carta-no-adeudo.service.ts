@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
+  CargaHistoricaCartasNoAdeudoResponse,
   CartaNoAdeudoDocumento,
   CartaNoAdeudoClienteCorreo,
   CartaNoAdeudoEnviada,
@@ -84,17 +85,28 @@ export class CartaNoAdeudoService {
     );
   }
 
+  cargarEnviadasHistoricas(archivo: File): Observable<CargaHistoricaCartasNoAdeudoResponse> {
+    const formData = new FormData();
+    formData.append('file', archivo);
+    return this.http.post<CargaHistoricaCartasNoAdeudoResponse>(`${this.baseUrl}/carga-historica`, formData);
+  }
+
   listarFallidos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoFallido>> {
     const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoFallido>>(`${this.baseUrl}/solicitudes/fallidos`, { params });
   }
 
-  listarEnviadas(page = 0, size = 20, correo?: string): Observable<CartaNoAdeudoPage<CartaNoAdeudoEnviada>> {
+  listarEnviadas(page = 0, size = 20, busqueda?: string): Observable<CartaNoAdeudoPage<CartaNoAdeudoEnviada>> {
     let params = new HttpParams().set('page', page.toString()).set('size', size.toString());
-    if (correo?.trim()) {
-      params = params.set('correo', correo.trim());
+    if (busqueda?.trim()) {
+      params = params.set('busqueda', busqueda.trim());
     }
     return this.http.get<CartaNoAdeudoPage<CartaNoAdeudoEnviada>>(`${this.baseUrl}/solicitudes/enviadas`, { params });
+  }
+
+  descargarReporte(anio: number, mes: number): Observable<Blob> {
+    const params = new HttpParams().set('anio', anio.toString()).set('mes', mes.toString());
+    return this.http.get(`${this.baseUrl}/reporte`, { params, responseType: 'blob' });
   }
 
   listarValidacionPagos(page = 0, size = 20): Observable<CartaNoAdeudoPage<CartaNoAdeudoValidacionPago>> {

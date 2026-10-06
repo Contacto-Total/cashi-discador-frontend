@@ -210,6 +210,12 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    // Vista oculta (sin entrada en el menú): solo ADMIN, se entra por URL.
+    path: 'cartas/no-adeudo/carga-historica',
+    loadComponent: () => import('./features/gestor-cartas/presentation/pages/carta-no-adeudo-carga-historica-page/carta-no-adeudo-carga-historica-page.component').then(m => m.CartaNoAdeudoCargaHistoricaPageComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
     path: 'cartas/no-adeudo',
     loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-page/no-debt-letter-page.component').then(m => m.NoDebtLetterPageComponent),
     canActivate: [authGuard]

@@ -515,11 +515,10 @@ interface ParteMensaje {
                     <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
                     <span>Sin promesa vigente <span class="text-[#5f6c80] dark:text-slate-400">(pendiente, parcial o vencida hace menos de 2 días)</span></span>
                   </label>
-                  <label class="relative flex cursor-pointer items-start gap-[9px] text-[13px]">
-                    <input type="checkbox" class="peer sr-only" [ngModel]="sinListaNegra" (ngModelChange)="sinListaNegra = $event; marcarCambio()" />
-                    <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
-                    <span>Sin lista negra</span>
-                  </label>
+                  <p class="flex items-start gap-[9px] text-[13px]">
+                    <lucide-angular name="lock" [size]="13" class="mt-[2px] block shrink-0 text-[#5f6c80] dark:text-slate-400"></lucide-angular>
+                    <span>Siempre fuera: lista negra, pago cumplido y saldo actual en cero <span class="text-[#5f6c80] dark:text-slate-400">(no se puede desmarcar; pago y saldo, solo en las cargas que los traen)</span></span>
+                  </p>
                   @if (vars.admiteSoloNoContenido) {
                     <label class="relative flex cursor-pointer items-start gap-[9px] text-[13px]">
                       <input type="checkbox" class="peer sr-only" [ngModel]="soloNoContenido" (ngModelChange)="soloNoContenido = $event; marcarCambio()" />
@@ -832,7 +831,6 @@ export class TenorFormComponent implements OnInit {
   plantilla = '';
   rangos: RangoTenor[] = [];
   sinPromesaVigente = true;
-  sinListaNegra = true;
   soloNoContenido = false;
   /** Si el archivo empieza con los contactos de control. Marcado por defecto. */
   incluirContactosControl = true;
@@ -1423,7 +1421,6 @@ export class TenorFormComponent implements OnInit {
         this.combinadas = (tenor.combinadas ?? []).map(c => ({ ...c, columnas: [...c.columnas] }));
         this.columnasExcel = [...(tenor.columnasExcel ?? [])];
         this.sinPromesaVigente = tenor.restricciones.sinPromesaVigente;
-        this.sinListaNegra = tenor.restricciones.sinListaNegra;
         this.soloNoContenido = tenor.restricciones.soloNoContenido;
         this.incluirContactosControl = tenor.incluirContactosControl ?? true;
         this.idInquilino = tenor.idInquilino;
@@ -1507,7 +1504,8 @@ export class TenorFormComponent implements OnInit {
       })),
       restricciones: {
         sinPromesaVigente: this.sinPromesaVigente,
-        sinListaNegra: this.sinListaNegra,
+        // Fija en el backend; se manda en true para que lo guardado diga lo que se aplica.
+        sinListaNegra: true,
         soloNoContenido: this.soloNoContenido
       },
       incluirContactosControl: this.incluirContactosControl,
