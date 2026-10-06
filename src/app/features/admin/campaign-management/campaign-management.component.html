@@ -30,6 +30,18 @@
   <div *ngIf="error" class="error-message"><lucide-angular name="x-circle" [size]="18"></lucide-angular> {{ error }}</div>
   <div *ngIf="successMessage" class="success-message"><lucide-angular name="check-circle" [size]="18"></lucide-angular> {{ successMessage }}</div>
 
+  <!-- Play sobre una campaña que ya completó sus vueltas -->
+  <div *ngIf="avisoVueltas" class="aviso-vueltas" role="alert">
+    <span class="aviso-vueltas__icono" aria-hidden="true"><lucide-angular name="circle-alert" [size]="20"></lucide-angular></span>
+    <div class="aviso-vueltas__texto">
+      <strong>No se pudo activar la campaña</strong>
+      <p>{{ avisoVueltas }}</p>
+    </div>
+    <button type="button" class="aviso-vueltas__cerrar" (click)="avisoVueltas = null" aria-label="Cerrar mensaje">
+      <lucide-angular name="x" [size]="18"></lucide-angular>
+    </button>
+  </div>
+
   <!-- Campaigns List Section -->
   <div class="campaigns-section">
     <!-- Campaigns List -->

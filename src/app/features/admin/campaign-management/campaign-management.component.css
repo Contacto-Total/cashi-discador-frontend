@@ -1414,3 +1414,109 @@ body.light-theme .info-box p {
     transform: none;
   }
 }
+
+/* ============================================
+   AVISO: play sobre una campaña que ya completó sus vueltas
+   Ícono + título + detalle + cerrar en una fila.
+   Base oscura; el claro va con body.light-theme.
+   ============================================ */
+.aviso-vueltas {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 1rem;
+  padding: 14px 14px 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.38);
+  background: rgba(239, 68, 68, 0.10);
+  color: #fca5a5;
+}
+
+.aviso-vueltas lucide-angular {
+  display: flex;
+}
+
+.aviso-vueltas__icono {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(239, 68, 68, 0.20);
+  color: #f87171;
+}
+
+.aviso-vueltas__texto {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.aviso-vueltas__texto strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #fee2e2;
+}
+
+.aviso-vueltas__texto p {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.aviso-vueltas__cerrar {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.aviso-vueltas__cerrar:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.aviso-vueltas__cerrar:focus-visible {
+  opacity: 1;
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+body.light-theme .aviso-vueltas {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+body.light-theme .aviso-vueltas__icono {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+body.light-theme .aviso-vueltas__texto strong {
+  color: #7f1d1d;
+}
+
+body.light-theme .aviso-vueltas__cerrar:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aviso-vueltas {
+    animation: aviso-vueltas-entrada 0.18s ease-out both;
+  }
+
+  @keyframes aviso-vueltas-entrada {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+  }
+}
