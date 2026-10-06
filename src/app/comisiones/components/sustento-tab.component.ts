@@ -167,7 +167,7 @@ const B = 28;
         <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-sus-dias">
           <div class="cmx-block-head">
             <h3 id="cmx-sus-dias" class="cmx-block-title">Día a día</h3>
-            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente CONTENIDO suma su capital asignado el día de su primer pago del mes }</span>
+            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente CONTENIDO suma su capital asignado el día de su primer pago del mes con PDP por LTD o baja 30/60/90 }</span>
           </div>
           <div class="cmx-tw">
             <table class="cmx-table">
@@ -238,6 +238,9 @@ const B = 28;
                                       <td class="n" style="color:var(--cmx-ink-3)">{{ pg.recaudo ?? 0 | appNumber:'1.2-2' }}</td>
                                       <td class="n" [class.na]="suma <= 0">
                                         @if (suma > 0) { {{ suma | appNumber:'1.2-2' }} }
+                                        @else if (pg.origenSuma === false) {
+                                          <span [attr.title]="'La PDP es por ' + (pg.origenPdp || 'un origen sin registrar') + ': solo suman las PDP por LTD o baja 30/60/90. El pago sí cuenta para la meta de pagos'">no suma · {{ pg.origenPdp || 'sin origen' }}</span>
+                                        }
                                         @else if (yaSumo(pg)) { <span title="Su capital ya sumó con su primer pago del mes">ya sumó</span> }
                                         @else { <span title="El cliente no tiene SLD_CAPITAL_ASIG en la tabla dinámica">sin capital</span> }
                                       </td>
@@ -457,9 +460,9 @@ export class SustentoTabComponent {
     return [...d.pagos].sort((a, b) => (a.horaBanco ?? '99').localeCompare(b.horaBanco ?? '99') || a.conciliacionId - b.conciliacionId);
   }
 
-  /** El cliente ya tuvo un pago antes en lo que se está viendo: su capital sumó ahí */
+  /** El cliente ya tuvo antes un pago que suma (PDP por LTD o baja) en lo que se está viendo: su capital sumó ahí */
   yaSumo(d: DetalleComision): boolean {
-    return (this.persona()?.filas ?? []).some(f => f.documentoCliente === d.documentoCliente
+    return (this.persona()?.filas ?? []).some(f => f.documentoCliente === d.documentoCliente && f.origenSuma !== false
       && (f.fechaBanco < d.fechaBanco || (f.fechaBanco === d.fechaBanco && f.conciliacionId < d.conciliacionId)));
   }
 
