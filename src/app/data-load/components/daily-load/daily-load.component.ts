@@ -542,7 +542,8 @@ export class DailyLoadComponent implements OnInit {
     reader.onload = async (e: any) => {
       try {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+        // raw: true evita que SheetJS interprete fechas como MM/dd en archivos de texto/HTML con extensión .xls
+        const workbook = XLSX.read(data, { type: 'array', raw: true });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
