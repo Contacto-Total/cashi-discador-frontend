@@ -270,11 +270,14 @@
         </div>
       </div>
 
-      <!-- Asesores con una llamada o una tipificación abierta -->
-      <section appTarjeta class="flex flex-1 flex-col">
+      <!-- Asesores con una llamada o una tipificación abierta. La tarjeta mide lo que le deja la fila
+           (el alto de la tarjeta principal menos los indicadores) y no crece con la lista: entran las
+           filas que caben y el resto se pagina dentro de la tarjeta. -->
+      <section appTarjeta class="flex min-h-[19rem] flex-[1_1_0px] flex-col">
         <app-titulo-tarjeta class="mb-2.5" icono="users" titulo="En gestión"></app-titulo-tarjeta>
-        <div class="flex flex-col">
-          @for (a of lista(); track a.idUsuario) {
+        <div #cajaGestion class="flex min-h-0 flex-[1_1_0px] flex-col overflow-hidden">
+          <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+          @for (a of gestionVisible(); track a.idUsuario) {
             <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 border-t border-(--line2) py-[.5625rem] first:border-t-0">
               <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ a.nombre }}</span>
               <span class="col-start-1 text-[.75rem] text-muted-foreground tabular-nums">{{ a.subcartera ? a.subcartera + ' · ' : '' }}{{ lleva(a) }}</span>
@@ -285,6 +288,22 @@
             </div>
           } @empty {
             <div class="rounded-[.625rem] border border-dashed border-(--paso-ln) px-3 py-[1.125rem] text-center text-[.875rem] text-muted-foreground">Sin gestiones abiertas</div>
+          }
+          </div>
+          @if (paginasGestion() > 1) {
+            <div class="flex flex-none items-center justify-between gap-3 border-t border-(--line2) pt-[.625rem]">
+              <p class="m-0 text-[.75rem] text-muted-foreground tabular-nums">Página {{ paginaGestion() + 1 }} de {{ paginasGestion() }}</p>
+              <div class="flex gap-2">
+                <button type="button" appBoton="secundario" appBotonAlto="icono" aria-label="Página anterior" title="Anterior"
+                        [disabled]="paginaGestion() === 0" (click)="irPaginaGestion(-1)">
+                  <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.izq }"></ng-container>
+                </button>
+                <button type="button" appBoton="secundario" appBotonAlto="icono" aria-label="Página siguiente" title="Siguiente"
+                        [disabled]="paginaGestion() >= paginasGestion() - 1" (click)="irPaginaGestion(1)">
+                  <ng-container *ngTemplateOutlet="ic; context: { $implicit: I.der }"></ng-container>
+                </button>
+              </div>
+            </div>
           }
         </div>
       </section>
