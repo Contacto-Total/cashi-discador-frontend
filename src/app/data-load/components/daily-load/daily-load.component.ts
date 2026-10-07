@@ -947,6 +947,10 @@ export class DailyLoadComponent implements OnInit {
         day = parseInt(match[1]);
         month = parseInt(match[2]);
         year = parseInt(match[3]);
+        // Año de 2 dígitos (ej. "5/10/26 0:00")
+        if (match[3].length <= 2) {
+          year += 2000;
+        }
       }
 
       const hours = parseInt(match[4]) || 0;
