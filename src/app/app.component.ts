@@ -17,7 +17,6 @@ import { NotificacionesSistemaService, NotificacionSistema } from './core/servic
 import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
-import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
 import { SupervisionPanelComponent } from './shared/components/supervision-panel/supervision-panel.component';
 import { PeripheralStatusBannerComponent } from './shared/components/peripheral-status-banner/peripheral-status-banner.component';
 import { PeripheralHealthService } from './core/services/peripheral-health.service';
@@ -36,6 +35,8 @@ import { MantenimientoService } from './features/mantenimiento-sistema/mantenimi
 import { MantenimientoPantallaComponent } from './features/mantenimiento-sistema/mantenimiento-pantalla.component';
 import { MantenimientoAvisoComponent } from './features/mantenimiento-sistema/mantenimiento-aviso.component';
 import { CuentaSidebar, SidebarComponent } from './shared/ui/sidebar/sidebar.component';
+import { EstadoMenu } from './shared/ui/estado-menu.component';
+import { EstadoAsesorService } from './features/agent-dashboard/estado-asesor.service';
 import { CajaTarjetasDirective } from './shared/ui/caja-tarjetas.directive';
 
 @Component({
@@ -48,7 +49,6 @@ import { CajaTarjetasDirective } from './shared/ui/caja-tarjetas.directive';
     RouterModule,
     LucideAngularModule,
     AuthorizationNotificationComponent,
-    AgentTimeAlertOverlayComponent,
     SupervisionPanelComponent,
     PeripheralStatusBannerComponent,
     ToastNotificationComponent,
@@ -116,8 +116,17 @@ export class AppComponent implements OnInit, OnDestroy {
     private gestionLock: GestionLockService,
     public mantenimiento: MantenimientoService,
     // Se pide aquí para que exista desde el arranque: al crearse aplica el tamaño de texto guardado.
-    private fontSizeService: FontSizeService
+    private fontSizeService: FontSizeService,
+    public estadoAsesor: EstadoAsesorService
   ) {}
+
+  /**
+   * Estado del asesor para el pie del menú. No sale en el Panel, que ya lo muestra con el anillo y la
+   * escala, ni en la pantalla de gestión.
+   */
+  get estadoDelMenu(): EstadoMenu | null {
+    return this.router.url.startsWith('/agent-dashboard') || this.isCollectionManagementPage() ? null : this.estadoAsesor.paraMenu();
+  }
 
   /** ADMIN ve notificaciones, tema, modo mantenimiento y las opciones de la cuenta en el menú lateral. */
   get esAdmin(): boolean {

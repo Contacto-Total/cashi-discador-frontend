@@ -87,6 +87,7 @@
        se despliegan sobre la cuenta al pulsarla, igual abierto que plegado (plegado, solo sus iconos).
        La raya de arriba mide lo que una fila, como las de sección: no cruza el menú de lado a lado. -->
   <div class="group/pie relative overflow-clip py-3.5 pr-2 pl-3.5 before:absolute before:inset-x-3.5 before:top-0 before:border-t before:border-sidebar-border before:content-['']" data-cuenta [attr.data-abierta]="cuentaAbierta ? '' : null">
+    <app-estado-menu [estado]="estado" [plegado]="plegado" (navegar)="alNavegar()"></app-estado-menu>
     <div *ngIf="esAdmin" class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out group-data-[abierta]/pie:grid-rows-[1fr]">
       <div class="invisible min-h-0 overflow-hidden transition-[visibility] delay-200 duration-0 group-data-[abierta]/pie:visible group-data-[abierta]/pie:delay-0">
         <ul id="sb-opciones" class="m-0 mb-[.5rem] flex w-[15.6875rem] list-none flex-col gap-1 p-0 group-data-[plegado]/sb:w-12">
@@ -134,6 +135,10 @@
           <lucide-angular name="bell" [size]="16"></lucide-angular>
           <span *ngIf="notificaciones > 0" class="absolute top-px right-px h-3.5 min-w-3.5 rounded-full bg-[#a63e30] px-[.2rem] text-center text-[.625rem] leading-[.875rem] font-bold text-white">{{ notificaciones > 9 ? '9+' : notificaciones }}</span>
         </button>
+        <button *ngIf="conVoz" type="button" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_NEUTRO" [ngClass]="vozActiva ? 'bg-sidebar-accent! text-brand!' : ''" [attr.aria-pressed]="vozActiva"
+                [attr.aria-label]="'Alertas de voz: ' + (vozActiva ? 'activadas' : 'desactivadas')" [appTip]="'Alertas de voz: ' + (vozActiva ? 'activadas' : 'desactivadas')" appTipLado="arriba" (click)="vozCambiar.emit()">
+          <lucide-angular [name]="vozActiva ? 'volume-2' : 'volume-x'" [size]="16"></lucide-angular>
+        </button>
         <a *ngIf="!esAdmin" routerLink="/settings" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_NEUTRO" class="nav-item" [ngClass]="activa('/settings') ? 'bg-sidebar-accent! text-brand!' : ''"
            aria-label="Configuración" appTip="Configuración" appTipLado="arriba" (click)="alNavegar()">
           <lucide-angular name="settings-2" [size]="16"></lucide-angular>
@@ -147,8 +152,9 @@
     <!-- Plegado, la salida baja a una columna bajo el avatar, que se abre al mismo ritmo que el ancho. -->
     <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:grid-rows-[1fr]">
       <div class="invisible min-h-0 overflow-hidden transition-[visibility] delay-[280ms] duration-0 group-data-[plegado]/sb:visible group-data-[plegado]/sb:delay-0">
-        <div class="flex flex-col gap-1 pt-[.5rem] pl-[.625rem]">
-          <button type="button" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_SALIR" aria-label="Cerrar sesión" appTip="Cerrar sesión" (click)="salir.emit()">
+        <!-- Mide lo mismo que el avatar y que el fondo del estado: lo que queda en el pie plegado es de un solo tamaño. -->
+        <div class="flex flex-col gap-1 pt-[.5rem] pl-[.5rem]">
+          <button type="button" [class]="BOTON_ICONO + ' size-8! ' + BOTON_ICONO_SALIR" aria-label="Cerrar sesión" appTip="Cerrar sesión" (click)="salir.emit()">
             <lucide-angular name="power" [size]="16"></lucide-angular>
           </button>
         </div>

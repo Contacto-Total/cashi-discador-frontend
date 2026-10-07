@@ -116,6 +116,13 @@
 @keyframes cashi-entra { from { background-color: var(--ok-bg); } to { background-color: transparent; } }
 @keyframes cashi-late { 50% { background-color: color-mix(in srgb, var(--ro-pt) 25%, transparent); } }
 
+/* Estado del asesor en el pie del menú. La luz que se enciende al pasar el cursor es un degradado
+   radial cuyo radio se anima: para eso el radio tiene que ser una propiedad registrada, y su valor
+   inicial ir en px (con rem la regla entera no es válida). Con el tiempo excedido, un destello recorre
+   la fila, con una pausa entre pasada y pasada: es lo único que se mueve. */
+@property --luz-estado { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes cashi-destello { 0%, 18% { background-position: 130% 0; } 72%, 100% { background-position: -30% 0; } }
+
 @theme inline {
   --color-background: var(--background);
   --color-lienzo: var(--lienzo);
