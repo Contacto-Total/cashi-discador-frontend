@@ -797,7 +797,8 @@ export class DailyLoadComponent implements OnInit {
                 try {
                   if (header.dataType === 'FECHA') {
                     // Intentar parsear la fecha desde el string CSV
-                    const dateValue = this.parseCSVDate(value, header.format || 'dd/MM/yyyy');
+                    //reciba un string
+                    const dateValue = this.parseCSVDate( String(value), header.format || 'dd/MM/yyyy');
                     if (dateValue) {
                       transformedRow[header.headerName] = dateValue;
                     } else {
