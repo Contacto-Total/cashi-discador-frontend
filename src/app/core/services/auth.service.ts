@@ -18,6 +18,12 @@ export interface RolResponse {
 export class AuthService {
   private readonly TOKEN_KEY = 'callcenter_token';
   private readonly USER_KEY = 'callcenter_user';
+  /**
+   * Marca de que el login se hizo en esta pestaña. Va en sessionStorage: sobrevive
+   * a un F5 pero no a cerrar la pestaña o el navegador, así que una sesión sin la
+   * marca es una que se recuperó del localStorage al volver a abrir la app.
+   */
+  private readonly LOGIN_PESTANA_KEY = 'cashi_login_pestana';
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
   private tokenCheckInterval: any;
@@ -98,6 +104,7 @@ export class AuthService {
     this.isLoggingOut = true;
 
     console.log('[AUTH] Token eliminado del localStorage');
+    sessionStorage.removeItem(this.LOGIN_PESTANA_KEY);
     this.currentUserSubject.next(null);
     localStorage.removeItem(this.USER_KEY);
     localStorage.removeItem('refresh_token');
@@ -282,6 +289,8 @@ export class AuthService {
         };
 
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        // Antes de emitir el usuario: quien escucha currentUser$ ya debe ver la marca.
+        sessionStorage.setItem(this.LOGIN_PESTANA_KEY, '1');
         this.currentUserSubject.next(user);
 
         // Programar renovación proactiva del nuevo token
@@ -315,6 +324,7 @@ export class AuthService {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem('refresh_token');
     localStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem(this.LOGIN_PESTANA_KEY);
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
 
@@ -384,6 +394,11 @@ export class AuthService {
   getCurrentUserId(): number | null {
     const user = this.getCurrentUser();
     return user ? user.id : null;
+  }
+
+  /** Si el login se hizo en esta pestaña (y no es una sesión recuperada al reabrir). */
+  esLoginDeEstaPestana(): boolean {
+    return sessionStorage.getItem(this.LOGIN_PESTANA_KEY) === '1';
   }
 
   getRefreshToken(): string | null {

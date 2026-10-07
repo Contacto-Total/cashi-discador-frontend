@@ -237,7 +237,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
         // Si está DESCONECTADO, lo activamos EN LÍNEA, no en DISPONIBLE: queda conectado
         // pero fuera de la cola, y entra a la cola cuando él elige Disponible.
-        if (response.estadoActual === 'DESCONECTADO') {
+        // Si al ver ese DESCONECTADO se cerró la sesión (sesión recuperada al reabrir,
+        // o el asesor ya había estado conectado en esta pestaña), no hay que reactivarlo.
+        if (response.estadoActual === 'DESCONECTADO' && this.authService.isAuthenticated()) {
           console.log('[AgentDashboard] Agente DESCONECTADO - activando como EN_LINEA');
           this.agentStatusService.changeStatus(this.userId!, {
             estado: AgentState.EN_LINEA,
