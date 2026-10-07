@@ -1,10 +1,11 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
 import {
   AsistenciaDia,
+  AmbitoAsistencia,
   AsistenciaReporte,
   ResumenAgente,
   SemanaAgente,
@@ -71,20 +72,13 @@ const COLOR_DIA: Record<string, string> = {
   `],
   template: `
     <div class="px-7 py-5">
-        @if (!idSubcartera()) {
-          <div [class]="estilos.vacio">
-            <strong class="block text-[13.5px]">Elige un cliente, una cartera o una subcartera</strong>
-            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-              El reporte se consulta por ámbito. Así no se trae a toda la empresa de golpe.
-            </span>
-          </div>
-        } @else if (cargando()) {
+        @if (cargando()) {
           <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando asistencia…</p>
         } @else if (roster().length === 0) {
           <div [class]="estilos.vacio">
             <strong class="block text-[13.5px]">Nadie en ese ámbito</strong>
             <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-              Prueba con otra cartera o subcartera.
+              Prueba con otro cliente, cartera o subcartera.
             </span>
           </div>
         } @else if (persona(); as p) {
@@ -327,6 +321,8 @@ export class AsistenciaReporteComponent {
 
   /** El ámbito, el rango y el agente los pone la cabecera del módulo: son
    *  comunes a todas las pestañas y, repetidos, se desincronizan. */
+  readonly idCliente = input<number | null>(null);
+  readonly idCartera = input<number | null>(null);
   readonly idSubcartera = input<number | null>(null);
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
@@ -493,31 +489,40 @@ export class AsistenciaReporteComponent {
   }
 
   constructor() {
-    // Vuelve a pedir cuando cambia el ámbito o el rango: son los tres valores
-    // que definen la consulta y no hay más de donde venga el cambio. Cambiar de
-    // ámbito vacía además la persona elegida, porque el roster es otro.
+    // Vuelve a pedir cuando cambia el ámbito o el rango: son los valores que
+    // definen la consulta y no hay más de donde venga el cambio. Cambiar de
+    // ámbito vacía además la persona elegida, porque el roster es otro. Sin
+    // nada elegido se trae a toda la empresa.
     effect(() => {
-      const ambito = this.idSubcartera();
+      const ambito: AmbitoAsistencia = {
+        idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera()
+      };
       const desde = this.desde();
       const hasta = this.hasta();
-      if (!ambito) {
-        this.reporte.set(null);
-        return;
-      }
-      this.pedir(desde, hasta, ambito);
+      untracked(() => this.pedir(desde, hasta, ambito));
     });
   }
 
-  private pedir(desde: string, hasta: string, idSubcartera: number): void {
+  /** El último pedido: la respuesta de un ámbito que ya se dejó no se usa. */
+  private pedido = 0;
+
+  private pedir(desde: string, hasta: string, ambito: AmbitoAsistencia): void {
+    const pedido = ++this.pedido;
     this.cargando.set(true);
-    this.servicio.reporte(desde, hasta, idSubcartera).subscribe({
+    this.servicio.reporte(desde, hasta, ambito).subscribe({
       next: r => {
+        if (pedido !== this.pedido) {
+          return;
+        }
         this.reporte.set(r);
         this.rosterCambia.emit(r.agentes.map(a => a.nombreAgente));
         this.reporteCargado.emit(r);
         this.cargando.set(false);
       },
       error: () => {
+        if (pedido !== this.pedido) {
+          return;
+        }
         this.toast.error('No se pudo cargar la asistencia');
         this.cargando.set(false);
       }

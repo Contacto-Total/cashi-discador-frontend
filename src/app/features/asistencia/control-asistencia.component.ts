@@ -80,8 +80,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
               <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
               Corregir marcaciones
             </button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="exportar()"
-                    [disabled]="!idSubcartera()">
+            <button type="button" [class]="estilos.botonPrimario" (click)="exportar()">
               <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Descargar Excel
             </button>
@@ -197,6 +196,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
         @switch (pantalla()) {
           @case ('asistencia') {
             <app-asistencia-reporte
+              [idCliente]="idCliente()" [idCartera]="idCartera()"
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
               [agente]="agente()"
               (rosterCambia)="roster.set($event)"
@@ -205,6 +205,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           }
           @case ('dashboard') {
             <app-asistencia-dashboard
+              [idCliente]="idCliente()" [idCartera]="idCartera()"
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
               (semanaAnterior)="retrocederSemana()"
               (volverASemana)="volverASemanaPorDefecto()"
@@ -233,6 +234,7 @@ import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
           }
           @case ('edicion') {
             <app-asistencia-edicion
+              [idCliente]="idCliente()" [idCartera]="idCartera()"
               [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
               (volver)="pantalla.set('asistencia')" />
           }
@@ -315,7 +317,7 @@ export class ControlAsistenciaComponent implements OnInit {
   /** Lo que hay que saber del ámbito antes de mirar a nadie en concreto. */
   readonly resumen = computed(() => {
     const r = this.reporte();
-    if (!this.idSubcartera() || !r) {
+    if (!r) {
       return 'Ingreso y salida según el inicio y cierre de sesión en Cashi';
     }
     const faltas = r.dias.filter(d => d.estado === 'FALTA').length;
@@ -436,7 +438,9 @@ export class ControlAsistenciaComponent implements OnInit {
    * se mantiene en un solo sitio.
    */
   exportar(): void {
-    this.servicio.excel(this.desde(), this.hasta(), this.idSubcartera()).subscribe({
+    this.servicio.excel(this.desde(), this.hasta(), {
+      idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera()
+    }).subscribe({
       next: blob => {
         const url = URL.createObjectURL(blob);
         const enlace = document.createElement('a');
