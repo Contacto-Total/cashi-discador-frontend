@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -82,6 +82,9 @@ const REPOSO = 10_000;
 const CADA = 1000;
 const NOTA = 6000;
 const POR_PAGINA = 5;
+/** Alto en rem de una fila de «En gestión» (dos renglones y su relleno) y de su paginador. */
+const FILA_GESTION = 3.8125;
+const PAGINADOR_GESTION = 2.625;
 
 /**
  * Vista de Sistemas para el mantenimiento: programa o lanza la detencion, sigue
@@ -156,6 +159,28 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
 
   readonly activo = computed(() => this.vista() === 'EN_DETENCION' || this.vista() === 'BLOQUEADO');
   readonly lista = computed<EnGestion[]>(() => this.avance()?.enGestion ?? []);
+
+  // «En gestión» por páginas. El alto útil de la tarjeta lo fija la fila, no la lista: de él y del
+  // tamaño de letra salen las filas que caben.
+  private readonly altoGestion = signal(0);
+  private readonly rem = signal(16);
+  private readonly paginaGestionPedida = signal(0);
+  /** Filas por página: todas si caben; si no, las que entran con el paginador puesto. */
+  readonly filasGestion = computed(() => {
+    const total = this.lista().length, alto = this.altoGestion(), rem = this.rem();
+    const fila = FILA_GESTION * rem + 1;
+    if (!alto || total * fila - 1 <= alto) {
+      return Math.max(1, total);
+    }
+    return Math.max(1, Math.floor((alto - PAGINADOR_GESTION * rem) / fila));
+  });
+  readonly paginasGestion = computed(() => Math.max(1, Math.ceil(this.lista().length / this.filasGestion())));
+  /** Si la lista se acorta, la página pedida puede ya no existir: se queda en la última. */
+  readonly paginaGestion = computed(() => Math.min(this.paginaGestionPedida(), this.paginasGestion() - 1));
+  readonly gestionVisible = computed<EnGestion[]>(() => {
+    const filas = this.filasGestion(), desde = this.paginaGestion() * filas;
+    return this.lista().slice(desde, desde + filas);
+  });
   readonly servicios = computed<ServicioVigilado[]>(() => this.avance()?.servicios ?? []);
   readonly bloqueados = computed(() => {
     const a = this.avance();
@@ -232,6 +257,26 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
     }, { allowSignalWrites: true });
   }
 
+  /** Mide la caja de «En gestión» al aparecer y cada vez que cambia de alto. */
+  @ViewChild('cajaGestion')
+  set cajaGestion(caja: ElementRef<HTMLElement> | undefined) {
+    this.vigiaGestion?.disconnect();
+    if (!caja) {
+      return;
+    }
+    this.vigiaGestion = new ResizeObserver(() => this.zona.run(() => {
+      this.altoGestion.set(caja.nativeElement.clientHeight);
+      this.rem.set(parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
+    }));
+    this.vigiaGestion.observe(caja.nativeElement);
+  }
+  private vigiaGestion?: ResizeObserver;
+  private readonly zona = inject(NgZone);
+
+  irPaginaGestion(paso: number): void {
+    this.paginaGestionPedida.set(Math.max(0, Math.min(this.paginaGestion() + paso, this.paginasGestion() - 1)));
+  }
+
   ngOnInit(): void {
     this.pedir();
     this.cargarHistorial(0);
@@ -240,6 +285,7 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.vigiaGestion?.disconnect();
     clearInterval(this.sondeo);
     clearInterval(this.reloj);
     this.esperas.forEach(clearTimeout);
