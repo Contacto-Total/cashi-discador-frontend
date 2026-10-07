@@ -278,7 +278,7 @@ export class AuthService {
           email: response.email,
           firstName: firstName,
           lastName: lastName,
-          role: this.mapRoleToBase(response.roles?.[0]) as UserRole,
+          role: this.mapRolesToBase(response.roles) as UserRole,
           roles: response.roles ?? [],
           sipExtension: response.extensionSip,
           sipPassword: response.sipPassword,
@@ -330,6 +330,13 @@ export class AuthService {
 
     // Reiniciar verificación de token después de logout
     this.startTokenCheck();
+  }
+
+  /** Rol base de un usuario con uno o varios roles: vale el de mayor nivel. */
+  private mapRolesToBase(roles?: string[]): string {
+    const bases = (roles ?? []).map(rol => this.mapRoleToBase(rol));
+    if (bases.includes('ADMIN')) return 'ADMIN';
+    return bases.includes('SUPERVISOR') ? 'SUPERVISOR' : 'AGENT';
   }
 
   /**
