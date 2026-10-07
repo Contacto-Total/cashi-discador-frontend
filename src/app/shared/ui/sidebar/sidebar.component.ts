@@ -152,15 +152,37 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
     return this.abiertos.has(item.codigo);
   }
 
-  alternarGrupo(item: MenuItem): void {
+  alternarGrupo(item: MenuItem, fila?: HTMLElement): void {
     if (this.plegado) {
       this.plegadoChange.emit(false);
       this.abiertos.add(item.codigo);
+      this.mostrarGrupo(fila, 300);
       return;
     }
     if (!this.abiertos.delete(item.codigo)) {
       this.abiertos.add(item.codigo);
+      this.mostrarGrupo(fila, 220);
     }
+  }
+
+  /**
+   * Al abrir un grupo, el menú baja lo justo para que se vean sus pantallas. En una pantalla baja el
+   * grupo se abre por debajo del pie y parecería que no pasó nada. Espera a que termine de desplegarse.
+   */
+  private mostrarGrupo(fila: HTMLElement | undefined, espera: number): void {
+    const menu = fila?.closest('nav');
+    if (!fila || !menu) {
+      return;
+    }
+    setTimeout(() => {
+      const grupo = fila.getBoundingClientRect();
+      const caja = menu.getBoundingClientRect();
+      const falta = grupo.bottom - caja.bottom;
+      if (falta > 0) {
+        // Sin sacar de la vista la fila del propio grupo.
+        menu.scrollBy({ top: Math.min(falta, grupo.top - caja.top), behavior: 'smooth' });
+      }
+    }, espera);
   }
 
   /** Al escribir, los grupos se aplanan y se ve el resultado directo. */
