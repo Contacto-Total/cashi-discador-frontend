@@ -154,6 +154,16 @@ export interface TipoDia {
   diasAnticipacion: number | null;
 }
 
+/**
+ * El ámbito de una consulta: lo elegido en la cascada Cliente › Cartera ›
+ * Subcartera. Manda lo más fino que haya; sin nada, toda la empresa.
+ */
+export interface AmbitoAsistencia {
+  idCliente?: number | null;
+  idCartera?: number | null;
+  idSubcartera?: number | null;
+}
+
 /** Lo que una solicitud abriría de deuda al aprobarse. */
 export interface DeudaSolicitud {
   seRecupera: boolean;

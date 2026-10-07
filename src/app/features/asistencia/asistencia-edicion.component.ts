@@ -1,10 +1,10 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaDia, AsistenciaReporte, CierreSemana, ResumenAgente, TipoMarcacion } from './asistencia.models';
+import { AmbitoAsistencia, AsistenciaDia, AsistenciaReporte, CierreSemana, ResumenAgente, TipoMarcacion } from './asistencia.models';
 import { ESTADOS, ESTILOS } from './asistencia.estilos';
 
 /** Las seis marcas, con el nombre que se lee en el aviso de accesibilidad. */
@@ -149,15 +149,15 @@ interface Cambio {
     </div>
 
     <div class="px-7 py-5">
-      @if (!idSubcartera() || !roster().length) {
+      @if (cargando()) {
+        <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando…</p>
+      } @else if (!roster().length) {
         <div [class]="estilos.vacio">
-          <strong class="block text-[13.5px]">Elige un ámbito con personas</strong>
+          <strong class="block text-[13.5px]">Nadie en ese ámbito</strong>
           <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            La edición trabaja sobre una persona del cliente y la cartera elegidos.
+            Prueba con otro cliente, cartera o subcartera.
           </span>
         </div>
-      } @else if (cargando()) {
-        <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando…</p>
       } @else if (persona(); as p) {
         <div class="aparecer">
 
@@ -368,6 +368,8 @@ export class AsistenciaEdicionComponent {
   protected readonly ESTADOS = ESTADOS;
   protected readonly MARCAS = MARCAS;
 
+  readonly idCliente = input<number | null>(null);
+  readonly idCartera = input<number | null>(null);
   readonly idSubcartera = input<number | null>(null);
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
@@ -407,11 +409,15 @@ export class AsistenciaEdicionComponent {
   /** Las semanas cerradas: lo que cae en ellas ya no se corrige. */
   readonly cierres = signal<CierreSemana[]>([]);
 
-  /** Si ese día es de una semana cerrada del ámbito o de toda la empresa. */
+  /**
+   * Si ese día es de una semana cerrada de toda la empresa o de la subcartera
+   * de la persona: la elegida en la cabecera o, sin ella, la suya.
+   */
   diaCerrado(fecha: string): boolean {
     const sub = this.idSubcartera();
+    const suya = this.persona()?.subcartera ?? null;
     return this.cierres().some(c => fecha >= c.lunes && fecha <= c.ultimoDia
-      && (c.idSubcartera === null || c.idSubcartera === sub));
+      && (c.idSubcartera === null || (sub ? c.idSubcartera === sub : !!suya && c.subcartera === suya)));
   }
 
   readonly semanaCerrada = computed(() => {
@@ -471,28 +477,38 @@ export class AsistenciaEdicionComponent {
       next: c => this.cierres.set(c),
       error: () => this.cierres.set([])
     });
+    // Sin nada elegido se corrige sobre toda la empresa.
     effect(() => {
-      const ambito = this.idSubcartera();
+      const ambito = this.ambito();
       const desde = this.desde();
       const hasta = this.hasta();
-      if (!ambito) {
-        this.reporte.set(null);
-        return;
-      }
-      this.cargar(desde, hasta, ambito);
+      untracked(() => this.cargar(desde, hasta, ambito));
     });
   }
 
-  private cargar(desde: string, hasta: string, idSubcartera: number): void {
+  private readonly ambito = computed<AmbitoAsistencia>(() => ({
+    idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera()
+  }));
+  /** El último pedido: la respuesta de un ámbito que ya se dejó no se usa. */
+  private pedido = 0;
+
+  private cargar(desde: string, hasta: string, ambito: AmbitoAsistencia): void {
+    const pedido = ++this.pedido;
     this.cargando.set(true);
-    this.servicio.reporte(desde, hasta, idSubcartera).subscribe({
+    this.servicio.reporte(desde, hasta, ambito).subscribe({
       next: r => {
+        if (pedido !== this.pedido) {
+          return;
+        }
         this.reporte.set(r);
         this.idElegido.set(r.agentes[0]?.idUsuario ?? null);
         this.descartar();
         this.cargando.set(false);
       },
       error: () => {
+        if (pedido !== this.pedido) {
+          return;
+        }
         this.toast.error('No se pudo cargar la asistencia');
         this.cargando.set(false);
       }
@@ -629,10 +645,7 @@ export class AsistenciaEdicionComponent {
       return;
     }
     this.toast.success('Horas corregidas');
-    const ambito = this.idSubcartera();
-    if (ambito) {
-      this.cargar(this.desde(), this.hasta(), ambito);
-    }
+    this.cargar(this.desde(), this.hasta(), this.ambito());
   }
 
   private corta(fecha: string): string {

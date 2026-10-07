@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AmbitoAsistencia,
   AsistenciaReporte,
   AvisoAsistencia,
   CierreSemana,
@@ -50,16 +51,28 @@ export class AsistenciaService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/asistencia`;
 
+  /**
+   * Pone el ámbito en la consulta: la subcartera si la hay; si no, la cartera,
+   * y si no, el cliente. Un número suelto es una subcartera.
+   */
+  private conAmbito(params: HttpParams, ambito?: number | AmbitoAsistencia | null): HttpParams {
+    const a: AmbitoAsistencia = typeof ambito === 'number' ? { idSubcartera: ambito } : ambito ?? {};
+    if (a.idSubcartera) {
+      return params.set('idSubcartera', a.idSubcartera);
+    }
+    if (a.idCartera) {
+      return params.set('idCartera', a.idCartera);
+    }
+    return a.idCliente ? params.set('idCliente', a.idCliente) : params;
+  }
+
   reporte(
     desde: string,
     hasta: string,
-    idSubcartera?: number | null,
+    ambito?: number | AmbitoAsistencia | null,
     idsUsuarios?: number[]
   ): Observable<AsistenciaReporte> {
-    let params = new HttpParams().set('desde', desde).set('hasta', hasta);
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera);
-    }
+    let params = this.conAmbito(new HttpParams().set('desde', desde).set('hasta', hasta), ambito);
     (idsUsuarios ?? []).forEach(id => {
       params = params.append('idsUsuarios', id);
     });
@@ -89,11 +102,8 @@ export class AsistenciaService {
   }
 
   /** El mismo reporte en Excel. */
-  excel(desde: string, hasta: string, idSubcartera?: number | null): Observable<Blob> {
-    let params = new HttpParams().set('desde', desde).set('hasta', hasta);
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera);
-    }
+  excel(desde: string, hasta: string, ambito?: number | AmbitoAsistencia | null): Observable<Blob> {
+    const params = this.conAmbito(new HttpParams().set('desde', desde).set('hasta', hasta), ambito);
     return this.http.get(`${this.url}/reporte/excel`, { params, responseType: 'blob' });
   }
 
@@ -137,11 +147,8 @@ export class AsistenciaService {
     return this.http.get<AsistenciaReporte>(`${this.url}/reporte/mio`, { params });
   }
 
-  dashboard(desde: string, hasta: string, idSubcartera?: number | null): Observable<DashboardAsistencia> {
-    let params = new HttpParams().set('desde', desde).set('hasta', hasta);
-    if (idSubcartera) {
-      params = params.set('idSubcartera', idSubcartera);
-    }
+  dashboard(desde: string, hasta: string, ambito?: number | AmbitoAsistencia | null): Observable<DashboardAsistencia> {
+    const params = this.conAmbito(new HttpParams().set('desde', desde).set('hasta', hasta), ambito);
     return this.http.get<DashboardAsistencia>(`${this.url}/dashboard`, { params });
   }
 

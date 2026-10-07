@@ -7,7 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Chart, registerables } from 'chart.js';
 import { ToastService } from '../../shared/services/toast.service';
 import { AsistenciaService } from './asistencia.service';
-import { CuadroDia, DashboardAsistencia, EstadoAsistencia, Justificacion } from './asistencia.models';
+import { AmbitoAsistencia, CuadroDia, DashboardAsistencia, EstadoAsistencia, Justificacion } from './asistencia.models';
 import { ESTADOS, ESTILOS, duracionCorta, enDuracion, semanaPorDefecto, unidadDe } from './asistencia.estilos';
 
 Chart.register(...registerables);
@@ -216,14 +216,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   </div>
 
   <div class="px-7 py-5">
-    @if (!idSubcartera()) {
-      <div [class]="estilos.vacio">
-        <strong class="block text-[13.5px]">Elige un cliente, una cartera o una subcartera</strong>
-        <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-          El dashboard resume el ámbito elegido; con toda la empresa de golpe no se lee.
-        </span>
-      </div>
-    } @else if (cargando()) {
+    @if (cargando()) {
       <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando…</p>
     } @else if (datos(); as d) {
       <div class="aparecer">
@@ -523,6 +516,8 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
   protected readonly ICONO_PASO: Record<string, string> = {
     hecho: 'check', falta: 'alert-triangle', espera: 'lock', listo: 'arrow-right'
   };
+  readonly idCliente = input<number | null>(null);
+  readonly idCartera = input<number | null>(null);
   readonly idSubcartera = input<number | null>(null);
   readonly desde = input.required<string>();
   readonly hasta = input.required<string>();
@@ -709,16 +704,14 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
+    // Sin nada elegido, el dashboard es el de toda la empresa.
     effect(() => {
-      const ambito = this.idSubcartera();
+      const ambito: AmbitoAsistencia = {
+        idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera()
+      };
       const desde = this.desde();
       const hasta = this.hasta();
-      if (!ambito) {
-        this.datos.set(null);
-        this.destruir();
-        return;
-      }
-      this.cargar(desde, hasta, ambito);
+      untracked(() => this.cargar(desde, hasta, ambito));
     });
   }
 
@@ -742,14 +735,24 @@ export class AsistenciaDashboardComponent implements AfterViewInit, OnDestroy {
     untracked(() => this.dibujar());
   });
 
-  private cargar(desde: string, hasta: string, idSubcartera: number): void {
+  /** El último pedido: la respuesta de un ámbito que ya se dejó no se usa. */
+  private pedido = 0;
+
+  private cargar(desde: string, hasta: string, ambito: AmbitoAsistencia): void {
+    const pedido = ++this.pedido;
     this.cargando.set(true);
-    this.servicio.dashboard(desde, hasta, idSubcartera).subscribe({
+    this.servicio.dashboard(desde, hasta, ambito).subscribe({
       next: d => {
+        if (pedido !== this.pedido) {
+          return;
+        }
         this.datos.set(d);
         this.cargando.set(false);
       },
       error: () => {
+        if (pedido !== this.pedido) {
+          return;
+        }
         this.toast.error('No se pudo cargar el dashboard');
         this.cargando.set(false);
       }
