@@ -127,8 +127,20 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
     return item.tipo === 'DROPDOWN' && item.children?.length > 0;
   }
 
+  /**
+   * La pantalla está abierta si la dirección es su ruta o sigue dentro de ella. Se compara por tramos
+   * y no por letras: estar en `/asistencia-equipo` no marca `/asistencia`.
+   */
   activa(ruta: string | null | undefined): boolean {
-    return !!ruta && this.url.startsWith(ruta);
+    if (!ruta) {
+      return false;
+    }
+    // Una ruta de menú que ya trae parámetros se compara tal cual.
+    if (ruta.includes('?')) {
+      return this.url.startsWith(ruta);
+    }
+    const url = this.url.split(/[?#]/)[0];
+    return url === ruta || url.startsWith(ruta.endsWith('/') ? ruta : `${ruta}/`);
   }
 
   /** El grupo contiene la pantalla actual. */
