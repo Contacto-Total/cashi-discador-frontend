@@ -62,6 +62,16 @@ export class WebsocketService {
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
+      // El token se renueva por HTTP cada hora, pero connectHeaders queda con el del
+      // primer connect(). Sin esto, pasada la primera hora cualquier reconexion entra
+      // con un token vencido, el backend la toma como anonima y a los 15 s marca
+      // DESCONECTADO a un asesor que sigue trabajando.
+      beforeConnect: (client: Client) => {
+        const vigente = this.authService.getToken();
+        if (vigente) {
+          client.connectHeaders = { Authorization: `Bearer ${vigente}` };
+        }
+      },
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       reconnectDelay: 5000,

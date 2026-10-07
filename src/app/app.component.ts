@@ -13,6 +13,7 @@ import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
 import { AgentPresenceService } from './core/services/agent-presence.service';
+import { SesionDesconexionService } from './core/services/sesion-desconexion.service';
 import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
 import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
@@ -105,6 +106,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private sessionConfig: SessionConfigService,
     private agentStatusService: AgentStatusService,
     private agentPresence: AgentPresenceService,
+    private sesionDesconexion: SesionDesconexionService,
     private recordatoriosService: RecordatoriosService,
     private notificacionesService: NotificacionesSistemaService,
     private menuPermissionService: MenuPermissionService,
@@ -246,6 +248,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.websocketService.connect();
         this.subscribeForceLogout();
         this.iniciarMonitoreoInactividad();
+        this.iniciarCierrePorDesconexion();
         this.mantenimiento.iniciar();
 
         // Cargar menú dinámico según el rol del usuario
@@ -276,6 +279,7 @@ export class AppComponent implements OnInit, OnDestroy {
         // Usuario no autenticado - detener servicios
         this.mantenimiento.detener();
         this.inactivityService.detener();
+        this.sesionDesconexion.detener();
         this.websocketService.disconnect();
         this.sipService.unregister();
         this.peripheralHealthService.stop();
@@ -317,6 +321,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.callStatusSubscription?.unsubscribe();
     this.predictiveCallSubscription?.unsubscribe();
     this.forceLogoutSubscription?.unsubscribe();
+    this.cierreDesconexionSubscription?.unsubscribe();
     this.inactivityService.detener();
 
     // Limpiar timeout de navegación si existe
@@ -414,6 +419,43 @@ export class AppComponent implements OnInit, OnDestroy {
     this.logout(true);
 
     // Resetear flag solo después de que la navegación complete
+    setTimeout(() => {
+      this.sessionClosing = false;
+    }, 1000);
+  }
+
+  private cierreDesconexionSubscription?: Subscription;
+
+  /**
+   * Cierra la sesión cuando el backend dejó al asesor DESCONECTADO (ver
+   * SesionDesconexionService). Antes el estado decía "fuera" y el token seguía vivo.
+   */
+  private iniciarCierrePorDesconexion(): void {
+    this.cierreDesconexionSubscription?.unsubscribe();
+    this.cierreDesconexionSubscription = this.sesionDesconexion.cerrar$.subscribe(() => {
+      this.cerrarSesionPorDesconexion();
+    });
+    this.sesionDesconexion.iniciar();
+  }
+
+  private cerrarSesionPorDesconexion(): void {
+    if (this.sessionClosing) {
+      return;
+    }
+    this.sessionClosing = true;
+
+    if (this.dialogRef) {
+      this.dialogRef.close();
+      this.dialogRef = null;
+    }
+
+    this.toast.warning('Tu sesión se cerró por desconexión');
+
+    // El backend ya lo tiene DESCONECTADO: no se vuelve a marcar, porque el DELETE
+    // escribiría otra fila de DESCONECTADO en el historial y el reporte contaría
+    // dos desconexiones.
+    this.logout(true, false);
+
     setTimeout(() => {
       this.sessionClosing = false;
     }, 1000);
@@ -692,7 +734,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
 
-  logout(forced = false): void {
+  /**
+   * @param marcarDesconectado false cuando el backend ya lo dejó DESCONECTADO
+   *        (cierre por desconexión): no se repite el DELETE de estado.
+   */
+  logout(forced = false, marcarDesconectado = true): void {
     // Bloqueo de salida: si hay una gestión con llamada sin guardar, el logout
     // manual queda bloqueado (la única vía de salida es Guardar Gestión).
     // El logout forzado (inactividad / sesión expirada) siempre procede.
@@ -761,6 +807,13 @@ export class AppComponent implements OnInit, OnDestroy {
         });
       } catch (e) {
         // Ignorar
+      }
+
+      // Sin esperar respuesta: el token se borra en el acto y nada más alcanza a
+      // usarlo (p. ej. la pantalla de agente reactivando EN_LINEA al ver DESCONECTADO).
+      if (!marcarDesconectado) {
+        finalizarLogout();
+        return;
       }
 
       try {
