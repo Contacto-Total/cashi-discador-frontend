@@ -46,7 +46,7 @@
       <ng-container *ngFor="let seccion of secciones">
       <p [class]="SECCION" [ngClass]="conBuscador ? SECCION_BAJO_LUPA : ''"><span [class]="TEXTO">{{ seccion.nombre }}</span></p>
       <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
-        <li *ngFor="let item of seccion.items">
+        <li *ngFor="let item of seccion.items" #fila>
           <ng-container *ngIf="!esGrupo(item)">
             <ng-container *ngTemplateOutlet="enlace; context: { $implicit: item, hija: false }"></ng-container>
           </ng-container>
@@ -54,7 +54,7 @@
           <ng-container *ngIf="esGrupo(item)">
             <button type="button" [class]="FILA + ' ' + FILA_MENU" [ngClass]="dentro(item) ? 'bg-transparent text-sidebar-foreground! hover:bg-sidebar-accent/60' : FILA_REPOSO"
                     [attr.aria-expanded]="abierto(item) && !plegado" [appTip]="item.etiqueta + ' · ' + item.children.length + ' pantallas'" [appTipActivo]="plegado"
-                    (click)="alternarGrupo(item)">
+                    (click)="alternarGrupo(item, fila)">
               <lucide-angular [name]="icono(item)" [size]="19.2" [ngClass]="'flex-none ' + (ICONO_REPOSO)"></lucide-angular>
               <span [class]="TEXTO">{{ item.etiqueta }}</span>
               <lucide-angular [ngClass]="'flex-none text-[color-mix(in_srgb,currentColor_50%,transparent)] transition-[rotate,opacity] duration-200 group-data-[plegado]/sb:opacity-0'" name="chevron-right" [size]="14" [class.rotate-90]="abierto(item)"></lucide-angular>
