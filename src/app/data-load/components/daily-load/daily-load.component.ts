@@ -615,6 +615,15 @@ export class DailyLoadComponent implements OnInit {
                   } else if (header.dataType === 'FECHA' && value instanceof Date) {
                     const format = header.format || 'dd/MM/yyyy';
                     transformedRow[header.headerName] = this.formatDateByPattern(value, format);
+                  } else if (header.dataType === 'FECHA') {
+                    // Fecha como texto en Excel (ej. "15/10/2026  00:00:00")
+                    const dateValue = this.parseCSVDate(String(value), header.format || 'dd/MM/yyyy');
+                    if (dateValue) {
+                      transformedRow[header.headerName] = dateValue;
+                    } else {
+                      rowError = `Valor no es fecha válida para campo ${header.headerName}: ${value} (formato esperado: ${header.format || 'dd/MM/yyyy'})`;
+                      transformedRow[header.headerName] = String(value);
+                    }
                   } else {
                     transformedRow[header.headerName] = String(value).trim();
                   }
@@ -916,47 +925,32 @@ export class DailyLoadComponent implements OnInit {
 
       const regex = new RegExp('^' + formatRegex + '$');
 
-      if (regex.test(value.trim())) {
-        return value.trim();
+      // El orden de entrada se detecta desde el valor, no desde el formato de salida:
+      // dd/MM/yyyy (día primero) o yyyy-MM-dd, con hora opcional (uno o más espacios, o 'T')
+      const match = value.trim().match(
+        /^(\d{1,4})[-\/.](\d{1,2})[-\/.](\d{1,4})(?:[\sT]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/
+      );
+
+      if (!match) {
+        // Formatos sin separador (ej. yyyyMMdd): aceptar solo si ya coincide con el formato configurado
+        return regex.test(value.trim()) ? value.trim() : null;
       }
 
-      // Si no coincide, intentar parsear y reformatear
-      // Detectar separadores comunes
-      const dateParts = value.split(/[-\/\s:]/);
-
-      if (dateParts.length < 3) {
-        return null;
-      }
-
-      // Intentar diferentes formatos comunes
       let day: number, month: number, year: number;
-      let hours = 0, minutes = 0, seconds = 0;
 
-      // Formato dd/MM/yyyy o dd-MM-yyyy
-      if (format.startsWith('dd')) {
-        day = parseInt(dateParts[0]);
-        month = parseInt(dateParts[1]);
-        year = parseInt(dateParts[2]);
-      }
-      // Formato MM/dd/yyyy o MM-dd-yyyy
-      else if (format.startsWith('MM')) {
-        month = parseInt(dateParts[0]);
-        day = parseInt(dateParts[1]);
-        year = parseInt(dateParts[2]);
-      }
-      // Formato yyyy/MM/dd o yyyy-MM-dd
-      else {
-        year = parseInt(dateParts[0]);
-        month = parseInt(dateParts[1]);
-        day = parseInt(dateParts[2]);
+      if (match[1].length === 4) {
+        year = parseInt(match[1]);
+        month = parseInt(match[2]);
+        day = parseInt(match[3]);
+      } else {
+        day = parseInt(match[1]);
+        month = parseInt(match[2]);
+        year = parseInt(match[3]);
       }
 
-      // Parsear tiempo si existe
-      if (dateParts.length > 3) {
-        hours = parseInt(dateParts[3]) || 0;
-        minutes = parseInt(dateParts[4]) || 0;
-        seconds = parseInt(dateParts[5]) || 0;
-      }
+      const hours = parseInt(match[4]) || 0;
+      const minutes = parseInt(match[5]) || 0;
+      const seconds = parseInt(match[6]) || 0;
 
       // Validar valores
       if (isNaN(day) || isNaN(month) || isNaN(year) ||
