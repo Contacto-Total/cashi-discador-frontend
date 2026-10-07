@@ -9,6 +9,7 @@ import { LucideAngularModule, Activity, AlarmClock, AlertCircle, AlertTriangle, 
 // Iconos del menú lateral y del Panel del asesor rediseñados.
 import { Headset, UserSearch, MessageCircleMore, TriangleAlert, Radar, HeartPulse, Gauge, AudioLines, MessageSquareQuote, DatabaseZap, CalendarArrowUp, BadgePercent, ChartPie, MessageSquareText, Mails, FileCheck2, ChartColumnBig, SquareUserRound, UserRoundCheck, SlidersHorizontal, Columns3, CircleDollarSign, Wrench, Power, Settings2, Dot, Repeat, UtensilsCrossed, ShowerHead, ClipboardPenLine, CircleCheck, CircleAlert, CirclePlus } from 'lucide-angular';
 import { routes } from './app.routes';
+import { alcanceCatalogoInterceptor } from './core/interceptors/alcance-catalogo.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { tokenRefreshInterceptor } from './core/interceptors/token-refresh.interceptor';
 
@@ -20,7 +21,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-PE' },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([tokenRefreshInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([alcanceCatalogoInterceptor, tokenRefreshInterceptor, authInterceptor])),
     provideAnimations(),
     importProvidersFrom(
       LucideAngularModule.pick({

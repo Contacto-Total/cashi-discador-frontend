@@ -825,8 +825,8 @@ export class AsistenciaEquipoComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Cualquier supervisora elige cliente, cartera y subcartera: el ambito no
-    // depende de las subcarteras de su rol.
+    // La supervisora elige cliente, cartera y subcartera entre los que tiene asignados:
+    // el catálogo llega ya acotado a su alcance.
     this.cargando.set(false);
     this.cargarClientes();
     this.servicio.tiposDeDia().subscribe({

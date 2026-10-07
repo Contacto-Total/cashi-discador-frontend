@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { Observable } from 'rxjs';
 import { TenantService } from '../../services/tenant.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { Tenant } from '../../models/tenant.model';
@@ -115,7 +116,7 @@ interface Role {
                   <div class="flex items-center gap-2">
                     <lucide-angular name="map-pin" [size]="16" class="text-green-400"></lucide-angular>
                     <h2 class="text-sm font-bold text-white">Asignaciones</h2>
-                    <span class="text-xs text-gray-400">({{ selectedRole() ? selectedRole()!.assignments.length : 0 }})</span>
+                    <span class="text-xs text-gray-400">({{ selectedRole() ? marcadas().size : 0 }})</span>
                   </div>
                   @if (selectedRole()) {
                     <button (click)="toggleExpandAll()"
@@ -169,7 +170,7 @@ interface Role {
                                   <label class="flex items-center gap-1.5 cursor-pointer group">
                                     <input type="checkbox"
                                            [checked]="isPortfolioAssigned(portfolio.id)"
-                                           (change)="togglePortfolioAssignment(tenant.id, portfolio.id)"
+                                           (change)="togglePortfolioAssignment(portfolio.id)"
                                            class="w-3 h-3 text-green-600 bg-slate-700 border-slate-600 rounded focus:ring-green-500">
                                     <lucide-angular name="folder" [size]="11" class="text-green-400"></lucide-angular>
                                     <span class="text-xs font-medium text-gray-300 group-hover:text-purple-300 flex-1">
@@ -199,7 +200,7 @@ interface Role {
                                         <label class="flex items-center gap-1.5 cursor-pointer group">
                                           <input type="checkbox"
                                                  [checked]="isSubPortfolioAssigned(subPortfolio.id)"
-                                                 (change)="toggleSubPortfolioAssignment(tenant.id, portfolio.id, subPortfolio.id)"
+                                                 (change)="toggleSubPortfolioAssignment(subPortfolio.id)"
                                                  class="w-3 h-3 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
                                           <lucide-angular name="folder-tree" [size]="10" class="text-purple-400"></lucide-angular>
                                           <span class="text-xs text-gray-400 group-hover:text-purple-300">
@@ -346,6 +347,14 @@ export class RolesManagementComponent implements OnInit {
   roles = signal<Role[]>([]);
   selectedRole = signal<Role | null>(null);
 
+  /** Subcarteras marcadas en el rol que se está editando. */
+  marcadas = computed(() => this.subcarterasCubiertas(this.selectedRole()?.assignments ?? []));
+
+  // Consultas del catálogo en curso y si alguna falló: sin el catálogo completo no se puede
+  // traducir lo marcado a filas por subcartera.
+  private catalogoPendiente = signal(0);
+  private catalogoFallido = signal(false);
+
   // Permisos disponibles (se cargan del backend)
   availablePermissions = signal<Permission[]>([]);
 
@@ -366,34 +375,38 @@ export class RolesManagementComponent implements OnInit {
   }
 
   loadAllData() {
-    // Cargar todos los tenants
-    this.tenantService.getAllTenants().subscribe({
-      next: (tenants) => {
-        this.tenants.set(tenants);
+    this.pedirCatalogo(this.tenantService.getAllTenants(), tenants => {
+      this.tenants.set(tenants);
 
-        // Cargar portfolios para cada tenant
-        tenants.forEach(tenant => {
-          this.portfolioService.getPortfoliosByTenant(tenant.id).subscribe({
-            next: (portfolios) => {
-              // Asegurar que cada portfolio tenga el tenantId correcto
-              const portfoliosWithTenant = portfolios.map(p => ({ ...p, tenantId: tenant.id }));
-              this.allPortfolios.set([...this.allPortfolios(), ...portfoliosWithTenant]);
+      tenants.forEach(tenant => {
+        this.pedirCatalogo(this.portfolioService.getPortfoliosByTenant(tenant.id), portfolios => {
+          // Asegurar que cada portfolio tenga el tenantId correcto
+          const portfoliosWithTenant = portfolios.map(p => ({ ...p, tenantId: tenant.id }));
+          this.allPortfolios.set([...this.allPortfolios(), ...portfoliosWithTenant]);
 
-              // Cargar subportfolios para cada portfolio
-              portfolios.forEach(portfolio => {
-                this.portfolioService.getSubPortfoliosByPortfolio(portfolio.id).subscribe({
-                  next: (subPortfolios) => {
-                    this.allSubPortfolios.set([...this.allSubPortfolios(), ...subPortfolios]);
-                  },
-                  error: (err) => console.error(`Error loading subportfolios for portfolio ${portfolio.id}:`, err)
-                });
-              });
-            },
-            error: (err) => console.error(`Error loading portfolios for tenant ${tenant.id}:`, err)
+          portfolios.forEach(portfolio => {
+            this.pedirCatalogo(this.portfolioService.getSubPortfoliosByPortfolio(portfolio.id), subPortfolios => {
+              this.allSubPortfolios.set([...this.allSubPortfolios(), ...subPortfolios]);
+            });
           });
         });
+      });
+    });
+  }
+
+  /** Una consulta del catálogo, llevando la cuenta de las que faltan y de si alguna falló. */
+  private pedirCatalogo<T>(consulta: Observable<T>, alLlegar: (datos: T) => void) {
+    this.catalogoPendiente.update(n => n + 1);
+    consulta.subscribe({
+      next: datos => {
+        alLlegar(datos);
+        this.catalogoPendiente.update(n => n - 1);
       },
-      error: (err) => console.error('Error loading tenants:', err)
+      error: err => {
+        console.error('Error al cargar el catálogo de clientes, carteras y subcarteras:', err);
+        this.catalogoFallido.set(true);
+        this.catalogoPendiente.update(n => n - 1);
+      }
     });
   }
 
@@ -441,29 +454,46 @@ export class RolesManagementComponent implements OnInit {
     return this.allSubPortfolios().filter(sp => sp.portfolioId === portfolioId);
   }
 
-  // Calcular el número real de subcarteras cubiertas por las asignaciones de un rol
+  /** Cuántas subcarteras cubren las asignaciones de un rol. */
   countSubPortfoliosForRole(role: Role): number {
-    const subPortfolioIds = new Set<number>();
+    return this.subcarterasCubiertas(role.assignments).size;
+  }
 
-    role.assignments.forEach(assignment => {
-      if (assignment.type === 'INQUILINO') {
-        // Contar todas las subcarteras de este tenant
-        const portfolios = this.allPortfolios().filter(p => p.tenantId === assignment.tenantId);
-        portfolios.forEach(portfolio => {
-          const subPortfolios = this.allSubPortfolios().filter(sp => sp.portfolioId === portfolio.id);
-          subPortfolios.forEach(sp => subPortfolioIds.add(sp.id));
-        });
-      } else if (assignment.type === 'CARTERA' && assignment.portfolioId) {
-        // Contar todas las subcarteras de este portfolio
-        const subPortfolios = this.allSubPortfolios().filter(sp => sp.portfolioId === assignment.portfolioId);
-        subPortfolios.forEach(sp => subPortfolioIds.add(sp.id));
-      } else if (assignment.type === 'SUBCARTERA' && assignment.subPortfolioId) {
-        // Contar solo esta subcartera
-        subPortfolioIds.add(assignment.subPortfolioId);
+  /**
+   * Subcarteras del catálogo que cubren unas asignaciones. Una fila de cliente o de cartera
+   * cuenta por todas las subcarteras que cuelgan de ella.
+   */
+  private subcarterasCubiertas(assignments: RoleAssignment[]): Set<number> {
+    const ids = new Set<number>();
+    this.allSubPortfolios().forEach(sp => {
+      const portfolio = this.allPortfolios().find(p => p.id === sp.portfolioId);
+      if (!portfolio) return;
+      const cubierta = assignments.some(a =>
+        (a.type === 'INQUILINO' && a.tenantId === portfolio.tenantId) ||
+        (a.type === 'CARTERA' && a.portfolioId === sp.portfolioId) ||
+        (a.type === 'SUBCARTERA' && a.subPortfolioId === sp.id)
+      );
+      if (cubierta) ids.add(sp.id);
+    });
+    return ids;
+  }
+
+  /**
+   * Una fila por subcartera, con cliente, cartera y subcartera tomados del catálogo. Lo guardado
+   * no depende de cuántas subcarteras tenga la cartera o el cliente, y quien lee la asignación
+   * solo necesita mirar la subcartera.
+   */
+  private filasPorSubcartera(ids: Set<number>): RoleAssignment[] {
+    const filas: RoleAssignment[] = [];
+    const puestas = new Set<number>();
+    this.allSubPortfolios().forEach(sp => {
+      const portfolio = this.allPortfolios().find(p => p.id === sp.portfolioId);
+      if (portfolio && ids.has(sp.id) && !puestas.has(sp.id)) {
+        puestas.add(sp.id);
+        filas.push({ type: 'SUBCARTERA', tenantId: portfolio.tenantId, portfolioId: sp.portfolioId, subPortfolioId: sp.id });
       }
     });
-
-    return subPortfolioIds.size;
+    return filas;
   }
 
   // Expansión de árbol
@@ -493,213 +523,52 @@ export class RolesManagementComponent implements OnInit {
     return this.expandedPortfolios().includes(portfolioId);
   }
 
-  // Verificar asignaciones (con herencia visual)
+  // Cliente y cartera se ven marcados cuando lo están todas sus subcarteras.
   isTenantAssigned(tenantId: number): boolean {
-    const role = this.selectedRole();
-    if (!role) return false;
-    return role.assignments.some(a => a.type === 'INQUILINO' && a.tenantId === tenantId);
+    return this.todasMarcadas(this.subcarterasDeCliente(tenantId));
   }
 
   isPortfolioAssigned(portfolioId: number): boolean {
-    const role = this.selectedRole();
-    if (!role) return false;
-
-    // Buscar el portfolio para obtener su tenantId
-    const portfolio = this.allPortfolios().find(p => p.id === portfolioId);
-    if (!portfolio) return false;
-
-    // Está marcado si: hay asignación de TENANT o asignación directa de PORTFOLIO
-    return role.assignments.some(a =>
-      (a.type === 'INQUILINO' && a.tenantId === portfolio.tenantId) ||
-      (a.type === 'CARTERA' && a.portfolioId === portfolioId)
-    );
+    return this.todasMarcadas(this.subcarterasDeCartera(portfolioId));
   }
 
   isSubPortfolioAssigned(subPortfolioId: number): boolean {
-    const role = this.selectedRole();
-    if (!role) return false;
-
-    // Buscar el subportfolio para obtener su portfolioId
-    const subPortfolio = this.allSubPortfolios().find(sp => sp.id === subPortfolioId);
-    if (!subPortfolio) return false;
-
-    // Buscar el portfolio para obtener su tenantId
-    const portfolio = this.allPortfolios().find(p => p.id === subPortfolio.portfolioId);
-    if (!portfolio) return false;
-
-    // Está marcado si: hay asignación de TENANT, PORTFOLIO o SUBPORTFOLIO
-    return role.assignments.some(a =>
-      (a.type === 'INQUILINO' && a.tenantId === portfolio.tenantId) ||
-      (a.type === 'CARTERA' && a.portfolioId === subPortfolio.portfolioId) ||
-      (a.type === 'SUBCARTERA' && a.subPortfolioId === subPortfolioId)
-    );
+    return this.marcadas().has(subPortfolioId);
   }
 
-  // Toggle asignaciones
   toggleTenantAssignment(tenantId: number) {
-    const role = this.selectedRole();
-    if (!role) return;
-
-    if (this.isTenantAssigned(tenantId)) {
-      // Desmarcar tenant y todas sus carteras/subcarteras
-      role.assignments = role.assignments.filter(a => a.tenantId !== tenantId);
-    } else {
-      // Marcar tenant (esto implica todas las carteras y subcarteras)
-      role.assignments.push({ type: 'INQUILINO', tenantId });
-
-      // Remover asignaciones específicas de portfolios/subportfolios de este tenant
-      role.assignments = role.assignments.filter(a =>
-        !(a.tenantId === tenantId && (a.type === 'CARTERA' || a.type === 'SUBCARTERA'))
-      );
-    }
-
-    this.selectedRole.set({ ...role });
+    this.alternar(this.subcarterasDeCliente(tenantId));
   }
 
-  togglePortfolioAssignment(tenantId: number, portfolioId: number) {
-    const role = this.selectedRole();
-    if (!role) return;
-
-    const isTenantAssigned = this.isTenantAssigned(tenantId);
-    const isCurrentlyAssigned = this.isPortfolioAssigned(portfolioId);
-
-    if (isCurrentlyAssigned) {
-      // Desmarcar portfolio
-      if (isTenantAssigned) {
-        // Si el tenant está asignado, necesitamos convertir a asignaciones específicas
-        // Eliminar asignación de TENANT
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'INQUILINO' && a.tenantId === tenantId)
-        );
-
-        // Añadir asignaciones de PORTFOLIO para todos los portfolios del tenant EXCEPTO este
-        const portfoliosOfTenant = this.getPortfoliosByTenant(tenantId);
-        portfoliosOfTenant.forEach(p => {
-          if (p.id !== portfolioId) {
-            role.assignments.push({ type: 'CARTERA', tenantId, portfolioId: p.id });
-          }
-        });
-      } else {
-        // Solo eliminar la asignación de PORTFOLIO específica
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'CARTERA' && a.portfolioId === portfolioId)
-        );
-      }
-
-      // Eliminar todas las asignaciones de subportfolios de este portfolio
-      role.assignments = role.assignments.filter(a =>
-        !(a.type === 'SUBCARTERA' && a.portfolioId === portfolioId)
-      );
-    } else {
-      // Marcar portfolio
-      role.assignments.push({ type: 'CARTERA', tenantId, portfolioId });
-
-      // Remover asignaciones específicas de subportfolios de este portfolio
-      role.assignments = role.assignments.filter(a =>
-        !(a.type === 'SUBCARTERA' && a.portfolioId === portfolioId)
-      );
-
-      // Verificar si ahora todos los portfolios del tenant están asignados
-      const portfoliosOfTenant = this.getPortfoliosByTenant(tenantId);
-      const allPortfoliosAssigned = portfoliosOfTenant.every(p =>
-        role.assignments.some(a => a.type === 'CARTERA' && a.portfolioId === p.id)
-      );
-
-      if (allPortfoliosAssigned && portfoliosOfTenant.length > 0) {
-        // Consolidar en una asignación de TENANT
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'CARTERA' && a.tenantId === tenantId)
-        );
-        role.assignments.push({ type: 'INQUILINO', tenantId });
-      }
-    }
-
-    this.selectedRole.set({ ...role });
+  togglePortfolioAssignment(portfolioId: number) {
+    this.alternar(this.subcarterasDeCartera(portfolioId));
   }
 
-  toggleSubPortfolioAssignment(tenantId: number, portfolioId: number, subPortfolioId: number) {
+  toggleSubPortfolioAssignment(subPortfolioId: number) {
+    this.alternar([subPortfolioId]);
+  }
+
+  private subcarterasDeCartera(portfolioId: number): number[] {
+    return this.getSubPortfoliosByPortfolio(portfolioId).map(sp => sp.id);
+  }
+
+  private subcarterasDeCliente(tenantId: number): number[] {
+    return this.getPortfoliosByTenant(tenantId).flatMap(p => this.subcarterasDeCartera(p.id));
+  }
+
+  private todasMarcadas(ids: number[]): boolean {
+    const marcadas = this.marcadas();
+    return ids.length > 0 && ids.every(id => marcadas.has(id));
+  }
+
+  /** Marca las subcarteras dadas; si ya lo estaban todas, las desmarca. */
+  private alternar(ids: number[]) {
     const role = this.selectedRole();
-    if (!role) return;
-
-    const isTenantAssigned = this.isTenantAssigned(tenantId);
-    const isPortfolioAssigned = this.isPortfolioAssigned(portfolioId);
-    const isCurrentlyAssigned = this.isSubPortfolioAssigned(subPortfolioId);
-
-    if (isCurrentlyAssigned) {
-      // Desmarcar subcartera
-      if (isTenantAssigned) {
-        // Convertir asignación de TENANT a PORTFOLIO específicos
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'INQUILINO' && a.tenantId === tenantId)
-        );
-
-        const portfoliosOfTenant = this.getPortfoliosByTenant(tenantId);
-        portfoliosOfTenant.forEach(p => {
-          if (p.id === portfolioId) {
-            // Para este portfolio, añadir todas las subcarteras EXCEPTO la desmarcada
-            const subPortfoliosOfPortfolio = this.getSubPortfoliosByPortfolio(p.id);
-            subPortfoliosOfPortfolio.forEach(sp => {
-              if (sp.id !== subPortfolioId) {
-                role.assignments.push({ type: 'SUBCARTERA', tenantId, portfolioId: p.id, subPortfolioId: sp.id });
-              }
-            });
-          } else {
-            // Para otros portfolios, mantener asignación de PORTFOLIO
-            role.assignments.push({ type: 'CARTERA', tenantId, portfolioId: p.id });
-          }
-        });
-      } else if (isPortfolioAssigned && !role.assignments.some(a => a.type === 'SUBCARTERA' && a.portfolioId === portfolioId)) {
-        // Si el portfolio está asignado (no como subportfolios individuales), convertir a asignaciones específicas
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'CARTERA' && a.portfolioId === portfolioId)
-        );
-
-        const subPortfoliosOfPortfolio = this.getSubPortfoliosByPortfolio(portfolioId);
-        subPortfoliosOfPortfolio.forEach(sp => {
-          if (sp.id !== subPortfolioId) {
-            role.assignments.push({ type: 'SUBCARTERA', tenantId, portfolioId, subPortfolioId: sp.id });
-          }
-        });
-      } else {
-        // Solo eliminar la asignación de SUBPORTFOLIO específica
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'SUBCARTERA' && a.subPortfolioId === subPortfolioId)
-        );
-      }
-    } else {
-      // Marcar subcartera
-      role.assignments.push({ type: 'SUBCARTERA', tenantId, portfolioId, subPortfolioId });
-
-      // Verificar si ahora todas las subcarteras del portfolio están asignadas
-      const subPortfoliosOfPortfolio = this.getSubPortfoliosByPortfolio(portfolioId);
-      const allSubPortfoliosAssigned = subPortfoliosOfPortfolio.every(sp =>
-        role.assignments.some(a => a.type === 'SUBCARTERA' && a.subPortfolioId === sp.id)
-      );
-
-      if (allSubPortfoliosAssigned && subPortfoliosOfPortfolio.length > 0) {
-        // Consolidar en una asignación de PORTFOLIO
-        role.assignments = role.assignments.filter(a =>
-          !(a.type === 'SUBCARTERA' && a.portfolioId === portfolioId)
-        );
-        role.assignments.push({ type: 'CARTERA', tenantId, portfolioId });
-
-        // Verificar si ahora todos los portfolios del tenant están asignados
-        const portfoliosOfTenant = this.getPortfoliosByTenant(tenantId);
-        const allPortfoliosAssigned = portfoliosOfTenant.every(p =>
-          role.assignments.some(a => a.type === 'CARTERA' && a.portfolioId === p.id)
-        );
-
-        if (allPortfoliosAssigned && portfoliosOfTenant.length > 0) {
-          // Consolidar en una asignación de TENANT
-          role.assignments = role.assignments.filter(a =>
-            !(a.type === 'CARTERA' && a.tenantId === tenantId)
-          );
-          role.assignments.push({ type: 'INQUILINO', tenantId });
-        }
-      }
-    }
-
-    this.selectedRole.set({ ...role });
+    if (!role || ids.length === 0) return;
+    const marcadas = new Set(this.marcadas());
+    const quitar = ids.every(id => marcadas.has(id));
+    ids.forEach(id => quitar ? marcadas.delete(id) : marcadas.add(id));
+    this.selectedRole.set({ ...role, assignments: this.filasPorSubcartera(marcadas) });
   }
 
   createNewRole() {
@@ -823,13 +692,17 @@ export class RolesManagementComponent implements OnInit {
   saveRole() {
     const role = this.selectedRole();
     if (!role || !this.isRoleValid()) return;
+    if (this.catalogoPendiente() > 0 || this.catalogoFallido()) {
+      alert('No se terminó de cargar el catálogo de clientes, carteras y subcarteras. Recarga la página antes de guardar.');
+      return;
+    }
 
     const request: RolRequest = {
       nombreRol: role.name,
       descripcion: role.description,
       activo: role.active,
       permisoIds: role.permissions,
-      asignaciones: role.assignments.map(a => ({
+      asignaciones: this.filasPorSubcartera(this.subcarterasCubiertas(role.assignments)).map(a => ({
         tipoAsignacion: a.type,
         tenantId: a.tenantId,
         portfolioId: a.portfolioId,
