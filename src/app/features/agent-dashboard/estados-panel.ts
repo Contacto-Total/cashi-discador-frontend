@@ -55,3 +55,10 @@ export const NIVELES = {
 } as const;
 
 export type Nivel = keyof typeof NIVELES;
+
+/** Tramos del semáforo de un estado, en segundos. */
+export interface UmbralTiempo { verde: number; ambar: number; tope: number; }
+
+export function nivelDeTiempo(segundos: number, u: UmbralTiempo): Nivel {
+  return segundos > u.tope ? 'excedido' : segundos > u.ambar ? 'rojo' : segundos > u.verde ? 'ambar' : 'verde';
+}

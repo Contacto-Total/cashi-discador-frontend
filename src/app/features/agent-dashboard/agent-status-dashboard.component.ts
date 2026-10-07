@@ -25,10 +25,7 @@ import { EscalaTiempoComponent } from '../../shared/ui/escala-tiempo.component';
 import { BotonEstadoComponent } from '../../shared/ui/boton-estado.component';
 import { BotonDirective } from '../../shared/ui/boton.directive';
 import { ModoReloj } from '../../shared/ui/reloj-estado';
-import { ESTADOS_OPERATIVOS, ESTADOS_PANEL, EstadoPanel, NIVELES, Nivel } from './estados-panel';
-
-/** Tramos del semáforo de un estado, en segundos. */
-interface Umbral { verde: number; ambar: number; tope: number; }
+import { ESTADOS_OPERATIVOS, ESTADOS_PANEL, EstadoPanel, NIVELES, Nivel, UmbralTiempo as Umbral, nivelDeTiempo } from './estados-panel';
 
 @Component({
   selector: 'app-agent-status-dashboard',
@@ -418,7 +415,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
   get nivel(): Nivel | null {
     const u = this.umbral;
-    return !u ? null : this.segundos > u.tope ? 'excedido' : this.segundos > u.ambar ? 'rojo' : this.segundos > u.verde ? 'ambar' : 'verde';
+    return u ? nivelDeTiempo(this.segundos, u) : null;
   }
 
   get semaforo() {

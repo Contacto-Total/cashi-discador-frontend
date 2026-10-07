@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { MenuItem } from '../../../core/services/menu-permission.service';
 import { CashiMascotaComponent } from '../cashi-mascota.component';
+import { EstadoMenu, EstadoMenuComponent } from '../estado-menu.component';
 import { TipDirective } from '../tip.directive';
 import { iconoDeMenu } from '../menu-iconos';
 import { SeccionMenu, seccionesDeMenu } from '../menu-secciones';
@@ -30,7 +31,7 @@ export interface CuentaSidebar {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, CashiMascotaComponent, TipDirective],
+  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, CashiMascotaComponent, EstadoMenuComponent, TipDirective],
   templateUrl: './sidebar.component.html'
 })
 export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
@@ -44,11 +45,17 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   @Input() movilAbierto = false;
   @Input() notificaciones = 0;
   @Input() temaOscuro = false;
+  /** Estado del asesor, sobre la cuenta. `null` cuando no toca mostrarlo (no es asesor, o ya está en el Panel). */
+  @Input() estado: EstadoMenu | null = null;
+  /** El asesor ve el interruptor de las alertas de voz. */
+  @Input() conVoz = false;
+  @Input() vozActiva = false;
 
   @Output() plegadoChange = new EventEmitter<boolean>();
   @Output() navegar = new EventEmitter<void>();
   @Output() notificacionesAbrir = new EventEmitter<void>();
   @Output() temaCambiar = new EventEmitter<void>();
+  @Output() vozCambiar = new EventEmitter<void>();
   @Output() salir = new EventEmitter<void>();
 
   @ViewChild('campoBuscar') private campoBuscar?: ElementRef<HTMLInputElement>;
@@ -97,9 +104,12 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  ngOnChanges(): void {
-    this.secciones = seccionesDeMenu(this.menu);
-    this.abrirGrupoDeLaRuta();
+  /** El estado del asesor cambia cada segundo: las secciones solo se rehacen si cambió el menú. */
+  ngOnChanges(cambios: SimpleChanges): void {
+    if (cambios['menu']) {
+      this.secciones = seccionesDeMenu(this.menu);
+      this.abrirGrupoDeLaRuta();
+    }
     if (!this.esAdmin) {
       this.cuentaAbierta = false;
     }
