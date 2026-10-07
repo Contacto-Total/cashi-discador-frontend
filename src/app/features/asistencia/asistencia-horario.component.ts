@@ -56,6 +56,10 @@ interface Bloque {
 const planPersona = (idUsuario: number): string => `p:${idUsuario}`;
 const planEquipo = (mes: string): string => `e:${mes}`;
 
+/** Destinos fuera de la semana que se ve: pasado el borde derecho o el izquierdo del calendario. */
+const SEMANA_SIGUIENTE = '>';
+const SEMANA_ANTERIOR = '<';
+
 /** El gesto en curso sobre un bloque: moverlo de día o estirarlo. */
 interface Gesto {
   bloque: Bloque;
@@ -64,6 +68,7 @@ interface Gesto {
   y0: number;
   movido: boolean;
   minutos: number;
+  /** El día bajo el bloque, o el borde por el que se sale a otra semana. */
   destino: string | null;
   dx: number;
 }
@@ -121,6 +126,11 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
     .cal-col { position: relative }
     .cal-col::before { content: ""; position: absolute; left: 0; right: 0; pointer-events: none; top: 14px; bottom: 35px; background-image: linear-gradient(#f1f3f6 1px, transparent 1px); background-size: 100% 56px }
     .cal-col.pasado .etq, .cal-col.pasado .bloque > * { opacity: .55 }
+    .cal-marco { position: relative }
+    .cal-borde { position: absolute; top: 50%; z-index: 7; transform: translateY(-50%); padding: 7px 11px; border-radius: 8px; background: #0f172a; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; box-shadow: 0 6px 16px rgba(15,23,42,.25) }
+    .cal-borde.der { right: 10px }
+    .cal-borde.izq { left: 10px }
+    .cal-borde.no { background: #b91c1c }
     .cal-col.destino-ok { background-color: color-mix(in srgb, #2563eb 9%, #fff) }
     .cal-col.destino-no { background-color: color-mix(in srgb, #dc2626 9%, #fff) }
     .cal-base, .cal-pausa { position: absolute; left: 4px; right: 4px; border-radius: 8px }
@@ -250,6 +260,11 @@ const indiceDia = (iso: string): number => (new Date(iso + 'T00:00:00').getDay()
           <div class="cal-marco" #marco
                (pointerdown)="empezar($event)" (pointermove)="mover($event)" (pointerup)="soltar()" (pointercancel)="cancelarGesto()"
                (keydown)="teclado($event)">
+            @if (bordeDeSemana(); as borde) {
+              <div class="cal-borde" [class.der]="borde.siguiente" [class.izq]="!borde.siguiente" [class.no]="!borde.valido">
+                {{ borde.siguiente ? 'Semana siguiente →' : '← Semana anterior' }}
+              </div>
+            }
             @if (plan(); as p) {
               <div class="cal" [style.--dias]="columnas().length">
                 <div class="cal-esquina"></div>
@@ -1141,14 +1156,30 @@ export class AsistenciaHorarioComponent {
         const r = c.getBoundingClientRect();
         return ev.clientX >= r.left && ev.clientX < r.right;
       });
-      this.gesto.set({ ...g, movido: true, dx, destino: col?.dataset['fecha'] ?? null });
+      // Pasado el borde del calendario, el bloque sale a la semana siguiente o a la anterior.
+      const primera = columnas[0]?.getBoundingClientRect();
+      const ultima = columnas[columnas.length - 1]?.getBoundingClientRect();
+      const borde = ultima && ev.clientX >= ultima.right ? SEMANA_SIGUIENTE
+        : primera && ev.clientX < primera.left ? SEMANA_ANTERIOR : null;
+      this.gesto.set({ ...g, movido: true, dx, destino: col?.dataset['fecha'] ?? borde });
     }
+  }
+
+  /** El borde por el que se está sacando un bloque, y si ese día de la otra semana todavía no pasó. */
+  bordeDeSemana(): { siguiente: boolean; valido: boolean } | null {
+    const g = this.gesto();
+    if (!g || g.modo !== 'mover' || !g.movido || (g.destino !== SEMANA_SIGUIENTE && g.destino !== SEMANA_ANTERIOR)) {
+      return null;
+    }
+    const siguiente = g.destino === SEMANA_SIGUIENTE;
+    return { siguiente, valido: sumarDias(g.bloque.fecha, siguiente ? 7 : -7) >= this.hoyIso };
   }
 
   /** Si el día bajo el bloque que se arrastra lo admite. */
   destinoValido(): boolean {
     const g = this.gesto();
-    return !!g?.destino && g.destino !== g.bloque.fecha && !this.motivoGrupo(g.bloque, g.destino, 30);
+    return !!g?.destino && g.destino !== SEMANA_SIGUIENTE && g.destino !== SEMANA_ANTERIOR
+      && g.destino !== g.bloque.fecha && !this.motivoGrupo(g.bloque, g.destino, 30);
   }
 
   soltar(): void {
@@ -1166,9 +1197,65 @@ export class AsistenciaHorarioComponent {
         const delGrupo = this.enGrupo(g.bloque);
         this.cambiarPlan(g.bloque.plan, lista => lista.map(x => delGrupo(x) ? { ...x, minutos: g.minutos, confirmado: false } : x));
       }
+    } else if (g.destino === SEMANA_SIGUIENTE || g.destino === SEMANA_ANTERIOR) {
+      this.pasarDeSemana(g.bloque, g.destino === SEMANA_SIGUIENTE ? 7 : -7);
     } else if (g.destino && g.destino !== g.bloque.fecha) {
       this.moverBloque(g.bloque, g.destino);
     }
+  }
+
+  /**
+   * Lleva un bloque (el del equipo, con todos) al mismo día de la semana
+   * siguiente o de la anterior, y pasa a esa semana para seguir ajustándolo.
+   * Ese día no está a la vista, así que lo revisa el servidor.
+   */
+  private pasarDeSemana(b: Bloque, dias: number): void {
+    const fecha = sumarDias(b.fecha, dias);
+    if (fecha < this.hoyIso) {
+      this.toast.error('Ese día ya pasó');
+      return;
+    }
+    this.validando.set(true);
+    this.validar(b, fecha, b.minutos).subscribe({
+      next: v => {
+        this.validando.set(false);
+        const motivo = v.motivo ?? this.conflictoForm(b, fecha);
+        if (motivo) {
+          this.toast.error(motivo);
+          return;
+        }
+        this.llevarA(b, fecha, v.salida ? aMin(v.salida) : CAL.desde, null);
+        this.moverSemana(dias);
+      },
+      error: () => {
+        this.validando.set(false);
+        this.toast.error('No se pudo revisar ese día');
+      }
+    });
+  }
+
+  /**
+   * Pone un bloque (el del equipo, con todos) en otra fecha, de cualquier
+   * semana. Si esa persona ya tiene uno ese día, se suman, sin pasar de las
+   * 20:00. Con `minutos` en null cada uno conserva los suyos.
+   */
+  private llevarA(b: Bloque, fecha: string, salida: number, minutos: number | null): void {
+    const delGrupo = this.enGrupo(b);
+    this.cambiarPlan(b.plan, lista => {
+      const movidos = lista.filter(delGrupo);
+      let salidaLista = lista.filter(x => !delGrupo(x));
+      for (const x of movidos) {
+        const suyos = Math.min(minutos ?? x.minutos, CAL.hasta - salida);
+        const ya = salidaLista.find(y => y.idUsuario === x.idUsuario && y.fecha === fecha);
+        if (ya) {
+          ya.minutos = Math.min(ya.minutos + suyos, CAL.hasta - salida);
+          ya.confirmado = false;
+        } else {
+          salidaLista = [...salidaLista, { ...x, fecha, minutos: suyos, salida, clave: `${x.idUsuario}-${fecha}`, confirmado: false }];
+        }
+      }
+      return salidaLista;
+    });
   }
 
   cancelarGesto(): void {
@@ -1463,22 +1550,7 @@ export class AsistenciaHorarioComponent {
           this.errorForm.set(motivo);
           return;
         }
-        const salida = v.salida ? aMin(v.salida) : CAL.desde;
-        const delGrupo = this.enGrupo(b);
-        this.cambiarPlan(b.plan, lista => {
-          const movidos = lista.filter(delGrupo);
-          let salidaLista = lista.filter(x => !delGrupo(x));
-          for (const x of movidos) {
-            const ya = salidaLista.find(y => y.idUsuario === x.idUsuario && y.fecha === fecha);
-            if (ya) {
-              ya.minutos = Math.min(ya.minutos + min, CAL.hasta - salida);
-              ya.confirmado = false;
-            } else {
-              salidaLista = [...salidaLista, { ...x, fecha, minutos: min, salida, clave: `${x.idUsuario}-${fecha}`, confirmado: false }];
-            }
-          }
-          return salidaLista;
-        });
+        this.llevarA(b, fecha, v.salida ? aMin(v.salida) : CAL.desde, min);
         this.cerrarForm();
       },
       error: () => {

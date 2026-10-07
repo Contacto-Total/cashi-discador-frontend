@@ -465,9 +465,37 @@ const ESTILOS = {
                 </div>
               </div>
 
-              <p class="nota-panel">Sirve para días pasados y para días futuros.</p>
+              <p class="nota-panel">{{ seRecupera()
+                ? 'Salen los días que no completaste desde el lunes de la semana pasada. Para un día que todavía no llega, cambia las fechas.'
+                : 'Sirve para días pasados y para días futuros.' }}</p>
 
-              <!-- Los días del rango con lo que hoy figura: el trabajado se ve y solo lo marca el descanso médico. -->
+              <!-- Un solo día que todavía no termina: puede trabajar una parte y deber el resto. -->
+              @if (admiteHoras()) {
+                <div class="flex flex-col gap-2">
+                  <label class="flex items-center gap-[9px] text-[13px]">
+                    <input type="checkbox" class="casilla-dia" [checked]="porHoras()"
+                           (change)="porHoras.set(!porHoras()); error.set('')">
+                    <span>Trabajo una parte del día</span>
+                  </label>
+                  @if (porHoras()) {
+                    <div class="flex gap-3">
+                      <div class="flex flex-1 flex-col gap-1.5">
+                        <label [class]="estilos.etiqueta" for="j-trabaja-desde">Trabajo desde</label>
+                        <input id="j-trabaja-desde" type="time" step="300" [class]="estilos.campo"
+                               [ngModel]="trabajaDesde()" (ngModelChange)="trabajaDesde.set($event); error.set('')">
+                      </div>
+                      <div class="flex flex-1 flex-col gap-1.5">
+                        <label [class]="estilos.etiqueta" for="j-trabaja-hasta">Hasta</label>
+                        <input id="j-trabaja-hasta" type="time" step="300" [class]="estilos.campo"
+                               [ngModel]="trabajaHasta()" (ngModelChange)="trabajaHasta.set($event); error.set('')">
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Los días del rango con lo que hoy figura. El trabajado solo se marca con descanso médico; con permiso, el que quedó a medias. -->
+              @if (!(admiteHoras() && porHoras())) {
               <div class="flex flex-col gap-1.5">
                 <span class="text-[13px]">Días que cubre</span>
                 <div class="tarjeta !px-3.5 !py-2.5">
@@ -483,7 +511,7 @@ const ESTILOS = {
                           <span [class]="'pastilla ' + f.clase">{{ f.texto }}</span>
                         </li>
                       } @empty {
-                        <li class="!justify-center text-[13px] !text-[#5f6c80] dark:!text-slate-400">Ese rango no tiene días laborables</li>
+                        <li class="!justify-center text-[13px] !text-[#5f6c80] dark:!text-slate-400">{{ seRecupera() ? 'No hay días sin completar en esas fechas' : 'Ese rango no tiene días laborables' }}</li>
                       }
                     } @else {
                       <li class="!justify-center text-[13px] !text-[#b91c1c] dark:!text-red-300">La fecha de fin no puede ser anterior a la de inicio</li>
@@ -491,18 +519,21 @@ const ESTILOS = {
                   </ul>
                 </div>
               </div>
+              }
 
+              @if (pideCertificado()) {
               <div class="flex flex-col gap-1.5">
                 <span class="text-[13px]">Certificado</span>
                 <label class="zona-archivo" for="j-archivo">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   <strong class="text-[13px] !text-[#0f172a] dark:!text-slate-100">{{ archivo()?.name ?? 'Adjuntar certificado' }}</strong>
-                  <span>Foto o PDF, hasta 10 MB. {{ textoCertificado() }}</span>
+                  <span>Foto o PDF, hasta 10 MB. Obligatorio.</span>
                 </label>
                 <input id="j-archivo" type="file" class="sr-only"
                        accept="image/jpeg,image/png,image/webp,application/pdf"
                        (change)="elegirArchivo($event)">
               </div>
+              }
 
               <div class="flex flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="j-comentario">Comentario</label>
@@ -578,6 +609,19 @@ export class MiAsistenciaComponent implements OnInit {
   readonly conEntradaMarcados = signal(new Set<string>());
   /** El tipo elegido, como signal: de él depende que un día con entrada se pueda marcar. */
   readonly idTipoNuevo = signal<number | null>(null);
+  private readonly tipoNuevo = computed(() => this.tipos().find(t => t.id === this.idTipoNuevo()) ?? null);
+  /** El certificado solo se pide en los tipos que lo exigen. */
+  readonly pideCertificado = computed(() => !!this.tipoNuevo()?.exigeCertificado);
+  /** Un permiso que se recupera: cubre lo que faltó ese día y abre esa deuda. */
+  readonly seRecupera = computed(() => !!this.tipoNuevo()?.recuperable);
+  /** En un permiso de un solo día que todavía no termina se puede trabajar una parte. */
+  readonly admiteHoras = computed(() => {
+    const { desde, hasta } = this.rango();
+    return this.seRecupera() && !!desde && desde === hasta && desde >= this.hoy();
+  });
+  readonly porHoras = signal(false);
+  readonly trabajaDesde = signal('08:00');
+  readonly trabajaHasta = signal('14:00');
 
   /** El lunes de la semana que se está viendo. */
   readonly lunes = signal(this.lunesDe(new Date()));
@@ -633,6 +677,7 @@ export class MiAsistenciaComponent implements OnInit {
     const hoy = this.hoy();
     // El descanso médico manda sobre las marcas: también cubre el día en que se entró y hubo que salir.
     const esDescansoMedico = this.tipos().find(t => t.id === this.idTipoNuevo())?.codigo === DESCANSO_MEDICO;
+    const seRecupera = this.seRecupera();
     const filas: DiaQueCubre[] = [];
     for (let f = desde; f <= hasta && filas.length < 31; f = this.sumarDias(f, 1)) {
       const diaSemana = new Date(f + 'T00:00:00').getDay();
@@ -648,8 +693,25 @@ export class MiAsistenciaComponent implements OnInit {
         : d.estado === 'NO_LABORABLE' ? [d.tipoDia ?? 'No laborable', 'p-neutro', false]
         : d.estado === 'JUSTIFICADO' ? [d.tipoDia ?? 'Justificado', 'p-neutro', false]
         : ['Trabajado', 'p-ok', esDescansoMedico];
-      filas.push({ fecha: f, etiqueta: `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`, texto, clase, marcable,
-        sinMarcar: esDescansoMedico && conEntrada });
+      const etiqueta = `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`;
+      if (seRecupera && f <= hoy) {
+        // El permiso cubre lo que faltó ese día. Se marca a propósito: es lo que después se recupera.
+        const jornada = d?.minutosJornada ?? 0;
+        if (d && (d.estado === 'NO_LABORABLE' || d.estado === 'JUSTIFICADO')) {
+          continue;
+        }
+        if (!conEntrada) {
+          filas.push({ fecha: f, etiqueta, texto: jornada ? `No trabajado · debe ${enHoras(jornada)}` : 'No trabajado',
+            clase: 'p-falta', marcable: true, sinMarcar: true });
+        } else if (d!.minutosTrabajados == null) {
+          filas.push({ fecha: f, etiqueta, texto: f === hoy ? 'En curso' : 'Faltan marcas', clase: 'p-neutro', marcable: f < hoy, sinMarcar: true });
+        } else if (jornada - d!.minutosTrabajados > 0) {
+          filas.push({ fecha: f, etiqueta, texto: `Trabajó ${enHoras(d!.minutosTrabajados)} de ${enHoras(jornada)} · debe ${enHoras(jornada - d!.minutosTrabajados)}`,
+            clase: 'p-tarde', marcable: true, sinMarcar: true });
+        }
+        continue;
+      }
+      filas.push({ fecha: f, etiqueta, texto, clase, marcable, sinMarcar: esDescansoMedico && conEntrada });
     }
     return filas;
   });
@@ -878,6 +940,7 @@ export class MiAsistenciaComponent implements OnInit {
       comentario: ''
     };
     this.idTipoNuevo.set(this.nuevo.idTipoDia);
+    this.porHoras.set(false);
     // Lo de la semana a la vista ya está: se usa mientras llega lo del rango.
     this.diasConocidos.set(new Map(this.dias().map(d => [d.fecha, d])));
     this.cargarRango();
@@ -945,16 +1008,6 @@ export class MiAsistenciaComponent implements OnInit {
     return tramos;
   }
 
-  /** «Obligatorio en descanso médico.»: los tipos que piden certificado, dichos por su nombre. */
-  textoCertificado(): string {
-    const nombres = this.tipos().filter(t => t.exigeCertificado).map(t => t.nombre.toLowerCase());
-    if (!nombres.length) {
-      return 'Opcional.';
-    }
-    const lista = nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
-    return `Obligatorio en ${lista}.`;
-  }
-
   cerrarSolicitud(): void {
     this.formulario.set(false);
   }
@@ -963,7 +1016,16 @@ export class MiAsistenciaComponent implements OnInit {
     this.nuevo.idTipoDia = id;
     this.idTipoNuevo.set(id);
     this.conEntradaMarcados.set(new Set());
+    this.porHoras.set(false);
     this.error.set('');
+    if (!this.pideCertificado()) {
+      this.archivo.set(null);
+    }
+    // Con un permiso que se recupera, las fechas sin tocar pasan a buscar lo que quedó sin completar.
+    if (this.seRecupera() && this.nuevo.fechaDesde === this.hoy() && this.nuevo.fechaHasta === this.hoy()) {
+      this.nuevo.fechaDesde = this.sumarDias(this.lunesDe(new Date()), -7);
+      this.cargarRango();
+    }
   }
 
   elegirArchivo(evento: Event): void {
@@ -981,7 +1043,12 @@ export class MiAsistenciaComponent implements OnInit {
       this.error.set('La fecha final no puede ser anterior a la inicial');
       return;
     }
-    const tramos = this.tramos();
+    const porHoras = this.admiteHoras() && this.porHoras();
+    if (porHoras && (!this.trabajaDesde() || !this.trabajaHasta() || this.trabajaDesde() >= this.trabajaHasta())) {
+      this.error.set('Indica desde y hasta qué hora trabajas ese día');
+      return;
+    }
+    const tramos = porHoras ? [{ desde: this.nuevo.fechaDesde, hasta: this.nuevo.fechaHasta }] : this.tramos();
     if (!tramos.length) {
       this.error.set('Marca al menos un día');
       return;
@@ -1010,7 +1077,9 @@ export class MiAsistenciaComponent implements OnInit {
         fechaDesde: tramo.desde,
         fechaHasta: tramo.hasta,
         comentario: this.nuevo.comentario.trim(),
-        archivo: this.archivo()
+        archivo: this.pideCertificado() ? this.archivo() : null,
+        trabajaDesde: porHoras ? this.trabajaDesde() : null,
+        trabajaHasta: porHoras ? this.trabajaHasta() : null
       })),
       toArray()
     ).subscribe({
@@ -1058,8 +1127,10 @@ export class MiAsistenciaComponent implements OnInit {
 
   /** «18/09» o «12/08 al 14/08». */
   diasTexto(s: Justificacion): string {
-    return s.fechaHasta && s.fechaHasta !== s.fechaDesde
+    const dias = s.fechaHasta && s.fechaHasta !== s.fechaDesde
       ? `${this.corta(s.fechaDesde)} al ${this.corta(s.fechaHasta)}` : this.corta(s.fechaDesde);
+    return s.trabajaDesde && s.trabajaHasta
+      ? `${dias} · trabaja de ${s.trabajaDesde.slice(0, 5)} a ${s.trabajaHasta.slice(0, 5)}` : dias;
   }
 
   /**
