@@ -2,50 +2,119 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { A11yModule } from '@angular/cdk/a11y';
+import { CdkMenuModule } from '@angular/cdk/menu';
+import { ConnectedPosition } from '@angular/cdk/overlay';
 import { TypificationV2Service } from '../../services/typification-v2.service';
 import { ThemeService } from '../../../shared/services/theme.service';
+import { ToastService } from '../../../shared/services/toast.service';
 import {
   TypificationCatalogV2,
   TenantTypificationConfigV2,
   ClassificationTypeV2,
-  TypificationTreeNodeV2
+  TypificationTreeNodeV2,
+  UpdateTypificationConfigCommandV2
 } from '../../models/typification-v2.model';
 import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
 import { TypificationFormDialogComponent } from '../typification-form-dialog/typification-form-dialog.component';
 import { CategoryFormDialogComponent } from '../category-form-dialog/category-form-dialog.component';
 import { TypificationAdditionalFieldsDialogComponent } from '../typification-additional-fields-dialog/typification-additional-fields-dialog.component';
-import { AdditionalFieldV2 } from '../../models/typification-v2.model';
+import { TUI, tuiSwitch, tuiPerilla, tuiNormalizar } from '../typification-ui';
+
+/** Una fila de la tabla: un nodo del árbol, o un resultado suelto cuando hay filtro. */
+interface FilaTipificacion {
+  node: TypificationTreeNodeV2;
+  depth: number;
+  hasKids: boolean;
+  /** Ruta de los padres. Solo se llena en la vista plana (con filtro o búsqueda). */
+  crumb: string;
+}
+
+interface EstadoEliminar {
+  tip: TypificationCatalogV2;
+  /** 'enUso': el backend se negó a borrarla y `mensaje` trae el motivo. */
+  paso: 'confirmar' | 'enUso';
+  mensaje: string;
+}
 
 @Component({
   selector: 'app-typification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, TypificationFormDialogComponent, CategoryFormDialogComponent, TypificationAdditionalFieldsDialogComponent],
+  imports: [
+    CommonModule, FormsModule, LucideAngularModule, A11yModule, CdkMenuModule,
+    TypificationFormDialogComponent, CategoryFormDialogComponent, TypificationAdditionalFieldsDialogComponent
+  ],
   templateUrl: './typification-maintenance.component.html',
   styleUrls: ['./typification-maintenance.component.scss']
 })
 export class TypificationMaintenanceComponent implements OnInit {
+  // ==================== SISTEMA VISUAL ====================
+  readonly ui = TUI;
+  readonly sw = tuiSwitch;
+  readonly perilla = tuiPerilla;
+
+  /** En pantallas angostas se ocultan Tipo y Nivel y la rejilla pasa a tres columnas. */
+  private readonly rejilla =
+    'grid grid-cols-[minmax(0,1fr)_80px_132px] items-center lg:grid-cols-[minmax(0,1fr)_180px_60px_96px_150px] ';
+  readonly claseEncabezado =
+    this.rejilla + 'min-h-[34px] rounded-t-xl border-b border-[#e6e9ee] bg-[#f8fafc] text-[11.5px] font-bold text-[#334155] ' +
+    'dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300';
+  readonly claseFila =
+    this.rejilla + 'tm-row min-h-[42px] bg-white transition-colors duration-150 hover:bg-[#f8fafc] ' +
+    'dark:bg-slate-900 dark:hover:bg-slate-800/60';
+
+  readonly claseMenu =
+    `tm-menu flex w-[292px] flex-col gap-px rounded-[10px] border border-[#e6e9ee] bg-white p-1.5 ${TUI.fuente} ` +
+    'shadow-[0_12px_28px_rgba(15,23,42,0.14)] dark:border-slate-700 dark:bg-slate-900';
+  private readonly menuItemBase =
+    'flex w-full items-center gap-[9px] rounded-[6px] px-2.5 py-[7px] text-left text-[12.5px] font-semibold outline-none ' +
+    'transition-colors duration-150 hover:bg-[#f4f6f9] focus-visible:bg-[#f4f6f9] ' +
+    'dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800 ';
+  readonly claseMenuItem = this.menuItemBase + 'text-[#0f172a] dark:text-slate-100';
+  readonly claseMenuItemPeligro = this.menuItemBase + 'text-[#b91c1c] dark:text-red-400';
+  readonly claseMenuItemApagado =
+    'flex w-full cursor-not-allowed items-center gap-[9px] rounded-[6px] px-2.5 py-[7px] text-left text-[12.5px] ' +
+    'font-semibold text-[#5f6c80] outline-none dark:text-slate-400';
+
+  /** El menú se abre hacia abajo alineado a la derecha; si no cabe, hacia arriba. */
+  readonly posMenu: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 }
+  ];
+
+  readonly esqueletoFilas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+  // ==================== ESTADO ====================
   selectedTenantId?: number;
   selectedPortfolioId?: number;
   selectedSubPortfolioId?: number;
+  /** Filtro por tipo. Se aplica en memoria sobre lo ya cargado de la subcartera. */
   selectedType?: ClassificationTypeV2;
+  /** Buscador por nombre o código, también en memoria. */
+  buscar = '';
 
   loading = signal(false);
-  showSuccess = signal(false);
   showClassificationDialog = signal(false);
   showCategoryDialog = signal(false);
   showAdditionalFieldsDialog = signal(false);
   classificationDialogMode = signal<'create' | 'edit'>('create');
   selectedClassificationForEdit = signal<TypificationCatalogV2 | undefined>(undefined);
   selectedTypificationForFields = signal<TypificationCatalogV2 | undefined>(undefined);
-  additionalFieldsForEdit = signal<AdditionalFieldV2[]>([]);
   parentClassificationForCreate = signal<TypificationCatalogV2 | undefined>(undefined);
+
+  eliminar = signal<EstadoEliminar | null>(null);
+  eliminando = signal(false);
 
   classificationTypes = Object.values(ClassificationTypeV2);
   typifications: TypificationCatalogV2[] = [];
   tenantConfigs: TenantTypificationConfigV2[] = [];
   treeNodes: TypificationTreeNodeV2[] = [];
-  expandedNodes = new Set<number>();
+  filas: FilaTipificacion[] = [];
+  /** Ramas contraídas. Lo que no está aquí se muestra expandido, incluidas las tipificaciones nuevas. */
+  private colapsados = new Set<number>();
+  /** Tipificaciones con un cambio de estado en curso: su interruptor queda bloqueado. */
+  private cambiando = new Set<number>();
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
   subPortfolios: any[] = [];
@@ -56,8 +125,6 @@ export class TypificationMaintenanceComponent implements OnInit {
     nombrePersonalizado: string;
     descripcionPersonalizada: string;
     colorPersonalizado: string;
-    iconoPersonalizado: string;
-    ordenVisualizacionPersonalizado: number;
   } | null>(null);
   savingEdit = signal(false);
 
@@ -80,7 +147,8 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   constructor(
     private classificationService: TypificationV2Service,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private toast: ToastService
   ) {}
 
   ngOnInit() {
@@ -107,8 +175,7 @@ export class TypificationMaintenanceComponent implements OnInit {
     this.selectedSubPortfolioId = undefined;
     this.portfolios = [];
     this.subPortfolios = [];
-    this.typifications = [];
-    this.treeNodes = [];
+    this.limpiarLista();
 
     if (this.selectedTenantId) {
       this.loadPortfolios();
@@ -128,26 +195,29 @@ export class TypificationMaintenanceComponent implements OnInit {
     });
   }
 
+  private limpiarLista() {
+    this.typifications = [];
+    this.tenantConfigs = [];
+    this.treeNodes = [];
+    this.filas = [];
+    this.colapsados.clear();
+    this.cancelEdit();
+  }
+
   loadTypifications() {
     if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) return;
 
     this.loading.set(true);
 
-    // Load ALL tenant configurations (including disabled) for maintenance view
-    const request$ = this.selectedType
-      ? this.classificationService.getTenantClassificationsByType(
-          this.selectedTenantId,
-          this.selectedType,
-          this.selectedPortfolioId
-        )
-      : this.classificationService.getTenantClassifications(
-          this.selectedTenantId,
-          this.selectedPortfolioId,
-          true, // includeDisabled = true for maintenance view
-          this.selectedSubPortfolioId
-        );
-
-    request$.subscribe({
+    // Siempre la configuración de la subcartera, con las deshabilitadas. El filtro
+    // por tipo ya no cambia de endpoint: antes pedía la configuración de la cartera
+    // (sin subcartera y sin deshabilitadas) y mostraba otro estado.
+    this.classificationService.getTenantClassifications(
+      this.selectedTenantId,
+      this.selectedPortfolioId,
+      true, // includeDisabled = true for maintenance view
+      this.selectedSubPortfolioId
+    ).subscribe({
       next: (configs) => {
         this.tenantConfigs = configs;
         // Extract typifications from tenant configs
@@ -188,6 +258,7 @@ export class TypificationMaintenanceComponent implements OnInit {
       error: (error) => {
         this.loading.set(false);
         console.error('Error loading typifications:', error);
+        this.toast.error('Error al cargar las tipificaciones');
       }
     });
   }
@@ -274,38 +345,91 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     sortNodes(roots);
     this.treeNodes = roots;
-    this.expandAll();
+    // Antes se expandía todo en cada recarga: habilitar una tipificación deshacía
+    // lo que el usuario había contraído. Ahora las ramas contraídas se conservan.
+    this.refrescarFilas();
+  }
+
+  // ==================== FILAS, FILTRO Y BÚSQUEDA ====================
+
+  /** Con filtro de tipo o texto en el buscador la lista deja de ser árbol. */
+  get vistaPlana(): boolean {
+    return !!this.selectedType || tuiNormalizar(this.buscar).length > 0;
+  }
+
+  private refrescarFilas() {
+    const q = tuiNormalizar(this.buscar);
+    const filas: FilaTipificacion[] = [];
+
+    if (this.selectedType || q) {
+      const recorrer = (nodes: TypificationTreeNodeV2[], ruta: string[]) => nodes.forEach(n => {
+        const nombre = this.nombreDe(n);
+        const okTipo = !this.selectedType || n.typification.tipoClasificacion === this.selectedType;
+        const okTexto = !q
+          || tuiNormalizar(nombre).includes(q)
+          || tuiNormalizar(n.typification.nombre).includes(q)
+          || tuiNormalizar(n.typification.codigo).includes(q);
+        if (okTipo && okTexto) {
+          filas.push({ node: n, depth: 0, hasKids: false, crumb: ruta.join(' › ') });
+        }
+        recorrer(n.children, [...ruta, nombre]);
+      });
+      recorrer(this.treeNodes, []);
+    } else {
+      const bajar = (nodes: TypificationTreeNodeV2[], depth: number) => nodes.forEach(n => {
+        filas.push({ node: n, depth, hasKids: n.children.length > 0, crumb: '' });
+        if (n.children.length > 0 && !this.colapsados.has(n.typification.id)) {
+          bajar(n.children, depth + 1);
+        }
+      });
+      bajar(this.treeNodes, 0);
+    }
+
+    this.filas = filas;
+  }
+
+  onBuscarChange(valor: string) {
+    this.buscar = valor;
+    this.refrescarFilas();
   }
 
   toggleNode(nodeId: number) {
-    if (this.expandedNodes.has(nodeId)) {
-      this.expandedNodes.delete(nodeId);
+    if (this.colapsados.has(nodeId)) {
+      this.colapsados.delete(nodeId);
     } else {
-      this.expandedNodes.add(nodeId);
+      this.colapsados.add(nodeId);
     }
+    this.refrescarFilas();
   }
 
   isExpanded(nodeId: number): boolean {
-    return this.expandedNodes.has(nodeId);
+    return !this.colapsados.has(nodeId);
   }
 
   expandAll() {
-    this.typifications.forEach(c => this.expandedNodes.add(c.id));
+    this.colapsados.clear();
+    this.refrescarFilas();
   }
 
   collapseAll() {
-    this.expandedNodes.clear();
+    const conHijos = (nodes: TypificationTreeNodeV2[]) => nodes.forEach(n => {
+      if (n.children.length > 0) {
+        this.colapsados.add(n.typification.id);
+        conHijos(n.children);
+      }
+    });
+    conHijos(this.treeNodes);
+    this.refrescarFilas();
   }
 
   onTypeChange() {
-    this.loadTypifications();
+    this.refrescarFilas();
   }
 
   onPortfolioChange() {
     this.selectedSubPortfolioId = undefined;
     this.subPortfolios = [];
-    this.typifications = [];
-    this.treeNodes = [];
+    this.limpiarLista();
 
     if (this.selectedPortfolioId) {
       this.classificationService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
@@ -320,42 +444,100 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   onSubPortfolioChange() {
-    this.typifications = [];
-    this.treeNodes = [];
+    this.limpiarLista();
 
     if (this.selectedSubPortfolioId) {
       this.loadTypifications();
     }
   }
 
-  toggleTypification(node: TypificationTreeNodeV2, event: Event) {
-    if (!this.selectedTenantId) return;
+  // ==================== DATOS PARA PINTAR ====================
 
-    const target = event.target as HTMLInputElement;
-    const enabled = target.checked;
+  get nombreSubcartera(): string {
+    const sub = this.subPortfolios.find(s => s.id === this.selectedSubPortfolioId);
+    return sub ? (sub.subPortfolioName || sub.nombre || '') : '';
+  }
+
+  get totalHabilitadas(): number {
+    return this.tenantConfigs.filter(c => c.estaHabilitada === true).length;
+  }
+
+  get totalPersonalizadas(): number {
+    return this.tenantConfigs.filter(c => this.hasCustomizations(c)).length;
+  }
+
+  nombreDe(node: TypificationTreeNodeV2): string {
+    return this.getEffectiveValue(node.config, node.typification, 'nombre');
+  }
+
+  /** Mientras se personaliza, el cuadro de color muestra el que se está eligiendo. */
+  colorDe(node: TypificationTreeNodeV2): string {
+    if (this.isEditing(node.config?.id) && this.editingForm()) {
+      return this.editingForm()!.colorPersonalizado;
+    }
+    return this.getEffectiveValue(node.config, node.typification, 'color') || '#6B7280';
+  }
+
+  iconoDe(node: TypificationTreeNodeV2): string {
+    return this.getEffectiveValue(node.config, node.typification, 'icono');
+  }
+
+  abreviatura(node: TypificationTreeNodeV2): string {
+    return node.typification.codigo?.substring(0, 2) || 'NA';
+  }
+
+  habilitada(node: TypificationTreeNodeV2): boolean {
+    return node.config?.estaHabilitada === true;
+  }
+
+  /** Tiene nombre propio en esta subcartera, distinto al del catálogo. */
+  renombrada(node: TypificationTreeNodeV2): boolean {
+    const propio = node.config?.nombrePersonalizado;
+    return !!propio && propio !== node.typification.nombre;
+  }
+
+  estaCambiando(node: TypificationTreeNodeV2): boolean {
+    return this.cambiando.has(node.typification.id);
+  }
+
+  // ==================== HABILITAR / DESHABILITAR ====================
+
+  toggleTypification(node: TypificationTreeNodeV2) {
+    if (!this.selectedTenantId || !node.config || this.estaCambiando(node)) return;
+
+    const id = node.typification.id;
+    const enabled = !this.habilitada(node);
+    const nombre = this.nombreDe(node);
+
+    // La fila responde al instante; si el backend falla se devuelve a como estaba.
+    node.config.estaHabilitada = enabled;
+    this.cambiando.add(id);
 
     const action$ = enabled
       ? this.classificationService.enableClassification(
           this.selectedTenantId,
-          node.typification.id,
+          id,
           this.selectedPortfolioId,
           this.selectedSubPortfolioId
         )
       : this.classificationService.disableClassification(
           this.selectedTenantId,
-          node.typification.id,
+          id,
           this.selectedPortfolioId,
           this.selectedSubPortfolioId
         );
 
     action$.subscribe({
       next: () => {
-        this.showSuccessMessage();
+        this.cambiando.delete(id);
+        this.toast.success(enabled ? `«${nombre}» habilitada` : `«${nombre}» deshabilitada`, 2000);
         this.loadTypifications();
       },
       error: (error) => {
         console.error('Error toggling typification:', error);
-        target.checked = !enabled;
+        this.cambiando.delete(id);
+        if (node.config) node.config.estaHabilitada = !enabled;
+        this.toast.error('No se pudo cambiar el estado de la tipificación');
       }
     });
   }
@@ -366,6 +548,9 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   // Classification dialog methods
   openCreateRootDialog() {
+    // Sin subcartera la tipificación nueva no se puede habilitar donde se la va a
+    // buscar, y quedaría creada pero invisible.
+    if (!this.selectedSubPortfolioId) return;
     this.classificationDialogMode.set('create');
     this.selectedClassificationForEdit.set(undefined);
     this.parentClassificationForCreate.set(undefined);
@@ -393,77 +578,111 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   onClassificationSaved(typification: TypificationCatalogV2) {
+    const eraEdicion = this.classificationDialogMode() === 'edit';
     this.showClassificationDialog.set(false);
     this.selectedClassificationForEdit.set(undefined);
     this.parentClassificationForCreate.set(undefined);
-    this.showSuccessMessage();
+    this.showSuccessMessage(eraEdicion
+      ? `«${typification.nombre}» se actualizó en el catálogo`
+      : `«${typification.nombre}» se creó y quedó habilitada en esta subcartera`);
     this.loadTypifications();
   }
 
-  // Additional Fields dialog methods
+  // Diálogo de montos (antes "campos adicionales"). Carga sus propios datos al abrir.
   openAdditionalFieldsDialog(typification: TypificationCatalogV2) {
     this.selectedTypificationForFields.set(typification);
-    this.loading.set(true);
-
-    // Cargar campos adicionales existentes
-    this.classificationService.getAdditionalFields(typification.id).subscribe({
-      next: (fields) => {
-        this.additionalFieldsForEdit.set(fields);
-        this.showAdditionalFieldsDialog.set(true);
-        this.loading.set(false);
-      },
-      error: (error) => {
-        console.error('Error loading additional fields:', error);
-        this.additionalFieldsForEdit.set([]);
-        this.showAdditionalFieldsDialog.set(true);
-        this.loading.set(false);
-      }
-    });
+    this.showAdditionalFieldsDialog.set(true);
   }
 
   closeAdditionalFieldsDialog() {
     this.showAdditionalFieldsDialog.set(false);
     this.selectedTypificationForFields.set(undefined);
-    this.additionalFieldsForEdit.set([]);
   }
 
   onAdditionalFieldsSaved() {
-    // El nuevo diálogo ya guarda internamente, solo cerramos y mostramos éxito
-    console.log('Campos adicionales guardados exitosamente');
     this.showAdditionalFieldsDialog.set(false);
     this.selectedTypificationForFields.set(undefined);
-    this.additionalFieldsForEdit.set([]);
-    this.showSuccessMessage();
+    this.showSuccessMessage('Montos guardados');
   }
 
-  deleteTypification(typification: TypificationCatalogV2) {
-    if (typification.esSistema) {
-      alert('No se pueden eliminar tipificaciones del sistema');
-      return;
-    }
+  // ==================== ELIMINAR DEL CATÁLOGO ====================
 
-    const message = `¿Está seguro de eliminar la tipificación "${typification.nombre}"?\n\nEsto la eliminará del catálogo global y afectará a TODAS las carteras.\n\nEsta acción no se puede deshacer.`;
+  abrirEliminar(typification: TypificationCatalogV2) {
+    if (typification.esSistema) return;
+    this.eliminar.set({ tip: typification, paso: 'confirmar', mensaje: '' });
+  }
 
-    if (!confirm(message)) {
-      return;
-    }
+  cerrarEliminar() {
+    if (this.eliminando()) return;
+    this.eliminar.set(null);
+  }
+
+  /** La tipificación que se intentó borrar ya está apagada en esta subcartera. */
+  get eliminarYaDeshabilitada(): boolean {
+    const e = this.eliminar();
+    if (!e) return false;
+    return this.tenantConfigs.some(c => c.tipificacion.id === e.tip.id && c.estaHabilitada !== true);
+  }
+
+  confirmarEliminar() {
+    const e = this.eliminar();
+    if (!e || this.eliminando()) return;
+
+    this.eliminando.set(true);
 
     // Siempre eliminar físicamente del catálogo global
-    this.classificationService.deleteTypification(typification.id).subscribe({
+    this.classificationService.deleteTypification(e.tip.id).subscribe({
       next: () => {
-        this.showSuccessMessage();
+        this.eliminando.set(false);
+        this.eliminar.set(null);
+        this.showSuccessMessage(`«${e.tip.nombre}» se eliminó del catálogo`);
         this.loadTypifications();
       },
       error: (error) => {
         console.error('Error al eliminar tipificación:', error);
-        alert('Error al eliminar la tipificación.');
+        this.eliminando.set(false);
+
+        // El backend rechaza con 400 y explica por qué (casi siempre: tiene gestiones
+        // asociadas). Borrarla rompería el historial, así que se ofrece apagarla aquí.
+        const mensaje = error?.error?.error || error?.error?.message;
+        if (error?.status === 400 && mensaje) {
+          this.eliminar.set({ tip: e.tip, paso: 'enUso', mensaje });
+        } else {
+          this.eliminar.set(null);
+          this.toast.error('Error al eliminar la tipificación');
+        }
       }
     });
   }
 
-  showSuccessMessage() {
-    this.showSuccess.set(true);
-    setTimeout(() => this.showSuccess.set(false), 3000);
+  deshabilitarEnSubcartera() {
+    const e = this.eliminar();
+    if (!e || !this.selectedTenantId || this.eliminando()) return;
+
+    this.eliminando.set(true);
+
+    this.classificationService.disableClassification(
+      this.selectedTenantId,
+      e.tip.id,
+      this.selectedPortfolioId,
+      this.selectedSubPortfolioId
+    ).subscribe({
+      next: () => {
+        this.eliminando.set(false);
+        this.eliminar.set(null);
+        this.showSuccessMessage(`«${e.tip.nombre}» quedó deshabilitada en esta subcartera`);
+        this.loadTypifications();
+      },
+      error: (error) => {
+        console.error('Error al deshabilitar tipificación:', error);
+        this.eliminando.set(false);
+        this.toast.error('No se pudo deshabilitar la tipificación');
+      }
+    });
+  }
+
+  showSuccessMessage(mensaje: string = 'Cambio guardado') {
+    this.toast.success(mensaje);
   }
 
   // Category dialog methods
@@ -477,7 +696,7 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   onCategorySaved(categoryName: string) {
     this.showCategoryDialog.set(false);
-    this.showSuccessMessage();
+    this.showSuccessMessage('Categoría creada');
     // Reload typification types
     this.classificationTypes = Object.values(ClassificationTypeV2);
   }
@@ -489,7 +708,8 @@ export class TypificationMaintenanceComponent implements OnInit {
       [ClassificationTypeV2.MODALIDAD_PAGO]: 'Modalidad de Pago',
       [ClassificationTypeV2.TIPO_FRACCIONAMIENTO]: 'Tipo de Fraccionamiento'
     };
-    return labels[type];
+    // Una categoría creada fuera de las cuatro fijas se muestra con su código
+    return labels[type] ?? type;
   }
 
   /**
@@ -553,19 +773,21 @@ export class TypificationMaintenanceComponent implements OnInit {
   /**
    * Inicia la edición inline de una tipificación
    */
-  startEdit(node: TypificationTreeNodeV2, event: Event) {
-    event.stopPropagation();
-
+  startEdit(node: TypificationTreeNodeV2) {
     const config = node.config;
     const typification = node.typification;
+
+    // Segundo clic sobre la misma fila: cierra el editor
+    if (config && this.isEditing(config.id)) {
+      this.cancelEdit();
+      return;
+    }
 
     this.editingNodeId.set(config?.id || null);
     this.editingForm.set({
       nombrePersonalizado: config?.nombrePersonalizado || typification.nombre,
       descripcionPersonalizada: config?.descripcionPersonalizada || typification.descripcion || '',
-      colorPersonalizado: config?.colorPersonalizado || typification.colorSugerido || '#3B82F6',
-      iconoPersonalizado: config?.iconoPersonalizado || typification.iconoSugerido || '',
-      ordenVisualizacionPersonalizado: config?.ordenVisualizacionPersonalizado || typification.ordenVisualizacion || 0
+      colorPersonalizado: config?.colorPersonalizado || typification.colorSugerido || '#3B82F6'
     });
   }
 
@@ -578,6 +800,19 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   /**
+   * Lo que el guardado no debe tocar. El backend reemplaza TODOS los campos de la
+   * configuración con lo que llega, y los que faltan toman su valor por defecto:
+   * `estaHabilitada` y `heredaDePadre` pasan a true. Sin esto, personalizar o
+   * restablecer una tipificación deshabilitada la volvía a habilitar.
+   */
+  private estadoQueSeConserva(config: TenantTypificationConfigV2): UpdateTypificationConfigCommandV2 {
+    return {
+      estaHabilitada: config.estaHabilitada,
+      heredaDePadre: config.heredaDePadre
+    };
+  }
+
+  /**
    * Guarda los cambios de edición inline
    */
   saveEdit(node: TypificationTreeNodeV2) {
@@ -585,27 +820,34 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     this.savingEdit.set(true);
     const form = this.editingForm()!;
+    const config = node.config;
+    const nombre = form.nombrePersonalizado.trim();
+    const descripcion = form.descripcionPersonalizada.trim();
 
-    const command = {
-      nombrePersonalizado: form.nombrePersonalizado !== node.typification.nombre ? form.nombrePersonalizado : undefined,
-      descripcionPersonalizada: form.descripcionPersonalizada !== (node.typification.descripcion || '') ? form.descripcionPersonalizada : undefined,
+    // Lo que coincide con el catálogo no se guarda como personalización
+    const command: UpdateTypificationConfigCommandV2 = {
+      ...this.estadoQueSeConserva(config),
+      nombrePersonalizado: nombre && nombre !== node.typification.nombre ? nombre : undefined,
+      descripcionPersonalizada: descripcion && descripcion !== (node.typification.descripcion || '') ? descripcion : undefined,
       colorPersonalizado: form.colorPersonalizado !== (node.typification.colorSugerido || '#3B82F6') ? form.colorPersonalizado : undefined,
-      iconoPersonalizado: form.iconoPersonalizado !== (node.typification.iconoSugerido || '') ? form.iconoPersonalizado : undefined,
-      ordenVisualizacionPersonalizado: form.ordenVisualizacionPersonalizado !== (node.typification.ordenVisualizacion || 0) ? form.ordenVisualizacionPersonalizado : undefined
+      // El editor no los muestra: se reenvían tal cual para no borrarlos
+      iconoPersonalizado: config.iconoPersonalizado || undefined,
+      ordenVisualizacionPersonalizado: config.ordenVisualizacionPersonalizado ?? undefined,
+      requiereObservacionesPersonalizado: config.requiereObservacionesPersonalizado ?? undefined
     };
 
-    this.classificationService.updateTenantTypificationConfig(node.config.id, command).subscribe({
+    this.classificationService.updateTenantTypificationConfig(config.id, command).subscribe({
       next: () => {
         this.savingEdit.set(false);
         this.editingNodeId.set(null);
         this.editingForm.set(null);
-        this.showSuccessMessage();
+        this.showSuccessMessage('Personalización guardada');
         this.loadTypifications();
       },
       error: (error) => {
         console.error('Error al guardar personalización:', error);
         this.savingEdit.set(false);
-        alert('Error al guardar los cambios');
+        this.toast.error('Error al guardar los cambios');
       }
     });
   }
@@ -613,31 +855,25 @@ export class TypificationMaintenanceComponent implements OnInit {
   /**
    * Resetea la personalización a valores del catálogo
    */
-  resetCustomization(node: TypificationTreeNodeV2, event: Event) {
-    event.stopPropagation();
-
+  resetCustomization(node: TypificationTreeNodeV2) {
     if (!node.config) return;
 
-    if (!confirm('¿Resetear a valores del catálogo global?')) {
+    if (!confirm(`¿Restablecer «${this.nombreDe(node)}» a los valores del catálogo?\n\nSe pierden el nombre, la descripción y el color propios de esta subcartera.`)) {
       return;
     }
 
-    const command = {
-      nombrePersonalizado: undefined,
-      descripcionPersonalizada: undefined,
-      colorPersonalizado: undefined,
-      iconoPersonalizado: undefined,
-      ordenVisualizacionPersonalizado: undefined
-    };
+    // Todo lo personalizado va vacío; el estado (habilitada o no) se conserva
+    const command: UpdateTypificationConfigCommandV2 = this.estadoQueSeConserva(node.config);
 
     this.classificationService.updateTenantTypificationConfig(node.config.id, command).subscribe({
       next: () => {
-        this.showSuccessMessage();
+        this.cancelEdit();
+        this.showSuccessMessage('Personalización restablecida');
         this.loadTypifications();
       },
       error: (error) => {
         console.error('Error al resetear personalización:', error);
-        alert('Error al resetear personalización');
+        this.toast.error('Error al restablecer la personalización');
       }
     });
   }
@@ -650,7 +886,11 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   /**
-   * Verifica si un nodo tiene personalizaciones
+   * Verifica si un nodo tiene personalizaciones.
+   *
+   * El orden personalizado no cuenta: se guarda pero nadie lo lee (el árbol se
+   * ordena por el orden global del catálogo). Además se comparaba con `!== null`,
+   * así que cualquier configuración sin ese campo salía como personalizada.
    */
   hasCustomizations(config: any): boolean {
     if (!config) return false;
@@ -658,8 +898,7 @@ export class TypificationMaintenanceComponent implements OnInit {
       config.nombrePersonalizado ||
       config.descripcionPersonalizada ||
       config.colorPersonalizado ||
-      config.iconoPersonalizado ||
-      config.ordenVisualizacionPersonalizado !== null
+      config.iconoPersonalizado
     );
   }
 
@@ -671,89 +910,5 @@ export class TypificationMaintenanceComponent implements OnInit {
     const catalogField = field === 'nombre' ? 'nombre' : field === 'color' ? 'colorSugerido' : field === 'icono' ? 'iconoSugerido' : field;
 
     return config?.[customField] || typification[catalogField] || '';
-  }
-
-  /**
-   * Verifica si un nodo coincide con el filtro de tipo actual
-   */
-  matchesTypeFilter(typification: TypificationCatalogV2): boolean {
-    if (!this.selectedType) return true; // Sin filtro = todos coinciden
-    return typification.tipoClasificacion === this.selectedType;
-  }
-
-  /**
-   * Verifica si un nodo o alguno de sus descendientes coincide con el filtro
-   */
-  nodeOrChildrenMatch(node: TypificationTreeNodeV2): boolean {
-    if (!this.selectedType) return true;
-    if (this.matchesTypeFilter(node.typification)) return true;
-    return node.children.some(child => this.nodeOrChildrenMatch(child));
-  }
-
-  /**
-   * Obtiene la ruta breadcrumb del padre
-   */
-  getParentBreadcrumb(node: TypificationTreeNodeV2): string {
-    const breadcrumbs: string[] = [];
-    let current = node;
-
-    // Buscar el padre en el árbol
-    const findParent = (nodes: TypificationTreeNodeV2[], targetId: number): TypificationTreeNodeV2 | null => {
-      for (const n of nodes) {
-        if (n.children.some(c => c.typification.id === targetId)) {
-          return n;
-        }
-        const found = findParent(n.children, targetId);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const parentId = current.typification.parentTypificationId || current.typification.tipificacionPadre?.id;
-    if (parentId) {
-      const parent = findParent(this.treeNodes, current.typification.id);
-      if (parent) {
-        // Construir breadcrumb recursivamente
-        const buildPath = (n: TypificationTreeNodeV2): string[] => {
-          const path: string[] = [];
-          const pid = n.typification.parentTypificationId || n.typification.tipificacionPadre?.id;
-          if (pid) {
-            const p = findParent(this.treeNodes, n.typification.id);
-            if (p) {
-              path.push(...buildPath(p));
-            }
-          }
-          path.push(this.getEffectiveValue(n.config, n.typification, 'nombre'));
-          return path;
-        };
-
-        return buildPath(parent).join(' > ');
-      }
-    }
-
-    return '';
-  }
-
-  /**
-   * Obtiene nodos filtrados (solo los que coinciden con el tipo)
-   */
-  getFilteredNodes(nodes: TypificationTreeNodeV2[]): TypificationTreeNodeV2[] {
-    if (!this.selectedType) return nodes;
-
-    const filtered: TypificationTreeNodeV2[] = [];
-
-    const collectMatching = (nodeList: TypificationTreeNodeV2[]) => {
-      for (const node of nodeList) {
-        if (this.matchesTypeFilter(node.typification)) {
-          filtered.push(node);
-        }
-        if (node.children.length > 0) {
-          collectMatching(node.children);
-        }
-      }
-    };
-
-    collectMatching(nodes);
-    return filtered;
   }
 }

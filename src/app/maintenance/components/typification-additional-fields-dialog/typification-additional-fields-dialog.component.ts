@@ -3,9 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { HttpClient } from '@angular/common/http';
-import { AdditionalFieldV2, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, RestriccionFecha } from '../../models/typification-v2.model';
+import { A11yModule } from '@angular/cdk/a11y';
+import { CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, RestriccionFecha } from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
+import { ToastService } from '../../../shared/services/toast.service';
 import { environment } from '../../../../environments/environment';
+import { TUI, TUI_ANIM, tuiSwitch, tuiPerilla } from '../typification-ui';
 
 interface ConfiguracionCabecera {
   codigo: string;
@@ -17,365 +20,244 @@ interface ConfiguracionCabecera {
 @Component({
   selector: 'app-typification-additional-fields-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, A11yModule],
   template: `
-    <!-- Backdrop con blur -->
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
-      [class.opacity-0]="!isVisible()"
-      [class.pointer-events-none]="!isVisible()"
-      [class.opacity-100]="isVisible()"
-    >
-      <!-- Overlay con blur -->
-      <div
-        class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
-        (click)="handleCancel()"
-      ></div>
+    <div [class]="ui.fondo" (click)="handleCancel()">
+      <div [class]="ui.panel + ' max-w-[940px]'" role="dialog" aria-modal="true" aria-labelledby="mf-titulo"
+           cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
+           (click)="$event.stopPropagation()" (keydown.escape)="handleCancel()">
 
-      <!-- Modal -->
-      <div
-        class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all duration-300 border border-slate-200 dark:border-slate-700"
-        [class.scale-95]="!isVisible()"
-        [class.opacity-0]="!isVisible()"
-        [class.scale-100]="isVisible()"
-        [class.opacity-100]="isVisible()"
-      >
-        <!-- Header -->
-        <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <lucide-angular name="sliders" [size]="20" class="text-white"></lucide-angular>
-            </div>
-            <div>
-              <h2 class="text-lg font-bold text-slate-900 dark:text-white">Configurar Montos</h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400">{{ typificationName() }}</p>
-            </div>
+        <!-- Cabecera -->
+        <div [class]="ui.cabecera">
+          <div class="min-w-0">
+            <h2 id="mf-titulo" [class]="ui.titulo">Configurar montos</h2>
+            <p [class]="ui.subtitulo">
+              <b class="font-bold text-[#334155] dark:text-slate-200">{{ typificationName() }}</b>
+              · qué montos puede ofrecer el asesor y con qué reglas
+            </p>
           </div>
-          <button
-            type="button"
-            (click)="handleCancel()"
-            class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
-          >
-            <lucide-angular name="x" [size]="20"></lucide-angular>
+          <button type="button" (click)="handleCancel()" [class]="ui.iconBtn" aria-label="Cerrar">
+            <lucide-angular name="x" [size]="17"></lucide-angular>
           </button>
         </div>
 
-        <!-- Body -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-5">
-          <!-- Selector de Subcartera -->
-          @if (portfolioId()) {
-            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
-              <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                <lucide-angular name="database" [size]="16" class="text-violet-500"></lucide-angular>
-                Subcartera
-              </label>
-
-              @if (loadingSubPortfolios()) {
-                <div class="flex items-center gap-2 py-2 text-sm text-slate-500">
-                  <lucide-angular name="loader" [size]="16" class="animate-spin"></lucide-angular>
-                  Cargando subcarteras...
-                </div>
-              } @else if (subPortfolios().length > 0) {
-                <select
-                  [(ngModel)]="selectedSubPortfolioId"
-                  (ngModelChange)="onSubPortfolioChange($event)"
-                  class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                >
-                  <option [ngValue]="undefined">-- Seleccione una subcartera --</option>
-                  @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
-                    <option [ngValue]="subPortfolio.id">{{ subPortfolio.nombre || subPortfolio.nombreSubcartera }}</option>
-                  }
-                </select>
-              } @else {
-                <p class="text-sm text-slate-500">No hay subcarteras disponibles</p>
-              }
+        <!-- Cuerpo -->
+        <div [class]="ui.cuerpo">
+          @if (sinCronograma()) {
+            <!-- Antes este caso decía "No se encontraron campos numéricos" y el diálogo
+                 quedaba reintentando cada medio segundo, incluso después de cerrarse -->
+            <div class="flex flex-col items-center gap-2 px-4 py-10 text-center">
+              <lucide-angular name="inbox" [size]="36" class="text-[#c5ccd6]"></lucide-angular>
+              <p class="text-[13px] font-bold text-[#334155] dark:text-slate-200">Esta tipificación no registra promesas de pago</p>
+              <p class="max-w-[440px] text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+                Los montos se configuran en las tipificaciones que tienen un campo de cronograma de pagos.
+                Se agrega desde «Editar en el catálogo», en «Campos de la tipificación».
+              </p>
             </div>
-          }
-
-          <!-- Lista de Opciones con Toggles -->
-          @if (selectedSubPortfolioId()) {
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                  <lucide-angular name="list-checks" [size]="18" class="text-emerald-500"></lucide-angular>
-                  Montos disponibles para el agente
-                </h3>
-                @if (opciones().length > 0) {
-                  <span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold rounded-full">
-                    {{ getOpcionesHabilitadasCount() }}/{{ opciones().length }} habilitados
+          } @else {
+            <!-- Subcartera: llega elegida la misma de la pantalla -->
+            <div class="flex flex-wrap items-end justify-between gap-2.5">
+              <div class="flex flex-col gap-1.5">
+                <label for="mf-sub" [class]="ui.label">Subcartera</label>
+                @if (loadingSubPortfolios()) {
+                  <span class="flex h-[38px] items-center gap-2 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                    <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                    Cargando subcarteras…
                   </span>
+                } @else if (subPortfolios().length > 0) {
+                  <select id="mf-sub" [ngModel]="selectedSubPortfolioId()" (ngModelChange)="onSubPortfolioChange($event)"
+                          [class]="ui.input + ' min-w-[240px]'">
+                    <option [ngValue]="undefined">Seleccionar subcartera</option>
+                    @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                      <option [ngValue]="subPortfolio.id">{{ subPortfolio.nombre || subPortfolio.nombreSubcartera || subPortfolio.subPortfolioName }}</option>
+                    }
+                  </select>
+                } @else {
+                  <span class="flex h-[38px] items-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">No hay subcarteras disponibles</span>
                 }
               </div>
+              @if (opciones().length > 0) {
+                <span class="pb-[9px] text-[12px] text-[#5f6c80] dark:text-slate-400">
+                  <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ getOpcionesHabilitadasCount() }}</b> de
+                  <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ opciones().length }}</b> montos habilitados
+                </span>
+              }
+            </div>
 
-              @if (loadingOpciones()) {
-                <div class="flex flex-col items-center justify-center py-16 text-slate-500">
-                  <div class="w-12 h-12 border-4 border-slate-200 dark:border-slate-700 border-t-violet-500 rounded-full animate-spin mb-4"></div>
-                  <p class="text-sm">Cargando montos disponibles...</p>
-                </div>
-              } @else if (opcionesConNombres().length > 0) {
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[450px] overflow-y-auto pr-1">
-                  @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
-                    <div
-                      class="p-4 rounded-xl border-2 transition-all duration-200"
-                      [class.bg-emerald-50]="opcion.estaHabilitada"
-                      [class.dark:bg-emerald-900/10]="opcion.estaHabilitada"
-                      [class.border-emerald-400]="opcion.estaHabilitada"
-                      [class.dark:border-emerald-600]="opcion.estaHabilitada"
-                      [class.shadow-lg]="opcion.estaHabilitada"
-                      [class.shadow-emerald-500/10]="opcion.estaHabilitada"
-                      [class.bg-slate-50]="!opcion.estaHabilitada"
-                      [class.dark:bg-slate-800/30]="!opcion.estaHabilitada"
-                      [class.border-slate-200]="!opcion.estaHabilitada"
-                      [class.dark:border-slate-700]="!opcion.estaHabilitada"
-                    >
-                      <!-- Row 1: Toggle + Label -->
-                      <div class="flex items-center justify-between cursor-pointer" (click)="toggleOpcionOriginal(opcion)">
-                        <div class="flex items-center gap-3 flex-1">
-                          <!-- Toggle Switch -->
-                          <label class="relative inline-flex items-center cursor-pointer" (click)="$event.stopPropagation()">
-                            <input
-                              type="checkbox"
-                              [checked]="opcion.estaHabilitada"
-                              (change)="toggleOpcionOriginal(opcion)"
-                              class="sr-only peer"
-                            >
-                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300/50 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
-                          </label>
+            @if (!selectedSubPortfolioId()) {
+              <div class="flex flex-col items-center gap-2 px-4 py-10 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
+                <lucide-angular name="inbox" [size]="36" class="text-[#c5ccd6]"></lucide-angular>
+                <span>Elige una subcartera para ver sus montos</span>
+              </div>
+            } @else if (loadingOpciones() || cargandoCampos()) {
+              <div class="grid animate-pulse grid-cols-1 gap-2.5 motion-reduce:animate-none md:grid-cols-2" role="status">
+                <span class="sr-only">Cargando montos…</span>
+                @for (n of esqueleto; track n) {
+                  <div class="h-[52px] rounded-xl border border-[#e6e9ee] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-800/60"></div>
+                }
+              </div>
+            } @else if (errorMessage()) {
+              <div class="flex flex-col items-center gap-2.5 px-4 py-10 text-center" role="alert">
+                <lucide-angular name="alert-circle" [size]="32" class="text-[#b91c1c]"></lucide-angular>
+                <p class="text-[13px] text-[#b91c1c] dark:text-red-300">{{ errorMessage() }}</p>
+                <button type="button" (click)="retryLoadOpciones()" [class]="ui.secundario">Reintentar</button>
+              </div>
+            } @else if (opcionesConNombres().length === 0) {
+              <div class="flex flex-col items-center gap-2 px-4 py-10 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
+                <lucide-angular name="inbox" [size]="36" class="text-[#c5ccd6]"></lucide-angular>
+                <span>No se encontraron campos numéricos en esta subcartera</span>
+              </div>
+            } @else {
+              <div class="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2">
+                @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
+                  <div [class]="'flex flex-col rounded-xl border bg-white transition-colors duration-150 dark:bg-slate-900 '
+                                + (opcion.estaHabilitada ? 'border-[#c5ccd6] dark:border-slate-600' : 'border-[#e6e9ee] dark:border-slate-800')">
 
-                          <!-- Label -->
-                          <div class="flex-1 min-w-0">
-                            <span class="text-sm font-semibold text-slate-900 dark:text-white block truncate">
-                              {{ opcion.visualName }}
-                            </span>
-                            @if (opcion.codigoOpcion !== 'personalizado' && opcion.campoTablaDinamica) {
-                              <span class="text-xs text-slate-500 dark:text-slate-400">
-                                {{ opcion.campoTablaDinamica }}
-                              </span>
-                            }
-                          </div>
-
-                          <!-- Badge -->
-                          @if (opcion.codigoOpcion === 'personalizado') {
-                            <span class="px-2 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-semibold rounded-lg">
-                              Manual
-                            </span>
-                          }
-                        </div>
+                    <!-- Interruptor y nombre -->
+                    <div class="flex min-h-[52px] items-center gap-2.5 px-3 py-2">
+                      <button type="button" role="switch" (click)="toggleOpcionOriginal(opcion)"
+                              [attr.aria-checked]="opcion.estaHabilitada"
+                              [attr.aria-label]="(opcion.estaHabilitada ? 'Deshabilitar ' : 'Habilitar ') + opcion.visualName"
+                              [class]="sw(opcion.estaHabilitada)">
+                        <span [class]="perilla(opcion.estaHabilitada)"></span>
+                      </button>
+                      <div class="flex min-w-0 flex-1 flex-col">
+                        <span [class]="'truncate text-[12.5px] font-bold leading-[1.35] tracking-[-0.01em] '
+                                       + (opcion.estaHabilitada ? 'text-[#0f172a] dark:text-slate-100' : 'text-[#5f6c80] dark:text-slate-400')">{{ opcion.visualName }}</span>
+                        @if (opcion.codigoOpcion !== 'personalizado' && opcion.campoTablaDinamica) {
+                          <span class="truncate font-mono text-[11px] leading-[1.35] text-[#5f6c80] dark:text-slate-400">{{ opcion.campoTablaDinamica }}</span>
+                        }
                       </div>
+                      @if (opcion.codigoOpcion === 'personalizado') {
+                        <span [class]="ui.chipVioleta">Lo escribe el asesor</span>
+                      }
+                    </div>
 
-                      <!-- Configuración expandida (solo si está habilitada) -->
-                      @if (opcion.estaHabilitada) {
-                        <div class="mt-4 pt-4 border-t border-emerald-200 dark:border-emerald-800/50 space-y-4" (click)="$event.stopPropagation()">
-                          <!-- Restricción de fecha -->
-                          <div>
-                            <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
-                              <lucide-angular name="calendar" [size]="12" class="text-blue-500"></lucide-angular>
-                              Restricción de fecha
-                            </label>
-                            <select
-                              [ngModel]="opcion.restriccionFecha || 'SIN_RESTRICCION'"
-                              (ngModelChange)="onRestriccionFechaChange(opcion.codigoOpcion, $event)"
-                              class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                              <option value="SIN_RESTRICCION">Sin restriccion</option>
+                    <!-- Reglas: solo si el monto está habilitado -->
+                    @if (opcion.estaHabilitada) {
+                      <div class="tui-entra flex flex-col gap-3.5 border-t border-[#eef1f5] p-3 dark:border-slate-800">
+                        <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                          <div class="flex flex-col gap-1.5">
+                            <span [class]="ui.label">Fecha de pago</span>
+                            <select [ngModel]="opcion.restriccionFecha || 'SIN_RESTRICCION'"
+                                    (ngModelChange)="onRestriccionFechaChange(opcion.codigoOpcion, $event)"
+                                    [attr.aria-label]="'Restricción de fecha de ' + opcion.visualName"
+                                    [class]="ui.inputSm + ' w-full'">
+                              <option value="SIN_RESTRICCION">Sin restricción</option>
                               <option value="DENTRO_MES">Solo dentro del mes actual</option>
                               <option value="FUERA_MES">Solo fuera del mes</option>
                             </select>
                           </div>
-
-                          <!-- Genera Carta de Acuerdo -->
-                          <div class="flex items-center justify-between">
-                            <label class="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                              <lucide-angular name="file-text" [size]="12" class="text-purple-500"></lucide-angular>
-                              Genera Carta de Acuerdo
-                            </label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                [checked]="opcion.generaCartaAcuerdo"
-                                (change)="onGeneraCartaChange(opcion.codigoOpcion, $event)"
-                                class="sr-only peer"
-                              >
-                              <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300/50 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                            </label>
-                          </div>
-
-                          <!-- Rango de Cuotas - Selector visual -->
-                          <div>
-                            <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-1.5">
-                              <lucide-angular name="layers" [size]="12" class="text-emerald-500"></lucide-angular>
-                              Cuotas permitidas
-                            </label>
-                            <div class="flex flex-wrap gap-1.5">
-                              @for (num of cuotasDisponibles; track num) {
-                                <button
-                                  type="button"
-                                  (click)="toggleCuota(opcion.codigoOpcion, num)"
-                                  class="w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150"
-                                  [class.bg-emerald-500]="isCuotaInRange(opcion, num)"
-                                  [class.text-white]="isCuotaInRange(opcion, num)"
-                                  [class.shadow-md]="isCuotaInRange(opcion, num)"
-                                  [class.shadow-emerald-500/30]="isCuotaInRange(opcion, num)"
-                                  [class.bg-slate-100]="!isCuotaInRange(opcion, num)"
-                                  [class.dark:bg-slate-700]="!isCuotaInRange(opcion, num)"
-                                  [class.text-slate-600]="!isCuotaInRange(opcion, num)"
-                                  [class.dark:text-slate-300]="!isCuotaInRange(opcion, num)"
-                                  [class.hover:bg-slate-200]="!isCuotaInRange(opcion, num)"
-                                  [class.dark:hover:bg-slate-600]="!isCuotaInRange(opcion, num)"
-                                >
-                                  {{ num }}
-                                </button>
-                              }
+                          <div class="flex flex-col gap-1.5">
+                            <span [class]="ui.label">Cuotas permitidas</span>
+                            <!-- Lo que se guarda es un mínimo y un máximo: antes eran 48 botones -->
+                            <div class="flex items-center gap-1.5 text-[12.5px] text-[#334155] dark:text-slate-300">
+                              <span>De</span>
+                              <input type="number" min="1" max="48" [value]="opcion.minCuotas || 1"
+                                     (change)="onMinCuotasChange(opcion.codigoOpcion, $event)"
+                                     [attr.aria-label]="'Mínimo de cuotas de ' + opcion.visualName"
+                                     [class]="ui.inputSm + ' w-[58px] tabular-nums'"/>
+                              <span>a</span>
+                              <input type="number" min="1" max="48" [value]="opcion.maxCuotas || 6"
+                                     (change)="onMaxCuotasChange(opcion.codigoOpcion, $event)"
+                                     [attr.aria-label]="'Máximo de cuotas de ' + opcion.visualName"
+                                     [class]="ui.inputSm + ' w-[58px] tabular-nums'"/>
                             </div>
-                            <p class="text-xs text-slate-500 mt-1.5">
-                              @if ((opcion.minCuotas || 1) === (opcion.maxCuotas || 6)) {
-                                Solo {{ opcion.minCuotas || 1 }} cuota{{ (opcion.minCuotas || 1) > 1 ? 's' : '' }}
-                              } @else {
-                                De {{ opcion.minCuotas || 1 }} a {{ opcion.maxCuotas || 6 }} cuotas
-                              }
-                            </p>
                           </div>
-
-                          <!-- Porcentaje de Auto-aprobación -->
-                          <div class="col-span-2 mt-2 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800">
-                            <label class="text-xs font-medium text-violet-700 dark:text-violet-300 mb-2 flex items-center gap-1.5">
-                              <lucide-angular name="percent" [size]="12"></lucide-angular>
-                              Descuento máximo para auto-aprobación
-                            </label>
-                            <div class="flex items-center gap-3 mt-2">
-                              <input
-                                type="range"
-                                [value]="opcion.porcentajeAutoAprobacion ?? 10"
-                                (input)="onPorcentajeChange(opcion.codigoOpcion, $event)"
-                                min="0"
-                                max="100"
-                                step="5"
-                                class="flex-1 h-2 bg-violet-200 dark:bg-violet-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-                              >
-                              <span class="text-sm font-bold text-violet-700 dark:text-violet-300 min-w-[50px] text-center">
-                                {{ opcion.porcentajeAutoAprobacion ?? 10 }}%
-                              </span>
-                            </div>
-                            <p class="text-[10px] text-violet-600 dark:text-violet-400 mt-2">
-                              Descuentos hasta {{ opcion.porcentajeAutoAprobacion ?? 10 }}% se aprueban automáticamente.
-                              Descuentos mayores van a evaluación.
-                            </p>
-                          </div>
-                          <!-- Auto-aprobación de AUMENTO sobre la deuda -->
-                          @if(opcion.codigoOpcion==='personalizado'){
-                          <div class="col-span-2 mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200                         
-  dark:border-emerald-800">
-                            <label class="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-2 flex items-center gap-1.5">
-                              <lucide-angular name="trending-up" [size]="12"></lucide-angular>
-                              Aumento máximo sobre la deuda para auto-aprobación
-                            </label>
-                            <div class="flex items-center gap-3 mt-2">
-                              <input type="range" [value]="opcion.porcentajeAutoAprobacionAumento ?? 5"
-                                     (input)="onPorcentajeAumentoChange(opcion.codigoOpcion, $event)"
-                                     min="0" max="100" step="5"
-                                     class="flex-1 h-2 bg-emerald-200 dark:bg-emerald-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
-                              <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300 min-w-[50px] text-center">                              
-                                  {{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}%                                                                          
-                                </span>
-                            </div>
-                            <p class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-2">
-                              Aumentos hasta {{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}% sobre la deuda se aprueban automáticamente. Aumentos mayores
-                              van a evaluación.
-                            </p>
-                          </div>
-
-                          <!-- Bloqueo: límite máximo de la promesa sobre la deuda -->
-                          <div class="col-span-2 mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                            <label class="text-xs font-medium text-red-700 dark:text-red-300 mb-2 flex items-center gap-1.5">
-                              <lucide-angular name="ban" [size]="12"></lucide-angular>
-                              Límite máximo de la promesa sobre la deuda (bloqueo)
-                            </label>
-                            <div class="flex items-center gap-3 mt-2">
-                              <input type="range" [value]="opcion.porcentajeMaximoPromesa ?? 10"
-                                     (input)="onPorcentajeMaximoChange(opcion.codigoOpcion, $event)"
-                                     min="0" max="100" step="5"
-                                     class="flex-1 h-2 bg-red-200 dark:bg-red-800 rounded-lg appearance-none cursor-pointer accent-red-500">
-                              <span class="text-sm font-bold text-red-700 dark:text-red-300 min-w-[50px] text-center">                                      
-                                  {{ opcion.porcentajeMaximoPromesa ?? 10 }}%                                                                                 
-                                </span>
-                            </div>
-                            <p class="text-[10px] text-red-600 dark:text-red-400 mt-2">
-                              Si la promesa supera la deuda en más de {{ opcion.porcentajeMaximoPromesa ?? 10 }}%, no se podrá registrar.
-                            </p>
-                          </div>}
                         </div>
-                      }
-                    </div>
-                  }
-                </div>
-              } @else if (errorMessage()) {
-                <div class="text-center py-12 text-red-500 dark:text-red-400">
-                  <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <lucide-angular name="alert-circle" [size]="32"></lucide-angular>
+
+                        <div class="flex items-center justify-between gap-2.5">
+                          <span class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Genera carta de acuerdo</span>
+                          <button type="button" role="switch" (click)="alternarCarta(opcion.codigoOpcion)"
+                                  [attr.aria-checked]="!!opcion.generaCartaAcuerdo"
+                                  [attr.aria-label]="'Genera carta de acuerdo: ' + opcion.visualName"
+                                  [class]="sw(!!opcion.generaCartaAcuerdo)">
+                            <span [class]="perilla(!!opcion.generaCartaAcuerdo)"></span>
+                          </button>
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                          <div class="flex items-baseline justify-between gap-2.5">
+                            <span class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Descuento máximo que se aprueba solo</span>
+                            <b class="text-[13px] font-extrabold tabular-nums">{{ opcion.porcentajeAutoAprobacion ?? 10 }}%</b>
+                          </div>
+                          <input type="range" min="0" max="100" step="5" [value]="opcion.porcentajeAutoAprobacion ?? 10"
+                                 (input)="onPorcentajeChange(opcion.codigoOpcion, $event)"
+                                 [attr.aria-label]="'Descuento máximo para auto-aprobación de ' + opcion.visualName"
+                                 class="w-full cursor-pointer accent-[#2563eb]"/>
+                          <span [class]="ui.ayuda">
+                            Hasta {{ opcion.porcentajeAutoAprobacion ?? 10 }}% se aprueba automáticamente. Un descuento mayor pasa a evaluación.
+                          </span>
+                        </div>
+
+                        @if (opcion.codigoOpcion === 'personalizado') {
+                          <div class="flex flex-col gap-1">
+                            <div class="flex items-baseline justify-between gap-2.5">
+                              <span class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Aumento máximo sobre la deuda que se aprueba solo</span>
+                              <b class="text-[13px] font-extrabold tabular-nums">{{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}%</b>
+                            </div>
+                            <input type="range" min="0" max="100" step="5" [value]="opcion.porcentajeAutoAprobacionAumento ?? 5"
+                                   (input)="onPorcentajeAumentoChange(opcion.codigoOpcion, $event)"
+                                   aria-label="Aumento máximo sobre la deuda para auto-aprobación"
+                                   class="w-full cursor-pointer accent-[#2563eb]"/>
+                            <span [class]="ui.ayuda">
+                              Hasta {{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}% por encima de la deuda se aprueba automáticamente. Más, pasa a evaluación.
+                            </span>
+                          </div>
+
+                          <div class="flex flex-col gap-1">
+                            <div class="flex items-baseline justify-between gap-2.5">
+                              <span class="inline-flex items-center gap-[7px] text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
+                                Tope de la promesa sobre la deuda
+                                <span [class]="ui.chipAmbar">Bloquea</span>
+                              </span>
+                              <b class="text-[13px] font-extrabold tabular-nums">{{ opcion.porcentajeMaximoPromesa ?? 10 }}%</b>
+                            </div>
+                            <input type="range" min="0" max="100" step="5" [value]="opcion.porcentajeMaximoPromesa ?? 10"
+                                   (input)="onPorcentajeMaximoChange(opcion.codigoOpcion, $event)"
+                                   aria-label="Límite máximo de la promesa sobre la deuda"
+                                   class="w-full cursor-pointer accent-[#2563eb]"/>
+                            <span [class]="ui.ayuda">
+                              Si la promesa supera la deuda en más de {{ opcion.porcentajeMaximoPromesa ?? 10 }}%, no se puede registrar.
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    }
                   </div>
-                  <p class="text-sm mb-4">{{ errorMessage() }}</p>
-                  <button
-                    (click)="retryLoadOpciones()"
-                    class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-900/50 transition-all"
-                  >
-                    Reintentar
-                  </button>
-                </div>
-              } @else {
-                <div class="text-center py-12 text-slate-400">
-                  <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <lucide-angular name="inbox" [size]="32"></lucide-angular>
-                  </div>
-                  <p class="text-sm">No se encontraron campos numericos en esta subcartera</p>
-                </div>
-              }
-            </div>
-          } @else {
-            <!-- Estado inicial: seleccionar subcartera -->
-            <div class="text-center py-16 text-slate-400">
-              <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <lucide-angular name="mouse-pointer-click" [size]="40" class="opacity-50"></lucide-angular>
+                }
               </div>
-              <p class="text-sm">Seleccione una subcartera para ver los montos disponibles</p>
-            </div>
+            }
           }
         </div>
 
-        <!-- Footer -->
-        <div class="flex justify-between items-center gap-4 p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <!-- Pie -->
+        <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#e6e9ee] px-[18px] py-3 dark:border-slate-700">
+          <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
             @if (opciones().length > 0) {
-              <lucide-angular name="info" [size]="14"></lucide-angular>
-              Los montos habilitados apareceran como opciones para el agente
+              Los montos habilitados aparecen como opciones para el asesor al registrar la promesa
             }
-          </div>
-          <div class="flex gap-3">
-            <button
-              type="button"
-              (click)="handleCancel()"
-              class="px-5 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium transition-all"
-            >
-              Cancelar
+          </span>
+          <div class="flex gap-2">
+            <button type="button" (click)="handleCancel()" [disabled]="guardando()" [class]="ui.secundario">
+              {{ sinCronograma() ? 'Cerrar' : 'Cancelar' }}
             </button>
-            <button
-              type="button"
-              (click)="handleSave()"
-              [disabled]="!canSave()"
-              class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-semibold transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none"
-            >
-              <lucide-angular name="save" [size]="16"></lucide-angular>
-              Guardar
-            </button>
+            @if (!sinCronograma()) {
+              <button type="button" (click)="handleSave()" [disabled]="!canSave()" [class]="ui.primario">
+                @if (guardando()) {
+                  <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                  Guardando
+                } @else {
+                  Guardar
+                }
+              </button>
+            }
           </div>
         </div>
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: contents;
-    }
-  `]
+  styles: [TUI_ANIM]
 })
 export class TypificationAdditionalFieldsDialogComponent {
   isOpen = input.required<boolean>();
@@ -383,10 +265,16 @@ export class TypificationAdditionalFieldsDialogComponent {
   typificationId = input.required<number>();
   tenantId = input.required<number>();
   portfolioId = input<number | undefined>(undefined);
+  /** Subcartera abierta en la pantalla: el diálogo arranca con esa misma elegida. */
   subPortfolioId = input<number | undefined>(undefined);
 
   close = output<void>();
   save = output<void>();
+
+  readonly ui = TUI;
+  readonly sw = tuiSwitch;
+  readonly perilla = tuiPerilla;
+  readonly esqueleto = [0, 1, 2, 3];
 
   opciones = signal<CampoOpcionDTO[]>([]);
   loadingOpciones = signal<boolean>(false);
@@ -395,10 +283,11 @@ export class TypificationAdditionalFieldsDialogComponent {
   loadingSubPortfolios = signal<boolean>(false);
   selectedSubPortfolioId = signal<number | undefined>(undefined);
   paymentScheduleFieldId = signal<number | null>(null);
-  isVisible = signal<boolean>(false);
-
-  // Cuotas disponibles (1-48)
-  cuotasDisponibles = Array.from({ length: 48 }, (_, i) => i + 1);
+  /** Aún no se sabe si la tipificación tiene campo de cronograma de pagos. */
+  cargandoCampos = signal<boolean>(false);
+  /** Ya se sabe que no lo tiene: no hay montos que configurar. */
+  sinCronograma = signal<boolean>(false);
+  guardando = signal<boolean>(false);
 
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
@@ -434,6 +323,7 @@ export class TypificationAdditionalFieldsDialogComponent {
 
   private typificationService = inject(TypificationV2Service);
   private http = inject(HttpClient);
+  private toast = inject(ToastService);
 
   constructor() {
     effect(() => {
@@ -441,10 +331,6 @@ export class TypificationAdditionalFieldsDialogComponent {
         this.resetState();
         this.loadSubPortfolios();
         this.loadPaymentScheduleField();
-        // Animacion de entrada
-        setTimeout(() => this.isVisible.set(true), 10);
-      } else {
-        this.isVisible.set(false);
       }
     });
   }
@@ -455,25 +341,33 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.errorMessage.set('');
     this.selectedSubPortfolioId.set(undefined);
     this.paymentScheduleFieldId.set(null);
+    this.sinCronograma.set(false);
+    this.guardando.set(false);
   }
 
   private loadPaymentScheduleField() {
     const typificationId = this.typificationId();
     if (!typificationId) return;
 
+    this.cargandoCampos.set(true);
+
     this.typificationService.getAdditionalFields(typificationId).subscribe({
       next: (fields) => {
+        this.cargandoCampos.set(false);
         // Find PAYMENT_SCHEDULE field
         const paymentField = fields.find(f => f.tipoCampo === FieldTypeV2.PAYMENT_SCHEDULE);
         if (paymentField) {
           this.paymentScheduleFieldId.set(paymentField.id);
-          console.log('Found PAYMENT_SCHEDULE field:', paymentField.id);
+          // Si la subcartera ya estaba elegida, los montos se cargan ahora
+          this.loadOpcionesAutomatically();
         } else {
-          console.warn('No PAYMENT_SCHEDULE field found for typification', typificationId);
+          this.sinCronograma.set(true);
         }
       },
       error: (error) => {
         console.error('Error loading fields:', error);
+        this.cargandoCampos.set(false);
+        this.errorMessage.set('No se pudieron cargar los campos de la tipificación.');
       }
     });
   }
@@ -490,10 +384,16 @@ export class TypificationAdditionalFieldsDialogComponent {
           this.subPortfolios.set(subPortfolios);
           this.loadingSubPortfolios.set(false);
 
-          // Auto-select if only one subportfolio
-          if (subPortfolios.length === 1) {
-            this.selectedSubPortfolioId.set(subPortfolios[0].id);
-            this.loadCabeceras(subPortfolios[0].id);
+          // Se parte de la subcartera abierta en la pantalla. Antes el diálogo la
+          // descartaba y obligaba a elegirla otra vez (salvo que hubiera una sola).
+          const deLaPantalla = this.subPortfolioId();
+          const inicial = subPortfolios.some(s => s.id === deLaPantalla)
+            ? deLaPantalla
+            : (subPortfolios.length === 1 ? subPortfolios[0].id : undefined);
+
+          if (inicial !== undefined) {
+            this.selectedSubPortfolioId.set(inicial);
+            this.loadCabeceras(inicial);
             this.loadOpcionesAutomatically();
           }
         },
@@ -505,7 +405,7 @@ export class TypificationAdditionalFieldsDialogComponent {
       });
   }
 
-  onSubPortfolioChange(subPortfolioId: number) {
+  onSubPortfolioChange(subPortfolioId: number | undefined) {
     this.selectedSubPortfolioId.set(subPortfolioId);
     this.opciones.set([]);
     this.cabeceras.set([]);
@@ -522,7 +422,6 @@ export class TypificationAdditionalFieldsDialogComponent {
       .subscribe({
         next: (cabeceras) => {
           this.cabeceras.set(cabeceras);
-          console.log('[DIALOG] Loaded cabeceras:', cabeceras.length);
         },
         error: (error) => {
           console.warn('[DIALOG] Error loading cabeceras:', error);
@@ -530,19 +429,19 @@ export class TypificationAdditionalFieldsDialogComponent {
       });
   }
 
+  /**
+   * Carga los montos cuando ya se conocen las dos cosas que necesita: el campo de
+   * cronograma y la subcartera. Se llama al resolverse cada una, así que ya no hace
+   * falta el reintento con temporizador que había antes (y que nunca se detenía si
+   * la tipificación no tenía ese campo).
+   */
   private loadOpcionesAutomatically() {
     const tenantId = this.tenantId();
     const portfolioId = this.portfolioId();
     const subPortfolioId = this.selectedSubPortfolioId();
     const campoId = this.paymentScheduleFieldId();
 
-    if (!tenantId || !portfolioId || !subPortfolioId) {
-      return;
-    }
-
-    // Wait for field ID if not loaded yet
-    if (!campoId) {
-      setTimeout(() => this.loadOpcionesAutomatically(), 500);
+    if (!tenantId || !portfolioId || !subPortfolioId || !campoId) {
       return;
     }
 
@@ -576,14 +475,20 @@ export class TypificationAdditionalFieldsDialogComponent {
         },
         error: (error) => {
           console.error('Error initializing options:', error);
-          this.errorMessage.set('Error al cargar las opciones. Verifique la configuracion de la subcartera.');
+          this.errorMessage.set('Error al cargar las opciones. Verifica la configuración de la subcartera.');
           this.loadingOpciones.set(false);
         }
       });
   }
 
   retryLoadOpciones() {
-    this.loadOpcionesAutomatically();
+    if (this.paymentScheduleFieldId()) {
+      this.loadOpcionesAutomatically();
+    } else {
+      // Lo que falló fue la carga de los campos de la tipificación
+      this.errorMessage.set('');
+      this.loadPaymentScheduleField();
+    }
   }
 
   toggleOpcionOriginal(opcionConNombre: CampoOpcionDTO & { visualName: string }) {
@@ -611,65 +516,44 @@ export class TypificationAdditionalFieldsDialogComponent {
     }
   }
 
-  onGeneraCartaChange(codigoOpcion: string, event: Event) {
-    const checkbox = event.target as HTMLInputElement;
+  alternarCarta(codigoOpcion: string) {
     const opciones = this.opciones();
     const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
     if (opcion) {
-      opcion.generaCartaAcuerdo = checkbox.checked;
-      // Forzar actualizacion del signal
+      opcion.generaCartaAcuerdo = !opcion.generaCartaAcuerdo;
       this.opciones.set([...opciones]);
     }
   }
 
-  // Verificar si una cuota esta en el rango seleccionado
-  isCuotaInRange(opcion: CampoOpcionDTO, num: number): boolean {
-    const min = opcion.minCuotas || 1;
-    const max = opcion.maxCuotas || 6;
-    return num >= min && num <= max;
+  /** Lee un número de cuotas del campo, lo acota a 1–48 y deja el campo mostrando el valor acotado. */
+  private leerCuotas(event: Event): number {
+    const campo = event.target as HTMLInputElement;
+    const leido = parseInt(campo.value, 10);
+    const valor = Math.max(1, Math.min(48, isNaN(leido) ? 1 : leido));
+    campo.value = String(valor);
+    return valor;
   }
 
-  // Toggle de cuota: expande o contrae el rango
-  toggleCuota(codigoOpcion: string, num: number) {
+  // El mínimo nunca queda por encima del máximo, ni al revés: el otro extremo lo acompaña
+  onMinCuotasChange(codigoOpcion: string, event: Event) {
+    const min = this.leerCuotas(event);
     const opciones = this.opciones();
     const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
     if (!opcion) return;
 
-    const currentMin = opcion.minCuotas || 1;
-    const currentMax = opcion.maxCuotas || 6;
+    opcion.minCuotas = min;
+    if ((opcion.maxCuotas || 6) < min) opcion.maxCuotas = min;
+    this.opciones.set([...opciones]);
+  }
 
-    // Si el numero esta en el rango
-    if (num >= currentMin && num <= currentMax) {
-      // Si es el unico, no hacer nada
-      if (currentMin === currentMax) return;
+  onMaxCuotasChange(codigoOpcion: string, event: Event) {
+    const max = this.leerCuotas(event);
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (!opcion) return;
 
-      // Si es el minimo, aumentar el minimo
-      if (num === currentMin) {
-        opcion.minCuotas = num + 1;
-      }
-      // Si es el maximo, reducir el maximo
-      else if (num === currentMax) {
-        opcion.maxCuotas = num - 1;
-      }
-      // Si esta en medio, verificar cual extremo esta mas cerca
-      else {
-        const distToMin = num - currentMin;
-        const distToMax = currentMax - num;
-        if (distToMin <= distToMax) {
-          opcion.minCuotas = num + 1;
-        } else {
-          opcion.maxCuotas = num - 1;
-        }
-      }
-    } else {
-      // Fuera del rango: expandir para incluirlo
-      if (num < currentMin) {
-        opcion.minCuotas = num;
-      } else {
-        opcion.maxCuotas = num;
-      }
-    }
-
+    opcion.maxCuotas = max;
+    if ((opcion.minCuotas || 1) > max) opcion.minCuotas = max;
     this.opciones.set([...opciones]);
   }
 
@@ -685,6 +569,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     opcion.porcentajeAutoAprobacion = porcentaje;
     this.opciones.set([...opciones]);
   }
+
   onPorcentajeAumentoChange(codigoOpcion: string, event: Event) {
     const porcentaje = parseInt((event.target as HTMLInputElement).value, 10);
     const opciones = this.opciones();
@@ -711,19 +596,20 @@ export class TypificationAdditionalFieldsDialogComponent {
     return this.selectedSubPortfolioId() !== undefined &&
            this.paymentScheduleFieldId() !== null &&
            this.opciones().length > 0 &&
-           !this.loadingOpciones();
+           !this.loadingOpciones() &&
+           !this.guardando();
   }
 
   handleCancel() {
-    this.isVisible.set(false);
-    setTimeout(() => this.close.emit(), 200);
+    if (this.guardando()) return;
+    this.close.emit();
   }
 
   handleSave() {
     const campoId = this.paymentScheduleFieldId();
     const opcionesActuales = this.opciones();
 
-    if (!campoId || opcionesActuales.length === 0) {
+    if (!campoId || opcionesActuales.length === 0 || this.guardando()) {
       return;
     }
 
@@ -744,16 +630,20 @@ export class TypificationAdditionalFieldsDialogComponent {
       }))
     };
 
+    this.guardando.set(true);
+
     this.typificationService.configurarOpciones(request).subscribe({
       next: (opcionesActualizadas) => {
-        console.log('Options saved successfully:', opcionesActualizadas.length);
+        this.guardando.set(false);
         this.opciones.set(opcionesActualizadas);
-        this.isVisible.set(false);
-        setTimeout(() => this.save.emit(), 200);
+        this.save.emit();
       },
       error: (error) => {
+        // Antes el mensaje se guardaba en un sitio que no se pinta mientras hay montos
+        // en pantalla: el guardado fallaba sin avisar.
         console.error('Error saving options:', error);
-        this.errorMessage.set('Error al guardar la configuracion');
+        this.guardando.set(false);
+        this.toast.error('Error al guardar la configuración de montos');
       }
     });
   }

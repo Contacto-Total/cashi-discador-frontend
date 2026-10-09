@@ -1,134 +1,405 @@
-<div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
+<div [class]="ui.raiz">
 
-  <!-- Notificación de éxito -->
-  @if (showSuccess()) {
-    <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">
-      <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
-        
-        <div>
-          <div class="font-bold">¡Cambio Guardado!</div>
-          <div class="text-sm opacity-90">La configuración se actualizó correctamente</div>
+  <!-- ============ Cabecera ============ -->
+  <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h1 class="!m-0 text-xl font-extrabold tracking-[-0.015em]">Tipificaciones</h1>
+      <p class="mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">Qué tipificaciones usa cada subcartera y con qué nombre las ven los asesores</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" (click)="openCreateCategoryDialog()" [class]="ui.secundario">Nueva categoría</button>
+      <button type="button" (click)="openCreateRootDialog()" [disabled]="!selectedSubPortfolioId" [class]="ui.primario"
+              [attr.title]="selectedSubPortfolioId ? null : 'Elige una subcartera para crear tipificaciones'">
+        <lucide-angular name="plus" [size]="15"></lucide-angular>
+        Nueva tipificación
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ Filtros ============ -->
+  <div class="mb-3 flex flex-wrap items-end gap-2.5">
+    <div class="flex flex-col gap-1.5">
+      <label for="tm-cliente" [class]="ui.label">Cliente</label>
+      <select id="tm-cliente" [(ngModel)]="selectedTenantId" (change)="onTenantChange()"
+              [disabled]="tenants.length === 0" [class]="ui.input">
+        @for (tenant of tenants; track tenant.id) {
+          <option [ngValue]="tenant.id">{{ tenant.tenantName }}</option>
+        }
+      </select>
+    </div>
+
+    <span class="pb-2.5 text-[#c5ccd6]" aria-hidden="true">&rsaquo;</span>
+
+    <div class="flex flex-col gap-1.5">
+      <label for="tm-cartera" [class]="ui.label">Cartera</label>
+      <select id="tm-cartera" [(ngModel)]="selectedPortfolioId" (change)="onPortfolioChange()"
+              [disabled]="portfolios.length === 0" [class]="ui.input">
+        <option [ngValue]="undefined">Seleccionar cartera</option>
+        @for (portfolio of portfolios; track portfolio.id) {
+          <option [ngValue]="portfolio.id">{{ portfolio.portfolioName }}</option>
+        }
+      </select>
+    </div>
+
+    <span class="pb-2.5 text-[#c5ccd6]" aria-hidden="true">&rsaquo;</span>
+
+    <div class="flex flex-col gap-1.5">
+      <label for="tm-subcartera" [class]="ui.label">Subcartera</label>
+      <select id="tm-subcartera" [(ngModel)]="selectedSubPortfolioId" (change)="onSubPortfolioChange()"
+              [disabled]="subPortfolios.length === 0" [class]="ui.input">
+        <option [ngValue]="undefined">Seleccionar subcartera</option>
+        @for (sub of subPortfolios; track sub.id) {
+          <option [ngValue]="sub.id">{{ sub.subPortfolioName || sub.nombre }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label for="tm-tipo" [class]="ui.label">Tipo</label>
+      <select id="tm-tipo" [(ngModel)]="selectedType" (change)="onTypeChange()"
+              [disabled]="!selectedSubPortfolioId" [class]="ui.input">
+        <option [ngValue]="undefined">Todos</option>
+        @for (type of classificationTypes; track type) {
+          <option [ngValue]="type">{{ getTypeLabel(type) }}</option>
+        }
+      </select>
+    </div>
+
+    <label class="flex h-[38px] min-w-[190px] flex-1 items-center gap-2.5 rounded-lg border border-[#d5dbe3]
+                  bg-white px-3 transition-colors focus-within:border-[#2563eb]
+                  dark:border-slate-700 dark:bg-slate-900">
+      <lucide-angular name="search" [size]="14" class="shrink-0 text-[#8491a3]"></lucide-angular>
+      <input type="text" [ngModel]="buscar" (ngModelChange)="onBuscarChange($event)"
+        [disabled]="!selectedSubPortfolioId"
+        placeholder="Buscar por nombre o código" aria-label="Buscar tipificación"
+        class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] outline-none
+               placeholder:text-[#5f6c80] disabled:cursor-not-allowed dark:text-slate-100"/>
+    </label>
+  </div>
+
+  <!-- ============ Contenido ============ -->
+  @if (!selectedSubPortfolioId) {
+    <!-- Antes aquí salía "No hay tipificaciones configuradas", aunque aún no se había elegido dónde mirar -->
+    <div class="tm-fade rounded-xl border border-dashed border-[#c5ccd6] bg-white px-6 py-12 text-center
+                dark:border-slate-700 dark:bg-slate-900">
+      <lucide-angular name="folder-tree" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+      <p class="text-[13px] font-bold text-[#334155] dark:text-slate-200">Elige una cartera y una subcartera</p>
+      <p class="mx-auto mt-1 max-w-[460px] text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+        Las tipificaciones se habilitan y se nombran por subcartera, así que la lista aparece al elegir una.
+      </p>
+    </div>
+  } @else if (loading() && treeNodes.length === 0) {
+    <!-- Primera carga: el esqueleto ocupa el lugar de la tabla -->
+    <div class="animate-pulse motion-reduce:animate-none" role="status">
+      <span class="sr-only">Cargando tipificaciones…</span>
+      <div class="mb-2.5 h-5 w-72 rounded bg-[#e2e8f0] dark:bg-slate-800"></div>
+      <div [class]="ui.tarjeta + ' overflow-hidden'">
+        <div class="h-[34px] border-b border-[#e6e9ee] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-800"></div>
+        @for (n of esqueletoFilas; track n) {
+          <div class="flex h-[42px] items-center gap-3 border-b border-[#eef1f5] px-3 last:border-b-0 dark:border-slate-800">
+            <span class="h-6 w-6 shrink-0 rounded-[6px] bg-[#e2e8f0] dark:bg-slate-800"></span>
+            <span class="h-3 w-52 rounded bg-[#e2e8f0] dark:bg-slate-800"></span>
+            <span class="h-3 flex-1 rounded bg-[#eef1f5] dark:bg-slate-800"></span>
+          </div>
+        }
+      </div>
+    </div>
+  } @else if (treeNodes.length === 0) {
+    <div class="tm-fade rounded-xl border border-dashed border-[#c5ccd6] bg-white px-6 py-12 text-center
+                dark:border-slate-700 dark:bg-slate-900">
+      <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+      <p class="text-[13px] font-bold text-[#334155] dark:text-slate-200">Esta subcartera no tiene tipificaciones</p>
+      <p class="mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">Crea la primera con «Nueva tipificación».</p>
+    </div>
+  } @else {
+    <!-- Al recargar (tras habilitar, guardar o eliminar) la tabla no se desmonta: se atenúa -->
+    <div [class]="'tm-fade transition-opacity duration-200 ' + (loading() ? 'opacity-60' : '')" [attr.aria-busy]="loading()">
+
+      <div class="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
+          <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ typifications.length }}</b> tipificaciones ·
+          <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ totalHabilitadas }}</b> habilitadas ·
+          <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ totalPersonalizadas }}</b> personalizadas
+          @if (vistaPlana) {
+            · <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ filas.length }}</b> coinciden con el filtro
+          }
+        </span>
+        @if (!vistaPlana) {
+          <div class="ml-auto flex items-center gap-1">
+            <button type="button" (click)="expandAll()" [class]="ui.enlace">Expandir todo</button>
+            <span class="text-[#c5ccd6]" aria-hidden="true">·</span>
+            <button type="button" (click)="collapseAll()" [class]="ui.enlace">Contraer todo</button>
+          </div>
+        }
+      </div>
+
+      <div [class]="ui.tarjeta + ' text-[12px]'" role="table" aria-label="Tipificaciones de la subcartera">
+        <div role="row" [class]="claseEncabezado">
+          <div role="columnheader" class="px-3 py-2">Tipificación</div>
+          <div role="columnheader" class="hidden px-2.5 py-2 lg:block">Tipo</div>
+          <div role="columnheader" class="hidden px-2.5 py-2 lg:block">Nivel</div>
+          <div role="columnheader" class="px-2.5 py-2">Habilitada</div>
+          <div role="columnheader" class="px-3 py-2 text-right">Acciones</div>
         </div>
+
+        @for (f of filas; track f.node.typification.id) {
+          <div class="border-b border-[#eef1f5] last:rounded-b-xl last:border-b-0 dark:border-slate-800">
+            <div role="row" [class]="claseFila">
+
+              <!-- Tipificación -->
+              <div role="cell" class="flex min-w-0 items-center gap-2 py-[5px] pr-2.5" [style.padding-left.px]="12 + f.depth * 22">
+                @if (f.hasKids) {
+                  <!-- Estos botones ya existían, pero no tenían icono: no se veían -->
+                  <button type="button" (click)="toggleNode(f.node.typification.id)"
+                          [attr.aria-expanded]="isExpanded(f.node.typification.id)"
+                          [attr.aria-label]="(isExpanded(f.node.typification.id) ? 'Contraer ' : 'Expandir ') + nombreDe(f.node)"
+                          class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-[#5f6c80] transition-colors
+                                 duration-150 hover:bg-[#eef1f5] hover:text-[#0f172a] dark:text-slate-400 dark:hover:bg-slate-800">
+                    <lucide-angular name="chevron-right" [size]="14"
+                      [class]="'inline-flex transition-transform duration-150 ' + (isExpanded(f.node.typification.id) ? 'rotate-90' : 'rotate-0')"></lucide-angular>
+                  </button>
+                } @else {
+                  <span class="w-5 shrink-0"></span>
+                }
+
+                <span aria-hidden="true"
+                      [class]="'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] text-[9.5px] font-extrabold tracking-[0.02em] text-white transition-opacity duration-150 '
+                               + (habilitada(f.node) ? 'opacity-100' : 'opacity-40')"
+                      [style.background-color]="colorDe(f.node)">
+                  @if (iconoDe(f.node)) {
+                    <lucide-angular [name]="iconoDe(f.node)" [size]="14"></lucide-angular>
+                  } @else {
+                    {{ abreviatura(f.node) }}
+                  }
+                </span>
+
+                <div class="flex min-w-0 flex-col">
+                  @if (f.crumb) {
+                    <span class="truncate text-[10.5px] font-semibold leading-[1.3] text-[#5f6c80] dark:text-slate-400">{{ f.crumb }}</span>
+                  }
+                  <div class="flex min-w-0 items-center gap-[7px]">
+                    <span [class]="'min-w-0 truncate text-[12.5px] leading-[1.35] tracking-[-0.01em] '
+                                   + (f.depth === 0 && !vistaPlana ? 'font-extrabold ' : 'font-bold ')
+                                   + (habilitada(f.node) ? 'text-[#0f172a] dark:text-slate-100' : 'text-[#5f6c80] dark:text-slate-400')">{{ nombreDe(f.node) }}</span>
+                    <span class="shrink-0 font-mono text-[11px] text-[#5f6c80] dark:text-slate-400">{{ f.node.typification.codigo }}</span>
+                    @if (hasCustomizations(f.node.config)) {
+                      <span [class]="ui.chipVioleta">Personalizada</span>
+                    }
+                    @if (renombrada(f.node)) {
+                      <span class="hidden min-w-0 truncate text-[11px] text-[#5f6c80] dark:text-slate-400 xl:inline">en el catálogo: {{ f.node.typification.nombre }}</span>
+                    }
+                    @if (f.node.typification.esSistema) {
+                      <span [class]="ui.chipGris" title="Tipificación del sistema: no se puede eliminar">
+                        <lucide-angular name="lock" [size]="10"></lucide-angular>
+                        Sistema
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div role="cell" class="hidden truncate px-2.5 py-[5px] text-[#5f6c80] dark:text-slate-400 lg:block">{{ getTypeLabel(f.node.typification.tipoClasificacion) }}</div>
+
+              <div role="cell" class="hidden px-2.5 py-[5px] lg:block">
+                <span [class]="ui.chipGris + ' tabular-nums'">N{{ f.node.level }}</span>
+              </div>
+
+              <div role="cell" class="px-2.5 py-[5px]">
+                <button type="button" role="switch" (click)="toggleTypification(f.node)"
+                        [disabled]="estaCambiando(f.node)"
+                        [attr.aria-checked]="habilitada(f.node)"
+                        [attr.aria-label]="(habilitada(f.node) ? 'Deshabilitar ' : 'Habilitar ') + nombreDe(f.node) + ' en esta subcartera'"
+                        [class]="sw(habilitada(f.node))">
+                  <span [class]="perilla(habilitada(f.node))"></span>
+                </button>
+              </div>
+
+              <div role="cell" class="flex items-center justify-end gap-1.5 px-2.5 py-[5px]">
+                <button type="button" (click)="startEdit(f.node)" [class]="ui.textoBtn"
+                        [attr.aria-expanded]="isEditing(f.node.config?.id)"
+                        title="Nombre, descripción y color solo para esta subcartera">Personalizar</button>
+                <button type="button" [class]="ui.iconBtn" aria-label="Más acciones"
+                        [cdkMenuTriggerFor]="menuAcciones" [cdkMenuTriggerData]="{ $implicit: f.node }" [cdkMenuPosition]="posMenu">
+                  <lucide-angular name="more-vertical" [size]="16"></lucide-angular>
+                </button>
+              </div>
+            </div>
+
+            <!-- Editor en línea: personaliza la tipificación solo para esta subcartera -->
+            @if (isEditing(f.node.config?.id)) {
+              @if (editingForm(); as form) {
+                <div class="tm-editor flex flex-col gap-3 border-t border-[#e6e9ee] bg-[#f8fafc] py-3.5 pr-3.5 dark:border-slate-800 dark:bg-slate-800/50"
+                     [style.padding-left.px]="40 + f.depth * 22">
+                  <div class="flex flex-wrap items-start gap-3.5">
+                    <div class="flex min-w-0 flex-[1_1_240px] flex-col gap-1.5">
+                      <label [attr.for]="'tm-ed-nombre-' + f.node.typification.id" [class]="ui.label">Nombre en esta subcartera</label>
+                      <input [id]="'tm-ed-nombre-' + f.node.typification.id" type="text" maxlength="255"
+                             [(ngModel)]="form.nombrePersonalizado" [class]="ui.input + ' w-full'"/>
+                      <span [class]="ui.ayuda">En el catálogo se llama {{ f.node.typification.nombre }}</span>
+                    </div>
+                    <div class="flex min-w-0 flex-[2_1_320px] flex-col gap-1.5">
+                      <label [attr.for]="'tm-ed-desc-' + f.node.typification.id" [class]="ui.label">Descripción (opcional)</label>
+                      <textarea [id]="'tm-ed-desc-' + f.node.typification.id" rows="2"
+                                [(ngModel)]="form.descripcionPersonalizada" [class]="ui.textarea"></textarea>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <span [class]="ui.label">Color</span>
+                      <div class="grid grid-cols-4 gap-1.5" role="group" aria-label="Color de la tipificación">
+                        @for (color of presetColors; track color.hex) {
+                          <button type="button" (click)="form.colorPersonalizado = color.hex"
+                                  [attr.aria-pressed]="form.colorPersonalizado === color.hex"
+                                  [attr.aria-label]="color.name" [title]="color.name"
+                                  [class]="'h-7 w-7 rounded-[7px] border-2 border-white transition-shadow duration-150 dark:border-slate-900 '
+                                           + (form.colorPersonalizado === color.hex
+                                              ? 'shadow-[0_0_0_2px_#0f172a] dark:shadow-[0_0_0_2px_#ffffff]'
+                                              : 'shadow-[0_0_0_2px_transparent]')"
+                                  [style.background-color]="color.hex"></button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap items-center justify-between gap-2.5">
+                    <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+                      Solo cambia en {{ nombreSubcartera || 'esta subcartera' }}. El catálogo y las demás carteras quedan igual.
+                    </span>
+                    <div class="flex gap-2">
+                      <button type="button" (click)="cancelEdit()" [disabled]="savingEdit()" [class]="ui.secundario">Cancelar</button>
+                      <button type="button" (click)="saveEdit(f.node)" [disabled]="savingEdit()" [class]="ui.primario">
+                        @if (savingEdit()) {
+                          <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                          Guardando
+                        } @else {
+                          Guardar
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        } @empty {
+          <div class="flex flex-col items-center gap-2 px-4 py-11 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
+            <lucide-angular name="inbox" [size]="36" class="text-[#c5ccd6]"></lucide-angular>
+            <span>Ninguna tipificación coincide con el filtro</span>
+          </div>
+        }
       </div>
     </div>
   }
 
-  <!-- Header Principal - Estilo Admin Pages -->
-  <div class="flex items-center gap-2 px-3 py-2 bg-slate-900 dark:bg-slate-950">
-    <div class="w-8 h-8 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="folder-tree" [size]="16" class="text-white"></lucide-angular>
+  <!-- ============ Menú de más acciones ============ -->
+  <ng-template #menuAcciones let-node>
+    <div cdkMenu [class]="claseMenu">
+      <button type="button" cdkMenuItem (cdkMenuItemTriggered)="openAdditionalFieldsDialog(node.typification)" [class]="claseMenuItem">
+        <lucide-angular name="sliders" [size]="15" class="shrink-0 text-[#5f6c80]"></lucide-angular>
+        Configurar montos
+      </button>
+      @if (hasCustomizations(node.config)) {
+        <button type="button" cdkMenuItem (cdkMenuItemTriggered)="resetCustomization(node)" [class]="claseMenuItem">
+          <lucide-angular name="corner-up-left" [size]="15" class="shrink-0 text-[#5f6c80]"></lucide-angular>
+          Restablecer personalización
+        </button>
+      }
+      <span class="mx-1 mb-0.5 mt-1.5 border-t border-[#e6e9ee] px-1.5 pb-0.5 pt-2 text-[10px] font-extrabold uppercase
+                   tracking-[0.07em] text-[#5f6c80] dark:border-slate-700 dark:text-slate-400">Catálogo · afecta a todas las carteras</span>
+      <button type="button" cdkMenuItem (cdkMenuItemTriggered)="openCreateChildDialog(node.typification)" [class]="claseMenuItem">
+        <lucide-angular name="plus" [size]="15" class="shrink-0 text-[#5f6c80]"></lucide-angular>
+        Agregar tipificación hija
+      </button>
+      <button type="button" cdkMenuItem (cdkMenuItemTriggered)="openEditDialog(node.typification)" [class]="claseMenuItem">
+        <lucide-angular name="pencil" [size]="15" class="shrink-0 text-[#5f6c80]"></lucide-angular>
+        Editar en el catálogo
+      </button>
+      @if (node.typification.esSistema) {
+        <button type="button" cdkMenuItem [cdkMenuItemDisabled]="true" [class]="claseMenuItemApagado">
+          <lucide-angular name="lock" [size]="15" class="shrink-0"></lucide-angular>
+          Eliminar no disponible: es del sistema
+        </button>
+      } @else {
+        <button type="button" cdkMenuItem (cdkMenuItemTriggered)="abrirEliminar(node.typification)" [class]="claseMenuItemPeligro">
+          <lucide-angular name="trash-2" [size]="15" class="shrink-0"></lucide-angular>
+          Eliminar del catálogo
+        </button>
+      }
     </div>
-    <div>
-      <h1 class="text-lg font-bold text-white">Mantenimiento de Tipificaciones</h1>
-      <p class="text-xs text-gray-400">Configuración de clasificaciones</p>
-    </div>
-  </div>
+  </ng-template>
 
-  <!-- Barra de Info / Filters -->
-  <div class="bg-white dark:bg-slate-900 border-b border-blue-400 dark:border-slate-700 shadow-sm relative overflow-hidden transition-colors duration-300">
-    <div class="absolute inset-0 bg-gradient-to-r from-blue-50 dark:from-blue-950/50 to-transparent opacity-50"></div>
-    <div class="relative px-3 py-1">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3 text-xs">
-          <!-- Tenant/Client Filter - Solo si hay tenants -->
-          @if (tenants.length > 0) {
-            <div>
-              <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cliente</div>
-              <select
-                [(ngModel)]="selectedTenantId"
-                (change)="onTenantChange()"
-                class="text-xs font-semibold text-gray-800 dark:text-white bg-transparent border-none focus:outline-none cursor-pointer">
-                <option *ngFor="let tenant of tenants" [ngValue]="tenant.id" class="bg-white dark:bg-slate-800">
-                  {{ tenant.tenantName }}
-                </option>
-              </select>
+  <!-- ============ Diálogo: eliminar del catálogo ============ -->
+  @if (eliminar(); as e) {
+    <div [class]="ui.fondo" (click)="cerrarEliminar()">
+      <div [class]="ui.panel + ' max-w-[460px]'" role="alertdialog" aria-modal="true"
+           aria-labelledby="tm-del-titulo" aria-describedby="tm-del-texto"
+           cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
+           (click)="$event.stopPropagation()" (keydown.escape)="cerrarEliminar()">
+
+        @if (e.paso === 'confirmar') {
+          <div class="flex items-start gap-3 px-[18px] pb-3.5 pt-[18px]">
+            <span class="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#fdecec] text-[#b91c1c]
+                         dark:bg-red-950/50 dark:text-red-300" aria-hidden="true">
+              <lucide-angular name="trash-2" [size]="17"></lucide-angular>
+            </span>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <h2 id="tm-del-titulo" [class]="ui.titulo">¿Eliminar {{ e.tip.nombre }} del catálogo?</h2>
+              <p id="tm-del-texto" class="text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+                Se elimina para <b class="font-bold text-[#0f172a] dark:text-slate-100">todas las carteras</b>, no solo para esta subcartera. No se puede deshacer.
+              </p>
             </div>
-
-            <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-          }
-
-          <!-- Portfolio Filter - Solo si hay portfolios -->
-          @if (portfolios.length > 0) {
-            <div>
-              <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cartera</div>
-              <select
-                [(ngModel)]="selectedPortfolioId"
-                (change)="onPortfolioChange()"
-                class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
-                <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Seleccionar Cartera</option>
-                <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id" class="bg-white dark:bg-slate-800">
-                  {{ portfolio.portfolioName }}
-                </option>
-              </select>
-            </div>
-
-            <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-          }
-
-          <!-- SubPortfolio Filter - Solo si hay subportfolios -->
-          @if (subPortfolios.length > 0) {
-            <div>
-              <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Subcartera</div>
-              <select
-                [(ngModel)]="selectedSubPortfolioId"
-                (change)="onSubPortfolioChange()"
-                class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
-                <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Seleccionar Subcartera</option>
-                <option *ngFor="let sub of subPortfolios" [ngValue]="sub.id" class="bg-white dark:bg-slate-800">
-                  {{ sub.subPortfolioName || sub.nombre }}
-                </option>
-              </select>
-            </div>
-
-            <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-          }
-
-          <!-- Type Filter -->
-          <div>
-            <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Tipo</div>
-            <select
-              [(ngModel)]="selectedType"
-              (change)="onTypeChange()"
-              class="text-xs font-semibold text-gray-800 dark:text-white bg-transparent border-none focus:outline-none cursor-pointer">
-              <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todos</option>
-              <option *ngFor="let type of classificationTypes" [ngValue]="type" class="bg-white dark:bg-slate-800">
-                {{ getTypeLabel(type) }}
-              </option>
-            </select>
           </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex gap-2">
-          <button
-            (click)="openCreateCategoryDialog()"
-            class="px-3 py-1 text-[10px] bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
-            <span class="text-sm">+</span>
-            Nueva Categoría
-          </button>
-          <button
-            (click)="openCreateRootDialog()"
-            class="px-3 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
-            
-            Nueva Tipificación
-          </button>
-          <button
-            (click)="expandAll()"
-            class="px-2 py-1 text-[10px] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded transition-colors font-semibold">
-            Expandir todo
-          </button>
-          <button
-            (click)="collapseAll()"
-            class="px-2 py-1 text-[10px] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded transition-colors font-semibold">
-            Contraer todo
-          </button>
-        </div>
+          <div [class]="ui.pie">
+            <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" [class]="ui.secundario">Cancelar</button>
+            <button type="button" (click)="confirmarEliminar()" [disabled]="eliminando()" [class]="ui.peligro">
+              @if (eliminando()) {
+                <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                Eliminando
+              } @else {
+                Eliminar del catálogo
+              }
+            </button>
+          </div>
+        } @else {
+          <!-- El backend se negó. Su mensaje se muestra tal cual: antes se tapaba con un error genérico -->
+          <div class="tui-entra flex items-start gap-3 px-[18px] pb-3.5 pt-[18px]">
+            <span class="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#fdf6e7] text-[#b45309]
+                         dark:bg-amber-950/50 dark:text-amber-300" aria-hidden="true">
+              <lucide-angular name="alert-triangle" [size]="17"></lucide-angular>
+            </span>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <h2 id="tm-del-titulo" [class]="ui.titulo">No se puede eliminar {{ e.tip.nombre }}</h2>
+              <p id="tm-del-texto" class="text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">{{ e.mensaje }}</p>
+            </div>
+          </div>
+          <div [class]="ui.caja + ' mx-[18px] mb-4 flex flex-col gap-1 px-[13px] py-[11px]'">
+            @if (eliminarYaDeshabilitada) {
+              <span class="text-[12.5px] font-bold">Ya está deshabilitada en esta subcartera</span>
+              <span class="text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">Los asesores no la ven y el historial se conserva. No hace falta nada más.</span>
+            } @else {
+              <span class="text-[12.5px] font-bold">Puedes deshabilitarla en {{ nombreSubcartera || 'esta subcartera' }}</span>
+              <span class="text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">Deja de aparecer para los asesores de la subcartera, el historial no cambia y se vuelve a habilitar con el interruptor.</span>
+            }
+          </div>
+          <div [class]="ui.pie">
+            <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" [class]="ui.secundario">Cerrar</button>
+            @if (!eliminarYaDeshabilitada) {
+              <button type="button" (click)="deshabilitarEnSubcartera()" [disabled]="eliminando()" [class]="ui.primario">
+                @if (eliminando()) {
+                  <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                  Deshabilitando
+                } @else {
+                  Deshabilitar en esta subcartera
+                }
+              </button>
+            }
+          </div>
+        }
       </div>
     </div>
-  </div>
+  }
 
-  <!-- Classification Form Dialog -->
+  <!-- ============ Modales de los componentes hijos ============ -->
   @if (showClassificationDialog()) {
+    <!-- subPortfolioId es lo que faltaba: sin él la tipificación nueva se habilitaba
+         a nivel cartera y no aparecía en la lista de la subcartera -->
     <app-typification-form-dialog
       [mode]="classificationDialogMode()"
       [typification]="selectedClassificationForEdit()"
@@ -136,12 +407,13 @@
       [defaultType]="selectedType"
       [tenantId]="selectedTenantId"
       [portfolioId]="selectedPortfolioId"
+      [subPortfolioId]="selectedSubPortfolioId"
+      [subPortfolioName]="nombreSubcartera"
       (save)="onClassificationSaved($event)"
       (cancel)="closeClassificationDialog()">
     </app-typification-form-dialog>
   }
 
-  <!-- Category Dialog -->
   @if (showCategoryDialog()) {
     <app-category-form-dialog
       [typifications]="typifications"
@@ -150,7 +422,6 @@
     </app-category-form-dialog>
   }
 
-  <!-- Additional Fields Dialog -->
   @if (showAdditionalFieldsDialog()) {
     <app-typification-additional-fields-dialog
       [isOpen]="showAdditionalFieldsDialog()"
@@ -163,511 +434,4 @@
       (close)="closeAdditionalFieldsDialog()">
     </app-typification-additional-fields-dialog>
   }
-
-  <!-- Loading State -->
-  @if (loading()) {
-    <div class="flex-1 flex items-center justify-center">
-      <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-300 font-semibold">Cargando tipificaciones...</p>
-      </div>
-    </div>
-  }
-
-  <!-- Tree View -->
-  @if (!loading()) {
-    <div class="flex-1 overflow-auto p-2">
-      <div class="typification-tree-container bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 transition-colors duration-300 border border-slate-200 dark:border-slate-800">
-        @if (treeNodes.length === 0) {
-          <!-- Empty State -->
-          <div class="text-center py-20">
-            
-            <p class="text-slate-500 dark:text-slate-400 text-lg font-semibold mb-2">No hay tipificaciones configuradas</p>
-            <p class="text-slate-400 dark:text-slate-500 text-sm mb-6">Comienza creando tu primera tipificación</p>
-          </div>
-        } @else {
-          <!-- Tree Nodes -->
-          @if (!selectedType) {
-            <!-- Vista completa con jerarquía (sin filtro) -->
-            <div class="space-y-1">
-              @for (node of treeNodes; track node.typification.id; let idx = $index) {
-                <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0, index: idx, siblings: treeNodes, parent: null}"></ng-container>
-              }
-            </div>
-          } @else {
-            <!-- Vista filtrada plana (con breadcrumb) -->
-            <div class="space-y-1">
-              @for (node of getFilteredNodes(treeNodes); track node.typification.id) {
-                <ng-container [ngTemplateOutlet]="flatNodeTemplate" [ngTemplateOutletContext]="{node: node}"></ng-container>
-              }
-            </div>
-          }
-        }
-      </div>
-    </div>
-  }
 </div>
-
-<!-- Tree Node Template (Recursive) -->
-<ng-template #treeNodeTemplate let-node="node" let-depth="depth" let-index="index" let-siblings="siblings" let-parent="parent">
-  <div class="typification-item-wrapper" [style.margin-left.px]="depth * 16">
-
-    <!-- MODO NORMAL (No editando) -->
-    @if (!isEditing(node.config?.id)) {
-      <div
-        class="typification-item flex items-center justify-between px-2 rounded border-l-3 mb-1 transition-all duration-300"
-        [class.py-1.5]="matchesTypeFilter(node.typification)"
-        [class.py-0.5]="!matchesTypeFilter(node.typification)"
-        [class.opacity-40]="!matchesTypeFilter(node.typification)"
-        [class.scale-95]="!matchesTypeFilter(node.typification)"
-        [class.bg-green-50]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.dark:bg-green-950/40]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.hover:bg-green-100]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.dark:hover:bg-green-900/50]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.bg-slate-100]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.dark:bg-slate-800/50]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.hover:bg-slate-200]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.dark:hover:bg-slate-700/50]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.bg-gray-50]="!matchesTypeFilter(node.typification)"
-        [class.dark:bg-gray-900/20]="!matchesTypeFilter(node.typification)"
-        [class.border-l-green-500]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.dark:border-l-green-600]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.border-l-slate-400]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.dark:border-l-slate-600]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
-        [class.border-l-gray-300]="!matchesTypeFilter(node.typification)"
-        [class.dark:border-l-gray-700]="!matchesTypeFilter(node.typification)"
-        [class.ring-2]="hasCustomizations(node.config) && matchesTypeFilter(node.typification)"
-        [class.ring-purple-400]="hasCustomizations(node.config) && matchesTypeFilter(node.typification)"
-        [class.dark:ring-purple-600]="hasCustomizations(node.config) && matchesTypeFilter(node.typification)">
-
-        <div class="flex items-center gap-2 flex-1 min-w-0">
-          <!-- Expand/Collapse Button -->
-          @if (node.children && node.children.length > 0) {
-            <button
-              (click)="toggleNode(node.typification.id); $event.stopPropagation()"
-              class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
-              @if (isExpanded(node.typification.id)) {
-
-              } @else {
-
-              }
-            </button>
-          } @else {
-            <div class="w-5 flex-shrink-0"></div>
-          }
-
-          <!-- Icon con color -->
-          <div
-            class="flex-shrink-0 rounded flex items-center justify-center text-white font-bold shadow-sm transition-all"
-            [class.w-8]="matchesTypeFilter(node.typification)"
-            [class.h-8]="matchesTypeFilter(node.typification)"
-            [class.text-xs]="matchesTypeFilter(node.typification)"
-            [class.w-6]="!matchesTypeFilter(node.typification)"
-            [class.h-6]="!matchesTypeFilter(node.typification)"
-            [class.text-[9px]]="!matchesTypeFilter(node.typification)"
-            [style.background-color]="getEffectiveValue(node.config, node.typification, 'color') || '#6B7280'">
-            @if (getEffectiveValue(node.config, node.typification, 'icono')) {
-              <lucide-angular
-                [name]="getEffectiveValue(node.config, node.typification, 'icono')"
-                [size]="matchesTypeFilter(node.typification) ? 18 : 14">
-              </lucide-angular>
-            } @else {
-              {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
-            }
-          </div>
-
-          <!-- Name and Type -->
-          <div class="flex-1 min-w-0">
-            <div class="font-semibold truncate transition-all"
-                 [class.text-sm]="matchesTypeFilter(node.typification)"
-                 [class.text-slate-800]="matchesTypeFilter(node.typification)"
-                 [class.dark:text-slate-100]="matchesTypeFilter(node.typification)"
-                 [class.text-xs]="!matchesTypeFilter(node.typification)"
-                 [class.text-gray-500]="!matchesTypeFilter(node.typification)"
-                 [class.dark:text-gray-500]="!matchesTypeFilter(node.typification)">
-              {{ getEffectiveValue(node.config, node.typification, 'nombre') }}
-            </div>
-            @if (matchesTypeFilter(node.typification)) {
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                {{ getTypeLabel(node.typification.tipoClasificacion) }}
-                @if (hasCustomizations(node.config)) {
-                  <span class="ml-1 px-1 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded text-[9px] font-bold">PERSONALIZADO</span>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Level Badge -->
-          <div class="flex-shrink-0 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded font-bold transition-all"
-               [class.text-[10px]]="matchesTypeFilter(node.typification)"
-               [class.text-[8px]]="!matchesTypeFilter(node.typification)">
-            N{{ node.level }}
-          </div>
-        </div>
-
-        <!-- Actions -->
-        @if (matchesTypeFilter(node.typification)) {
-          <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
-            <!-- Enable/Disable Toggle -->
-            <label class="relative inline-flex items-center cursor-pointer"
-                   (click)="$event.stopPropagation()"
-                   [title]="node.config?.estaHabilitada ? 'Desactivar' : 'Activar'">
-              <input
-                type="checkbox"
-                [checked]="node.config?.estaHabilitada === true"
-                (change)="toggleTypification(node, $event); $event.stopPropagation()"
-                class="sr-only peer">
-              <div class="w-9 h-5 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-            </label>
-
-            <!-- Personalizar Button -->
-            <button
-              (click)="startEdit(node, $event)"
-              title="Personalizar para esta cartera"
-              class="px-2 py-1 text-[10px] bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition-colors">
-              EDITAR
-            </button>
-
-            @if (hasCustomizations(node.config)) {
-              <button
-                (click)="resetCustomization(node, $event)"
-                title="Resetear a valores del catálogo"
-                class="w-6 h-6 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors">
-                <lucide-angular name="corner-up-left" [size]="14"></lucide-angular>
-              </button>
-            }
-
-            <button
-              (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
-              title="Agregar hijo"
-              class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-              <lucide-angular name="plus-circle" [size]="14"></lucide-angular>
-            </button>
-
-            <button
-              (click)="openAdditionalFieldsDialog(node.typification); $event.stopPropagation()"
-              title="Configurar Campos Adicionales"
-              class="w-6 h-6 flex items-center justify-center text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors">
-              <lucide-angular name="settings" [size]="14"></lucide-angular>
-            </button>
-
-            <button
-              (click)="openEditDialog(node.typification); $event.stopPropagation()"
-              title="Editar catálogo global"
-              class="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-              <lucide-angular name="edit-2" [size]="14"></lucide-angular>
-            </button>
-
-            <button
-              (click)="deleteTypification(node.typification); $event.stopPropagation()"
-              title="Eliminar"
-              [disabled]="node.typification.esSistema"
-              [class.opacity-30]="node.typification.esSistema"
-              [class.cursor-not-allowed]="node.typification.esSistema"
-              class="w-6 h-6 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-              <lucide-angular name="trash-2" [size]="14"></lucide-angular>
-            </button>
-          </div>
-        }
-      </div>
-    }
-
-    <!-- MODO EDICIÓN INLINE -->
-    @if (isEditing(node.config?.id) && editingForm()) {
-      <div class="bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-lg p-3 mb-2 shadow-lg">
-        <div class="flex items-start gap-3">
-          <!-- Color Picker -->
-          <div class="flex-shrink-0">
-            <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Color</label>
-            <div class="flex gap-1 flex-wrap max-w-[120px]">
-              @for (color of presetColors; track color.hex) {
-                <button
-                  type="button"
-                  (click)="editingForm()!.colorPersonalizado = color.hex"
-                  [class]="'w-6 h-6 rounded border-2 transition-all ' +
-                           (editingForm()!.colorPersonalizado === color.hex ? 'border-gray-900 dark:border-white ring-2 ring-purple-500' : 'border-gray-300')"
-                  [style.background-color]="color.hex"
-                  [title]="color.name">
-                </button>
-              }
-            </div>
-          </div>
-
-          <!-- Form Fields -->
-          <div class="flex-1 space-y-2">
-            <!-- Nombre -->
-            <div>
-              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Nombre Personalizado</label>
-              <input
-                type="text"
-                [(ngModel)]="editingForm()!.nombrePersonalizado"
-                placeholder="Nombre"
-                class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
-            </div>
-
-            <!-- Descripción -->
-            <div>
-              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Descripción (Opcional)</label>
-              <textarea
-                [(ngModel)]="editingForm()!.descripcionPersonalizada"
-                rows="2"
-                placeholder="Descripción"
-                class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
-              </textarea>
-            </div>
-
-            <!-- Orden -->
-            <div>
-              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Orden</label>
-              <input
-                type="number"
-                [(ngModel)]="editingForm()!.ordenVisualizacionPersonalizado"
-                min="0"
-                step="10"
-                class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex-shrink-0 flex flex-col gap-1">
-            <button
-              (click)="saveEdit(node)"
-              [disabled]="savingEdit()"
-              class="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors flex items-center gap-1">
-              @if (savingEdit()) {
-                <div class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              }
-              GUARDAR
-            </button>
-            <button
-              (click)="cancelEdit()"
-              [disabled]="savingEdit()"
-              class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors">
-              CANCELAR
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-
-    <!-- Children Nodes (Recursive) -->
-    @if (isExpanded(node.typification.id) && node.children && node.children.length > 0) {
-      <div class="mt-1 space-y-1">
-        @for (child of node.children; track child.typification.id; let childIdx = $index) {
-          <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: child, depth: depth + 1, index: childIdx, siblings: node.children, parent: node}"></ng-container>
-        }
-      </div>
-    }
-  </div>
-</ng-template>
-
-<!-- Flat Node Template (para vista filtrada con breadcrumb) -->
-<ng-template #flatNodeTemplate let-node="node">
-  <div class="typification-item-wrapper">
-
-    <!-- MODO NORMAL (No editando) -->
-    @if (!isEditing(node.config?.id)) {
-      <div
-        class="typification-item flex items-center justify-between px-3 py-2 rounded border-l-3 mb-1 transition-all duration-300"
-        [class.bg-green-50]="node.config?.estaHabilitada"
-        [class.dark:bg-green-950/40]="node.config?.estaHabilitada"
-        [class.hover:bg-green-100]="node.config?.estaHabilitada"
-        [class.dark:hover:bg-green-900/50]="node.config?.estaHabilitada"
-        [class.bg-slate-100]="!node.config?.estaHabilitada"
-        [class.dark:bg-slate-800/50]="!node.config?.estaHabilitada"
-        [class.hover:bg-slate-200]="!node.config?.estaHabilitada"
-        [class.dark:hover:bg-slate-700/50]="!node.config?.estaHabilitada"
-        [class.border-l-green-500]="node.config?.estaHabilitada"
-        [class.dark:border-l-green-600]="node.config?.estaHabilitada"
-        [class.border-l-slate-400]="!node.config?.estaHabilitada"
-        [class.dark:border-l-slate-600]="!node.config?.estaHabilitada"
-        [class.ring-2]="hasCustomizations(node.config)"
-        [class.ring-purple-400]="hasCustomizations(node.config)"
-        [class.dark:ring-purple-600]="hasCustomizations(node.config)">
-
-        <div class="flex items-center gap-3 flex-1 min-w-0">
-          <!-- Icon con color -->
-          <div
-            class="flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white text-sm font-bold shadow-sm"
-            [style.background-color]="getEffectiveValue(node.config, node.typification, 'color') || '#6B7280'">
-            @if (getEffectiveValue(node.config, node.typification, 'icono')) {
-              <lucide-angular
-                [name]="getEffectiveValue(node.config, node.typification, 'icono')"
-                [size]="20">
-              </lucide-angular>
-            } @else {
-              {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
-            }
-          </div>
-
-          <!-- Name with Breadcrumb -->
-          <div class="flex-1 min-w-0">
-            <!-- Breadcrumb del padre (si existe) -->
-            @if (getParentBreadcrumb(node)) {
-              <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate mb-0.5">
-                {{ getParentBreadcrumb(node) }}
-              </div>
-            }
-
-            <!-- Nombre principal -->
-            <div class="font-semibold text-slate-800 dark:text-slate-100 text-base truncate">
-              {{ getEffectiveValue(node.config, node.typification, 'nombre') }}
-            </div>
-
-            <!-- Badge de personalización -->
-            @if (hasCustomizations(node.config)) {
-              <span class="inline-block mt-0.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded text-[9px] font-bold">PERSONALIZADO</span>
-            }
-          </div>
-
-          <!-- Level Badge -->
-          <div class="flex-shrink-0 px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs font-bold">
-            N{{ node.level }}
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center gap-1.5 ml-3 flex-shrink-0">
-          <!-- Enable/Disable Toggle -->
-          <label class="relative inline-flex items-center cursor-pointer"
-                 (click)="$event.stopPropagation()"
-                 [title]="node.config?.estaHabilitada ? 'Desactivar' : 'Activar'">
-            <input
-              type="checkbox"
-              [checked]="node.config?.estaHabilitada === true"
-              (change)="toggleTypification(node, $event); $event.stopPropagation()"
-              class="sr-only peer">
-            <div class="w-9 h-5 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-          </label>
-
-          <!-- Personalizar Button -->
-          <button
-            (click)="startEdit(node, $event)"
-            title="Personalizar para esta cartera"
-            class="px-2 py-1 text-[10px] bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition-colors">
-            EDITAR
-          </button>
-
-          @if (hasCustomizations(node.config)) {
-            <button
-              (click)="resetCustomization(node, $event)"
-              title="Resetear a valores del catálogo"
-              class="w-6 h-6 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors">
-              <lucide-angular name="corner-up-left" [size]="14"></lucide-angular>
-            </button>
-          }
-
-          <button
-            (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
-            title="Agregar hijo"
-            class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-            <lucide-angular name="plus-circle" [size]="14"></lucide-angular>
-          </button>
-
-          <button
-            (click)="openAdditionalFieldsDialog(node.typification); $event.stopPropagation()"
-            title="Configurar Campos Adicionales"
-            class="w-6 h-6 flex items-center justify-center text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors">
-            <lucide-angular name="settings" [size]="14"></lucide-angular>
-          </button>
-
-          <button
-            (click)="openEditDialog(node.typification); $event.stopPropagation()"
-            title="Editar catálogo global"
-            class="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-            <lucide-angular name="edit-2" [size]="14"></lucide-angular>
-          </button>
-
-          <button
-            (click)="deleteTypification(node.typification); $event.stopPropagation()"
-            title="Eliminar"
-            [disabled]="node.typification.esSistema"
-            [class.opacity-30]="node.typification.esSistema"
-            [class.cursor-not-allowed]="node.typification.esSistema"
-            class="w-6 h-6 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-            <lucide-angular name="trash-2" [size]="14"></lucide-angular>
-          </button>
-        </div>
-      </div>
-    }
-
-    <!-- MODO EDICIÓN INLINE (mismo que el tree template) -->
-    @if (isEditing(node.config?.id) && editingForm()) {
-      <div class="bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-lg p-3 mb-2 shadow-lg">
-        <div class="flex items-start gap-3">
-          <!-- Color Picker -->
-          <div class="flex-shrink-0">
-            <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Color</label>
-            <div class="flex gap-1 flex-wrap max-w-[120px]">
-              @for (color of presetColors; track color.hex) {
-                <button
-                  type="button"
-                  (click)="editingForm()!.colorPersonalizado = color.hex"
-                  [class]="'w-6 h-6 rounded border-2 transition-all ' +
-                           (editingForm()!.colorPersonalizado === color.hex ? 'border-gray-900 dark:border-white ring-2 ring-purple-500' : 'border-gray-300')"
-                  [style.background-color]="color.hex"
-                  [title]="color.name">
-                </button>
-              }
-            </div>
-          </div>
-
-          <!-- Form Fields -->
-          <div class="flex-1 space-y-2">
-            <!-- Nombre -->
-            <div>
-              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Nombre Personalizado</label>
-              <input
-                type="text"
-                [(ngModel)]="editingForm()!.nombrePersonalizado"
-                placeholder="Nombre"
-                class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
-            </div>
-
-            <!-- Descripción -->
-            <div>
-              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Descripción (Opcional)</label>
-              <textarea
-                [(ngModel)]="editingForm()!.descripcionPersonalizada"
-                rows="2"
-                placeholder="Descripción"
-                class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
-              </textarea>
-            </div>
-
-            <!-- Orden -->
-            <div>
-              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Orden</label>
-              <input
-                type="number"
-                [(ngModel)]="editingForm()!.ordenVisualizacionPersonalizado"
-                min="0"
-                step="10"
-                class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex-shrink-0 flex flex-col gap-1">
-            <button
-              (click)="saveEdit(node)"
-              [disabled]="savingEdit()"
-              class="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors flex items-center gap-1">
-              @if (savingEdit()) {
-                <div class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              }
-              GUARDAR
-            </button>
-            <button
-              (click)="cancelEdit()"
-              [disabled]="savingEdit()"
-              class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors">
-              CANCELAR
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-
-  </div>
-</ng-template>
