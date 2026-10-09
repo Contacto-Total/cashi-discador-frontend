@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
@@ -6,9 +6,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { MenuItem } from '../../../core/services/menu-permission.service';
+import { NotificacionSistema } from '../../../core/services/notificaciones-sistema.service';
 import { CashiMascotaComponent } from '../cashi-mascota.component';
 import { EstadoMenu, EstadoMenuComponent } from '../estado-menu.component';
+import { NotificacionesPanelComponent } from '../notificaciones-panel.component';
 import { TipDirective } from '../tip.directive';
+import { LuzEstadoService } from '../luz-estado.service';
 import { iconoDeMenu } from '../menu-iconos';
 import { SeccionMenu, seccionesDeMenu } from '../menu-secciones';
 
@@ -31,7 +34,7 @@ export interface CuentaSidebar {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, CashiMascotaComponent, EstadoMenuComponent, TipDirective],
+  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, CashiMascotaComponent, EstadoMenuComponent, NotificacionesPanelComponent, TipDirective],
   templateUrl: './sidebar.component.html'
 })
 export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
@@ -44,6 +47,9 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   @Input() plegado = false;
   @Input() movilAbierto = false;
   @Input() notificaciones = 0;
+  /** Las notificaciones están desplegadas en el pie, sobre la cuenta; la campana queda marcada. */
+  @Input() notificacionesAbiertas = false;
+  @Input() notificacionesLista: NotificacionSistema[] = [];
   @Input() temaOscuro = false;
   /** Estado del asesor, sobre la cuenta. `null` cuando no toca mostrarlo (no es asesor, o ya está en el Panel). */
   @Input() estado: EstadoMenu | null = null;
@@ -54,6 +60,9 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   @Output() plegadoChange = new EventEmitter<boolean>();
   @Output() navegar = new EventEmitter<void>();
   @Output() notificacionesAbrir = new EventEmitter<void>();
+  @Output() notificacionesCerrar = new EventEmitter<void>();
+  @Output() notificacionLeer = new EventEmitter<NotificacionSistema>();
+  @Output() notificacionesLeerTodas = new EventEmitter<void>();
   @Output() temaCambiar = new EventEmitter<void>();
   @Output() vozCambiar = new EventEmitter<void>();
   @Output() salir = new EventEmitter<void>();
@@ -66,6 +75,8 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
   url = '';
   private readonly abiertos = new Set<string>();
   private readonly router = inject(Router);
+  readonly luz = inject(LuzEstadoService);
+  private readonly zona = inject(NgZone);
   private readonly raiz = inject<ElementRef<HTMLElement>>(ElementRef);
   private rutas?: Subscription;
   private rutaAbierta = '';
@@ -110,7 +121,8 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
       this.secciones = seccionesDeMenu(this.menu);
       this.abrirGrupoDeLaRuta();
     }
-    if (!this.esAdmin) {
+    // Las notificaciones y las opciones de la cuenta se despliegan en el mismo sitio: una a la vez.
+    if (!this.esAdmin || (cambios['notificacionesAbiertas'] && this.notificacionesAbiertas)) {
       this.cuentaAbierta = false;
     }
   }
@@ -156,33 +168,43 @@ export class SidebarComponent implements OnInit, OnChanges, OnDestroy {
     if (this.plegado) {
       this.plegadoChange.emit(false);
       this.abiertos.add(item.codigo);
-      this.mostrarGrupo(fila, 300);
+      this.mostrarGrupo(fila, 320);
       return;
     }
     if (!this.abiertos.delete(item.codigo)) {
       this.abiertos.add(item.codigo);
-      this.mostrarGrupo(fila, 220);
+      this.mostrarGrupo(fila, 240);
     }
   }
 
   /**
-   * Al abrir un grupo, el menú baja lo justo para que se vean sus pantallas. En una pantalla baja el
-   * grupo se abre por debajo del pie y parecería que no pasó nada. Espera a que termine de desplegarse.
+   * Al abrir un grupo, el menú baja lo justo para que se vean sus pantallas: en una pantalla baja el
+   * grupo se abre por debajo del pie y parecería que no pasó nada.
+   *
+   * Baja a la vez que el grupo se despliega y termina con él (`duracion`, en ms). No se desplaza
+   * después ni con animación propia: si la lista siguiera moviéndose cuando ya se ven las pantallas,
+   * un clic rápido sobre una de ellas (se pulsa en un sitio y se suelta cuando ya se movió) se perdería.
    */
-  private mostrarGrupo(fila: HTMLElement | undefined, espera: number): void {
+  private mostrarGrupo(fila: HTMLElement | undefined, duracion: number): void {
     const menu = fila?.closest('nav');
     if (!fila || !menu) {
       return;
     }
-    setTimeout(() => {
+    const fin = performance.now() + duracion;
+    const paso = () => {
       const grupo = fila.getBoundingClientRect();
       const caja = menu.getBoundingClientRect();
       const falta = grupo.bottom - caja.bottom;
       if (falta > 0) {
         // Sin sacar de la vista la fila del propio grupo.
-        menu.scrollBy({ top: Math.min(falta, grupo.top - caja.top), behavior: 'smooth' });
+        menu.scrollTop += Math.max(0, Math.min(falta, grupo.top - caja.top));
       }
-    }, espera);
+      if (performance.now() < fin) {
+        requestAnimationFrame(paso);
+      }
+    };
+    // Fuera de Angular: son solo ajustes de desplazamiento, no hay nada que repintar.
+    this.zona.runOutsideAngular(() => requestAnimationFrame(paso));
   }
 
   /** Al escribir, los grupos se aplanan y se ve el resultado directo. */

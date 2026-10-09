@@ -1,4 +1,5 @@
-<div class="font-cashi flex flex-1 flex-col gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)">
+<div class="font-cashi cashi-luz-estado flex flex-1 flex-col gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased" [style.--tono]="tono(estado)"
+     [attr.data-entrada]="luz.entrada() ? luz.entrada() % 2 : null">
   <!-- Error -->
   <div *ngIf="error" role="alert" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-nivel-rojo/30 bg-nivel-rojo/8 px-4 py-[.75rem] text-nivel-rojo">
     <span class="flex items-center gap-2 font-medium"><lucide-angular name="triangle-alert" [size]="16"></lucide-angular>{{ error }}</span>
@@ -71,7 +72,7 @@
         </div>
         <div appTarjetaLuz class="flex-1 justify-between">
           <div>
-            <app-titulo-tarjeta icono="bell-ring" titulo="Seguimiento de promesas"></app-titulo-tarjeta>
+            <app-titulo-tarjeta titulo="Seguimiento de promesas"></app-titulo-tarjeta>
             <p class="m-0 mt-[.75rem] text-[.875rem] text-muted-foreground">Clientes con promesas de pago pendientes de cobrar.</p>
             <p *ngIf="!recordatoriosHabilitado" class="m-0 mt-[.5rem] text-[.75rem] text-muted-foreground">Fuera del horario de seguimiento</p>
           </div>
@@ -88,7 +89,7 @@
          que le toca a la tarjeta: crecen ellos, no los huecos. -->
     <div appTarjetaLuz class="@container/estados">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <app-titulo-tarjeta icono="repeat" titulo="Cambiar estado"></app-titulo-tarjeta>
+        <app-titulo-tarjeta titulo="Cambiar estado"></app-titulo-tarjeta>
         <p *ngIf="enEstadoDeSistema" class="m-0 flex items-center gap-1.5 text-[.75rem] text-muted-foreground">
           <lucide-angular name="lock" [size]="14"></lucide-angular>Estás en {{ e.nombre }}: lo controla el sistema y no se cambia a mano.
         </p>
@@ -99,7 +100,7 @@
           <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[.75rem] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Operativo</p>
           <div class="grid flex-1 auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[minmax(0,1fr)]">
             <app-boton-estado *ngFor="let s of operativos" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
-                              [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
+                              [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s)" [enCurso]="loading"
                               (elegir)="changeStatus(s)"></app-boton-estado>
           </div>
         </div>
@@ -107,7 +108,7 @@
           <p class="m-0 mb-[.625rem] flex items-center gap-2 text-[.75rem] font-medium text-muted-foreground after:h-px after:flex-1 after:bg-border after:content-['']">Pausas</p>
           <div class="grid flex-1 auto-rows-fr grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-2.5 @min-[58rem]/estados:grid-cols-[repeat(4,minmax(0,1fr))]">
             <app-boton-estado *ngFor="let s of pausas" [nombre]="ficha(s).nombre" [detalle]="ficha(s).detalle || ''" [icono]="ficha(s).icono"
-                              [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s) || loading"
+                              [tono]="tono(ficha(s))" [tinta]="tinta(ficha(s))" [actual]="isCurrentState(s)" [bloqueado]="!canChangeToState(s)" [enCurso]="loading"
                               (elegir)="changeStatus(s)"></app-boton-estado>
           </div>
         </div>
@@ -119,9 +120,11 @@
 <!-- Título de la pantalla: abre la primera tarjeta. -->
 <ng-template #cabecera>
   <app-page-header titulo="Panel del asesor" subtitulo="Estado actual, tiempo y cambio de estado">
-    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border border-border bg-muted px-[.75rem] py-[.25rem] text-[.75rem] font-semibold whitespace-nowrap text-muted-foreground"
+    <!-- Sin campaña va neutra, con borde y sin relleno; el relleno queda para cuando la campaña disca. -->
+    <span class="inline-flex flex-none items-center gap-1.5 rounded-full border py-[.25rem] pr-[.75rem] text-[.75rem] font-semibold whitespace-nowrap transition-colors duration-300"
+          [ngClass]="isDiscando ? 'border-(--ok-ln) bg-(--ok-bg) pl-[.625rem] text-(--ok)' : 'border-border bg-transparent pl-[.75rem] text-muted-foreground'"
           [attr.title]="isDiscando && campaignName ? campaignName : null">
-      <span *ngIf="isDiscando" class="size-1.5 rounded-full bg-ring"></span>
+      <span *ngIf="isDiscando" class="size-[.4375rem] rounded-full bg-current"></span>
       {{ isDiscando ? 'Discando' : 'Sin campaña' }}
     </span>
   </app-page-header>
@@ -130,7 +133,7 @@
 <!-- «Llamada manual»: el mismo bloque dentro de la tarjeta del estado o en su propia tarjeta. -->
 <ng-template #llamadaManual>
   <div>
-    <app-titulo-tarjeta icono="phone-outgoing" titulo="Llamada manual"></app-titulo-tarjeta>
+    <app-titulo-tarjeta titulo="Llamada manual"></app-titulo-tarjeta>
     <p class="m-0 mt-[.75rem] text-[.875rem] text-muted-foreground">Entra en modo manual para marcar tú el número.</p>
     <p *ngIf="currentStatus?.estadoActual === AgentState.EN_MANUAL" class="m-0 mt-[.5rem] text-[.75rem] text-muted-foreground">Modo manual activo. Las llamadas se hacen desde el softphone.</p>
   </div>

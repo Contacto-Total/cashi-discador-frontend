@@ -1,13 +1,28 @@
-<!-- Arriba a la derecha, en la esquina. Si la pila de avisos del armazón tiene avisos, los emergentes
-     salen debajo de ella: su alto llega en --alto-avisos. -->
-<div class="fixed top-[calc(1rem_+_var(--alto-avisos,0px))] right-5 z-[10000] flex max-w-[min(25rem,calc(100vw-2.5rem))] flex-col items-end gap-3">
+<!-- Arriba a la derecha, en la esquina, a la misma distancia del borde de arriba que del de la derecha.
+     Si la pila de avisos del armazón tiene avisos, los emergentes salen debajo de ella: su alto llega
+     en --alto-avisos. La clase cashi-pantalla trae los colores de estado, que solo existen dentro de ella. -->
+<div class="cashi-pantalla fixed top-[calc(1.25rem_+_var(--alto-avisos,0px))] right-5 z-[10000] flex max-w-[min(25rem,calc(100vw-2.5rem))] flex-col items-end gap-3">
   <div *ngFor="let toast of toasts" role="status"
-       class="font-cashi flex max-w-full animate-[cashi-noti_.3s_ease] items-start gap-2.5 rounded-lg border bg-card py-3 pr-3 pl-3.5 text-[.875rem] leading-[1.45] text-foreground antialiased shadow-[0_4px_12px_rgb(15_23_42/.12)] motion-reduce:animate-none dark:shadow-[0_4px_12px_rgb(0_0_0/.55)]"
-       [ngClass]="BORDE[toast.type]"
-       [@glowPulse]="{ value: toast.glowCount, params: { glow: glowColor(toast.type) } }">
-    <lucide-angular [name]="getIcon(toast.type)" [size]="18" [ngClass]="'mt-px flex-none ' + TINTA[toast.type]"></lucide-angular>
-    <span class="min-w-0 flex-1 font-semibold">{{ toast.message }}</span>
-    <button type="button" class="flex flex-none cursor-pointer rounded-[.3125rem] border-0 bg-transparent p-0.5 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+       class="font-cashi flex max-w-full animate-[cashi-noti_.3s_ease] items-center gap-2.5 rounded-lg border border-(--t-ln) bg-(--t-bg) py-3 pr-3 pl-3.5 text-[.875rem] leading-[1.45] font-medium text-(--t) antialiased shadow-[0_4px_12px_rgb(15_23_42/.12)] motion-reduce:animate-none dark:shadow-[0_4px_12px_rgb(0_0_0/.55)]"
+       [ngClass]="COLOR[toast.type]"
+       [@glowPulse]="{ value: toast.glowCount, params: { glow: glowColor(toast.type) } }"
+       (mouseenter)="pausar(toast)" (mouseleave)="seguir(toast)">
+    <!-- El anillo se consume mientras el aviso sigue en pantalla y se detiene con el cursor encima.
+         El arco se vuelve a crear en cada reintento, para que la cuenta empiece de nuevo. -->
+    <span class="relative grid size-7 flex-none place-items-center">
+      <svg viewBox="0 0 28 28" aria-hidden="true" class="absolute inset-0 size-full -rotate-90 fill-none stroke-[2.5]">
+        <circle cx="14" cy="14" r="12.5" style="stroke: color-mix(in oklab, var(--t-pt) 24%, transparent)"></circle>
+        <circle *ngFor="let vuelta of [toast.glowCount]" cx="14" cy="14" r="12.5" pathLength="100"
+                class="animate-[cashi-aviso-vida_linear_forwards] [stroke-dasharray:100px] [stroke-linecap:round] motion-reduce:animate-none"
+                style="stroke: var(--t-pt)" [style.animation-duration.ms]="toast.duration || 3000"
+                [style.animation-play-state]="toast.pausado ? 'paused' : 'running'"></circle>
+      </svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="relative size-4 fill-none stroke-current stroke-[2.6] [stroke-linecap:round] [stroke-linejoin:round]">
+        <path *ngFor="let trazo of SIGNO[toast.type]" [attr.d]="trazo"></path>
+      </svg>
+    </span>
+    <span class="min-w-0 flex-1">{{ toast.message }}</span>
+    <button type="button" class="flex flex-none cursor-pointer rounded-[.3125rem] border-0 bg-transparent p-0.5 text-(--t) transition-colors duration-150 hover:bg-(--t-ln)"
             (click)="remove(toast.id)" aria-label="Cerrar aviso">
       <lucide-angular name="x" [size]="14"></lucide-angular>
     </button>

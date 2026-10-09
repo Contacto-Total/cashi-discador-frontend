@@ -222,7 +222,7 @@ export class CustomerService {
   }
 
   getRecentCustomers(): Observable<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]> {
-    return this.http.get<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]>(`${this.apiUrl}/recent`);
+    return this.http.get<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]>(`${environment.apiUrl}/client-search/recent`);
   }
 
   registerCustomerAccess(customerId: number): Observable<void> {

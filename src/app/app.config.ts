@@ -4,12 +4,13 @@ import localeEsPe from '@angular/common/locales/es-PE';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { LucideAngularModule, Activity, AlarmClock, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, Award, Ban, Banknote, BadgeCheck, BarChart2, BarChart3, Bell, BellOff, BellRing, Bookmark, BookOpen, Bot, Briefcase, Building, Building2, Calculator, Calendar, CalendarCheck, CalendarDays, CalendarX, Check, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clipboard, ClipboardEdit, ClipboardList, Clock, CloudUpload, Code, Coffee, Coins, Columns, Copy, CornerDownRight, CornerUpLeft, Cpu, CreditCard, Database, Delete, Disc, DollarSign, Download, Ear, Edit, Edit2, Edit3, Eye, EyeOff, FileBadge, FileBarChart, FileCheck, FilePlus, FileSearch, FileSignature, FileSpreadsheet, FileText, FileX, Filter, FilterX, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, Globe, GripVertical, HandMetal, Handshake, HardDrive, Hash, Headphones, Heart, History, Home, Inbox, Info, Key, Landmark, Layers, LayoutDashboard, Link, List, ListChecks, ListFilter, ListOrdered, Loader, Loader2, Lock, LogOut, Mail, Map, MapPin, Medal, Megaphone, Menu, MessageCircle, MessageSquare, Mic, MicOff, Minus, MinusCircle, Monitor, Moon, MoreVertical, Navigation, Package, Palette, Pause, Pencil, Percent, Phone, PhoneCall, PhoneForwarded, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, PieChart, Play, Plug, Plus, PlusCircle, QrCode, Radio, RefreshCw, Rocket, RotateCcw, Save, ScanLine, Search, SearchX, Send, Settings, Shield, ShieldAlert, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, SkipForward, Sliders, Smartphone, Smile, Sparkles, Square, Star, Sun, Table, Table2, Tag, Tags, Target, ThumbsDown, ThumbsUp, Timer, Trash, Trash2, TrendingDown, TrendingUp, Trophy, Type, Unlink, Unlock, Upload, Utensils, User, UserCheck, UserCircle, UserCog, Users, UserX, Volume2, VolumeX, Wallet, X, XCircle, Zap, UploadCloud, CalendarRange, CalendarPlus, HelpCircle, ClipboardCheck, CalendarClock,
+import { LucideAngularModule, Undo2, Activity, AlarmClock, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, Award, Ban, Banknote, BadgeCheck, BarChart2, BarChart3, Bell, BellOff, BellRing, Bookmark, BookOpen, Bot, Briefcase, Building, Building2, Calculator, Calendar, CalendarCheck, CalendarDays, CalendarX, Check, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clipboard, ClipboardEdit, ClipboardList, Clock, CloudUpload, Code, Coffee, Coins, Columns, Copy, CornerDownRight, CornerUpLeft, Cpu, CreditCard, Database, Delete, Disc, DollarSign, Download, Ear, Edit, Edit2, Edit3, Eye, EyeOff, FileBadge, FileBarChart, FileCheck, FilePlus, FileSearch, FileSignature, FileSpreadsheet, FileText, FileX, Filter, FilterX, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, Globe, GripVertical, HandMetal, Handshake, HardDrive, Hash, Headphones, Heart, History, Home, Inbox, Info, Key, Landmark, Layers, LayoutDashboard, Link, List, ListChecks, ListFilter, ListOrdered, Loader, Loader2, Lock, LogOut, Mail, Map, MapPin, Medal, Megaphone, Menu, MessageCircle, MessageSquare, Mic, MicOff, Minus, MinusCircle, Monitor, Moon, MoreVertical, Navigation, Package, Palette, Pause, Pencil, Percent, Phone, PhoneCall, PhoneForwarded, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, PieChart, Play, Plug, Plus, PlusCircle, QrCode, Radio, RefreshCw, Rocket, RotateCcw, Save, ScanLine, Search, SearchX, Send, Settings, Shield, ShieldAlert, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, SkipForward, Sliders, Smartphone, Smile, Sparkles, Square, Star, Sun, Table, Table2, Tag, Tags, Target, ThumbsDown, ThumbsUp, Timer, Trash, Trash2, TrendingDown, TrendingUp, Trophy, Type, Unlink, Unlock, Upload, Utensils, User, UserCheck, UserCircle, UserCog, Users, UserX, Volume2, VolumeX, Wallet, X, XCircle, Zap, UploadCloud, CalendarRange, CalendarPlus, HelpCircle, ClipboardCheck, CalendarClock,
   IdCard, Cake, MessageSquarePlus, Forward, FileArchive, SmilePlus} from 'lucide-angular';
 // Iconos del menú lateral y del Panel del asesor rediseñados.
 import { Headset, UserSearch, MessageCircleMore, TriangleAlert, Radar, HeartPulse, Gauge, AudioLines, MessageSquareQuote, DatabaseZap, CalendarArrowUp, BadgePercent, ChartPie, MessageSquareText, Mails, FileCheck2, ChartColumnBig, SquareUserRound, UserRoundCheck, SlidersHorizontal, Columns3, CircleDollarSign, Wrench, Power, Settings2, Dot, Repeat, UtensilsCrossed, ShowerHead, ClipboardPenLine, CircleCheck, CircleAlert, CirclePlus } from 'lucide-angular';
 import { routes } from './app.routes';
 import { alcanceCatalogoInterceptor } from './core/interceptors/alcance-catalogo.interceptor';
+import { alcanceClientesInterceptor } from './core/interceptors/alcance-clientes.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { tokenRefreshInterceptor } from './core/interceptors/token-refresh.interceptor';
 
@@ -21,7 +22,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-PE' },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([alcanceCatalogoInterceptor, tokenRefreshInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([alcanceCatalogoInterceptor, alcanceClientesInterceptor, tokenRefreshInterceptor, authInterceptor])),
     provideAnimations(),
     importProvidersFrom(
       LucideAngularModule.pick({
@@ -43,6 +44,7 @@ export const appConfig: ApplicationConfig = {
         BarChart3,
         Bell,
         BellOff,
+        Undo2,
         BellRing,
         Bookmark,
         BookOpen,

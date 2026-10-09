@@ -115,6 +115,8 @@ const EN_GESTION: AgentState[] = [
   AgentState.EN_LLAMADA, AgentState.TIPIFICANDO, AgentState.GESTION_MANUAL, AgentState.SEGUIMIENTO
 ];
 const COMPROBAR_RECARGA = 3000;
+/** Tras liberar, el administrador se recarga pasado este tiempo: quien libero ve terminar el flujo. */
+const ESPERA_RECARGA_ADMIN = 5000;
 export const RUTA_MANTENIMIENTO = '/admin/mantenimiento-sistema';
 const AVISO = 10 * 60_000;
 const RECORDATORIO = 5 * 60_000;
@@ -186,6 +188,7 @@ export class MantenimientoService {
   private ultimoSondeo = 0;
   private suscripciones: Subscription[] = [];
   private recargaPendiente = false;
+  private recargaDesde = 0;
   private comprobandoRecarga = false;
   private ultimaComprobacion = 0;
   private bloqueoAnterior = false;
@@ -371,8 +374,9 @@ export class MantenimientoService {
     this.recordar(d);
     this.ahora.set(Date.now() + this.desfase);
     // Tras un bloqueo hubo despliegue: se recarga para tomar la version nueva.
-    if (antes?.estado === 'BLOQUEADO' && d.estado === 'OPERATIVO' && !this.esAdmin()) {
+    if (antes?.estado === 'BLOQUEADO' && d.estado === 'OPERATIVO') {
       this.recargaPendiente = true;
+      this.recargaDesde = Date.now() + (this.esAdmin() ? ESPERA_RECARGA_ADMIN : 0);
     }
     // Con una recarga pendiente el reloj sigue al segundo, para recargar en cuanto se pueda.
     this.fijarReloj(d.estado === 'OPERATIVO' && !this.recargaPendiente ? SONDEO_NORMAL : 1000);
@@ -483,7 +487,7 @@ export class MantenimientoService {
    * al agente en TIPIFICANDO sin forma de cerrarlo. Se espera a que termine.
    */
   private recargarSiSePuede(): void {
-    if (!this.recargaPendiente || this.comprobandoRecarga || this.gestionAbierta()) {
+    if (!this.recargaPendiente || this.comprobandoRecarga || Date.now() < this.recargaDesde || this.gestionAbierta()) {
       return;
     }
     const usuario = this.auth.getCurrentUser();

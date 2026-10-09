@@ -6,8 +6,9 @@ import { Subscription } from 'rxjs';
 import { ToastService, Toast } from '../../services/toast.service';
 
 /**
- * Avisos emergentes de la aplicación. Siguen la guía de notificaciones de Cashi, la misma del aviso de
- * mantenimiento: fondo de tarjeta, color solo en el borde y el icono, entrada desde la derecha.
+ * Avisos emergentes de la aplicación. El fondo, el borde y el texto van en el color del aviso, y el
+ * signo va dentro de un anillo que se consume mientras el aviso sigue en pantalla. Con el cursor
+ * encima la cuenta se detiene; al salir, sigue donde quedó.
  */
 @Component({
   selector: 'app-toast-notification',
@@ -32,11 +33,24 @@ import { ToastService, Toast } from '../../services/toast.service';
 })
 export class ToastNotificationComponent implements OnInit, OnDestroy {
   toasts: Toast[] = [];
-  /** Color de cada tipo: va en el borde y en el icono. */
-  readonly BORDE: Record<Toast['type'], string> = { success: 'border-[#10b981]', error: 'border-[#ef4444]', warning: 'border-[#f59e0b]', info: 'border-[#3b82f6]' };
-  readonly TINTA: Record<Toast['type'], string> = { success: 'text-[#10b981]', error: 'text-[#ef4444]', warning: 'text-[#f59e0b]', info: 'text-[#3b82f6]' };
+  /** Colores de cada tipo: texto (--t), fondo, borde y el tono vivo del anillo (--t-pt). */
+  readonly COLOR: Record<Toast['type'], string> = {
+    success: '[--t:var(--ok)] [--t-bg:var(--ok-bg)] [--t-ln:var(--ok-ln)] [--t-pt:var(--ok-pt)]',
+    error: '[--t:var(--ro)] [--t-bg:var(--ro-bg)] [--t-ln:var(--ro-ln)] [--t-pt:var(--ro-pt)]',
+    warning: '[--t:var(--am)] [--t-bg:var(--am-bg)] [--t-ln:var(--am-ln)] [--t-pt:var(--am-pt)]',
+    info: '[--t:var(--info)] [--t-bg:var(--info-bg)] [--t-ln:var(--info-ln)] [--t-pt:var(--info)]'
+  };
+  /** Signo de cada tipo, en trazos de 24 × 24. Va suelto: el anillo ya hace de círculo. */
+  readonly SIGNO: Record<Toast['type'], string[]> = {
+    success: ['M19 7 10 16l-5-5'],
+    error: ['M17 7 7 17', 'm7 7 10 10'],
+    warning: ['M12 6v7', 'M12 17.5h.01'],
+    info: ['M12 18v-7', 'M12 6.5h.01']
+  };
   private subscription!: Subscription;
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Lo que le queda a cada aviso y desde cuándo corre esa cuenta. */
+  private cuentas = new Map<string, { resta: number; desde: number }>();
 
   constructor(private toastService: ToastService) {}
 
@@ -70,34 +84,55 @@ export class ToastNotificationComponent implements OnInit, OnDestroy {
     }
     this.timers.forEach(handle => clearTimeout(handle));
     this.timers.clear();
+    this.cuentas.clear();
   }
 
-  /** (Re)inicia el auto-cierre de una toast, limpiando cualquier timer previo. */
+  /**
+   * (Re)inicia el auto-cierre de una toast, limpiando cualquier timer previo. Si el cursor está
+   * encima, la cuenta queda entera y arranca al salir.
+   */
   private startTimer(toast: Toast): void {
-    const previous = this.timers.get(toast.id);
-    if (previous) {
-      clearTimeout(previous);
+    this.detener(toast.id);
+    const resta = toast.duration || 3000;
+    this.cuentas.set(toast.id, { resta, desde: Date.now() });
+    if (!toast.pausado) {
+      this.timers.set(toast.id, setTimeout(() => this.remove(toast.id), resta));
     }
-    const handle = setTimeout(() => this.remove(toast.id), toast.duration || 3000);
-    this.timers.set(toast.id, handle);
+  }
+
+  /** El cursor entra al aviso: la cuenta se detiene y se guarda lo que faltaba. */
+  pausar(toast: Toast): void {
+    const cuenta = this.cuentas.get(toast.id);
+    if (!cuenta || toast.pausado) {
+      return;
+    }
+    this.detener(toast.id);
+    cuenta.resta = Math.max(cuenta.resta - (Date.now() - cuenta.desde), 0);
+    toast.pausado = true;
+  }
+
+  /** El cursor sale: la cuenta sigue donde quedó. */
+  seguir(toast: Toast): void {
+    const cuenta = this.cuentas.get(toast.id);
+    if (!cuenta || !toast.pausado) {
+      return;
+    }
+    toast.pausado = false;
+    cuenta.desde = Date.now();
+    this.timers.set(toast.id, setTimeout(() => this.remove(toast.id), cuenta.resta));
   }
 
   remove(id: string): void {
+    this.detener(id);
+    this.cuentas.delete(id);
+    this.toasts = this.toasts.filter(t => t.id !== id);
+  }
+
+  private detener(id: string): void {
     const handle = this.timers.get(id);
     if (handle) {
       clearTimeout(handle);
       this.timers.delete(id);
-    }
-    this.toasts = this.toasts.filter(t => t.id !== id);
-  }
-
-  getIcon(type: string): string {
-    switch (type) {
-      case 'success': return 'check-circle';
-      case 'error': return 'x-circle';
-      case 'warning': return 'alert-triangle';
-      case 'info': return 'info';
-      default: return 'info';
     }
   }
 

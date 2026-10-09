@@ -3,6 +3,12 @@
        [attr.data-plegado]="plegado ? '' : null"
        aria-label="Menú principal">
 
+  <!-- Mientras el Panel del asesor está abierto, la luz del estado también cae sobre el menú. Va en una
+       capa propia, por debajo del contenido, para no tocar el fondo ni las transiciones del menú. -->
+  <span *ngIf="luz.tono() as tono" aria-hidden="true"
+        class="cashi-luz-estado cashi-menu-luz pointer-events-none absolute inset-0 -z-10 rounded-[inherit]"
+        [style.--tono]="tono" [attr.data-entrada]="luz.entrada() ? luz.entrada() % 2 : null"></span>
+
   <!-- Marca -->
   <div class="flex h-20 flex-none items-center justify-center gap-3 overflow-clip px-3.5 transition-[gap] duration-[280ms] ease-[cubic-bezier(.4,0,.2,1)] group-data-[plegado]/sb:gap-0">
     <app-cashi-mascota [escala]="0.44" [plana]="true"></app-cashi-mascota>
@@ -36,7 +42,7 @@
         </li>
       </ul>
       <ng-template #sinResultados>
-        <p class="m-0 px-2.5 py-2 text-[.75rem] text-muted-foreground">Sin resultados para «{{ filtro }}»</p>
+        <p class="m-0 px-2.5 py-2 text-[.75rem] text-muted-foreground">Sin resultados para "{{ filtro }}"</p>
       </ng-template>
     </ng-container>
 
@@ -109,6 +115,11 @@
       </div>
     </div>
 
+    <!-- Notificaciones del sistema: se despliegan aquí, sobre la cuenta, sin abrir una caja aparte. -->
+    <app-notificaciones-panel *ngIf="esAdmin && notificacionesAbiertas && !plegado" [notificaciones]="notificacionesLista"
+                              (cerrar)="notificacionesCerrar.emit()" (leer)="notificacionLeer.emit($event)"
+                              (leerTodas)="notificacionesLeerTodas.emit()"></app-notificaciones-panel>
+
     <!-- La fila mide siempre lo mismo: al plegar no se recoloca nada, el ancho la recorta. -->
     <div class="flex w-[16.0625rem] items-center gap-1.5">
       <button type="button" class="group/yo relative flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border-0 bg-transparent py-1 pr-2 pl-3.5 text-left text-sidebar-foreground transition-colors duration-150"
@@ -130,7 +141,8 @@
                 [appTip]="temaOscuro ? 'Modo claro' : 'Modo oscuro'" appTipLado="arriba" (click)="temaCambiar.emit()">
           <lucide-angular [name]="temaOscuro ? 'sun' : 'moon'" [size]="16"></lucide-angular>
         </button>
-        <button *ngIf="esAdmin" type="button" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_NEUTRO" aria-label="Notificaciones"
+        <button *ngIf="esAdmin" type="button" [class]="BOTON_ICONO + ' ' + BOTON_ICONO_NEUTRO" [ngClass]="notificacionesAbiertas ? 'bg-sidebar-accent! text-brand!' : ''"
+                aria-label="Notificaciones" [attr.aria-expanded]="notificacionesAbiertas"
                 appTip="Notificaciones" appTipLado="arriba" (click)="$event.stopPropagation(); notificacionesAbrir.emit()">
           <lucide-angular name="bell" [size]="16"></lucide-angular>
           <span *ngIf="notificaciones > 0" class="absolute top-px right-px h-3.5 min-w-3.5 rounded-full bg-[#a63e30] px-[.2rem] text-center text-[.625rem] leading-[.875rem] font-bold text-white">{{ notificaciones > 9 ? '9+' : notificaciones }}</span>
