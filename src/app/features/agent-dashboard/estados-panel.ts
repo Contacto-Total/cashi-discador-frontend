@@ -48,10 +48,10 @@ export const ESTADOS_OPERATIVOS: ReadonlySet<AgentState> = new Set([AgentState.D
  * `excedido` empieza al superar el tope, que es lo que el backend llama exceder el tiempo máximo.
  */
 export const NIVELES = {
-  verde: { trazo: 'var(--nivel-verde)', tinta: 'var(--nivel-verde)', icono: 'circle-check', leyenda: 'Dentro del margen' },
-  ambar: { trazo: 'var(--nivel-ambar)', tinta: 'var(--nivel-ambar-texto)', icono: 'circle-alert', leyenda: 'Acercándose al tope' },
-  rojo: { trazo: 'var(--nivel-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Al límite' },
-  excedido: { trazo: 'var(--nivel-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Tiempo excedido' }
+  verde: { trazo: 'var(--trazo-verde)', tinta: 'var(--nivel-verde)', icono: 'circle-check', leyenda: 'Dentro del margen' },
+  ambar: { trazo: 'var(--trazo-ambar)', tinta: 'var(--nivel-ambar-texto)', icono: 'circle-alert', leyenda: 'Acercándose al tope' },
+  rojo: { trazo: 'var(--trazo-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Al límite' },
+  excedido: { trazo: 'var(--trazo-rojo)', tinta: 'var(--nivel-rojo)', icono: 'triangle-alert', leyenda: 'Tiempo excedido' }
 } as const;
 
 export type Nivel = keyof typeof NIVELES;

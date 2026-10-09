@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
@@ -19,6 +19,7 @@ import { ThemeService } from '../../shared/services/theme.service';
 import { UmbralesEstadoService } from '../../maintenance/services/umbrales-estado.service';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { TarjetaLuzDirective } from '../../shared/ui/tarjeta-luz.directive';
+import { LuzEstadoService } from '../../shared/ui/luz-estado.service';
 import { TituloTarjetaComponent } from '../../shared/ui/titulo-tarjeta.component';
 import { AnilloTiempoComponent } from '../../shared/ui/anillo-tiempo.component';
 import { EscalaTiempoComponent } from '../../shared/ui/escala-tiempo.component';
@@ -111,7 +112,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     private router: Router,
     private sipService: SipService,
     private umbralesService: UmbralesEstadoService,
-    private tema: ThemeService
+    private tema: ThemeService,
+    private cdr: ChangeDetectorRef,
+    readonly luz: LuzEstadoService
   ) {}
 
   ngOnInit(): void {
@@ -175,6 +178,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.luz.tono.set(null);
+    this.luz.entrada.set(0);
     window.removeEventListener('beforeunload', this.boundBeforeUnload);
     clearInterval(this.tic);
     clearTimeout(this.relevo);
@@ -440,18 +445,36 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * El arco y la marca solo se deslizan de un segundo al siguiente. Si el tiempo salta (se volvió a
-   * la pantalla, llegó una corrección) se colocan de golpe; al cambiar de estado se apagan en su
-   * sitio y aparecen en el nuevo, en vez de retroceder por la barra.
+   * Al volver a la pestaña, el arco y la marca se colocan de golpe. Con la pestaña oculta el navegador
+   * deja de dibujar, pero el reloj sigue contando segundo a segundo: sin esto, al volver recorrerían
+   * de una vez todo el tramo que pasó sin verse. El redibujo se fuerza aquí para que el salto quede
+   * hecho antes del siguiente segundo.
    */
-  private pintarReloj(): void {
+  @HostListener('document:visibilitychange')
+  alVolverALaPestana(): void {
+    if (document.hidden || !this.currentStatus) {
+      return;
+    }
+    this.pintarReloj(true);
+    this.cdr.detectChanges();
+    void document.body.offsetWidth;
+  }
+
+  /**
+   * El arco y la marca solo se deslizan de un segundo al siguiente. Si el tiempo salta (se volvió a
+   * la pantalla o a la pestaña, llegó una corrección) se colocan de golpe; al cambiar de estado se
+   * apagan en su sitio y aparecen en el nuevo, en vez de retroceder por la barra.
+   */
+  private pintarReloj(deGolpe = false): void {
     const estado = this.currentStatus?.estadoActual ?? null;
     const antes = this.segundos;
     this.segundos = Math.max(0, Math.floor(this.baseSegundos + (Date.now() - this.baseEn) / 1000));
     const trazo = this.semaforo?.trazo ?? 'var(--muted-foreground)';
+    this.luz.tono.set(this.tono(this.estado));
 
     if (estado !== this.estadoPintado && this.estadoPintado !== null) {
       this.estadoPintado = estado;
+      this.luz.entrada.update(n => n + 1);
       this.modoReloj = 'fuera';
       clearTimeout(this.relevo);
       this.relevo = setTimeout(() => {
@@ -467,7 +490,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     if (this.relevo || this.modoReloj === 'oculta') {
       return;
     }
-    this.modoReloj = this.segundos - antes === 1 ? 'suave' : 'quieta';
+    this.modoReloj = !deGolpe && !document.hidden && this.segundos - antes === 1 ? 'suave' : 'quieta';
     this.vistaSegundos = this.segundos;
     this.vistaTrazo = trazo;
   }

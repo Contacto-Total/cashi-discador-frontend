@@ -8,6 +8,8 @@ export interface Toast {
   duration?: number;
   /** Contador de "re-intentos" para re-disparar el brillo del borde (uso interno del componente). */
   glowCount?: number;
+  /** El cursor está encima y la cuenta del cierre está detenida (uso interno del componente). */
+  pausado?: boolean;
 }
 
 @Injectable({

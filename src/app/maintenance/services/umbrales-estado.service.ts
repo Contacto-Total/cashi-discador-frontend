@@ -3,9 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+/** Umbral de un estado. `idSubcartera` 0 es la configuración general. */
 export interface ConfigUmbralEstado {
   id: number;
   estado: string;
+  idSubcartera: number;
   nombreUmbral: string;
   umbralVerdeSegundos: number;
   umbralAmarilloSegundos: number;
@@ -17,6 +19,32 @@ export interface ConfigUmbralEstado {
   mensajeAlerta: string;
 }
 
+/** Subcartera que se puede configurar. */
+export interface SubcarteraUmbral {
+  idSubcartera: number;
+  cliente: string;
+  cartera: string;
+  subcartera: string;
+  asesores: number;
+}
+
+export interface CambioUmbral {
+  estado: string;
+  idSubcartera: number;
+  umbralVerdeSegundos: number | null;
+  umbralAmarilloSegundos: number | null;
+  tiempoMaximoSegundos: number | null;
+  alertaSupervisor: boolean;
+  sonidoAlerta: boolean;
+  activo: boolean;
+}
+
+/** Lo que se guarda de una vez: filas que cambian y filas de subcartera que vuelven a la general. */
+export interface CambiosUmbrales {
+  guardar: CambioUmbral[];
+  quitar: { estado: string; idSubcartera: number }[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -25,20 +53,22 @@ export class UmbralesEstadoService {
 
   constructor(private http: HttpClient) {}
 
+  /** Todos: los generales y los de cada subcartera. */
   getAll(): Observable<ConfigUmbralEstado[]> {
     return this.http.get<ConfigUmbralEstado[]>(this.apiUrl);
   }
 
-  /** Solo los umbrales activos: los que rigen el semáforo del asesor. */
+  /** Los umbrales activos que rigen para quien los pide, según su subcartera: el semáforo del asesor. */
   getActivos(): Observable<ConfigUmbralEstado[]> {
     return this.http.get<ConfigUmbralEstado[]>(`${this.apiUrl}/activos`);
   }
 
-  update(id: number, data: Partial<ConfigUmbralEstado>): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}`, data);
+  getSubcarteras(): Observable<SubcarteraUmbral[]> {
+    return this.http.get<SubcarteraUmbral[]>(`${this.apiUrl}/subcarteras`);
   }
 
-  recargarCache(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/recargar-cache`, {});
+  /** Guarda los cambios y devuelve cómo queda todo. */
+  guardar(cambios: CambiosUmbrales): Observable<ConfigUmbralEstado[]> {
+    return this.http.put<ConfigUmbralEstado[]>(this.apiUrl, cambios);
   }
 }

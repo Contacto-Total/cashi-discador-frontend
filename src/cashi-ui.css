@@ -32,6 +32,11 @@
   --nivel-ambar: #d59c22;
   --nivel-rojo: #b8402f;
   --nivel-ambar-texto: #966700;
+  /* Trazo de los medidores de tiempo (anillo, escala y su marca): el color del nivel rebajado al 85 %
+     sobre el gris de la pista, para que no deslumbre. Los tres usan el mismo color; por eso coinciden. */
+  --trazo-verde: color-mix(in srgb, var(--nivel-verde) 85%, var(--muted));
+  --trazo-ambar: color-mix(in srgb, var(--nivel-ambar) 85%, var(--muted));
+  --trazo-rojo: color-mix(in srgb, var(--nivel-rojo) 85%, var(--muted));
   --tooltip: #1b2422;
   --tooltip-foreground: #ffffff;
   --color-cashi-500: #10b981;
@@ -102,7 +107,9 @@
    al ajuste «Tamaño de texto»; aquí cada tamaño en uso pasa a rem. Vale dentro de lo que lleva
    `font-cashi`, que es lo que marca al diseño nuevo. Un tamaño nuevo de icono se agrega a esta lista. */
 .font-cashi lucide-angular > svg[width="14"] { width: .875rem; height: .875rem; }
+.font-cashi lucide-angular > svg[width="15"] { width: .9375rem; height: .9375rem; }
 .font-cashi lucide-angular > svg[width="16"] { width: 1rem; height: 1rem; }
+.font-cashi lucide-angular > svg[width="17"] { width: 1.0625rem; height: 1.0625rem; }
 .font-cashi lucide-angular > svg[width="17.6"] { width: 1.1rem; height: 1.1rem; }
 .font-cashi lucide-angular > svg[width="18"] { width: 1.125rem; height: 1.125rem; }
 .font-cashi lucide-angular > svg[width="19.2"] { width: 1.2rem; height: 1.2rem; }
@@ -112,6 +119,11 @@
    punto de un servicio caído y la entrada de un aviso emergente. El parpadeo va en el color y no en
    `opacity`. */
 @keyframes cashi-noti { from { transform: translateX(400px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Las notificaciones aparecen en el pie del menú. */
+@keyframes cashi-panel-notis { from { transform: translateY(.375rem); opacity: 0; } }
+/* Anillo de un aviso emergente: se consume en lo que dura el aviso. Con calc() o animación el desfase
+   necesita unidad; el trazo mide 100 por su pathLength. */
+@keyframes cashi-aviso-vida { from { stroke-dashoffset: 0px; } to { stroke-dashoffset: 100px; } }
 @keyframes cashi-halo { 0% { box-shadow: 0 0 0 0 rgb(16 185 129 / .5); } 70%, 100% { box-shadow: 0 0 0 13px rgb(16 185 129 / 0); } }
 @keyframes cashi-entra { from { background-color: var(--ok-bg); } to { background-color: transparent; } }
 @keyframes cashi-late { 50% { background-color: color-mix(in srgb, var(--ro-pt) 25%, transparent); } }
@@ -121,6 +133,22 @@
    inicial ir en px (con rem la regla entera no es válida). Con el tiempo excedido, un destello recorre
    la fila, con una pausa entre pasada y pasada: es lo único que se mueve. */
 @property --luz-estado { syntax: '<length>'; inherits: false; initial-value: 0px; }
+
+/* Luz del estado en el Panel del asesor y, mientras está abierto, en el menú. El color y el alcance del
+   foco son propiedades registradas para poder animarlas: el color pasa de un estado a otro y, en cada
+   cambio, el foco vuelve a abrirse desde arriba. La entrada alterna entre dos animaciones iguales:
+   cambiar de nombre la reinicia. */
+@property --tono-luz { syntax: '<color>'; inherits: true; initial-value: transparent; }
+@property --luz-fin { syntax: '<percentage>'; inherits: true; initial-value: 58%; }
+.cashi-luz-estado { --tono-luz: var(--tono, transparent); transition: --tono-luz .6s ease; }
+.cashi-luz-estado[data-entrada="0"] { animation: cashi-luz-a .8s cubic-bezier(.22, 1, .36, 1); }
+.cashi-luz-estado[data-entrada="1"] { animation: cashi-luz-b .8s cubic-bezier(.22, 1, .36, 1); }
+@keyframes cashi-luz-a { from { --luz-fin: 18%; } to { --luz-fin: 58%; } }
+@keyframes cashi-luz-b { from { --luz-fin: 18%; } to { --luz-fin: 58%; } }
+.cashi-menu-luz { background-image: radial-gradient(160% 26rem at 50% -5rem, color-mix(in oklab, var(--tono-luz) 12%, transparent) 0%, transparent var(--luz-fin)); }
+@media (prefers-reduced-motion: reduce) {
+  .cashi-luz-estado { transition: none; animation: none !important; }
+}
 @keyframes cashi-destello { 0%, 18% { background-position: 130% 0; } 72%, 100% { background-position: -30% 0; } }
 
 @theme inline {

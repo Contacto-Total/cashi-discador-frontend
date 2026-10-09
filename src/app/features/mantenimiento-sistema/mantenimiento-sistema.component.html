@@ -50,7 +50,7 @@
   <div class="grid grid-cols-[minmax(0,2.35fr)_minmax(20rem,1fr)] items-stretch gap-3 max-[1150px]:grid-cols-[minmax(0,1fr)]">
     <!-- La primera tarjeta lleva el título y lo principal de la pantalla: el formulario con la vista del
          asesor a un lado y el flujo al otro. Los indicadores y «En gestión» van aparte, a su derecha. -->
-    <section appTarjeta class="flex flex-col px-6 py-5">
+    <section appTarjeta class="flex flex-col px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5">
       <app-page-header titulo="Mantenimiento del sistema" [subtitulo]="subtitulo()">
         <span role="status"
               class="inline-flex flex-none items-center gap-1.5 rounded-full border py-1 pr-3 pl-2.5 text-[.75rem] font-semibold tabular-nums transition-[background-color,color,border-color] duration-300 before:size-[.4375rem] before:rounded-full before:bg-current before:content-['']"
@@ -61,7 +61,7 @@
         <div class="flex min-w-0 flex-col">
           <!-- Programar, iniciar o seguir el mantenimiento -->
           <div>
-            <app-titulo-tarjeta class="mb-[.75rem]" [icono]="vista() === 'OPERATIVO' ? 'circle-plus' : 'timer'"
+            <app-titulo-tarjeta class="mb-[.75rem]"
                                 [titulo]="vista() === 'OPERATIVO' ? 'Nuevo mantenimiento' : 'Mantenimiento en curso'"></app-titulo-tarjeta>
             <div class="flex flex-col gap-3">
               @if (error(); as e) {
@@ -168,7 +168,7 @@
 
           <!-- Lo que ve un asesor libre en este momento -->
           <div class="mt-[1.125rem] flex flex-1 flex-col border-t border-border pt-[1.125rem]">
-            <app-titulo-tarjeta class="mb-[.75rem]" icono="monitor" titulo="Vista del asesor"></app-titulo-tarjeta>
+            <app-titulo-tarjeta class="mb-[.75rem]" titulo="Vista del asesor"></app-titulo-tarjeta>
             <div class="relative flex min-h-[250px] flex-1 overflow-hidden rounded-[10px] border border-border bg-background">
               <div class="w-[46px] flex-none border-r border-(--esq-ln) bg-(--esq-lat)"></div>
               <div class="flex flex-1 flex-col gap-2 p-2.5">
@@ -210,7 +210,7 @@
 
         <!-- Flujo, paso a paso con los datos en vivo -->
         <div class="flex min-w-0 flex-col border-l border-border pl-7 max-[720px]:mt-[1.125rem] max-[720px]:border-t max-[720px]:border-l-0 max-[720px]:pt-[1.125rem] max-[720px]:pl-0">
-          <app-titulo-tarjeta class="mb-[.75rem]" icono="list-checks" titulo="Flujo"></app-titulo-tarjeta>
+          <app-titulo-tarjeta class="mb-[.75rem]" titulo="Flujo"></app-titulo-tarjeta>
           <ol class="m-0 flex flex-1 list-none flex-col p-0">
             @for (p of pasos(); track p.id) {
               <li class="relative grid flex-1 grid-cols-[2rem_minmax(0,1fr)_auto] content-start gap-x-3.5 rounded-[.625rem] py-3 pr-3 pl-2 [&:not(:last-child)]:before:absolute [&:not(:last-child)]:before:top-11 [&:not(:last-child)]:before:-bottom-3 [&:not(:last-child)]:before:left-[1.4375rem] [&:not(:last-child)]:before:z-[1] [&:not(:last-child)]:before:w-0.5 [&:not(:last-child)]:before:bg-border [&:not(:last-child)]:before:transition-colors [&:not(:last-child)]:before:duration-[400ms] [&:not(:last-child)]:before:content-['']"
@@ -274,7 +274,7 @@
            (el alto de la tarjeta principal menos los indicadores) y no crece con la lista: entran las
            filas que caben y el resto se pagina dentro de la tarjeta. -->
       <section appTarjeta class="flex min-h-[19rem] flex-[1_1_0px] flex-col">
-        <app-titulo-tarjeta class="mb-2.5" icono="users" titulo="En gestión"></app-titulo-tarjeta>
+        <app-titulo-tarjeta class="mb-2.5" titulo="En gestión"></app-titulo-tarjeta>
         <div #cajaGestion class="flex min-h-0 flex-[1_1_0px] flex-col overflow-hidden">
           <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
           @for (a of gestionVisible(); track a.idUsuario) {
@@ -312,7 +312,7 @@
 
   <!-- Historial. El tema antiguo fija con !important el aspecto de las tablas: de ahí los `!`. -->
   <section appTarjeta>
-    <app-titulo-tarjeta class="mb-[.75rem]" icono="history" titulo="Historial"></app-titulo-tarjeta>
+    <app-titulo-tarjeta class="mb-[.75rem]" titulo="Historial"></app-titulo-tarjeta>
     <div class="overflow-x-auto">
       <table class="w-full border-collapse bg-transparent!">
         <caption class="sr-only">Mantenimientos anteriores, del más reciente al más antiguo</caption>

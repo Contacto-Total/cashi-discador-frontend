@@ -1,0 +1,165 @@
+<!-- La tarjeta principal ocupa el alto disponible y la lista se desplaza por dentro; a su lado, las
+     subcarteras, que entran solo si la tabla queda holgada y se llevan una parte fija del ancho. El reparto
+     depende del ancho que le queda a la pantalla (cambia al plegar el menú), no del de la ventana. -->
+<div class="font-cashi grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_min(28cqw,26rem)] grid-rows-[minmax(0,1fr)] items-start gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased @max-[70.5rem]/umbrales:grid-cols-[minmax(0,1fr)]">
+  <section appTarjeta class="@container/tabla flex min-h-0 flex-col self-stretch overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5">
+    <!-- El filtro es más alto que el título: se alinean arriba para que el título no baje. Si la
+         tarjeta es angosta, el filtro pasa debajo a todo el ancho. -->
+    <app-page-header class="flex-none" titulo="Umbrales de estado" subtitulo="Tiempos en minutos por subcartera" [sinRaya]="true"
+                     fila="items-start gap-y-6 [&>div:first-child]:flex-none @max-[42.5rem]/tabla:flex-wrap">
+      <div class="grid min-w-0 flex-[0_1_29.5rem] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 @max-[42.5rem]/tabla:basis-full">
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="um-cli" class="m-0! text-[.75rem]! leading-[1.5]! font-medium! text-foreground/80!">Cliente</label>
+          <select id="um-cli" [class]="LISTA" (change)="elegirCliente($any($event.target).value)">
+            <option value="" [selected]="!cliente()">Todos</option>
+            @for (c of clientes(); track c) {
+              <option [value]="c" [selected]="c === cliente()">{{ c }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="um-car" class="m-0! text-[.75rem]! leading-[1.5]! font-medium! text-foreground/80!">Cartera</label>
+          <select id="um-car" [class]="LISTA" (change)="elegirCartera($any($event.target).value)">
+            <option value="" [selected]="!cartera()">Todas</option>
+            @for (c of carteras(); track c) {
+              <option [value]="c" [selected]="c === cartera()">{{ c }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="um-sub" class="m-0! text-[.75rem]! leading-[1.5]! font-medium! text-foreground/80!">Subcartera</label>
+          <select id="um-sub" [class]="LISTA" (change)="elegirSub($any($event.target).value)">
+            <option value="0" [selected]="!sub()">Todas</option>
+            @for (s of deLaCartera(); track s.idSubcartera) {
+              <option [value]="s.idSubcartera" [selected]="s.idSubcartera === sub()">{{ rotuloSub(s) }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </app-page-header>
+
+    <div [class]="REJILLA + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
+      <span>Estado</span>
+      <span class="@max-[40.4rem]/tabla:invisible">Escala</span>
+      <span class="grid text-center" [ngClass]="TIEMPOS"><span>Verde</span><span>Ámbar</span><span>Tope</span></span>
+      <span class="text-center" [ngClass]="AVISOS"><span>Activo</span><span>Supervisor</span><span>Sonido</span></span>
+    </div>
+
+    <div class="-mx-8 -mb-5 min-h-0 flex-1 overflow-y-auto px-8 pb-3">
+      @if (error(); as e) {
+        <div role="alert" class="mt-[.875rem] flex flex-wrap items-center justify-between gap-3 rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--ro)">
+          <span>{{ e }}</span>
+          <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="cargar()">Reintentar</button>
+        </div>
+      } @else if (cargando()) {
+        <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">Cargando umbrales…</p>
+      }
+
+      @for (g of grupos(); track g.nombre) {
+        <p class="mx-2 mt-[.875rem] mb-[.25rem] text-[.8125rem] font-bold text-foreground @max-[37.5rem]/tabla:ml-1">{{ g.nombre }}</p>
+        @for (e of g.estados; track clave(e)) {
+          <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'" [style.--tinta]="tinta(e)">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <lucide-angular [name]="ficha(e).icono" [size]="20" [ngClass]="'flex flex-none text-(--tinta)'"></lucide-angular>
+              <span class="min-w-0 overflow-hidden text-[.875rem] font-normal text-ellipsis whitespace-nowrap">{{ ficha(e).nombre }}</span>
+            </div>
+
+            <!-- Revertir va al final de la escala: la barra le cede el sitio solo en las filas que lo llevan. -->
+            <div class="flex min-w-0 items-center gap-2">
+              <div aria-hidden="true" class="flex h-2 min-w-0 flex-1 gap-0.5 rounded-full bg-muted @max-[40.4rem]/tabla:hidden">
+                @if (tramos(e); as t) {
+                  @if (t.length) {
+                    <span class="h-full rounded-l-full bg-(--trazo-verde) transition-[width] duration-200 ease-out" [style.width.%]="t[0]"></span>
+                    <span class="h-full bg-(--trazo-ambar) transition-[width] duration-200 ease-out" [style.width.%]="t[1]"></span>
+                    <span class="h-full rounded-r-full bg-(--trazo-rojo) transition-[width] duration-200 ease-out" [style.width.%]="t[2]"></span>
+                  }
+                }
+              </div>
+              @if (revertible(e)) {
+                <button type="button" appBoton="secundario" appBotonAlto="chico" class="flex-none"
+                        [attr.aria-label]="(sub() ? 'Revertir a General: ' : 'Revertir cambios: ') + ficha(e).nombre"
+                        [title]="sub() ? 'Revertir a General' : 'Revertir cambios'" (click)="revertir(e)">
+                  <lucide-angular name="undo-2" [size]="16" [ngClass]="'hidden @min-[52.75rem]/tabla:flex'"></lucide-angular>Revertir
+                </button>
+              }
+            </div>
+
+            <!-- Los campos siguen en la página con el tope apagado, para conservar lo escrito. -->
+            <div [ngClass]="[TIEMPOS, valor(e).activo ? 'grid' : 'hidden']">
+              <input type="number" inputmode="decimal" min="0.5" step="0.5" [class]="CAMPO" [ngClass]="mal(e) ? 'border-(--ro-pt)!' : 'border-(--campo-ln)!'"
+                     [attr.value]="valor(e).verde" [attr.aria-label]="'Verde de ' + ficha(e).nombre + ', en minutos'" (input)="escribir(e, 'verde', $any($event.target).value)">
+              <input type="number" inputmode="decimal" min="0.5" step="0.5" [class]="CAMPO" [ngClass]="mal(e) ? 'border-(--ro-pt)!' : 'border-(--campo-ln)!'"
+                     [attr.value]="valor(e).ambar" [attr.aria-label]="'Ámbar de ' + ficha(e).nombre + ', en minutos'" (input)="escribir(e, 'ambar', $any($event.target).value)">
+              <input type="number" inputmode="decimal" min="0.5" step="0.5" [class]="CAMPO" [ngClass]="mal(e) ? 'border-(--ro-pt)!' : 'border-(--campo-ln)!'"
+                     [attr.value]="valor(e).tope" [attr.aria-label]="'Tope de ' + ficha(e).nombre + ', en minutos'" (input)="escribir(e, 'tope', $any($event.target).value)">
+            </div>
+            @if (!valor(e).activo) {
+              <span class="text-[.8125rem] whitespace-nowrap text-muted-foreground">Sin tope de tiempo</span>
+            }
+
+            <div [class]="AVISOS">
+              <button type="button" role="switch" [attr.aria-checked]="valor(e).activo" [attr.aria-label]="'Tope de tiempo activo: ' + ficha(e).nombre"
+                      class="relative block h-[1.125rem] w-8 flex-none cursor-pointer rounded-full border-0! p-0! transition-colors duration-150 after:absolute after:top-0.5 after:left-0.5 after:size-3.5 after:rounded-full after:bg-white after:shadow-[0_1px_2px_rgb(0_0_0/.25)] after:transition-transform after:duration-150 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      [ngClass]="valor(e).activo ? 'bg-brand after:translate-x-3.5' : 'bg-(--campo-ln)'" (click)="alternarTope(e)"></button>
+              <button type="button" [class]="AVISO" [ngClass]="valor(e).activo && valor(e).supervisor ? AVISO_SI : AVISO_NO"
+                      [attr.aria-pressed]="valor(e).activo && valor(e).supervisor" [attr.aria-label]="'Avisar al supervisor: ' + ficha(e).nombre" title="Avisar al supervisor"
+                      [disabled]="!valor(e).activo" (click)="alternar(e, 'supervisor')">
+                <lucide-angular [name]="valor(e).activo && valor(e).supervisor ? 'bell-ring' : 'bell-off'" [size]="17"></lucide-angular>
+              </button>
+              <button type="button" [class]="AVISO" [ngClass]="valor(e).activo && valor(e).sonido ? AVISO_SI : AVISO_NO"
+                      [attr.aria-pressed]="valor(e).activo && valor(e).sonido" [attr.aria-label]="'Sonido: ' + ficha(e).nombre" title="Sonido"
+                      [disabled]="!valor(e).activo" (click)="alternar(e, 'sonido')">
+                <lucide-angular [name]="valor(e).activo && valor(e).sonido ? 'volume-2' : 'volume-x'" [size]="17"></lucide-angular>
+              </button>
+            </div>
+
+            @if (mal(e)) {
+              <p role="alert" class="col-[2/-1] m-0 -mt-0.5 text-[.75rem] font-medium text-(--ro)">Verde &lt; Ámbar &lt; Tope</p>
+            }
+          </div>
+        }
+      }
+    </div>
+  </section>
+
+  <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
+  <section appTarjeta aria-label="Subcarteras" class="flex min-h-0 flex-col self-stretch overflow-hidden px-5 pt-[clamp(1rem,2.6vh,2rem)] pb-5 @max-[70.5rem]/umbrales:hidden">
+    <p role="heading" aria-level="2" class="m-0 mb-[.75rem] flex-none text-[1rem] font-bold">Subcarteras</p>
+    <div class="-mx-1.5 -mb-5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-5">
+      <button type="button" class="font-cashi grid w-full flex-none cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-lg border-0! px-2.5! py-2! text-left text-foreground! transition-colors duration-150"
+              [ngClass]="!sub() ? 'bg-sidebar-accent' : 'bg-transparent hover:bg-muted'" [attr.aria-current]="!sub()" (click)="elegirSub(0, true)">
+        <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">General</span>
+        <span class="col-[1/-1] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">Todas las subcarteras</span>
+      </button>
+      @for (c of porCliente(); track c.nombre) {
+        <p class="mt-[.875rem] mr-2.5 mb-1.5 ml-[.1875rem] flex flex-none items-center gap-2 text-[.8125rem] font-bold text-foreground">
+          <lucide-angular name="building-2" [size]="15" [ngClass]="'flex flex-none text-muted-foreground'"></lucide-angular>
+          <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ c.nombre }}</span>
+          <span class="text-[.75rem] font-medium text-muted-foreground">{{ c.subs.length }} {{ c.subs.length === 1 ? 'subcartera' : 'subcarteras' }}</span>
+        </p>
+        <div class="ml-4 flex flex-none flex-col gap-0.5">
+          @for (s of c.subs; track s.idSubcartera) {
+            <button type="button" class="font-cashi grid w-full flex-none cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-lg border-0! py-2! pr-2.5! pl-[.6875rem]! text-left text-foreground! transition-colors duration-150"
+                    [ngClass]="s.idSubcartera === sub() ? 'bg-sidebar-accent' : 'bg-transparent hover:bg-muted'" [attr.aria-current]="s.idSubcartera === sub()" (click)="elegirSub(s.idSubcartera, true)">
+              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ s.subcartera }}</span>
+              <span class="col-[2] row-[1] justify-self-end rounded-full px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap"
+                    [ngClass]="personalizada(s.idSubcartera) ? 'bg-(--ok-bg) text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]'
+                      : s.idSubcartera === sub() ? 'bg-card text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]'
+                      : 'bg-transparent text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]'">{{ personalizada(s.idSubcartera) ? 'Personalizado' : 'General' }}</span>
+              <span class="col-[1/-1] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">Cartera {{ s.cartera }} · {{ s.asesores }} {{ s.asesores === 1 ? 'asesor' : 'asesores' }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </section>
+</div>
+
+<!-- Barra de cambios: una tarjeta aparte, siempre abajo. -->
+<div appTarjeta class="font-cashi flex flex-none items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+  <span class="mr-auto text-[.875rem] font-medium" [ngClass]="hayInvalido() ? 'text-(--ro)' : cambios() ? 'text-foreground' : 'text-muted-foreground'">{{ resumen() }}</span>
+  <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="!cambios() || guardando()" (click)="descartar()">Descartar</button>
+  <button type="button" appBoton class="flex-none px-4!" [disabled]="!cambios() || hayInvalido() || guardando()" (click)="guardar()">
+    <lucide-angular name="check" [size]="16"></lucide-angular>Guardar cambios
+  </button>
+</div>

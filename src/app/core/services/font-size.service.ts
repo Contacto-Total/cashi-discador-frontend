@@ -9,6 +9,10 @@ export class FontSizeService {
   private readonly DEFAULT_SIZE = 16;
   private readonly MIN_SIZE = 14;
   private readonly MAX_SIZE = 24;
+  /** Tamaño de la raíz según el ancho de la ventana, para el tamaño por defecto: entero desde 1600 px
+      y, por debajo, baja de forma continua hasta 14.5 px en 1280 px o menos. Como la interfaz se mide
+      en rem, en una pantalla chica se reducen juntos la letra, los iconos y los espacios. */
+  private readonly ESCALA_VENTANA = 'clamp(14.5px, calc(8.5px + .46875vw), 16px)';
 
   private fontSizeSubject: BehaviorSubject<number>;
   public fontSize$: Observable<number>;
@@ -21,6 +25,7 @@ export class FontSizeService {
 
     // Apply initial font size
     this.applyFontSize(savedSize);
+    window.addEventListener('resize', () => this.measureScale(), { passive: true });
   }
 
   /**
@@ -109,11 +114,21 @@ export class FontSizeService {
    */
   private applyFontSize(size: number): void {
     const html = document.documentElement;
-    html.style.fontSize = `${size}px`;
+    // El tamaño elegido multiplica al que corresponde a la ventana.
+    html.style.fontSize = `calc(${this.ESCALA_VENTANA} * ${size / this.DEFAULT_SIZE})`;
 
     // Also set a CSS custom property for components that might need it
-    html.style.setProperty('--app-font-size', `${size}px`);
-    // La misma medida como factor respecto del tamaño por defecto, para lo que no se mide en rem.
-    html.style.setProperty('--app-font-scale', String(size / this.DEFAULT_SIZE));
+    html.style.setProperty('--app-font-size', '1rem');
+    this.measureScale();
+  }
+
+  /**
+   * El tamaño que resulta como factor respecto del tamaño por defecto, para lo que no se mide en rem.
+   * Cambia con el ancho de la ventana.
+   */
+  private measureScale(): void {
+    const html = document.documentElement;
+    const real = parseFloat(getComputedStyle(html).fontSize) || this.DEFAULT_SIZE;
+    html.style.setProperty('--app-font-scale', String(real / this.DEFAULT_SIZE));
   }
 }

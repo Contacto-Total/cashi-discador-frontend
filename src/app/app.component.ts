@@ -29,7 +29,6 @@ import { ToastService } from './shared/services/toast.service';
 import { GestionLockService } from './core/services/gestion-lock.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
-import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 import { WhatsAppNotificationPopupComponent } from './features/whatsapp/components/notification-popup/whatsapp-notification-popup.component';
 import { AvisosAsistenciaComponent } from './features/asistencia/avisos-asistencia.component';
 import { MantenimientoService } from './features/mantenimiento-sistema/mantenimiento.service';
@@ -45,7 +44,6 @@ import { CajaTarjetasDirective } from './shared/ui/caja-tarjetas.directive';
   standalone: true,
   imports: [
     CommonModule,
-    AppDateTimePipe,
     RouterOutlet,
     RouterModule,
     LucideAngularModule,
@@ -195,22 +193,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.notificacionesCount = 0;
       }
     });
-  }
-
-  getNotificacionIcon(tipo: string): string {
-    switch (tipo) {
-      case 'ARCHIVADO_MENSUAL': return 'archive';
-      case 'ERROR': return 'alert-circle';
-      default: return 'bell';
-    }
-  }
-
-  getNotificacionColor(tipo: string): string {
-    switch (tipo) {
-      case 'ARCHIVADO_MENSUAL': return 'text-green-400';
-      case 'ERROR': return 'text-red-400';
-      default: return 'text-blue-400';
-    }
   }
 
   ngOnInit(): void {

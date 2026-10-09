@@ -1,380 +1,376 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbrales-estado.service';
+import { AgentState } from '../../../core/models/agent-status.model';
+import { ESTADOS_PANEL } from '../../../features/agent-dashboard/estados-panel';
+import { ThemeService } from '../../../shared/services/theme.service';
+import { ToastService } from '../../../shared/services/toast.service';
+import { BotonDirective } from '../../../shared/ui/boton.directive';
+import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
+import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
+import { CambiosUmbrales, ConfigUmbralEstado, SubcarteraUmbral, UmbralesEstadoService } from '../../services/umbrales-estado.service';
 
+/** Lo que se configura de un estado. Los tiempos van en minutos; `NaN` mientras el campo no tiene un número. */
+interface Valor {
+  verde: number;
+  ambar: number;
+  tope: number;
+  activo: boolean;
+  supervisor: boolean;
+  sonido: boolean;
+}
+
+/** Configuración general y, por subcartera, solo los estados que tienen la suya. */
+interface Juego {
+  general: Record<string, Valor>;
+  propios: Record<number, Record<string, Valor>>;
+}
+
+const GENERAL = 0;
+
+const GRUPOS: { nombre: string; estados: AgentState[] }[] = [
+  { nombre: 'Operativo', estados: [AgentState.DISPONIBLE, AgentState.GESTION_MANUAL] },
+  {
+    nombre: 'Pausas',
+    estados: [AgentState.EN_REUNION, AgentState.CAPACITACION, AgentState.REFRIGERIO, AgentState.COMIDA, AgentState.SSHH, AgentState.AUSENTE, AgentState.SOPORTE]
+  },
+  { nombre: 'Del sistema', estados: [AgentState.EN_LLAMADA, AgentState.TIPIFICANDO] }
+];
+
+/** Tiempos que toma un estado al activarle el tope si no tenía unos válidos. */
+const TIEMPOS_INICIALES = { verde: 5, ambar: 8, tope: 10 };
+
+const tiemposValidos = (v: Valor): boolean =>
+  [v.verde, v.ambar, v.tope].every(n => Number.isFinite(n) && n > 0) && v.verde < v.ambar && v.ambar < v.tope;
+
+/** Con el tope activo, los tres tiempos tienen que ir en orden. */
+const mal = (v: Valor): boolean => v.activo && !tiemposValidos(v);
+
+const igual = (a: Valor | undefined, b: Valor | undefined): boolean => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/**
+ * Umbrales de estado: los tiempos que dibujan la escala del asesor en cada estado y a quién se avisa
+ * al pasar el tope. Hay una configuración general y cada subcartera puede tener la suya solo en los
+ * estados que haga falta; el resto los toma de la general.
+ *
+ * Con una subcartera elegida, tocar cualquier valor de un estado lo deja con configuración propia.
+ * Nada se envía hasta «Guardar cambios».
+ */
 @Component({
   selector: 'app-umbrales-estado',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
-  styles: [`
-    @keyframes slideIn {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    .animate-slide-in { animation: slideIn 0.3s ease-out; }
-  `],
-  template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
-      <!-- Toast -->
-      @if (toastMessage()) {
-        <div class="fixed top-4 right-4 z-50 animate-slide-in">
-          <div class="px-4 py-3 rounded-lg shadow-lg border flex items-center gap-2"
-               [class]="toastType() === 'success'
-                 ? 'bg-emerald-900/90 border-emerald-700 text-emerald-200'
-                 : 'bg-red-900/90 border-red-700 text-red-200'">
-            <lucide-angular [name]="toastType() === 'success' ? 'check-circle' : 'alert-circle'" [size]="18"></lucide-angular>
-            <span class="text-sm font-medium">{{ toastMessage() }}</span>
-          </div>
-        </div>
-      }
-
-      <!-- Header -->
-      <div class="max-w-7xl mx-auto mb-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-              <lucide-angular name="timer" [size]="24" class="text-white"></lucide-angular>
-            </div>
-            <div>
-              <h1 class="text-2xl font-bold text-white">Umbrales de Estado</h1>
-              <p class="text-sm text-gray-400">Configuración de tiempos límite por estado de agente</p>
-            </div>
-          </div>
-          <button (click)="recargarCache()"
-                  [disabled]="saving()"
-                  class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 shadow-lg">
-            <lucide-angular name="refresh-cw" [size]="16" [class.animate-spin]="saving()"></lucide-angular>
-            Recargar Cache
-          </button>
-        </div>
-      </div>
-
-      <!-- Table -->
-      <div class="max-w-7xl mx-auto">
-        <div class="bg-slate-900/80 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
-          @if (loading()) {
-            <div class="flex items-center justify-center py-20">
-              <div class="flex items-center gap-3 text-gray-400">
-                <lucide-angular name="loader-2" [size]="24" class="animate-spin"></lucide-angular>
-                <span>Cargando umbrales...</span>
-              </div>
-            </div>
-          } @else {
-            <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead>
-                  <tr class="border-b border-slate-700/50">
-                    <th class="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</th>
-                    <th class="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Umbrales</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-emerald-400 uppercase tracking-wider">Verde (min)</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-amber-400 uppercase tracking-wider">Amarillo (min)</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-red-400 uppercase tracking-wider">Rojo/Máx (min)</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Alerta Sup.</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sonido</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Activo</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (umbral of umbrales(); track umbral.id) {
-                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
-                        [class.bg-slate-800/50]="editingId() === umbral.id"
-                        (click)="startEditing(umbral)">
-                      <!-- Estado badge -->
-                      <td class="px-4 py-3">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-                              [style.background-color]="getEstadoColor(umbral.estado) + '22'"
-                              [style.color]="getEstadoColor(umbral.estado)"
-                              [style.border]="'1px solid ' + getEstadoColor(umbral.estado) + '44'">
-                          {{ umbral.estado }}
-                        </span>
-                      </td>
-
-                      <!-- Barra visual -->
-                      <td class="px-4 py-3">
-                        <div class="flex h-3 rounded-full overflow-hidden bg-slate-700/50 w-36">
-                          <div class="bg-emerald-500" [style.width.%]="getBarPercent(umbral, 'verde')"></div>
-                          <div class="bg-amber-500" [style.width.%]="getBarPercent(umbral, 'amarillo')"></div>
-                          <div class="bg-red-500" [style.width.%]="getBarPercent(umbral, 'rojo')"></div>
-                        </div>
-                      </td>
-
-                      <!-- Verde -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <input type="number" [(ngModel)]="editForm.umbralVerdeMin" min="0" [max]="editForm.umbralAmarilloMin" step="0.5"
-                                 (ngModelChange)="clampValues()"
-                                 class="w-20 px-2 py-1 bg-slate-700 border border-emerald-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        } @else {
-                          <span class="text-emerald-400 font-medium">{{ toMin(umbral.umbralVerdeSegundos) }}</span>
-                        }
-                      </td>
-
-                      <!-- Amarillo -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <input type="number" [(ngModel)]="editForm.umbralAmarilloMin" [min]="editForm.umbralVerdeMin" [max]="editForm.tiempoMaximoMin" step="0.5"
-                                 (ngModelChange)="clampValues()"
-                                 class="w-20 px-2 py-1 bg-slate-700 border border-amber-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500">
-                        } @else {
-                          <span class="text-amber-400 font-medium">{{ toMin(umbral.umbralAmarilloSegundos) }}</span>
-                        }
-                      </td>
-
-                      <!-- Rojo / Máximo (siempre iguales) -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <input type="number" [(ngModel)]="editForm.tiempoMaximoMin" min="0" step="0.5"
-                                 (ngModelChange)="onMaximoChange($event)"
-                                 class="w-20 px-2 py-1 bg-slate-700 border border-red-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-500">
-                        } @else {
-                          <span class="text-red-400 font-medium">{{ toMin(umbral.tiempoMaximoSegundos) }}</span>
-                        }
-                      </td>
-
-                      <!-- Alerta Supervisor -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <button (click)="editForm.alertaSupervisor = !editForm.alertaSupervisor"
-                                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors mx-auto"
-                                  [class]="editForm.alertaSupervisor ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-500'">
-                            <lucide-angular [name]="editForm.alertaSupervisor ? 'bell' : 'bell-off'" [size]="16"></lucide-angular>
-                          </button>
-                        } @else {
-                          <div class="flex justify-center">
-                            <lucide-angular [name]="umbral.alertaSupervisor ? 'bell' : 'bell-off'" [size]="16"
-                                            [class]="umbral.alertaSupervisor ? 'text-blue-400' : 'text-gray-600'"></lucide-angular>
-                          </div>
-                        }
-                      </td>
-
-                      <!-- Sonido -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <button (click)="editForm.sonidoAlerta = !editForm.sonidoAlerta"
-                                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors mx-auto"
-                                  [class]="editForm.sonidoAlerta ? 'bg-purple-600 text-white' : 'bg-slate-700 text-gray-500'">
-                            <lucide-angular [name]="editForm.sonidoAlerta ? 'volume-2' : 'volume-x'" [size]="16"></lucide-angular>
-                          </button>
-                        } @else {
-                          <div class="flex justify-center">
-                            <lucide-angular [name]="umbral.sonidoAlerta ? 'volume-2' : 'volume-x'" [size]="16"
-                                            [class]="umbral.sonidoAlerta ? 'text-purple-400' : 'text-gray-600'"></lucide-angular>
-                          </div>
-                        }
-                      </td>
-
-                      <!-- Activo -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <button (click)="editForm.activo = !editForm.activo"
-                                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors mx-auto"
-                                  [class]="editForm.activo ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-gray-500'">
-                            <lucide-angular [name]="editForm.activo ? 'check' : 'x'" [size]="16"></lucide-angular>
-                          </button>
-                        } @else {
-                          <div class="flex justify-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                  [class]="umbral.activo ? 'bg-emerald-900/50 text-emerald-400' : 'bg-gray-800 text-gray-500'">
-                              {{ umbral.activo ? 'Sí' : 'No' }}
-                            </span>
-                          </div>
-                        }
-                      </td>
-
-                      <!-- Acciones -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <div class="flex items-center justify-center gap-1">
-                            <button (click)="saveUmbral(umbral)"
-                                    [disabled]="saving()"
-                                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1">
-                              <lucide-angular name="save" [size]="14"></lucide-angular>
-                              Guardar
-                            </button>
-                            <button (click)="cancelEditing()"
-                                    class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1">
-                              <lucide-angular name="x" [size]="14"></lucide-angular>
-                            </button>
-                          </div>
-                        } @else {
-                          <button (click)="startEditing(umbral)"
-                                  class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-lg text-xs font-medium transition-colors">
-                            <lucide-angular name="pencil" [size]="14"></lucide-angular>
-                          </button>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Info footer -->
-            <div class="px-4 py-3 border-t border-slate-800/50 flex items-center gap-2 text-xs text-gray-500">
-              <lucide-angular name="info" [size]="14"></lucide-angular>
-              <span>Los valores se muestran en minutos. Click en una fila para editar. Recuerda recargar cache después de guardar cambios.</span>
-            </div>
-          }
-        </div>
-      </div>
-    </div>
-  `
+  imports: [NgClass, LucideAngularModule, PageHeaderComponent, TarjetaDirective, BotonDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './umbrales-estado.component.html',
+  host: { class: 'cashi-pantalla @container/umbrales flex min-h-0 flex-1 flex-col gap-3' }
 })
 export class UmbralesEstadoComponent implements OnInit {
-  umbrales = signal<ConfigUmbralEstado[]>([]);
-  loading = signal(true);
-  saving = signal(false);
-  editingId = signal<number | null>(null);
-  toastMessage = signal('');
-  toastType = signal<'success' | 'error'>('success');
+  private readonly api = inject(UmbralesEstadoService);
+  private readonly avisos = inject(ToastService);
+  private readonly tema = inject(ThemeService);
 
-  editForm = {
-    umbralVerdeMin: 0,
-    umbralAmarilloMin: 0,
-    tiempoMaximoMin: 0,
-    alertaSupervisor: false,
-    sonidoAlerta: false,
-    activo: true
-  };
+  readonly GRUPOS = GRUPOS;
 
-  private estadoColors: Record<string, string> = {
-    'DISPONIBLE': '#22c55e',
-    'EN_LLAMADA': '#3b82f6',
-    'ACW': '#f59e0b',
-    'BREAK': '#a855f7',
-    'LUNCH': '#ec4899',
-    'CAPACITACION': '#06b6d4',
-    'FEEDBACK': '#8b5cf6',
-    'SERVICIOS': '#64748b',
-    'DESCONECTADO': '#ef4444'
-  };
+  /** Columnas de la cabecera y de cada fila. El ancho que sobra separa primero las columnas (hasta 2rem),
+      después alarga la escala y al final se reparte entre ellas; en una tarjeta angosta la escala se
+      retira y queda solo el sitio del botón. */
+  readonly REJILLA = 'grid grid-cols-[8.75rem_minmax(7.25rem,clamp(18rem,42cqw,34rem))_9.5rem_11.75rem] items-center justify-between gap-x-[clamp(.75rem,calc(22.2cqw_-_8.24rem),2rem)] gap-y-[.25rem] px-2 '
+    + '@max-[40.4rem]/tabla:grid-cols-[8.75rem_4.25rem_9.5rem_11.75rem] '
+    + '@max-[37.5rem]/tabla:grid-cols-[minmax(4.5rem,8.75rem)_4.25rem_8.75rem_10.25rem] @max-[37.5rem]/tabla:gap-x-1 @max-[37.5rem]/tabla:px-1';
+  readonly TIEMPOS = 'grid-cols-[repeat(3,3rem)] gap-1 @max-[37.5rem]/tabla:grid-cols-[repeat(3,2.75rem)]';
+  readonly AVISOS = 'grid grid-cols-[repeat(3,3.75rem)] items-center justify-items-center gap-1 @max-[37.5rem]/tabla:grid-cols-[repeat(3,3.25rem)]';
+  /** El tema antiguo fija con !important el aspecto de campos y listas: de ahí los `!`. */
+  readonly CAMPO = 'font-cashi m-0! w-full rounded-lg border! bg-(--campo)! px-1! py-[.3125rem]! text-center text-[.875rem]! leading-[1.5]! text-foreground! tabular-nums outline-none '
+    + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+  readonly LISTA = 'font-cashi m-0! h-auto! w-full rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-2.5! py-2! text-[.875rem]! leading-[1.5]! text-ellipsis text-foreground! outline-none '
+    + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
+  /** Botón de icono con estado. Encendido va teñido de verde; apagado, neutro y con el icono tachado. */
+  readonly AVISO = 'grid size-7 flex-none place-items-center overflow-hidden rounded-lg border! p-0! bg-no-repeat [background-size:200%_100%] [background-position:130%_0] '
+    + '[background-image:linear-gradient(110deg,transparent_38%,var(--brillo)_50%,transparent_62%)] '
+    + '[transition:background-position_.7s_ease-out,scale_.7s_ease-out,background-color_.2s_ease-out,border-color_.2s_ease-out,color_.2s_ease-out] '
+    + 'enabled:cursor-pointer enabled:shadow-[0_1px_2px_rgb(0_0_0/.05)] enabled:hover:[background-position:-30%_0] enabled:active:scale-[.94] enabled:active:duration-[120ms] '
+    + 'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
+  readonly AVISO_SI = 'border-(--ok-ln)! bg-(--ok-bg) text-(--ok) [--brillo:color-mix(in_srgb,var(--ok)_20%,transparent)] enabled:hover:bg-[color-mix(in_srgb,var(--ok)_16%,var(--card))]';
+  readonly AVISO_NO = 'border-border! bg-card text-foreground/80 [--brillo:rgb(0_0_0/.06)] enabled:hover:bg-muted enabled:hover:text-foreground '
+    + 'dark:bg-muted dark:[--brillo:rgb(255_255_255/.06)] dark:enabled:hover:bg-border';
 
-  constructor(private umbralesService: UmbralesEstadoService) {}
+  readonly cargando = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly guardando = signal(false);
+
+  readonly subcarteras = signal<SubcarteraUmbral[]>([]);
+  readonly cliente = signal('');
+  readonly cartera = signal('');
+  /** Subcartera elegida; 0 es la configuración general. */
+  readonly sub = signal(GENERAL);
+
+  private readonly guardado = signal<Juego>({ general: {}, propios: {} });
+  private readonly trabajo = signal<Juego>({ general: {}, propios: {} });
+
+  /** Cambia cuando hay que volver a crear las filas: sus campos solo toman el valor al nacer, para que
+      escribir no les pise el texto a medias. */
+  private readonly version = signal(0);
+  private readonly versionDeFila = signal<Record<string, number>>({});
+  /** Últimos tiempos válidos de cada fila: la escala no se redibuja con un orden inválido. */
+  private readonly ultimaEscala = new Map<string, number[]>();
+
+  readonly clientes = computed(() => [...new Set(this.subcarteras().map(s => s.cliente))]);
+  private readonly delCliente = computed(() => this.subcarteras().filter(s => !this.cliente() || s.cliente === this.cliente()));
+  readonly carteras = computed(() => [...new Set(this.delCliente().map(s => s.cartera))]);
+  readonly deLaCartera = computed(() => this.delCliente().filter(s => !this.cartera() || s.cartera === this.cartera()));
+  readonly porCliente = computed(() => this.clientes().map(nombre => ({ nombre, subs: this.subcarteras().filter(s => s.cliente === nombre) })));
+
+  /** Estados de cada grupo que tienen configuración general; los que no, no se listan. */
+  readonly grupos = computed(() => GRUPOS
+    .map(g => ({ nombre: g.nombre, estados: g.estados.filter(e => !!this.trabajo().general[e]) }))
+    .filter(g => g.estados.length));
+
+  /** Cuántos estados cambiaron respecto de lo guardado, sumando general y subcarteras. */
+  readonly cambios = computed(() => {
+    const antes = this.guardado(), ahora = this.trabajo();
+    let n = Object.keys(ahora.general).filter(e => !igual(antes.general[e], ahora.general[e])).length;
+    for (const id of new Set([...Object.keys(antes.propios), ...Object.keys(ahora.propios)].map(Number))) {
+      const a = antes.propios[id] ?? {}, b = ahora.propios[id] ?? {};
+      n += [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(e => !igual(a[e], b[e])).length;
+    }
+    return n;
+  });
+
+  readonly hayInvalido = computed(() => {
+    const t = this.trabajo();
+    return [...Object.values(t.general), ...Object.values(t.propios).flatMap(p => Object.values(p))].some(mal);
+  });
+
+  readonly resumen = computed(() => {
+    const n = this.cambios();
+    return this.hayInvalido() ? 'Orden inválido: Verde < Ámbar < Tope' : n === 0 ? 'Sin cambios' : n === 1 ? '1 cambio sin guardar' : `${n} cambios sin guardar`;
+  });
 
   ngOnInit(): void {
-    this.loadUmbrales();
+    this.cargar();
   }
 
-  loadUmbrales(): void {
-    this.loading.set(true);
-    this.umbralesService.getAll().subscribe({
-      next: (data) => {
-        this.umbrales.set(data);
-        this.loading.set(false);
+  cargar(): void {
+    this.cargando.set(true);
+    this.error.set(null);
+    forkJoin({ umbrales: this.api.getAll(), subcarteras: this.api.getSubcarteras() }).subscribe({
+      next: r => {
+        this.subcarteras.set(r.subcarteras);
+        this.recibir(r.umbrales);
+        this.cargando.set(false);
       },
       error: () => {
-        this.showToast('Error al cargar umbrales', 'error');
-        this.loading.set(false);
+        this.error.set('No se pudieron cargar los umbrales');
+        this.cargando.set(false);
       }
     });
   }
 
-  toMin(seconds: number): number {
-    return Math.round((seconds / 60) * 100) / 100;
+  // ----------------------------------------------------------------- Alcance
+
+  elegirCliente(nombre: string): void {
+    this.cliente.set(nombre);
+    this.cartera.set('');
+    this.fijarSub(GENERAL);
   }
 
-  getEstadoColor(estado: string): string {
-    return this.estadoColors[estado] || '#94a3b8';
+  elegirCartera(nombre: string): void {
+    this.cartera.set(nombre);
+    this.fijarSub(GENERAL);
   }
 
-  getBarPercent(umbral: ConfigUmbralEstado, segment: string): number {
-    const total = umbral.tiempoMaximoSegundos || 1;
-    switch (segment) {
-      case 'verde': return (umbral.umbralVerdeSegundos / total) * 100;
-      case 'amarillo': return ((umbral.umbralAmarilloSegundos - umbral.umbralVerdeSegundos) / total) * 100;
-      case 'rojo': return ((total - umbral.umbralAmarilloSegundos) / total) * 100;
-      default: return 0;
+  /** Elegir una subcartera deja también su cliente y su cartera en el filtro. */
+  elegirSub(id: number | string, desdeLista = false): void {
+    const s = this.subcarteras().find(x => x.idSubcartera === Number(id));
+    if (s) {
+      this.cliente.set(s.cliente);
+      this.cartera.set(s.cartera);
+    } else if (desdeLista) {
+      this.cliente.set('');
+      this.cartera.set('');
+    }
+    this.fijarSub(s ? s.idSubcartera : GENERAL);
+  }
+
+  private fijarSub(id: number): void {
+    this.sub.set(id);
+    this.version.update(n => n + 1);
+  }
+
+  /** Nombre en la lista del filtro: con el cliente cuando dos subcarteras se llaman igual. */
+  rotuloSub(s: SubcarteraUmbral): string {
+    return this.deLaCartera().filter(x => x.subcartera === s.subcartera).length > 1 ? `${s.subcartera} · ${s.cliente}` : s.subcartera;
+  }
+
+  personalizada(id: number): boolean {
+    return Object.keys(this.trabajo().propios[id] ?? {}).length > 0;
+  }
+
+  // ----------------------------------------------------------------- Filas
+
+  /** Lo que rige para el estado en el alcance elegido. */
+  valor(e: string): Valor {
+    const t = this.trabajo();
+    return t.propios[this.sub()]?.[e] ?? t.general[e];
+  }
+
+  clave(e: string): string {
+    return `${e}#${this.version()}#${this.versionDeFila()[e] ?? 0}`;
+  }
+
+  ficha(e: AgentState) {
+    return ESTADOS_PANEL[e];
+  }
+
+  tinta(e: AgentState): string {
+    const f = ESTADOS_PANEL[e];
+    return this.tema.isDarkMode() ? f.oscuro ?? f.tono : f.tinta ?? f.tono;
+  }
+
+  mal(e: string): boolean {
+    return mal(this.valor(e));
+  }
+
+  /** Hay algo que revertir: en una subcartera, que el estado tenga lo suyo; en General, cambios sin guardar. */
+  revertible(e: string): boolean {
+    const t = this.trabajo();
+    return this.sub() ? !!t.propios[this.sub()]?.[e] : !igual(this.guardado().general[e], t.general[e]);
+  }
+
+  /** Anchos de los tres tramos de la escala, en porcentaje. Vacío si el estado no tiene tope. */
+  tramos(e: string): number[] {
+    const v = this.valor(e), llave = `${this.sub()}:${e}`;
+    if (!v.activo) {
+      return [];
+    }
+    if (tiemposValidos(v)) {
+      this.ultimaEscala.set(llave, [v.verde / v.tope * 100, (v.ambar - v.verde) / v.tope * 100, (v.tope - v.ambar) / v.tope * 100]);
+    }
+    return this.ultimaEscala.get(llave) ?? [];
+  }
+
+  escribir(e: string, campo: 'verde' | 'ambar' | 'tope', texto: string): void {
+    this.modificar(e, v => ({ ...v, [campo]: parseFloat(texto) }));
+  }
+
+  alternarTope(e: string): void {
+    const antes = this.valor(e);
+    this.modificar(e, v => v.activo ? { ...v, activo: false } : { ...v, ...(tiemposValidos(v) ? {} : TIEMPOS_INICIALES), activo: true });
+    // Si tomó los tiempos iniciales, los campos se crean de nuevo para mostrarlos.
+    if (!antes.activo && !tiemposValidos(antes)) {
+      this.renovarFila(e);
     }
   }
 
-  onMaximoChange(max: number): void {
-    if (!max || max <= 0) return;
-    // Autocalcular verde (50%) y amarillo (80%) del máximo
-    this.editForm.umbralVerdeMin = Math.round(max * 0.5 * 100) / 100;
-    this.editForm.umbralAmarilloMin = Math.round(max * 0.8 * 100) / 100;
-  }
-
-  clampValues(): void {
-    const max = this.editForm.tiempoMaximoMin;
-    if (this.editForm.umbralVerdeMin > this.editForm.umbralAmarilloMin) {
-      this.editForm.umbralVerdeMin = this.editForm.umbralAmarilloMin;
-    }
-    if (this.editForm.umbralAmarilloMin > max) {
-      this.editForm.umbralAmarilloMin = max;
-    }
-    if (this.editForm.umbralVerdeMin > max) {
-      this.editForm.umbralVerdeMin = max;
+  alternar(e: string, campo: 'supervisor' | 'sonido'): void {
+    if (this.valor(e).activo) {
+      this.modificar(e, v => ({ ...v, [campo]: !v[campo] }));
     }
   }
 
-  startEditing(umbral: ConfigUmbralEstado): void {
-    if (this.editingId() === umbral.id) return;
-    this.editingId.set(umbral.id);
-    this.editForm = {
-      umbralVerdeMin: this.toMin(umbral.umbralVerdeSegundos),
-      umbralAmarilloMin: this.toMin(umbral.umbralAmarilloSegundos),
-      tiempoMaximoMin: this.toMin(umbral.tiempoMaximoSegundos),
-      alertaSupervisor: umbral.alertaSupervisor,
-      sonidoAlerta: umbral.sonidoAlerta,
-      activo: umbral.activo
+  revertir(e: string): void {
+    const id = this.sub();
+    this.trabajo.update(t => {
+      if (!id) {
+        return { ...t, general: { ...t.general, [e]: this.guardado().general[e] } };
+      }
+      const { [e]: _, ...resto } = t.propios[id] ?? {};
+      const { [id]: __, ...otros } = t.propios;
+      return { ...t, propios: Object.keys(resto).length ? { ...otros, [id]: resto } : otros };
+    });
+    this.renovarFila(e);
+  }
+
+  /** Aplica un cambio al estado en el alcance elegido. En una subcartera, el estado pasa a tener lo suyo. */
+  private modificar(e: string, cambio: (v: Valor) => Valor): void {
+    const id = this.sub();
+    this.trabajo.update(t => {
+      if (!id) {
+        return { ...t, general: { ...t.general, [e]: cambio(t.general[e]) } };
+      }
+      const propios = t.propios[id] ?? {};
+      return { ...t, propios: { ...t.propios, [id]: { ...propios, [e]: cambio(propios[e] ?? t.general[e]) } } };
+    });
+  }
+
+  private renovarFila(e: string): void {
+    this.versionDeFila.update(v => ({ ...v, [e]: (v[e] ?? 0) + 1 }));
+  }
+
+  // ----------------------------------------------------------------- Guardar
+
+  descartar(): void {
+    this.trabajo.set(this.guardado());
+    this.version.update(n => n + 1);
+  }
+
+  guardar(): void {
+    if (!this.cambios() || this.hayInvalido() || this.guardando()) {
+      return;
+    }
+    this.guardando.set(true);
+    this.api.guardar(this.diferencia()).subscribe({
+      next: umbrales => {
+        this.recibir(umbrales);
+        this.guardando.set(false);
+        this.avisos.success('Umbrales guardados.');
+      },
+      error: err => {
+        this.guardando.set(false);
+        this.avisos.error(err?.error?.error || 'No se pudieron guardar los umbrales');
+      }
+    });
+  }
+
+  private diferencia(): CambiosUmbrales {
+    const antes = this.guardado(), ahora = this.trabajo();
+    const fila = (estado: string, idSubcartera: number, v: Valor) => {
+      const validos = tiemposValidos(v);
+      return {
+        estado, idSubcartera,
+        umbralVerdeSegundos: validos ? Math.round(v.verde * 60) : null,
+        umbralAmarilloSegundos: validos ? Math.round(v.ambar * 60) : null,
+        tiempoMaximoSegundos: validos ? Math.round(v.tope * 60) : null,
+        alertaSupervisor: v.supervisor, sonidoAlerta: v.sonido, activo: v.activo
+      };
     };
-  }
-
-  cancelEditing(): void {
-    this.editingId.set(null);
-  }
-
-  saveUmbral(umbral: ConfigUmbralEstado): void {
-    this.saving.set(true);
-    const tiempoMaxSeg = Math.round(this.editForm.tiempoMaximoMin * 60);
-    const payload: Partial<ConfigUmbralEstado> = {
-      umbralVerdeSegundos: Math.round(this.editForm.umbralVerdeMin * 60),
-      umbralAmarilloSegundos: Math.round(this.editForm.umbralAmarilloMin * 60),
-      umbralRojoSegundos: tiempoMaxSeg,
-      tiempoMaximoSegundos: tiempoMaxSeg,
-      alertaSupervisor: this.editForm.alertaSupervisor,
-      sonidoAlerta: this.editForm.sonidoAlerta,
-      activo: this.editForm.activo
-    };
-
-    this.umbralesService.update(umbral.id, payload).subscribe({
-      next: () => {
-        // Update local data
-        const updated = this.umbrales().map(u =>
-          u.id === umbral.id ? { ...u, ...payload } : u
-        );
-        this.umbrales.set(updated);
-        this.editingId.set(null);
-        this.saving.set(false);
-        this.showToast(`Umbral "${umbral.estado}" actualizado correctamente`, 'success');
-      },
-      error: () => {
-        this.saving.set(false);
-        this.showToast('Error al guardar umbral', 'error');
+    const cambios: CambiosUmbrales = { guardar: [], quitar: [] };
+    for (const [e, v] of Object.entries(ahora.general)) {
+      if (!igual(antes.general[e], v)) {
+        cambios.guardar.push(fila(e, GENERAL, v));
       }
-    });
-  }
-
-  recargarCache(): void {
-    this.saving.set(true);
-    this.umbralesService.recargarCache().subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.showToast('Cache recargado correctamente', 'success');
-      },
-      error: () => {
-        this.saving.set(false);
-        this.showToast('Error al recargar cache', 'error');
+    }
+    for (const id of new Set([...Object.keys(antes.propios), ...Object.keys(ahora.propios)].map(Number))) {
+      const a = antes.propios[id] ?? {}, b = ahora.propios[id] ?? {};
+      for (const e of new Set([...Object.keys(a), ...Object.keys(b)])) {
+        if (!b[e]) {
+          cambios.quitar.push({ estado: e, idSubcartera: id });
+        } else if (!igual(a[e], b[e])) {
+          cambios.guardar.push(fila(e, id, b[e]));
+        }
       }
-    });
+    }
+    return cambios;
   }
 
-  private showToast(message: string, type: 'success' | 'error'): void {
-    this.toastMessage.set(message);
-    this.toastType.set(type);
-    setTimeout(() => this.toastMessage.set(''), 3000);
+  private recibir(umbrales: ConfigUmbralEstado[]): void {
+    const juego: Juego = { general: {}, propios: {} };
+    const minutos = (segundos: number) => +(segundos / 60).toFixed(2);
+    for (const u of umbrales) {
+      const v: Valor = {
+        verde: minutos(u.umbralVerdeSegundos), ambar: minutos(u.umbralAmarilloSegundos), tope: minutos(u.tiempoMaximoSegundos),
+        activo: !!u.activo, supervisor: !!u.alertaSupervisor, sonido: !!u.sonidoAlerta
+      };
+      if (!u.idSubcartera) {
+        juego.general[u.estado] = v;
+      } else {
+        (juego.propios[u.idSubcartera] ??= {})[u.estado] = v;
+      }
+    }
+    this.guardado.set(juego);
+    this.trabajo.set(juego);
+    this.ultimaEscala.clear();
+    this.version.update(n => n + 1);
   }
 }
