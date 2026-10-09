@@ -33,6 +33,16 @@ type CierreVentana = 'hoy' | 'mes';
 // los tres conteos, asi que cambiar el selector no reconsulta nada.
 type GestionesTipo = 'todos' | 'cd' | 'ci' | 'nc';
 
+// Una de las seis tablas de Corte Horario, ya formateada: el template solo pinta.
+interface TablaCorte {
+  k: string;
+  titulo: string;
+  unidad: string;
+  color: string;
+  filas: { id: number; nombre: string; v: string[] }[];
+  total: string[];
+}
+
 @Component({
   selector: 'app-agent-productivity',
   standalone: true,
@@ -46,6 +56,118 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   // Exponer Math para el template
   Math = Math;
 
+  // ==================== SISTEMA VISUAL (el de /reports/estado-agentes) ====================
+  // Cada constante lleva un solo valor por propiedad: dos utilidades de Tailwind
+  // que pisan lo mismo no se resuelven por el orden en que se escriben.
+  readonly claseLabel = 'text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400';
+  readonly claseInput =
+    'h-[38px] rounded-lg border border-[#d5dbe3] bg-white px-3 text-[13px] font-semibold text-[#0f172a] ' +
+    'outline-none transition-colors focus:border-[#2563eb] disabled:opacity-50 ' +
+    'dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
+  readonly claseKpi =
+    'ap-rise flex flex-col gap-0.5 rounded-xl border border-[#e6e9ee] bg-white px-3.5 py-3 ' +
+    'dark:border-slate-800 dark:bg-slate-900';
+  readonly claseKpiV = 'text-[24px] font-extrabold leading-tight tracking-[-0.025em] tabular-nums';
+  readonly claseKpiS = 'mt-auto text-[11px] font-medium text-[#5f6c80] dark:text-slate-400';
+  readonly claseMeter =
+    'mt-1.5 block h-1.5 overflow-hidden rounded-full bg-[#e2e8f0] shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] dark:bg-slate-800';
+  readonly claseProy = 'flex min-w-0 flex-[1_1_240px] flex-col gap-0.5 bg-white px-3.5 py-3 dark:bg-slate-900';
+  readonly claseProyV = 'text-[20px] font-extrabold leading-snug tracking-[-0.02em] tabular-nums';
+  readonly claseProyS = 'text-[11px] font-medium tabular-nums text-[#5f6c80] dark:text-slate-400';
+  readonly claseCaja =
+    'flex h-8 max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-[#d5dbe3] bg-white p-0.5 ' +
+    'dark:border-slate-700 dark:bg-slate-900';
+
+  // Tabla de asesores
+  readonly claseSep = 'border-l border-l-[#e6e9ee] dark:border-l-slate-800 ';
+  readonly claseGrupo =
+    'h-[26px] whitespace-nowrap border-b border-l border-[#e6e9ee] bg-[#f8fafc] px-2.5 text-left text-[10px] ' +
+    'font-extrabold uppercase tracking-[0.07em] dark:border-slate-800 dark:bg-slate-800 ';
+  private readonly thBase =
+    'whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] py-2 align-middle text-[11.5px] font-bold leading-[1.3] ' +
+    'text-[#334155] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 ';
+  readonly claseTh = this.thBase + 'px-2.5 text-right ';
+  readonly claseThInd = this.thBase + 'px-3 text-left ';
+  readonly claseThCentro = this.thBase + 'px-2.5 text-center ';
+  readonly claseThAgente = this.thBase + 'sticky left-0 z-[2] min-w-[210px] border-r px-2.5 text-left ';
+  readonly claseThSub = 'block text-[10.5px] font-semibold text-[#1d4ed8] dark:text-blue-300';
+  private readonly tdBase = 'whitespace-nowrap border-b border-[#e6e9ee] bg-inherit py-2 align-middle dark:border-slate-800 ';
+  readonly claseTd = this.tdBase + 'px-2.5 text-right font-medium text-[#334155] dark:text-slate-300 ';
+  readonly claseTdFuerte = this.tdBase + 'px-2.5 text-right font-extrabold text-[#0f172a] dark:text-slate-100 ';
+  readonly claseTdInd = this.tdBase + 'px-3 text-left ';
+  readonly claseTdCentro = this.tdBase + 'px-2.5 text-center ';
+  /** El fondo lo hereda de la fila: asi la celda fija sigue al hover. */
+  readonly claseTdAgente = this.tdBase + 'sticky left-0 z-[1] min-w-[210px] border-r px-2.5 text-left ';
+  private readonly totalBase =
+    'whitespace-nowrap border-t border-[#d5dbe3] bg-inherit py-2 align-middle text-[12px] font-extrabold dark:border-slate-700 ';
+  readonly claseTotal = this.totalBase + 'px-2.5 text-right ';
+  readonly claseTotalInd = this.totalBase + 'px-3 text-left ';
+  readonly claseTotalCentro = this.totalBase + 'px-2.5 text-center text-[#5f6c80] dark:text-slate-400';
+  readonly claseTotalAgente = this.totalBase + 'sticky left-0 z-[1] min-w-[210px] border-r px-2.5 text-left ';
+  readonly claseBarra = 'ap-fill block h-full rounded-full bg-[#2563eb] dark:bg-blue-500';
+
+  // Tablas de Corte Horario. La columna Cierre va resaltada.
+  private readonly corteFondoCierre = 'bg-[rgba(15,23,42,0.035)] dark:bg-white/5 ';
+  private readonly corteThBase =
+    'whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] py-[7px] text-[11.5px] font-bold dark:border-slate-800 dark:bg-slate-800 ';
+  readonly claseCorteThAgente = this.corteThBase + 'px-3 text-left text-[#334155] dark:text-slate-300';
+  readonly claseCorteTh = this.corteThBase + 'px-2.5 text-right text-[#334155] dark:text-slate-300';
+  readonly claseCorteThCierre = this.corteThBase + 'pl-2.5 pr-3 text-right text-[#0f172a] dark:text-slate-100';
+  private readonly corteTdBase = 'whitespace-nowrap border-b border-[#e6e9ee] py-[7px] dark:border-slate-800 ';
+  readonly claseCorteTdAgente =
+    this.corteTdBase + 'max-w-[190px] truncate px-3 text-left text-[12.5px] font-bold tracking-[-0.01em] text-[#0f172a] dark:text-slate-100';
+  readonly claseCorteTd = this.corteTdBase + 'px-2.5 text-right font-medium text-[#334155] dark:text-slate-300';
+  readonly claseCorteTdCierre =
+    this.corteTdBase + this.corteFondoCierre + 'pl-2.5 pr-3 text-right font-extrabold text-[#0f172a] dark:text-slate-100';
+  private readonly corteTotalBase =
+    'whitespace-nowrap border-t border-[#d5dbe3] py-2 font-extrabold text-[#0f172a] dark:border-slate-700 dark:text-slate-100 ';
+  readonly claseCorteTotalAgente = this.corteTotalBase + 'px-3 text-left text-[12.5px]';
+  readonly claseCorteTotal = this.corteTotalBase + 'px-2.5 text-right';
+  readonly claseCorteTotalCierre = this.corteTotalBase + this.corteFondoCierre + 'pl-2.5 pr-3 text-right';
+
+  claseTab(activo: boolean): string {
+    return 'shrink-0 rounded-[6px] px-3.5 text-[12.5px] font-bold transition-colors duration-150 ' +
+      (activo ? 'bg-[#0f172a] text-white dark:bg-white dark:text-slate-900'
+              : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100');
+  }
+
+  /** Opcion de columna: mas liviana que una pestaña para que no compita con ellas. */
+  claseSeg(activo: boolean): string {
+    return 'h-[26px] shrink-0 whitespace-nowrap rounded-[6px] px-2.5 text-[12px] font-bold transition-colors duration-150 ' +
+      'disabled:cursor-not-allowed ' +
+      (activo ? 'bg-[#e8effd] text-[#1d4ed8] dark:bg-blue-500/20 dark:text-blue-300'
+              : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100');
+  }
+
+  // Opciones de columna. "sub" es lo que se lee bajo el titulo de la columna.
+  readonly opcionesGestiones: { k: GestionesTipo; l: string; sub: string }[] = [
+    { k: 'todos', l: 'Todos (CD+CI)', sub: 'CD + CI' },
+    { k: 'cd',    l: 'CD',            sub: 'solo CD' },
+    { k: 'ci',    l: 'CI',            sub: 'solo CI' },
+    { k: 'nc',    l: 'NC',            sub: 'solo NC' }
+  ];
+  readonly opcionesGeneracion: { k: GeneracionVentana; l: string; sub: string }[] = [
+    { k: 'hoy',    l: 'Ese día',       sub: 'vence ese día' },
+    { k: 'manana', l: 'Día siguiente', sub: 'vence al día siguiente' },
+    { k: 'semana', l: 'Esa semana',    sub: 'vence esa semana' },
+    { k: 'mes',    l: 'Ese mes',       sub: 'vence ese mes' }
+  ];
+  readonly opcionesCierre: { k: CierreVentana; l: string; sub: string }[] = [
+    { k: 'hoy', l: 'Hoy',      sub: 'hoy' },
+    { k: 'mes', l: 'Este mes', sub: 'este mes' }
+  ];
+
+  readonly HORAS_CORTE = [
+    { k: '12', l: '12:00' },
+    { k: '15', l: '15:00' },
+    { k: '17', l: '17:00' },
+    { k: '23', l: 'Cierre' }
+  ];
+
+  readonly esqueletoKpi = [0, 1, 2, 3, 4];
+  readonly esqueletoFilas = [0, 1, 2, 3, 4, 5, 6, 7];
+  readonly esqueletoCorte = [0, 1, 2, 3, 4, 5];
+
   // Filtros
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
@@ -58,6 +180,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   generacionVentana: GeneracionVentana = 'mes';
   cierreVentana: CierreVentana = 'hoy';
   gestionesTipo: GestionesTipo = 'todos';
+  // Filtro por nombre. Se resuelve en memoria sobre lo ya consultado.
+  buscarAgente = '';
   customDateFrom: string = '';
   customDateTo: string = '';
 
@@ -287,7 +411,104 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   totalGestionesMostradas(): number {
-    return this.agents.reduce((sum, a) => sum + this.gestionesDe(a), 0);
+    return this.agentesFiltrados.reduce((sum, a) => sum + this.gestionesDe(a), 0);
+  }
+
+  elegirGeneracion(v: GeneracionVentana): void {
+    if (this.generacionVentana === v) return;
+    this.generacionVentana = v;
+    this.onGeneracionVentanaChange();
+  }
+
+  elegirCierre(v: CierreVentana): void {
+    if (this.cierreVentana === v) return;
+    this.cierreVentana = v;
+    this.onCierreVentanaChange();
+  }
+
+  get gestionesSub(): string {
+    return this.opcionesGestiones.find(o => o.k === this.gestionesTipo)?.sub ?? '';
+  }
+
+  get generacionSub(): string {
+    return this.opcionesGeneracion.find(o => o.k === this.generacionVentana)?.sub ?? '';
+  }
+
+  get cierreSub(): string {
+    return this.opcionesCierre.find(o => o.k === this.cierreVentana)?.sub ?? '';
+  }
+
+  // ==================== BUSCADOR DE ASESOR ====================
+  /** Sin tildes ni mayusculas: "oscar" encuentra a "Óscar". */
+  private normalizar(s: string | null | undefined): string {
+    return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  get hayFiltroAgente(): boolean {
+    return this.normalizar(this.buscarAgente).length > 0;
+  }
+
+  onBuscarAgenteChange(valor: string): void {
+    this.buscarAgente = valor;
+    this.construirCorte();
+  }
+
+  private filtroCache: { src: AgentMetrics[]; q: string; out: AgentMetrics[] } | null = null;
+
+  get agentesFiltrados(): AgentMetrics[] {
+    const src = this.agents;
+    const q = this.normalizar(this.buscarAgente);
+    if (!q) return src;
+    const c = this.filtroCache;
+    if (c && c.src === src && c.q === q) return c.out;
+    const out = src.filter(a => this.normalizar(a.nombreAgente).includes(q));
+    this.filtroCache = { src, q, out };
+    return out;
+  }
+
+  // ==================== CABECERA ====================
+  get anyLoading(): boolean {
+    return this.loading || this.loadingCorte;
+  }
+
+  /** 'YYYY-MM-DD' -> 'DD/MM/YYYY'. A mano: new Date() lo leeria en UTC y en Lima cae al dia anterior. */
+  private fechaCorta(iso: string): string {
+    const [y, m, d] = (iso || '').split('-');
+    return y && m && d ? `${d}/${m}/${y}` : '—';
+  }
+
+  get subtitulo(): string {
+    const { fechaInicio, fechaFin } = this.getDateRange();
+    const rango = fechaInicio === fechaFin
+      ? this.fechaCorta(fechaInicio)
+      : `${this.fechaCorta(fechaInicio)} al ${this.fechaCorta(fechaFin)}`;
+    const partes = [this.selectedPeriod === 'custom' ? rango : `${this.getPeriodLabel()}, ${rango}`];
+
+    const tenant = this.tenants.find(t => t.id === this.selectedTenantId);
+    const cartera = this.portfolios.find(p => p.id === this.selectedCarteraId);
+    const sub = this.subPortfolios.find(s => s.id === this.selectedSubcarteraId);
+    [tenant?.tenantName, cartera?.portfolioName, sub?.subPortfolioName]
+      .forEach(n => { if (n) partes.push(n); });
+
+    const n = this.activeTab === 'corteHorario'
+      ? (this.corteHorarioData ? this.corteAgents.length : null)
+      : (this.productivityData ? this.agents.length : null);
+    if (n !== null) partes.push(n === 1 ? '1 asesor' : `${n} asesores`);
+
+    return partes.join(' · ');
+  }
+
+  // ==================== BARRAS ====================
+  min100(v: number | null | undefined): number {
+    return Math.max(0, Math.min(100, v || 0));
+  }
+
+  /**
+   * La barra se desplaza en vez de cambiar de ancho: transform no recalcula el
+   * layout de la tabla en cada cuadro y conserva el extremo redondeado.
+   */
+  barra(v: number | null | undefined): string {
+    return `translateX(${this.min100(v) - 100}%)`;
   }
 
   get etiquetaTasaCierre(): string {
@@ -518,7 +739,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   // Totales de la fila de cierre de la tabla.
   agentTotal(field: string): number {
-    return this.agents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
+    return this.agentesFiltrados.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
   }
 
   formatMoney(value: number): string {
@@ -541,15 +762,29 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   getTrendClass(trend: string): string {
     switch (trend) {
-      case 'up': return 'trend-up';
-      case 'down': return 'trend-down';
-      default: return 'trend-stable';
+      case 'up': return 'bg-[#e8f5ec] text-[#15803d] dark:bg-emerald-500/15 dark:text-emerald-300';
+      case 'down': return 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-500/15 dark:text-red-300';
+      default: return 'bg-[#eef1f5] text-[#334155] dark:bg-slate-800 dark:text-slate-300';
+    }
+  }
+
+  // La tendencia no se distingue solo por color: lleva icono y texto.
+  getTrendLabel(trend: string): string {
+    switch (trend) {
+      case 'up': return 'Sube';
+      case 'down': return 'Baja';
+      default: return 'Igual';
     }
   }
 
   getChangeClass(value: number | undefined): string {
-    if (!value) return '';
-    return value > 0 ? 'change-positive' : value < 0 ? 'change-negative' : '';
+    if (!value) return 'text-[#5f6c80] dark:text-slate-400';
+    return value > 0 ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#b91c1c] dark:text-red-400';
+  }
+
+  getChangeIcon(value: number | undefined): string {
+    if (!value) return 'minus';
+    return value > 0 ? 'trending-up' : 'trending-down';
   }
 
   getPeriodLabel(): string {
@@ -587,6 +822,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     ).subscribe({
       next: (data) => {
         this.corteHorarioData = data;
+        this.construirCorte();
         this.loadingCorte = false;
       },
       error: (err) => {
@@ -600,22 +836,54 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     return this.corteHorarioData?.agents || [];
   }
 
-  // Totales para corte horario
-  corteTotal(field: string): number {
-    return this.corteAgents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
+  get corteAgentesFiltrados(): AgentCorte[] {
+    const q = this.normalizar(this.buscarAgente);
+    return q ? this.corteAgents.filter(a => this.normalizar(a.nombreAgente).includes(q)) : this.corteAgents;
   }
 
-  corteTotalMoney(field: string): string {
-    const total = this.corteAgents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
-    return this.fmt.number(total, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  }
+  // Las seis tablas, ya calculadas. Se rearman al llegar datos o al cambiar el
+  // buscador, no en cada deteccion de cambios: son 24 celdas por asesor.
+  tablasCorte: TablaCorte[] = [];
 
-  shortName(name: string): string {
-    if (!name) return '';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
-    }
-    return name;
+  private construirCorte(): void {
+    const agentes = this.corteAgentesFiltrados;
+    const horas = this.HORAS_CORTE.map(h => h.k);
+
+    type Leer = (campo: string, hora: string) => number;
+    const leerDe = (a: AgentCorte): Leer =>
+      (campo, hora) => Number(a[(campo + hora) as keyof AgentCorte]) || 0;
+    const sumar: Leer = (campo, hora) => agentes.reduce((s, a) => s + leerDe(a)(campo, hora), 0);
+
+    const entero = (n: number): string => this.fmt.number(n, { maximumFractionDigits: 0 });
+    // Ticket y tasa salen de dividir los acumulados: asi el TOTAL no promedia promedios.
+    const ticket = (monto: number, cant: number): string => cant ? entero(monto / cant) : '—';
+    const tasa = (cant: number, cd: number): string =>
+      cd ? this.fmt.number(cant / cd * 100, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + '%' : '—';
+
+    const tabla = (k: string, titulo: string, unidad: string, color: string,
+                   celda: (leer: Leer, hora: string) => string): TablaCorte => ({
+      k, titulo, unidad, color,
+      filas: agentes.map(a => ({
+        id: a.idAgente,
+        nombre: a.nombreAgente,
+        v: horas.map(h => celda(leerDe(a), h))
+      })),
+      total: horas.map(h => celda(sumar, h))
+    });
+
+    this.tablasCorte = [
+      tabla('gestiones', 'Gestiones', '', 'text-[#2563eb] dark:text-blue-400',
+        (leer, h) => entero(leer('gestiones', h))),
+      tabla('cd', 'CD · Contacto directo', '', 'text-[#1746a2] dark:text-blue-300',
+        (leer, h) => entero(leer('cd', h))),
+      tabla('pdpCant', 'PDP cantidad', '', 'text-[#4a3aa7] dark:text-violet-300',
+        (leer, h) => entero(leer('pdpCant', h))),
+      tabla('pdpMonto', 'PDP monto', 'S/', 'text-[#4a3aa7] dark:text-violet-300',
+        (leer, h) => entero(leer('pdpMonto', h))),
+      tabla('ticket', 'Ticket promedio', 'S/', 'text-[#0f7a55] dark:text-emerald-400',
+        (leer, h) => ticket(leer('pdpMonto', h), leer('pdpCant', h))),
+      tabla('tasa', 'Tasa de cierre', '', 'text-[#334155] dark:text-slate-300',
+        (leer, h) => tasa(leer('pdpCant', h), leer('cd', h)))
+    ];
   }
 }
