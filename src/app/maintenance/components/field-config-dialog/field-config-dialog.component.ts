@@ -2,6 +2,7 @@ import { Component, effect, inject, input, output, signal } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { A11yModule } from '@angular/cdk/a11y';
 import {
   FieldConfig,
   FieldType,
@@ -11,243 +12,164 @@ import {
 } from '../../models/field-config.model';
 import { ApiSystemConfigService, FieldTypeResource } from '../../../collection-management/services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../../../collection-management/components/dynamic-field-renderer/dynamic-field-renderer.component';
+import { TUI, TUI_ANIM } from '../typification-ui';
 
 @Component({
   selector: 'app-field-config-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DynamicFieldRendererComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, A11yModule, DynamicFieldRendererComponent],
   template: `
     @if (isOpen()) {
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-          <!-- Header -->
-          <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <lucide-angular name="settings" [size]="24" class="text-blue-600"></lucide-angular>
-              Configurar Campos Personalizados
-            </h2>
-            <button
-              type="button"
-              (click)="handleCancel()"
-              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <lucide-angular name="x" [size]="24"></lucide-angular>
+      <!-- Sin cierre al hacer clic fuera: aquí hay mucho escrito a mano y se perdería -->
+      <div [class]="ui.fondo">
+        <div [class]="ui.panel + ' max-w-[780px]'" role="dialog" aria-modal="true" aria-labelledby="fc-titulo"
+             cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="handleCancel()">
+
+          <!-- Cabecera -->
+          <div [class]="ui.cabecera">
+            <div class="min-w-0">
+              <h2 id="fc-titulo" [class]="ui.titulo">Campos de la tipificación</h2>
+              <p [class]="ui.subtitulo">
+                Datos que el asesor completa al elegir
+                <b class="font-bold text-[#334155] dark:text-slate-200">{{ typificationName() || 'esta tipificación' }}</b>
+              </p>
+            </div>
+            <button type="button" (click)="handleCancel()" [class]="ui.iconBtn" aria-label="Cerrar">
+              <lucide-angular name="x" [size]="17"></lucide-angular>
             </button>
           </div>
 
-          <!-- Body -->
-          <div class="flex-1 overflow-y-auto p-6 space-y-4">
-            <!-- Lista de campos configurados -->
-            <div class="space-y-3">
-              @for (field of fields(); track field.id; let idx = $index) {
-                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="flex-1 space-y-3">
-                      <div class="grid grid-cols-2 gap-3">
-                        <!-- ID del campo -->
-                        <div>
-                          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            ID del Campo
-                          </label>
-                          <input
-                            type="text"
-                            [(ngModel)]="field.id"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                            placeholder="payment_schedule"
-                          />
-                        </div>
+          <!-- Cuerpo -->
+          <div [class]="ui.cuerpo + ' !gap-2.5'">
+            <!-- Se sigue cada campo por el objeto y no por su id: el id es editable, y al
+                 seguirlo por id cada tecla recreaba la tarjeta y el campo perdía el foco -->
+            @for (field of fields(); track field; let idx = $index) {
+              <div [class]="ui.tarjeta + ' tui-entra flex flex-col gap-3 p-3'">
+                <div class="flex items-center justify-between gap-2.5">
+                  <span class="text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[#5f6c80] dark:text-slate-400">Campo {{ idx + 1 }}</span>
+                  <button type="button" (click)="removeField(idx)" [class]="ui.iconBtnPeligro"
+                          [attr.aria-label]="'Eliminar el campo ' + field.label" title="Eliminar campo">
+                    <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+                  </button>
+                </div>
 
-                        <!-- Label -->
-                        <div>
-                          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Etiqueta
-                          </label>
-                          <input
-                            type="text"
-                            [(ngModel)]="field.label"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                            placeholder="Cronograma de Pago"
-                          />
-                        </div>
-                      </div>
-
-                      <div class="grid grid-cols-2 gap-3">
-                        <!-- Tipo de campo -->
-                        <div>
-                          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Tipo de Campo
-                          </label>
-                          <select
-                            [(ngModel)]="field.type"
-                            (ngModelChange)="onFieldTypeChange(field)"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          >
-                            @for (type of fieldTypes(); track type.id) {
-                              <option [value]="type.typeCode">{{ type.typeName }}</option>
-                            }
-                          </select>
-                        </div>
-
-                        <!-- Requerido -->
-                        <div class="flex items-cent
-                        er pt-6">
-                          <label class="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              [(ngModel)]="field.required"
-                              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Campo Requerido
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <!-- Configuración de tabla/cronograma -->
-                      @if (field.type === 'table') {
-                        <div class="mt-4 p-4 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">
-                          <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-medium text-gray-900 dark:text-white">Columnas de la Tabla</h4>
-                            <button
-                              type="button"
-                              (click)="addColumn(field)"
-                              class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                              + Agregar Columna
-                            </button>
-                          </div>
-
-                          @for (column of field.columns; track column.id; let colIdx = $index) {
-                            <div class="grid grid-cols-3 gap-2 mb-2">
-                              <input
-                                type="text"
-                                [(ngModel)]="column.id"
-                                class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                placeholder="ID"
-                              />
-                              <input
-                                type="text"
-                                [(ngModel)]="column.label"
-                                class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                placeholder="Etiqueta"
-                              />
-                              <div class="flex gap-1">
-                                <select
-                                  [(ngModel)]="column.type"
-                                  class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                >
-                                  @for (colType of columnFieldTypes(); track colType.id) {
-                                    <option [value]="colType.typeCode">{{ colType.typeName }}</option>
-                                  }
-                                </select>
-                                <button
-                                  type="button"
-                                  (click)="removeColumn(field, colIdx)"
-                                  class="px-2 text-red-600 hover:text-red-800"
-                                >
-                                  <lucide-angular name="trash-2" [size]="16"></lucide-angular>
-                                </button>
-                              </div>
-                            </div>
-                          }
-                        </div>
+                <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <div class="flex flex-col gap-1.5">
+                    <label [attr.for]="'fc-et-' + idx" [class]="ui.label">Etiqueta</label>
+                    <input [id]="'fc-et-' + idx" type="text" [(ngModel)]="field.label" placeholder="Cronograma de pago"
+                           [class]="ui.input + ' w-full'"/>
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <label [attr.for]="'fc-id-' + idx" [class]="ui.label">ID del campo</label>
+                    <input [id]="'fc-id-' + idx" type="text" [(ngModel)]="field.id" placeholder="payment_schedule"
+                           [class]="ui.input + ' w-full font-mono'"/>
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <label [attr.for]="'fc-tipo-' + idx" [class]="ui.label">Tipo</label>
+                    <select [id]="'fc-tipo-' + idx" [(ngModel)]="field.type" (ngModelChange)="onFieldTypeChange(field)"
+                            [class]="ui.input + ' w-full'">
+                      @for (type of fieldTypes(); track type.id) {
+                        <option [value]="type.typeCode">{{ type.typeName }}</option>
                       }
-
-                      <!-- Texto de ayuda -->
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Texto de Ayuda (opcional)
-                        </label>
-                        <input
-                          type="text"
-                          [(ngModel)]="field.helpText"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          placeholder="Instrucciones para el usuario..."
-                        />
-                      </div>
-
-                      <!-- Vista Previa -->
-                      <div class="mt-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg border-2 border-purple-200 dark:border-purple-800">
-                        <div class="flex items-center gap-2 mb-3">
-                          <lucide-angular name="eye" [size]="16" class="text-purple-600 dark:text-purple-400"></lucide-angular>
-                          <h5 class="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide">Vista Previa</h5>
-                        </div>
-                        <app-dynamic-field-renderer
-                          [schema]="{ fields: [field] }"
-                          (dataChange)="onPreviewDataChange($event)"
-                        ></app-dynamic-field-renderer>
-                      </div>
-                    </div>
-
-                    <!-- Botón eliminar campo -->
-                    <button
-                      type="button"
-                      (click)="removeField(idx)"
-                      class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      <lucide-angular name="trash-2" [size]="20"></lucide-angular>
-                    </button>
+                    </select>
                   </div>
                 </div>
-              }
 
-              @if (fields().length === 0) {
-                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                  
-                  <p>No hay campos configurados</p>
-                  <p class="text-sm">Haz clic en "Agregar Campo" para empezar</p>
+                <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <div class="flex flex-col gap-1.5">
+                    <label [attr.for]="'fc-ay-' + idx" [class]="ui.label">Texto de ayuda (opcional)</label>
+                    <input [id]="'fc-ay-' + idx" type="text" [(ngModel)]="field.helpText" placeholder="Instrucciones para el asesor"
+                           [class]="ui.input + ' w-full'"/>
+                  </div>
+                  <label class="flex h-[38px] cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
+                    <input type="checkbox" [(ngModel)]="field.required" class="h-[15px] w-[15px] accent-[#2563eb]"/>
+                    Obligatorio
+                  </label>
                 </div>
-              }
-            </div>
 
-            <!-- Botón agregar campo -->
-            <button
-              type="button"
-              (click)="addField()"
-              class="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2"
-            >
-              <lucide-angular name="plus" [size]="20"></lucide-angular>
-              Agregar Campo
+                <!-- Columnas: solo para campos de tipo tabla -->
+                @if (field.type === 'table') {
+                  <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between gap-2.5">
+                      <span [class]="ui.label">Columnas de la tabla</span>
+                      <button type="button" (click)="addColumn(field)" [class]="ui.textoBtn">
+                        <lucide-angular name="plus" [size]="13"></lucide-angular>
+                        Agregar columna
+                      </button>
+                    </div>
+                    @for (column of field.columns; track column; let colIdx = $index) {
+                      <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,150px)_28px] items-center gap-1.5">
+                        <input type="text" [(ngModel)]="column.label" placeholder="Etiqueta"
+                               [attr.aria-label]="'Etiqueta de la columna ' + (colIdx + 1)"
+                               [class]="ui.inputSm + ' w-full'"/>
+                        <input type="text" [(ngModel)]="column.id" placeholder="ID"
+                               [attr.aria-label]="'ID de la columna ' + (colIdx + 1)"
+                               [class]="ui.inputSm + ' w-full font-mono'"/>
+                        <select [(ngModel)]="column.type" [attr.aria-label]="'Tipo de la columna ' + (colIdx + 1)"
+                                [class]="ui.inputSm + ' w-full'">
+                          @for (colType of columnFieldTypes(); track colType.id) {
+                            <option [value]="colType.typeCode">{{ colType.typeName }}</option>
+                          }
+                        </select>
+                        <button type="button" (click)="removeColumn(field, colIdx)" [class]="ui.iconBtnPeligro"
+                                [attr.aria-label]="'Eliminar la columna ' + (colIdx + 1)">
+                          <lucide-angular name="x" [size]="14"></lucide-angular>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Vista previa: el campo tal como lo verá el asesor -->
+                <div [class]="ui.caja + ' flex flex-col gap-2 px-3 py-2.5'">
+                  <span class="text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[#5f6c80] dark:text-slate-400">Vista previa</span>
+                  <app-dynamic-field-renderer
+                    [schema]="{ fields: [field] }"
+                    (dataChange)="onPreviewDataChange($event)"
+                  ></app-dynamic-field-renderer>
+                </div>
+              </div>
+            } @empty {
+              <div class="flex flex-col items-center gap-1 px-4 py-8 text-center">
+                <lucide-angular name="inbox" [size]="32" class="mb-1 text-[#c5ccd6]"></lucide-angular>
+                <p class="text-[13px] font-bold text-[#334155] dark:text-slate-200">Esta tipificación no pide datos adicionales</p>
+                <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Agrega el primero con «Agregar campo».</p>
+              </div>
+            }
+
+            <button type="button" (click)="addField()"
+                    class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[10px] border border-dashed border-[#c5ccd6]
+                           bg-white text-[12.5px] font-bold text-[#334155] transition-colors duration-150
+                           hover:border-[#2563eb] hover:text-[#1d4ed8]
+                           dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
+              <lucide-angular name="plus" [size]="15"></lucide-angular>
+              Agregar campo
             </button>
           </div>
 
-          <!-- Footer -->
-          <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
-              (click)="handleCancel()"
-              class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              (click)="handleSave()"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <lucide-angular name="save" [size]="20"></lucide-angular>
-              Guardar Configuración
-            </button>
+          <!-- Pie -->
+          <div [class]="ui.pie">
+            <button type="button" (click)="handleCancel()" [class]="ui.secundario">Cancelar</button>
+            <button type="button" (click)="handleSave()" [class]="ui.primario">Guardar campos</button>
           </div>
         </div>
       </div>
     }
   `,
-  styles: [`
-    :host {
-      display: contents;
-    }
-  `]
+  styles: [TUI_ANIM]
 })
 export class FieldConfigDialogComponent {
   private apiSystemConfigService = inject(ApiSystemConfigService);
 
   isOpen = input.required<boolean>();
   existingSchema = input<MetadataSchema | null>(null);
+  /** Nombre de la tipificación, solo para el subtítulo. */
+  typificationName = input<string>('');
 
   save = output<MetadataSchema>();
   cancel = output<void>();
+
+  readonly ui = TUI;
 
   fields = signal<FieldConfig[]>([]);
   fieldTypes = signal<FieldTypeResource[]>([]);

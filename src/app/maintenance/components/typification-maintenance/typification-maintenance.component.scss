@@ -1,21 +1,80 @@
-// ============================================
-// CLASSIFICATION ITEM STYLES
-// ============================================
+// El aspecto de la pantalla vive en las clases de Tailwind del template (constantes
+// de typification-ui.ts). Aquí quedan solo las animaciones.
+//
+// Todas usan únicamente el fotograma "from" y relleno "backwards": parten del estado
+// inicial y terminan en el estilo propio del elemento, sin dejar nada pegado al
+// terminar (por ejemplo, no pisan la atenuación que se aplica al recargar). Solo se
+// anima opacity y transform.
 
-.classification-item {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  position: relative;
+// Cambio de estado: vacío, tabla cargada.
+.tm-fade {
+  animation: tm-fade 180ms ease-out backwards;
+}
 
-  // Estado hover suave
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+// Fila: al expandir una rama, las hijas entran con un fundido corto.
+.tm-row {
+  animation: tm-row 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+// Editor en línea: baja desde la fila que se está personalizando.
+.tm-editor {
+  animation: tm-row 220ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+// Menú de más acciones.
+.tm-menu {
+  transform-origin: top right;
+  animation: tm-menu 140ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+// Diálogo de eliminar (los modales hijos traen las suyas en TUI_ANIM).
+.tui-fondo {
+  animation: tm-fade 150ms ease-out backwards;
+}
+
+.tui-panel {
+  animation: tm-dialog 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.tui-entra {
+  animation: tm-row 220ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+@keyframes tm-fade {
+  from {
+    opacity: 0;
   }
 }
 
-// Dark mode adjustments
-:host-context(.dark) {
-  .classification-item:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+@keyframes tm-row {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes tm-menu {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes tm-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-fade,
+  .tm-row,
+  .tm-editor,
+  .tm-menu,
+  .tui-fondo,
+  .tui-panel,
+  .tui-entra {
+    animation: none;
   }
 }

@@ -87,6 +87,8 @@ export interface UpdateTypificationCommandV2 {
 
 export interface UpdateTypificationConfigCommandV2 {
   estaHabilitada?: boolean;
+  // El backend pisa estos dos con `true` si no llegan: hay que mandar el valor actual.
+  heredaDePadre?: boolean;
   nombrePersonalizado?: string;
   descripcionPersonalizada?: string;
   colorPersonalizado?: string;
