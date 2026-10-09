@@ -1,246 +1,280 @@
-<div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
-  <div class="flex-1 overflow-y-auto">
-    <div class="p-4 max-w-[1400px] mx-auto">
-      <!-- Header -->
-      <div class="mb-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center">
-            <lucide-angular name="menu" [size]="20" class="text-white"></lucide-angular>
-          </div>
-          <div>
-            <h1 class="text-xl font-bold text-white">Configuracion de Menu</h1>
-            <p class="text-sm text-gray-400">Configura la visibilidad del menu por rol</p>
-          </div>
-        </div>
-      </div>
+<div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif]
+            text-[#0f172a] p-4 md:p-5 dark:bg-slate-950 dark:text-slate-100">
 
-      <!-- Role Tabs -->
-      <div class="flex gap-2 mb-4">
-        @if (loadingRoles()) {
-          <div class="flex items-center gap-2 text-gray-400">
-            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
-            <span class="text-sm">Cargando roles...</span>
-          </div>
+  <!-- ============ Cabecera ============ -->
+  <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h1 class="!m-0 text-xl font-extrabold tracking-[-0.015em]">Configuración de Menú</h1>
+      <p class="mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">Qué elementos del menú ve cada rol y en qué orden</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      @if (hasChanges()) {
+        <span class="mc-fade inline-flex h-7 items-center gap-1.5 rounded-full border border-[#f3e2c0] bg-[#fdf6e7] px-2.5
+                     text-[11.5px] font-bold text-[#b45309]
+                     dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300" role="status">
+          <lucide-angular name="alert-circle" [size]="13"></lucide-angular>
+          {{ textoCambios() }}
+        </span>
+      }
+      <button type="button" (click)="cancel()" [disabled]="!hasChanges() || saving()" [class]="claseSecundario">
+        Descartar
+      </button>
+      <button type="button" (click)="save()" [disabled]="!hasChanges() || saving()" [class]="clasePrimario">
+        @if (saving()) {
+          <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+          Guardando
         } @else {
+          <lucide-angular name="save" [size]="15"></lucide-angular>
+          Guardar cambios
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ Rol y buscador ============ -->
+  <div class="mb-3 flex flex-wrap items-end gap-2.5">
+    <div class="flex min-w-0 max-w-full flex-col gap-1.5">
+      <span [class]="claseLabel">Rol</span>
+      @if (loadingRoles()) {
+        <span class="flex h-[38px] items-center gap-2 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+          <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+          Cargando roles…
+        </span>
+      } @else if (roles().length === 0) {
+        <span class="flex h-[38px] items-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">No hay roles disponibles</span>
+      } @else {
+        <div class="flex h-[38px] max-w-full overflow-x-auto rounded-lg border border-[#c5ccd6] bg-white p-[3px]
+                    dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="Rol a configurar">
           @for (role of roles(); track role.idRol) {
-            <button
-              (click)="selectRole(role.nombreRol)"
-              [class]="selectedRole() === role.nombreRol
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-800 text-gray-300 hover:bg-slate-700'"
-              class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+            <button type="button" (click)="selectRole(role.nombreRol)"
+                    [attr.aria-pressed]="selectedRole() === role.nombreRol"
+                    [class]="claseTab(selectedRole() === role.nombreRol)">
               {{ role.descripcion || role.nombreRol }}
             </button>
           }
-          @if (roles().length === 0) {
-            <span class="text-gray-500 text-sm">No hay roles disponibles</span>
-          }
-        }
-      </div>
-
-      <!-- Loading -->
-      @if (loading()) {
-        <div class="flex items-center justify-center py-12">
-          <lucide-angular name="loader-2" [size]="32" class="text-indigo-400 animate-spin"></lucide-angular>
-        </div>
-      } @else {
-        <!-- Two Columns -->
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Visible Items -->
-          <div class="bg-slate-900 rounded-lg border border-slate-800 p-4">
-            <div class="flex items-center gap-2 mb-3">
-              <lucide-angular name="eye" [size]="18" class="text-green-400"></lucide-angular>
-              <h2 class="text-sm font-bold text-white">Elementos Visibles</h2>
-              <span class="text-xs text-gray-400">({{ visibleItems().length }})</span>
-            </div>
-
-            <div class="min-h-[400px] p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
-              @for (item of visibleFlat(); track item.codigo) {
-                <div
-                  [class.ml-6]="isChild(item)"
-                  class="flex items-center justify-between p-2 mb-1 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group">
-                  <div class="flex items-center gap-2">
-                    @if (isChild(item)) {
-                      <lucide-angular name="corner-down-right" [size]="12" class="text-gray-500"></lucide-angular>
-                    }
-                    <lucide-angular [name]="item.icono" [size]="16" [class]="isChild(item) ? 'text-indigo-300' : 'text-indigo-400'"></lucide-angular>
-                    <span class="text-sm" [class]="isChild(item) ? 'text-gray-200' : 'text-white font-medium'">{{ item.etiqueta }}</span>
-                    @if (item.tipo === 'DROPDOWN') {
-                      <span class="text-xs bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">dropdown</span>
-                    }
-                    <span class="text-xs text-gray-500">#{{ item.orden }}</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    @if (item.tipo !== 'DROPDOWN') {
-                      <button
-                        (click)="openParentModal(item)"
-                        class="p-1 text-gray-400 hover:text-indigo-400"
-                        title="Asignar padre">
-                        <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
-                      </button>
-                    }
-                    @if (isChild(item)) {
-                      <button
-                        (click)="removeParent(item)"
-                        class="p-1 text-gray-400 hover:text-yellow-400"
-                        title="Quitar padre">
-                        <lucide-angular name="unlink" [size]="14"></lucide-angular>
-                      </button>
-                    }
-                    <button
-                      (click)="moveToHidden(item)"
-                      class="p-1 text-gray-400 hover:text-red-400"
-                      title="Ocultar">
-                      <lucide-angular name="eye-off" [size]="14"></lucide-angular>
-                    </button>
-                  </div>
-                </div>
-              }
-
-              @if (visibleItems().length === 0) {
-                <div class="flex flex-col items-center justify-center py-8 text-gray-500">
-                  <lucide-angular name="eye-off" [size]="32"></lucide-angular>
-                  <p class="text-sm mt-2">No hay elementos visibles</p>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Hidden Items -->
-          <div class="bg-slate-900 rounded-lg border border-slate-800 p-4">
-            <div class="flex items-center gap-2 mb-3">
-              <lucide-angular name="eye-off" [size]="18" class="text-red-400"></lucide-angular>
-              <h2 class="text-sm font-bold text-white">Elementos Ocultos</h2>
-              <span class="text-xs text-gray-400">({{ hiddenItems().length }})</span>
-            </div>
-
-            <div class="min-h-[400px] p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
-              @for (item of hiddenFlat(); track item.codigo) {
-                <div
-                  [class.ml-6]="isChild(item)"
-                  class="flex items-center justify-between p-2 mb-1 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
-                  <div class="flex items-center gap-2">
-                    @if (isChild(item)) {
-                      <lucide-angular name="corner-down-right" [size]="12" class="text-gray-600"></lucide-angular>
-                    }
-                    <lucide-angular [name]="item.icono" [size]="16" class="text-gray-400"></lucide-angular>
-                    <span class="text-sm text-gray-300">{{ item.etiqueta }}</span>
-                    @if (item.tipo === 'DROPDOWN') {
-                      <span class="text-xs bg-gray-500/20 text-gray-400 px-1.5 py-0.5 rounded">dropdown</span>
-                    }
-                    <span class="text-xs text-gray-600">#{{ item.orden }}</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    @if (item.tipo !== 'DROPDOWN') {
-                      <button
-                        (click)="openParentModal(item)"
-                        class="p-1 text-gray-400 hover:text-indigo-400"
-                        title="Asignar padre">
-                        <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
-                      </button>
-                    }
-                    @if (isChild(item)) {
-                      <button
-                        (click)="removeParent(item)"
-                        class="p-1 text-gray-400 hover:text-yellow-400"
-                        title="Quitar padre">
-                        <lucide-angular name="unlink" [size]="14"></lucide-angular>
-                      </button>
-                    }
-                    <button
-                      (click)="moveToVisible(item)"
-                      class="p-1 text-gray-400 hover:text-green-400"
-                      title="Mostrar">
-                      <lucide-angular name="eye" [size]="14"></lucide-angular>
-                    </button>
-                  </div>
-                </div>
-              }
-
-              @if (hiddenItems().length === 0) {
-                <div class="flex flex-col items-center justify-center py-8 text-gray-500">
-                  <lucide-angular name="check-circle" [size]="32"></lucide-angular>
-                  <p class="text-sm mt-2">Todos los elementos son visibles</p>
-                </div>
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="mt-4 flex justify-end gap-2">
-          <button
-            (click)="cancel()"
-            [disabled]="!hasChanges()"
-            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors">
-            Cancelar
-          </button>
-          <button
-            (click)="save()"
-            [disabled]="!hasChanges() || saving()"
-            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
-            @if (saving()) {
-              <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
-            } @else {
-              <lucide-angular name="save" [size]="16"></lucide-angular>
-            }
-            Guardar Cambios
-          </button>
         </div>
       }
     </div>
-  </div>
-</div>
 
-<!-- Modal para asignar padre -->
-@if (showParentModal()) {
-  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" (click)="closeParentModal()">
-    <div class="bg-slate-900 rounded-lg border border-slate-700 p-4 w-96 max-w-[90vw]" (click)="$event.stopPropagation()">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-white">Asignar Padre</h3>
-        <button (click)="closeParentModal()" class="text-gray-400 hover:text-white">
-          <lucide-angular name="x" [size]="20"></lucide-angular>
+    <label class="flex h-[38px] min-w-[190px] flex-1 items-center gap-2.5 rounded-lg border border-[#d5dbe3]
+                  bg-white px-3 transition-colors focus-within:border-[#2563eb]
+                  dark:border-slate-700 dark:bg-slate-900">
+      <lucide-angular name="search" [size]="14" class="shrink-0 text-[#8491a3]"></lucide-angular>
+      <input type="text" [ngModel]="buscar()" (ngModelChange)="buscar.set($event)"
+        placeholder="Buscar elemento por nombre o ruta" aria-label="Buscar elemento del menú"
+        class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] outline-none
+               placeholder:text-[#5f6c80] dark:text-slate-100"/>
+    </label>
+  </div>
+
+  <p class="mb-3 flex items-start gap-2 text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+    <lucide-angular name="info" [size]="14" class="mt-0.5 shrink-0"></lucide-angular>
+    <span>
+      Mostrar y ocultar se guarda por rol con
+      <b class="font-bold text-[#334155] dark:text-slate-200">Guardar cambios</b>.
+      Mover un elemento de grupo aplica a
+      <b class="font-bold text-[#334155] dark:text-slate-200">todos los roles</b> y se guarda al instante.
+    </span>
+  </p>
+
+  <!-- ============ Columnas ============ -->
+  @if (loading()) {
+    <!-- El esqueleto ocupa el lugar que tendrán las dos listas -->
+    <div class="grid animate-pulse items-start gap-3 motion-reduce:animate-none
+                [grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))]" role="status">
+      <span class="sr-only">Cargando configuración…</span>
+      @for (col of [0, 1]; track col) {
+        <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div class="h-[38px] border-b border-[#e6e9ee] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-800"></div>
+          @for (n of esqueletoFilas; track n) {
+            <div class="flex h-[38px] items-center gap-3 border-b border-[#eef1f5] px-3 last:border-b-0 dark:border-slate-800">
+              <span class="h-4 w-4 shrink-0 rounded bg-[#e2e8f0] dark:bg-slate-800"></span>
+              <span class="h-3 w-40 rounded bg-[#e2e8f0] dark:bg-slate-800"></span>
+              <span class="h-3 flex-1 rounded bg-[#eef1f5] dark:bg-slate-800"></span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else if (selectedRole()) {
+    <div class="grid items-start gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))]">
+
+      <!-- Visibles -->
+      <section [class]="claseCard" [style.--i]="0" aria-labelledby="mc-col-visibles">
+        <div [class]="claseCardHead">
+          <lucide-angular name="eye" [size]="15" class="shrink-0 text-[#2563eb] dark:text-blue-400"></lucide-angular>
+          <h2 id="mc-col-visibles" class="!m-0 text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[#2563eb] dark:text-blue-400">Visibles</h2>
+          <span class="inline-flex h-[18px] items-center rounded-full bg-[#e8effd] px-[7px] text-[11px] font-extrabold tabular-nums
+                       text-[#1d4ed8] dark:bg-blue-500/20 dark:text-blue-300">{{ visibleItems().length }}</span>
+          <span class="ml-auto text-[11.5px] text-[#5f6c80] dark:text-slate-400">En el orden en que aparecen en el menú</span>
+        </div>
+
+        @for (f of filasVisibles(); track f.item.codigo) {
+          <ng-container *ngTemplateOutlet="fila; context: { $implicit: f, visible: true }"></ng-container>
+        } @empty {
+          <div class="flex flex-col items-center gap-2 px-4 py-10 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
+            <lucide-angular name="eye-off" [size]="32" class="text-[#c5ccd6]"></lucide-angular>
+            <span>{{ hayBusqueda ? 'Ningún elemento visible coincide con la búsqueda' : 'Este rol no ve ningún elemento del menú' }}</span>
+          </div>
+        }
+      </section>
+
+      <!-- Ocultos -->
+      <section [class]="claseCard" [style.--i]="1" aria-labelledby="mc-col-ocultos">
+        <div [class]="claseCardHead">
+          <lucide-angular name="eye-off" [size]="15" class="shrink-0 text-[#5f6c80] dark:text-slate-400"></lucide-angular>
+          <h2 id="mc-col-ocultos" class="!m-0 text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[#334155] dark:text-slate-300">Ocultos</h2>
+          <span class="inline-flex h-[18px] items-center rounded-full bg-[#eef1f5] px-[7px] text-[11px] font-extrabold tabular-nums
+                       text-[#334155] dark:bg-slate-700 dark:text-slate-200">{{ hiddenItems().length }}</span>
+          <span class="ml-auto text-[11.5px] text-[#5f6c80] dark:text-slate-400">Este rol no los ve</span>
+        </div>
+
+        @for (f of filasOcultas(); track f.item.codigo) {
+          <ng-container *ngTemplateOutlet="fila; context: { $implicit: f, visible: false }"></ng-container>
+        } @empty {
+          <div class="flex flex-col items-center gap-2 px-4 py-10 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
+            <lucide-angular name="check-circle" [size]="32" class="text-[#c5ccd6]"></lucide-angular>
+            <span>{{ hayBusqueda ? 'Ningún elemento oculto coincide con la búsqueda' : 'Todos los elementos están visibles para este rol' }}</span>
+          </div>
+        }
+      </section>
+    </div>
+  }
+
+  <!-- ============ Fila (compartida por las dos columnas) ============ -->
+  <ng-template #fila let-f let-visible="visible">
+    <div [class]="'mc-row flex min-h-[38px] items-center gap-2 border-b border-[#eef1f5] bg-white py-1 pr-2.5 transition-colors duration-150 hover:bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/60 '
+                  + (f.nested ? 'pl-9' : 'pl-2.5')">
+
+      @if (visible) {
+        <span class="w-5 shrink-0 text-right text-[11px] font-bold tabular-nums text-[#5f6c80] dark:text-slate-400"
+              [attr.title]="f.pos ? 'Posición en el menú' : 'No aparece en el menú'">{{ f.pos || '—' }}</span>
+      }
+      @if (f.nested) {
+        <lucide-angular name="corner-down-right" [size]="12" class="shrink-0 text-[#8491a3]"></lucide-angular>
+      }
+      <lucide-angular [name]="f.item.icono" [size]="16"
+        [class]="'shrink-0 ' + (!visible ? 'text-[#8491a3]'
+                                : f.nested ? 'text-[#5f6c80] dark:text-slate-400' : 'text-[#2563eb] dark:text-blue-400')"></lucide-angular>
+
+      <span [class]="'min-w-0 flex-[0_1_auto] truncate text-[12.5px] tracking-[-0.01em] '
+                     + (f.nested ? 'font-semibold ' : 'font-bold ')
+                     + (visible ? 'text-[#0f172a] dark:text-slate-100' : 'text-[#334155] dark:text-slate-300')">{{ f.item.etiqueta }}</span>
+
+      @if (f.item.tipo === 'DROPDOWN') {
+        <span [class]="claseChipGris">Grupo · {{ f.hijos }}</span>
+      }
+      @if (f.huerfano && !visible) {
+        <span [class]="claseChipGris">en {{ f.grupo }}</span>
+      }
+      @if (f.huerfano && visible) {
+        <!-- El backend solo manda al menú los hijos cuyo grupo también es visible -->
+        <span [class]="claseChipAmbar">No se muestra: el grupo {{ f.grupo }} está oculto</span>
+      }
+      @if (f.cambiado) {
+        <span [class]="claseChipAmbar">Sin guardar</span>
+      }
+
+      <span class="min-w-0 flex-1 truncate font-mono text-[11px] text-[#5f6c80] dark:text-slate-400">{{ f.item.ruta }}</span>
+
+      @if (f.item.tipo !== 'DROPDOWN') {
+        <button type="button" (click)="openParentModal(f.item)" [class]="claseIconBtn"
+                title="Mover a un grupo" aria-label="Mover a un grupo">
+          <lucide-angular name="folder-tree" [size]="15"></lucide-angular>
         </button>
-      </div>
-
-      @if (itemToAssignParent(); as item) {
-        <p class="text-sm text-gray-400 mb-4">
-          Selecciona el dropdown padre para: <span class="text-white font-medium">{{ item.etiqueta }}</span>
-        </p>
-
-        @if (item.codigoPadre) {
-          <div class="mb-3 p-2 bg-slate-800 rounded border border-slate-700">
-            <span class="text-xs text-gray-400">Padre actual:</span>
-            <span class="text-sm text-indigo-400 ml-2">{{ getParentLabel(item.codigoPadre) }}</span>
-          </div>
-        }
-
-        <div class="space-y-2 max-h-60 overflow-y-auto">
-          <!-- Opcion: Sin padre -->
-          <button
-            (click)="assignParent(null)"
-            class="w-full flex items-center gap-2 p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-left transition-colors">
-            <lucide-angular name="minus-circle" [size]="16" class="text-gray-400"></lucide-angular>
-            <span class="text-sm text-gray-300">Sin padre (elemento raiz)</span>
-          </button>
-
-          <!-- Dropdowns disponibles -->
-          @for (parent of availableParents(); track parent.codigo) {
-            @if (parent.codigo !== item.codigo) {
-              <button
-                (click)="assignParent(parent.codigo)"
-                [class]="item.codigoPadre === parent.codigo ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700'"
-                class="w-full flex items-center gap-2 p-2 bg-slate-800 hover:bg-slate-700 rounded border text-left transition-colors">
-                <lucide-angular [name]="parent.icono" [size]="16" class="text-indigo-400"></lucide-angular>
-                <span class="text-sm text-white">{{ parent.etiqueta }}</span>
-                @if (item.codigoPadre === parent.codigo) {
-                  <lucide-angular name="check" [size]="14" class="text-indigo-400 ml-auto"></lucide-angular>
-                }
-              </button>
-            }
-          }
-        </div>
+      }
+      @if (f.item.codigoPadre) {
+        <button type="button" (click)="removeParent(f.item)" [class]="claseIconBtn"
+                title="Sacar del grupo" aria-label="Sacar del grupo">
+          <lucide-angular name="unlink" [size]="15"></lucide-angular>
+        </button>
+      }
+      @if (visible) {
+        <button type="button" (click)="moveToHidden(f.item)" [class]="claseTextoBtn">
+          <lucide-angular name="eye-off" [size]="13"></lucide-angular>
+          Ocultar
+        </button>
+      } @else {
+        <button type="button" (click)="moveToVisible(f.item)" [class]="claseTextoBtn">
+          <lucide-angular name="eye" [size]="13"></lucide-angular>
+          Mostrar
+        </button>
       }
     </div>
-  </div>
-}
+  </ng-template>
+
+  <!-- ============ Diálogo: mover a un grupo ============ -->
+  @if (showParentModal()) {
+    <div class="mc-backdrop fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.45)] p-4"
+         (click)="closeParentModal()">
+      <div class="mc-dialog flex max-h-full w-[440px] max-w-full flex-col rounded-[14px] border border-[#e6e9ee] bg-white
+                  shadow-[0_24px_48px_rgba(15,23,42,0.22)] dark:border-slate-700 dark:bg-slate-900"
+           role="dialog" aria-modal="true" aria-labelledby="mc-dlg-titulo"
+           cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
+           (click)="$event.stopPropagation()" (keydown.escape)="closeParentModal()">
+
+        <div class="flex items-center justify-between gap-3 pb-2.5 pl-[18px] pr-3.5 pt-3.5">
+          <h2 id="mc-dlg-titulo" class="!m-0 text-[15px] font-extrabold tracking-[-0.01em]">Mover a un grupo</h2>
+          <button type="button" (click)="closeParentModal()" [class]="claseIconBtn" aria-label="Cerrar">
+            <lucide-angular name="x" [size]="17"></lucide-angular>
+          </button>
+        </div>
+
+        @if (itemToAssignParent(); as item) {
+          <div class="flex min-h-0 flex-col gap-3 px-[18px] pb-4">
+            <p class="text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+              Elige dónde se mostrará
+              <b class="font-bold text-[#0f172a] dark:text-slate-100">{{ item.etiqueta }}</b> dentro del menú.
+            </p>
+
+            <div class="flex min-h-0 flex-col gap-1.5 overflow-y-auto p-0.5" role="radiogroup" aria-label="Grupo de destino">
+              <label [class]="claseOpcion(grupoElegido() === null)">
+                <input type="radio" name="mc-grupo" class="h-[15px] w-[15px] shrink-0 accent-[#2563eb]"
+                       [checked]="grupoElegido() === null" (change)="grupoElegido.set(null)"/>
+                <lucide-angular name="minus-circle" [size]="16"
+                  [class]="'shrink-0 ' + (grupoElegido() === null ? 'text-[#2563eb]' : 'text-[#5f6c80] dark:text-slate-400')"></lucide-angular>
+                <span [class]="'min-w-0 flex-1 text-[12.5px] ' + (grupoElegido() === null ? 'font-bold' : 'font-semibold')">Sin grupo (nivel principal)</span>
+                @if (!item.codigoPadre) {
+                  <span [class]="claseChipGris">Ubicación actual</span>
+                }
+              </label>
+
+              @for (parent of availableParents(); track parent.codigo) {
+                @if (parent.codigo !== item.codigo) {
+                  <label [class]="claseOpcion(grupoElegido() === parent.codigo)">
+                    <input type="radio" name="mc-grupo" class="h-[15px] w-[15px] shrink-0 accent-[#2563eb]"
+                           [checked]="grupoElegido() === parent.codigo" (change)="grupoElegido.set(parent.codigo)"/>
+                    <lucide-angular [name]="parent.icono" [size]="16"
+                      [class]="'shrink-0 ' + (grupoElegido() === parent.codigo ? 'text-[#2563eb]' : 'text-[#5f6c80] dark:text-slate-400')"></lucide-angular>
+                    <span [class]="'min-w-0 flex-1 text-[12.5px] ' + (grupoElegido() === parent.codigo ? 'font-bold' : 'font-semibold')">{{ parent.etiqueta }}</span>
+                    @if (item.codigoPadre === parent.codigo) {
+                      <span [class]="claseChipGris">Ubicación actual</span>
+                    }
+                  </label>
+                }
+              }
+            </div>
+
+            <p class="flex items-start gap-2 rounded-[10px] border border-[#f3e2c0] bg-[#fdf6e7] px-3 py-2 text-[12px] font-semibold
+                      leading-[1.5] text-[#8a4207] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+              <lucide-angular name="alert-triangle" [size]="15" class="mt-px shrink-0"></lucide-angular>
+              <span>Este cambio aplica a todos los roles y se guarda al instante, sin pasar por Guardar cambios.</span>
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-2 border-t border-[#e6e9ee] px-[18px] py-3 dark:border-slate-700">
+            <button type="button" (click)="closeParentModal()" [disabled]="moviendo()" [class]="claseSecundario">Cancelar</button>
+            <button type="button" (click)="confirmarMover()" [disabled]="sinCambioDeGrupo() || moviendo()" [class]="clasePrimario">
+              @if (moviendo()) {
+                <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                Moviendo
+              } @else {
+                Mover
+              }
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

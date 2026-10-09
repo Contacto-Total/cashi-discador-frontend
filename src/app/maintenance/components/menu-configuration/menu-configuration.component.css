@@ -1,3 +1,73 @@
+/* El aspecto de la pantalla vive en las clases de Tailwind del template (el mismo
+   sistema visual de /reports/estado-agentes). Aqui quedan las animaciones.
+
+   Todas usan unicamente el fotograma "from" y relleno "backwards": parten del
+   estado inicial y terminan en el estilo propio del elemento, sin dejar nada
+   pegado al terminar. Solo se anima opacity y transform. */
+
+/* Las dos columnas: aparecen subiendo 6px. --i escalona el retraso. */
+.mc-rise {
+  animation: mc-rise 280ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Aviso de cambios sin guardar. */
+.mc-fade {
+  animation: mc-fade 180ms ease-out backwards;
+}
+
+/* Fila: al mostrar u ocultar un elemento, la fila nace en la otra columna y entra
+   con un fundido corto, asi se ve adonde fue a parar. */
+.mc-row {
+  animation: mc-row 220ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+/* Dialogo: el fondo aparece y la caja crece apenas. La salida es inmediata. */
+.mc-backdrop {
+  animation: mc-fade 150ms ease-out backwards;
+}
+
+.mc-dialog {
+  animation: mc-dialog 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+@keyframes mc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes mc-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mc-row {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes mc-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-rise,
+  .mc-fade,
+  .mc-row,
+  .mc-backdrop,
+  .mc-dialog {
+    animation: none;
+  }
+}
+
 /* Drag and Drop Styles */
 .cdk-drag-preview {
   box-sizing: border-box;
