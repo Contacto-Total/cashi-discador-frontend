@@ -22,7 +22,7 @@
     <div class="relative transition-opacity delay-[120ms] duration-[140ms] group-data-[plegado]/sb:opacity-0 group-data-[plegado]/sb:delay-0" [attr.inert]="plegado ? '' : null">
       <lucide-angular [ngClass]="'pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground'" name="search" [size]="14"></lucide-angular>
       <input #campoBuscar type="search" [(ngModel)]="filtro" placeholder="Buscar…" aria-label="Buscar pantalla"
-             class="font-cashi h-9 w-full rounded-lg border! border-border! bg-background/60! pr-[3.75rem] pl-[2.125rem] text-[.875rem] text-foreground! outline-none placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
+             class="font-cashi h-9 w-full rounded-lg border! border-border! bg-background/60! pr-[3.75rem] pl-[2.125rem] text-[.875rem] text-foreground! outline-none placeholder:text-muted-foreground! focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]">
       <kbd class="font-cashi pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-transparent px-1.5 py-0.5 text-[.6875rem] leading-[1.2] font-semibold text-muted-foreground">Ctrl K</kbd>
     </div>
     <button type="button" [class]="FILA + ' ' + FILA_REPOSO"
