@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { rrhhGuard } from './features/asistencia/asistencia.guards';
 import { adminGuard } from './core/guards/admin.guard';
 import { adminOrSupervisorGuard } from './core/guards/admin-or-supervisor.guard';
+import { adminOrOperacionesGuard } from './core/guards/admin-or-operaciones.guard';
 import { gestionPendienteGuard } from './core/guards/gestion-pendiente.guard';
 
 export const routes: Routes = [
@@ -371,7 +372,7 @@ export const routes: Routes = [
   {
     path: 'admin/maintenance/umbrales-estado',
     loadComponent: () => import('./maintenance/components/umbrales-estado/umbrales-estado.component').then(m => m.UmbralesEstadoComponent),
-    canActivate: [authGuard, adminGuard]
+    canActivate: [authGuard, adminOrOperacionesGuard]
   },
 
   // ========================================
