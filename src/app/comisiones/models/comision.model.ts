@@ -78,7 +78,10 @@ export interface MetaCantidad {
   monto: number;
 }
 
-/** LTD: gestiones con campo_monto_origen en origenes. PKM: clientes con la columna PKM. SOBRE: sobrecumplimiento en soles. */
+/**
+ * LTD: PDP con campo_monto_origen en origenes y todas sus cuotas pagadas; cada nivel paga su monto por cada LTD de
+ * su tramo. PKM: clientes con la columna PKM. SOBRE: sobrecumplimiento en soles.
+ */
 export type TipoBono = 'LTD' | 'PKM' | 'SOBRE';
 
 /** Nivel de un bono: desde (cantidad o soles) → monto; montoSegundo = 2° puesto */
@@ -312,8 +315,15 @@ export interface DetalleComision {
   idGestion: number;
   /** Origen de la PDP (registros_gestion.campo_monto_origen) */
   origenPdp: string | null;
-  /** Solo contención: si ese origen suma el capital del cliente (LTD, bajas); null en recaudo */
-  origenSuma: boolean | null;
+  /** registros_gestion.monto_promesa */
+  montoPromesa: number | null;
+  /** registros_gestion.monto_base: valor del origen al registrar la PDP */
+  montoBase: number | null;
+  /** Solo contención: día en que el cliente pasó a CONTENIDO */
+  fechaContencion: string | null;
+  /** Solo contención: baja 30 con la que se comparó la PDP y de dónde salió */
+  baja30: number | null;
+  baja30Fuente: string | null;
   fechaGestion: string;
   numeroCuota: number;
   fechaVencimientoCuota: string;
@@ -331,6 +341,44 @@ export interface DetalleComision {
   metaAsesor: number | null;
   porcentajeAcumulado: number | null;
   comisionAlcanzada: number;
+}
+
+/** Por qué un pago no suma. Los de contención cuentan igual para la meta de pagos del asesor. */
+export type MotivoExclusion =
+  | 'PAGO_SISTEMA'
+  | 'SUPERVISOR_NO_ASIGNA'
+  | 'USUARIO_EXCLUIDO'
+  | 'AGENTE_NO_PARTICIPANTE'
+  | 'PARTICIPANTE_QUITADO'
+  | 'NO_CONTENIDO'
+  | 'YA_CONTENIDO'
+  | 'PDP_DESPUES_CONTENCION'
+  | 'SIN_BAJA30'
+  | 'PDP_MENOR_BAJA30';
+
+/** Un pago conciliado del período (comision_resultado_pago), sume o no */
+export interface PagoSustento {
+  conciliacionId: number;
+  fechaBanco: string;
+  banco: string | null;
+  numeroOperacion: string | null;
+  documentoCliente: string | null;
+  nombreCliente: string | null;
+  idGestion: number;
+  idAgenteGestion: number;
+  nombreAgenteGestion: string | null;
+  montoAplicado: number;
+  contencion: string | null;
+  capitalAsignado: number | null;
+  origenPdp: string | null;
+  fechaGestion: string | null;
+  montoPromesa: number | null;
+  montoBase: number | null;
+  fechaContencion: string | null;
+  baja30: number | null;
+  baja30Fuente: string | null;
+  /** null = suma */
+  motivoExclusion: MotivoExclusion | null;
 }
 
 export interface AuditoriaComision {

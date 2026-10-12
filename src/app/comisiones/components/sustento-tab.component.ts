@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, mo
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable } from 'rxjs';
-import { DetalleComision, EscalaComision, LineaDesglose, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { DiaDetalle, METRICA_INFO, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
+import { DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
+import { DiaDetalle, METRICA_INFO, MOTIVO_INFO, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -34,8 +34,9 @@ const B = 28;
 /**
  * Sustento del período: por asesor (contra su meta individual) o por el supervisor (el total de los
  * asesores contra la meta del mes). Gráfico del acumulado por fecha banco, día a día y, en cada día,
- * los pagos con hora, cliente y monto. En contención cada pago muestra lo pagado y el capital asignado
- * que suma (solo en el primer pago del cliente).
+ * los pagos con hora, cliente y monto. En contención cada pago muestra su PDP, la fecha de contención, lo
+ * pagado y el capital asignado que suma (solo en el primer pago del cliente). Abajo, los pagos que no suman y
+ * por qué.
  */
 @Component({
   selector: 'cmx-sustento-tab',
@@ -167,7 +168,7 @@ const B = 28;
         <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-sus-dias">
           <div class="cmx-block-head">
             <h3 id="cmx-sus-dias" class="cmx-block-title">Día a día</h3>
-            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente CONTENIDO suma su capital asignado el día de su primer pago del mes con PDP por LTD o baja 30/60/90 }</span>
+            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente contenido suma su capital asignado el día de su primer pago del mes }</span>
           </div>
           <div class="cmx-tw">
             <table class="cmx-table">
@@ -214,6 +215,10 @@ const B = 28;
                                   <th scope="col" class="n">Gestión</th>
                                   <th scope="col" class="n">Cuota</th>
                                   @if (porCapital()) {
+                                    <th scope="col">PDP</th>
+                                    <th scope="col" class="n">Monto origen</th>
+                                    <th scope="col" class="n">Monto PDP</th>
+                                    <th scope="col">Contuvo</th>
                                     <th scope="col" class="n">Pagado</th>
                                     <th scope="col" class="n">SLD capital asig.</th>
                                   } @else {
@@ -235,12 +240,13 @@ const B = 28;
                                     <td class="n">{{ pg.numeroCuota }}</td>
                                     @if (porCapital()) {
                                       @let suma = d.sumas.get(pg.conciliacionId) ?? 0;
+                                      <td>{{ pg.origenPdp || '—' }}</td>
+                                      <td class="n">{{ pg.montoBase != null ? (pg.montoBase | appNumber:'1.2-2') : '—' }}</td>
+                                      <td class="n" [attr.title]="pg.baja30 != null ? 'Baja 30: S/ ' + (pg.baja30 | appNumber:'1.2-2') + ' (' + pg.baja30Fuente + ')' : null">{{ pg.montoPromesa != null ? (pg.montoPromesa | appNumber:'1.2-2') : '—' }}</td>
+                                      <td class="n" style="text-align:left">{{ pg.fechaContencion ? diaMes(pg.fechaContencion) : '—' }}</td>
                                       <td class="n" style="color:var(--cmx-ink-3)">{{ pg.recaudo ?? 0 | appNumber:'1.2-2' }}</td>
                                       <td class="n" [class.na]="suma <= 0">
                                         @if (suma > 0) { {{ suma | appNumber:'1.2-2' }} }
-                                        @else if (pg.origenSuma === false) {
-                                          <span [attr.title]="'La PDP es por ' + (pg.origenPdp || 'un origen sin registrar') + ': solo suman las PDP por LTD o baja 30/60/90. El pago sí cuenta para la meta de pagos'">no suma · {{ pg.origenPdp || 'sin origen' }}</span>
-                                        }
                                         @else if (yaSumo(pg)) { <span title="Su capital ya sumó con su primer pago del mes">ya sumó</span> }
                                         @else { <span title="El cliente no tiene SLD_CAPITAL_ASIG en la tabla dinámica">sin capital</span> }
                                       </td>
@@ -263,6 +269,57 @@ const B = 28;
             </table>
           </div>
         </section>
+
+        @if (noSuman().length) {
+          <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-sus-nosuman">
+            <div class="cmx-block-head">
+              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman ({{ noSuman().length }})</h3>
+              <span class="cmx-block-desc">
+                Conciliados en el mes, pero no suman {{ porCapital() ? 'capital' : 'al recaudo' }}@if (porCapital()) {. Los de clientes que no contuvo siguen contando para la meta de pagos }
+              </span>
+            </div>
+            <div class="cmx-tw">
+              <table class="cmx-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Fecha banco</th>
+                    @if (p.esSupervisor) { <th scope="col">Asesor</th> }
+                    <th scope="col">Cliente</th>
+                    <th scope="col">DNI</th>
+                    <th scope="col" class="n">Gestión</th>
+                    <th scope="col">Fecha PDP</th>
+                    <th scope="col" class="n">Monto</th>
+                    @if (porCapital()) {
+                      <th scope="col" class="n">Monto PDP</th>
+                      <th scope="col" class="n">Baja 30</th>
+                      <th scope="col">Contuvo</th>
+                    }
+                    <th scope="col">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (pg of noSuman(); track pg.conciliacionId) {
+                    <tr>
+                      <td class="n" style="text-align:left">{{ diaMes(pg.fechaBanco) }}</td>
+                      @if (p.esSupervisor) { <td>{{ pg.nombreAgenteGestion || '—' }}</td> }
+                      <td>{{ pg.nombreCliente || '—' }}</td>
+                      <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
+                      <td class="n">{{ pg.idGestion }}</td>
+                      <td class="n" style="text-align:left">{{ pg.fechaGestion ? diaMes(pg.fechaGestion.slice(0, 10)) : '—' }}</td>
+                      <td class="n">{{ pg.montoAplicado | appNumber:'1.2-2' }}</td>
+                      @if (porCapital()) {
+                        <td class="n">{{ pg.montoPromesa != null ? (pg.montoPromesa | appNumber:'1.2-2') : '—' }}</td>
+                        <td class="n" [attr.title]="pg.baja30Fuente">{{ pg.baja30 != null ? (pg.baja30 | appNumber:'1.2-2') : '—' }}</td>
+                        <td class="n" style="text-align:left">{{ pg.fechaContencion ? diaMes(pg.fechaContencion) : '—' }}</td>
+                      }
+                      <td>{{ motivo(pg) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
       }
     }
 
@@ -275,12 +332,15 @@ export class SustentoTabComponent {
   readonly vista = input.required<VistaSustento>();
   /** De dónde sale el detalle pago a pago; por defecto, el del período completo (módulo de comisiones) */
   readonly fuenteDetalle = input<(idPeriodo: number) => Observable<DetalleComision[]>>();
+  /** De dónde salen los pagos que no suman; por defecto, todos los del período (módulo de comisiones) */
+  readonly fuentePagos = input<(idPeriodo: number) => Observable<PagoSustento[]>>();
   /** Persona elegida: id de usuario del asesor o 'sup' */
   readonly seleccion = model<number | 'sup' | null>(null);
 
   readonly diaMes = diaMes;
 
   readonly filas = signal<DetalleComision[]>([]);
+  readonly pagos = signal<PagoSustento[]>([]);
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
   readonly abiertos = signal<Set<string>>(new Set());
@@ -355,6 +415,15 @@ export class SustentoTabComponent {
   readonly persona = computed(() => {
     const lista = this.personas();
     return lista.find(p => p.clave === this.seleccion()) ?? lista[0] ?? null;
+  });
+
+  /** Pagos que no suman: los de las gestiones del asesor o, para el supervisor, todos */
+  readonly noSuman = computed<PagoSustento[]>(() => {
+    const p = this.persona();
+    if (!p) {
+      return [];
+    }
+    return this.pagos().filter(pg => pg.motivoExclusion != null && (p.esSupervisor || pg.idAgenteGestion === p.clave));
   });
 
   readonly dias = computed<DiaDetalle[]>(() => {
@@ -437,6 +506,16 @@ export class SustentoTabComponent {
         this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
       }
     });
+    // Los pagos que no suman son un complemento: si fallan, el sustento se ve igual
+    const fuentePagos = this.fuentePagos() ?? ((id: number) => this.service.obtenerPagos(id));
+    fuentePagos(this.reporte().periodo.id).subscribe({
+      next: pagos => this.pagos.set(pagos),
+      error: () => this.pagos.set([])
+    });
+  }
+
+  motivo(pg: PagoSustento): string {
+    return pg.motivoExclusion ? MOTIVO_INFO[pg.motivoExclusion] ?? pg.motivoExclusion : '';
   }
 
   elegir(clave: number | 'sup'): void {
@@ -460,9 +539,9 @@ export class SustentoTabComponent {
     return [...d.pagos].sort((a, b) => (a.horaBanco ?? '99').localeCompare(b.horaBanco ?? '99') || a.conciliacionId - b.conciliacionId);
   }
 
-  /** El cliente ya tuvo antes un pago que suma (PDP por LTD o baja) en lo que se está viendo: su capital sumó ahí */
+  /** El cliente ya tuvo antes un pago que suma en lo que se está viendo: su capital sumó ahí */
   yaSumo(d: DetalleComision): boolean {
-    return (this.persona()?.filas ?? []).some(f => f.documentoCliente === d.documentoCliente && f.origenSuma !== false
+    return (this.persona()?.filas ?? []).some(f => f.documentoCliente === d.documentoCliente
       && (f.fechaBanco < d.fechaBanco || (f.fechaBanco === d.fechaBanco && f.conciliacionId < d.conciliacionId)));
   }
 
