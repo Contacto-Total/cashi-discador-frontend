@@ -55,4 +55,28 @@ export class AlcanceService {
     }
     return this.pedido;
   }
+
+  /**
+   * Si el usuario puede ver al cliente de ese documento. Es para lo que se le pide a un servicio
+   * que no sabe quién pregunta. Si la consulta falla responde que no.
+   */
+  puedeDocumento(documento: string): Observable<boolean> {
+    const ruta = `${environment.apiUrl}/menu/alcance/documento/${encodeURIComponent(documento.trim())}`;
+    return this.http.get(ruta).pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * Si un tramo, nombrado por su texto como hacen los servicios anteriores ('Tramo 3'),
+   * corresponde a una subcartera del usuario. Si la consulta falla responde que no.
+   */
+  puedeTramo(nombre: string): Observable<boolean> {
+    const ruta = `${environment.apiUrl}/menu/alcance/tramo/${encodeURIComponent(nombre.trim())}`;
+    return this.http.get(ruta).pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
 }

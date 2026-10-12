@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AgregarParticipanteRequest,
@@ -14,6 +14,7 @@ import {
   Inquilino,
   MesPeriodo,
   MiPeriodoComision,
+  PagoSustento,
   ReportePeriodo,
   Subcartera,
   SupervisorCashi,
@@ -126,8 +127,14 @@ export class ComisionesService {
     return this.http.get(`${this.baseUrl}/periodos/${id}/excel`, { responseType: 'blob' });
   }
 
-  exportarExcelParticipante(id: number, idResultado: number): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/periodos/${id}/participantes/${idResultado}/excel`, { responseType: 'blob' });
+  /** Bono LTD: resumen por participante, detalle por PDP y cuotas */
+  exportarExcelLtd(id: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/periodos/${id}/excel-ltd`, { responseType: 'blob' });
+  }
+
+  /** Todos los pagos conciliados del período, sumen o no */
+  obtenerPagos(id: number): Observable<PagoSustento[]> {
+    return this.http.get<{ pagos: PagoSustento[] }>(`${this.baseUrl}/periodos/${id}/sustento`).pipe(map(s => s.pagos));
   }
 
   // ==================== MIS COMISIONES (solo lo del usuario de la sesión) ====================
@@ -145,5 +152,10 @@ export class ComisionesService {
   /** Su detalle pago a pago (el supervisor, el de sus asesores) */
   miDetalle(id: number): Observable<DetalleComision[]> {
     return this.http.get<DetalleComision[]>(`${this.baseUrl}/mis/${id}/detalle`);
+  }
+
+  /** Sus pagos, sumen o no (el supervisor, todos los del período) */
+  misPagos(id: number): Observable<PagoSustento[]> {
+    return this.http.get<PagoSustento[]>(`${this.baseUrl}/mis/${id}/pagos`);
   }
 }

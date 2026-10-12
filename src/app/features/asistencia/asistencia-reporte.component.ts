@@ -11,7 +11,7 @@ import {
   SemanaAgente,
   TipoMarcacion
 } from './asistencia.models';
-import { ESTADOS, ESTILOS, estadoVisible, textoLimite } from './asistencia.estilos';
+import { ESTADOS, ESTILOS, estadoVisible, notaDeHoras, textoLimite } from './asistencia.estilos';
 
 /** El cuadro de cada día en la cinta: color pleno, el mismo de los gráficos. */
 const COLOR_DIA: Record<string, string> = {
@@ -260,6 +260,10 @@ const COLOR_DIA: Record<string, string> = {
                       <td [class]="estilos.td">
                         <span class="inline-flex items-center rounded-full px-[9px] py-0.5 text-[11.5px] font-bold"
                               [class]="ESTADOS[estadoVisible(dia)].clase">{{ dia.tipoDia ?? ESTADOS[estadoVisible(dia)].texto }}</span>
+                        @if (notaDeHoras(dia); as nota) {
+                          <span class="ml-1 inline-flex items-center rounded-full px-[9px] py-0.5 text-[11.5px] font-bold"
+                                [class]="nota.clase">{{ nota.texto }}</span>
+                        }
                       </td>
                     </tr>
                   }
@@ -311,6 +315,7 @@ export class AsistenciaReporteComponent {
   protected readonly ESTADOS = ESTADOS;
   protected readonly COLOR_DIA = COLOR_DIA;
   protected readonly estadoVisible = estadoVisible;
+  protected readonly notaDeHoras = notaDeHoras;
 
   /**
    * El tope semanal de tardanza, tal como vino en el reporte: es por

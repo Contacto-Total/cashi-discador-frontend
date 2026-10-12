@@ -9,10 +9,11 @@ import { CustomMultiSelectComponent } from '../../../../../shared/components/cus
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { ThemeService } from '../../../../../shared/services/theme.service';
 import { CampaignService } from '../../services/campaign.service';
+import { AlcanceService } from '../../../../../core/services/alcance.service';
 import { CampaignReportRequest } from '../../models/campaign-report.request';
 import { Range } from '../../models/range.model';
 import { LucideAngularModule } from 'lucide-angular';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, forkJoin, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-range-slider',
@@ -80,6 +81,7 @@ export class RangeSliderComponent implements OnInit {
   private isGenerating: boolean = false;
 
   private themeService = inject(ThemeService);
+  private alcance = inject(AlcanceService);
   isDarkMode = this.themeService.isDarkMode;
 
   // Loading modal state
@@ -128,6 +130,16 @@ export class RangeSliderComponent implements OnInit {
 
     this.updateErrorArrays();
     this.cdr.markForCheck();
+
+    // Solo se ofrecen los tramos de las subcarteras asignadas al usuario.
+    forkJoin(this.tramoOptions.map(opcion => this.alcance.puedeTramo(opcion.value))).subscribe(puede => {
+      this.tramoOptions = this.tramoOptions.filter((_, i) => puede[i]);
+      if (!this.tramoOptions.some(opcion => opcion.value === this.campaignName)) {
+        this.campaignName = this.tramoOptions[0]?.value ?? '';
+        this.onTramoChange();
+      }
+      this.cdr.markForCheck();
+    });
   }
 
   private updateErrorArrays() {
@@ -410,6 +422,11 @@ export class RangeSliderComponent implements OnInit {
 
     if (this.isGenerating) {
       console.log('⏸️ Ya se está generando, saliendo...');
+      return;
+    }
+
+    if (!this.campaignName) {
+      this.toastService.error('No tienes ningún tramo asignado para generar campañas');
       return;
     }
 

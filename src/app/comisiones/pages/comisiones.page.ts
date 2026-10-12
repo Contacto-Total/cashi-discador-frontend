@@ -96,6 +96,11 @@ interface OpcionSubcartera {
                   <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcel(r)">
                     <cmx-icon name="download" [size]="15" /> {{ descargando() ? 'Generando…' : 'Excel' }}
                   </button>
+                  @if (tieneLtd(r)) {
+                    <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcelLtd(r)">
+                      <cmx-icon name="download" [size]="15" /> Excel LTD
+                    </button>
+                  }
                 }
                 @if (r.periodo.estado === 'EN_CURSO') {
                   <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(r)">
@@ -681,6 +686,25 @@ export class ComisionesPage implements OnInit {
       error: e => {
         this.descargando.set(false);
         this.toast.error(mensajeError(e, 'No se pudo generar el Excel.'));
+      }
+    });
+  }
+
+  /** El período tiene algún bono LTD activo */
+  tieneLtd(r: ReportePeriodo): boolean {
+    return (r.periodo.bonos ?? []).some(b => b.tipo === 'LTD' && b.activo !== false);
+  }
+
+  descargarExcelLtd(r: ReportePeriodo): void {
+    this.descargando.set(true);
+    this.service.exportarExcelLtd(r.periodo.id).subscribe({
+      next: blob => {
+        this.descargando.set(false);
+        descargar(blob, nombreArchivo('Bono_LTD', nombreConGrupo(r.periodo.nombreSubcartera, r.periodo.grupo), this.codigo()));
+      },
+      error: e => {
+        this.descargando.set(false);
+        this.toast.error(mensajeError(e, 'No se pudo generar el Excel LTD.'));
       }
     });
   }

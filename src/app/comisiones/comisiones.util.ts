@@ -9,6 +9,7 @@ import {
   GrupoComision,
   LineaDesglose,
   MetaCantidad,
+  MotivoExclusion,
   ParticipanteComision,
   RolComision,
   TipoBono,
@@ -73,8 +74,22 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
   CONTENCION: {
     etiqueta: 'Contención',
     logrado: 'Contención',
-    descripcion: 'Cada cliente CONTENIDO con pago conciliado suma su saldo capital asignado, una sola vez.'
+    descripcion: 'Cada cliente que el asesor contiene suma su saldo capital asignado, una sola vez: la PDP es del día de la contención o antes y cubre la baja 30.'
   }
+};
+
+/** Por qué un pago no suma, como se muestra */
+export const MOTIVO_INFO: Record<MotivoExclusion, string> = {
+  PAGO_SISTEMA: 'Pago voluntario (registrado por el supervisor)',
+  SUPERVISOR_NO_ASIGNA: 'El supervisor no lo asignó al asesor',
+  USUARIO_EXCLUIDO: 'Usuario excluido',
+  AGENTE_NO_PARTICIPANTE: 'La gestión es de alguien que no participa',
+  PARTICIPANTE_QUITADO: 'Participante quitado',
+  NO_CONTENIDO: 'Cliente no contenido',
+  YA_CONTENIDO: 'Cliente ya venía contenido',
+  PDP_DESPUES_CONTENCION: 'PDP después de la contención',
+  SIN_BAJA30: 'Cliente sin baja 30',
+  PDP_MENOR_BAJA30: 'PDP menor a la baja 30'
 };
 
 /** Cartera de Tramo Propio como se muestra; vacío en GENERAL */

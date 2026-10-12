@@ -13,6 +13,30 @@ export function estadoVisible(d: AsistenciaDia): EstadoAsistencia {
 }
 
 /**
+ * Qué pasa con las horas del día, que el estado no dice: «Puntual» solo habla
+ * de la entrada. La solicitud que cubre el día y lo que queda por recuperar, o
+ * lo que debe si no hay ninguna. Lo que faltó por llegar tarde ya lo dice la
+ * tardanza y no se muestra como deuda. Null si no hay nada que señalar.
+ */
+export function notaDeHoras(d: AsistenciaDia): { texto: string; clase: string } | null {
+  const horas = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const justificado = 'bg-[#eef2ff] text-[#3730a3] dark:bg-indigo-950/50 dark:text-indigo-300';
+  if (d.solicitud && d.estadoSolicitud === 'APROBADA') {
+    // El día justificado ya lleva el nombre de la solicitud en su estado: solo falta lo que debe.
+    if (d.estado === 'JUSTIFICADO') {
+      return d.minutosDeuda ? { texto: `Debe ${horas(d.minutosDeuda)}`, clase: justificado } : null;
+    }
+    return { texto: d.minutosDeuda ? `${d.solicitud} · debe ${horas(d.minutosDeuda)}` : d.solicitud, clase: justificado };
+  }
+  if (d.solicitud && d.estadoSolicitud) {
+    return { texto: `${d.solicitud} en revisión`, clase: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' };
+  }
+  return d.minutosDebe && d.estado !== 'NO_LABORABLE' && d.estado !== 'JUSTIFICADO'
+    ? { texto: `Debe ${horas(d.minutosDebe)}`, clase: 'bg-[#fdeee0] text-[#c2410c] dark:bg-orange-950/50 dark:text-orange-300' }
+    : null;
+}
+
+/**
  * Las clases que comparten las pantallas de asistencia.
  *
  * Están aquí y no repetidas en cada componente porque son los tokens de Cashi
@@ -31,6 +55,14 @@ export const ESTILOS = {
   botonPrimario: 'inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-[#0f172a] bg-[#0f172a] px-3.5 text-[13.5px] font-semibold !text-white transition-colors hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-45 dark:border-white dark:bg-white dark:!text-[#0f172a] dark:hover:bg-slate-200',
   /** El botón pequeño de las filas de una tabla, con su texto: el icono solo no dice qué hace. */
   botonChico: 'inline-flex h-[30px] items-center gap-[5px] rounded-lg border border-[#8491a3] bg-white px-[11px] text-[12px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-default disabled:opacity-45 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  /** Formulario de solicitud: las dos opciones de «para cuándo», el segmentado de «qué necesita» y el recuadro del total. */
+  opcion: 'flex flex-col items-start gap-0.5 rounded-[10px] border border-[#8491a3] bg-white px-3 py-2.5 text-left !text-[#0f172a] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-100 dark:hover:bg-slate-700',
+  opcionElegida: '!border-[#0f172a] !bg-[#f4f6f9] shadow-[inset_0_0_0_1px_#0f172a] dark:!border-white dark:!bg-slate-700 dark:shadow-[inset_0_0_0_1px_#ffffff]',
+  segmento: 'h-8 whitespace-nowrap rounded-[7px] px-1.5 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 max-[440px]:px-0.5 max-[440px]:text-[11.5px]',
+  segmentoLibre: '!text-[#5f6c80] hover:!text-[#0f172a] dark:!text-slate-400 dark:hover:!text-slate-100',
+  segmentoElegido: 'bg-[#0f172a] !text-white dark:bg-white dark:!text-[#0f172a]',
+  calculo: 'flex flex-wrap items-center justify-between gap-x-3.5 gap-y-1 rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-3.5 py-2.5 dark:border-slate-700 dark:bg-slate-800',
+  pastilla: 'inline-flex items-center whitespace-nowrap rounded-full px-[9px] py-0.5 text-[11.5px] font-bold',
   botonIcono: 'inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[7px] border border-[#e6e9ee] bg-white !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-default disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:!text-slate-200',
   th: 'whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   td: 'whitespace-nowrap px-3 py-2 text-[12.5px] tabular-nums',
