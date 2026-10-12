@@ -43,6 +43,7 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   private refreshInterval: any;
   private clearCooldownTimer: ReturnType<typeof setInterval> | null = null;
+  private recargaPendiente: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private adminMonitoringService: AdminMonitoringService,
@@ -69,6 +70,9 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
     }
     if (this.clearCooldownTimer) {
       clearInterval(this.clearCooldownTimer);
+    }
+    if (this.recargaPendiente) {
+      clearTimeout(this.recargaPendiente);
     }
   }
 
@@ -154,14 +158,21 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
       // Remove ended call
       this.activeCalls = this.activeCalls.filter(c => c.callUuid !== callData.callUuid);
     } else {
-      // Update or add call
-      const index = this.activeCalls.findIndex(c => c.callUuid === callData.callUuid);
-      if (index >= 0) {
-        this.activeCalls[index] = callData;
-      } else {
-        this.activeCalls.push(callData);
-      }
+      // El aviso llega a todos los supervisores y solo dice qué llamada cambió: sus datos se
+      // piden a la lista, que ya viene acotada a las subcarteras del usuario.
+      this.recargarPronto();
     }
+  }
+
+  /** Vuelve a pedir la lista, como mucho una vez por segundo aunque lleguen muchos avisos. */
+  private recargarPronto(): void {
+    if (this.recargaPendiente) {
+      return;
+    }
+    this.recargaPendiente = setTimeout(() => {
+      this.recargaPendiente = null;
+      this.loadActiveCalls();
+    }, 1000);
   }
 
   handleMonitoringEvent(event: any): void {
