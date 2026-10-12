@@ -142,9 +142,12 @@ export class AppComponent implements OnInit, OnDestroy {
     if (u !== this.cuentaDe) {
       this.cuentaDe = u;
       const letras = `${u?.firstName?.trim()?.[0] ?? ''}${u?.lastName?.trim()?.[0] ?? ''}` || (u?.username ?? '').slice(0, 2);
+      // El rol se muestra con el nombre con que está asignado; con varios roles va el tipo
+      // que los agrupa, porque la lista no cabe en el pie del menú.
+      const roles = u?.roles ?? [];
       this.cuentaCalculada = u ? {
         usuario: u.username,
-        rol: u.role === 'AGENT' ? 'ASESOR' : u.role,
+        rol: roles.length === 1 ? roles[0] : (u.role === 'AGENT' ? 'ASESOR' : u.role),
         anexo: u.sipExtension || null,
         iniciales: letras.toUpperCase()
       } : null;
