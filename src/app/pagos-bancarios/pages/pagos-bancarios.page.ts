@@ -16,9 +16,15 @@ import {
   BcpPagoManual,
   BcpPagoManualFiltros,
   AprobarArchivoBcpResponse,
+  PagoBancoPendiente,
+  PagoBancoPorResolver,
   PrevalidacionArchivoBcp,
   ResumenConciliacionCliente
 } from '../models/bcp-archivo.model';
+import { aFechaIso, infoCategoria } from '../models/categoria-pago';
+import { ArchivoDropzoneWidget } from '../widgets/archivo-dropzone.widget';
+import { BcpPagosPendientesWidget } from '../widgets/bcp-pagos-pendientes.widget';
+import { PagoPendienteControlesDialogWidget } from '../widgets/pago-pendiente-controles-dialog.widget';
 import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
 import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
@@ -28,7 +34,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -167,33 +173,21 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           </div>
 
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div class="flex-1">
-              <label
-                for="file-upload"
-                class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer
-                       border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500
-                       bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg class="w-8 h-8 mb-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                  </svg>
-                  @if (selectedFile()) {
-                    <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">{{ selectedFile()?.name }}</p>
-                    <p class="text-xs text-slate-600 dark:text-slate-400">{{ formatFileSize(selectedFile()?.size || 0) }}</p>
-                  } @else {
-                    <p class="mb-2 text-sm text-slate-600 dark:text-slate-400">
-                      <span class="font-semibold">Click para seleccionar</span> o arrastra el archivo
-                    </p>
-                    <p class="text-xs text-slate-600 dark:text-slate-400">Solo archivos TXT</p>
-                  }
-                </div>
-                <input id="file-upload" type="file" class="hidden" accept=".txt" (change)="onFileSelected($event)" />
-              </label>
+            <div class="flex-1 w-full">
+              <app-archivo-dropzone
+                inputId="file-upload"
+                [extensiones]="['.txt']"
+                descripcion="Solo archivos TXT"
+                [file]="selectedFile()"
+                tono="blue"
+                [disabled]="isLoading()"
+                (fileSelected)="onArchivoSeleccionado($event)"
+                (rejected)="onArchivoRechazado($event)"
+              ></app-archivo-dropzone>
             </div>
 
             <button
+              type="button"
               (click)="procesarArchivo()"
               [disabled]="!selectedFile() || isLoading() || !hasRequiredBcpContext()"
               class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
@@ -214,7 +208,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           </div>
 
           @if (errorMessage()) {
-            <div class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div role="alert" class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p class="text-red-700 dark:text-red-400">{{ errorMessage() }}</p>
             </div>
           }
@@ -254,13 +248,13 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           @if (getPrevalidacionProcesada().length > 0) {
             <app-bcp-prevalidacion-archivo
               [data]="getPrevalidacionProcesadaFiltrada()"
-              [todosAprobables]="resultado()?.todosAprobables === true"
               [approvalEnabled]="canAprobarArchivo()"
               [isSaving]="isApprovingArchivo()"
               [pagosDuplicados]="resultado()?.pagosDuplicados || []"
               [completed]="archivoAprobado()"
               (guardar)="aprobarArchivo($event)"
               (documentoClick)="abrirResumenConciliacionBcp($event)"
+              (resolver)="resolverFila($event, 'bcp')"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -284,10 +278,13 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           }
 
           @if (resultadoAprobacion(); as aprobacion) {
-            <div class="mb-6 rounded-lg border p-4" [class]="aprobacion.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+            <div [attr.role]="aprobacion.exitoso ? 'status' : 'alert'" class="mb-6 rounded-lg border p-4" [class]="aprobacion.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
               <p class="font-semibold">{{ aprobacion.mensaje }}</p>
               @if (aprobacion.exitoso) {
-                <p class="mt-1 text-sm">Archivo ID: {{ aprobacion.archivoId }} · Pagos insertados: {{ aprobacion.pagosInsertados }} · Verificados: {{ aprobacion.pagosVerificados }} · Conciliaciones: {{ aprobacion.conciliacionesAprobadas }}</p>
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacion.archivoId }} · Pagos guardados: {{ aprobacion.pagosInsertados }} · Conciliaciones: {{ aprobacion.conciliacionesAprobadas }} · Pendientes: {{ aprobacion.pagosPendientes ?? 0 }}</p>
+                @if (resumenAprobacion(aprobacion).length > 0) {
+                  <p class="mt-1 text-sm">{{ resumenAprobacion(aprobacion).join(' · ') }}</p>
+                }
               }
               @if (aprobacion.errores && aprobacion.errores.length > 0) {
                 <ul class="mt-2 list-disc pl-5 text-sm">
@@ -299,6 +296,18 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
             </div>
           }
 
+        }
+
+        @if (hasRequiredBcpContext()) {
+          <app-bcp-pagos-pendientes
+            idPrefix="pendientes-bcp"
+            [tenantId]="selectedTenantId"
+            [carteraId]="selectedPortfolioId"
+            [subcarteraId]="selectedSubPortfolioId"
+            [refresco]="refrescoPendientes()"
+            (resolver)="resolverPendiente($event, 'bcp')"
+            (documentoClick)="abrirResumenPendiente($event, 'bcp')"
+          ></app-bcp-pagos-pendientes>
         }
       }
 
@@ -813,33 +822,21 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           </div>
 
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div class="flex-1">
-              <label
-                for="file-upload-oh"
-                class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer
-                       border-purple-300 dark:border-purple-600 hover:border-purple-400 dark:hover:border-purple-500
-                       bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-              >
-                <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg class="w-8 h-8 mb-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                  @if (selectedFileOh()) {
-                    <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">{{ selectedFileOh()?.name }}</p>
-                    <p class="text-xs text-slate-600 dark:text-slate-400">{{ formatFileSize(selectedFileOh()?.size || 0) }}</p>
-                  } @else {
-                    <p class="mb-2 text-sm text-slate-600 dark:text-slate-400">
-                      <span class="font-semibold">Click para seleccionar</span> o arrastra el archivo
-                    </p>
-                    <p class="text-xs text-slate-600 dark:text-slate-400">Archivos Excel (.xlsx, .xls)</p>
-                  }
-                </div>
-                <input id="file-upload-oh" type="file" class="hidden" accept=".xlsx,.xls" (change)="onFileSelectedOh($event)" />
-              </label>
+            <div class="flex-1 w-full">
+              <app-archivo-dropzone
+                inputId="file-upload-oh"
+                [extensiones]="['.xlsx', '.xls']"
+                descripcion="Archivos Excel (.xlsx, .xls)"
+                [file]="selectedFileOh()"
+                tono="purple"
+                [disabled]="isLoadingOh()"
+                (fileSelected)="onArchivoSeleccionadoOh($event)"
+                (rejected)="onArchivoRechazadoOh($event)"
+              ></app-archivo-dropzone>
             </div>
 
             <button
+              type="button"
               (click)="procesarArchivoOh()"
               [disabled]="!selectedFileOh() || !hasRequiredOhContext() || isLoadingOh()"
               class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
@@ -860,7 +857,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           </div>
 
           @if (errorMessageOh()) {
-            <div class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div role="alert" class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p class="text-red-700 dark:text-red-400">{{ errorMessageOh() }}</p>
             </div>
           }
@@ -900,13 +897,13 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
           @if (getPrevalidacionOhProcesadaFiltrada().length > 0) {
             <app-bcp-prevalidacion-archivo
               [data]="getPrevalidacionOhProcesadaFiltrada()"
-              [todosAprobables]="resultadoOh()?.todosAprobables === true"
               [approvalEnabled]="canAprobarArchivoOh()"
               [isSaving]="isApprovingArchivoOh()"
               [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
               [completed]="archivoOhAprobado()"
               (guardar)="aprobarArchivoOh($event)"
               (documentoClick)="abrirResumenConciliacionOh($event)"
+              (resolver)="resolverFila($event, 'oh')"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -925,11 +922,18 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
             ></app-bcp-no-procesados>
           }
 
+          @if (getNoProcesadosOh().length > 0) {
+            <app-bcp-no-procesados [data]="getNoProcesadosOh()"></app-bcp-no-procesados>
+          }
+
           @if (resultadoAprobacionOh(); as aprobacionOh) {
-            <div class="mb-6 rounded-lg border p-4" [class]="aprobacionOh.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+            <div [attr.role]="aprobacionOh.exitoso ? 'status' : 'alert'" class="mb-6 rounded-lg border p-4" [class]="aprobacionOh.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
               <p class="font-semibold">{{ aprobacionOh.mensaje }}</p>
               @if (aprobacionOh.exitoso) {
-                <p class="mt-1 text-sm">Archivo ID: {{ aprobacionOh.archivoId }} · Pagos insertados: {{ aprobacionOh.pagosInsertados }} · Verificados: {{ aprobacionOh.pagosVerificados }} · Conciliaciones: {{ aprobacionOh.conciliacionesAprobadas }}</p>
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacionOh.archivoId }} · Pagos guardados: {{ aprobacionOh.pagosInsertados }} · Conciliaciones: {{ aprobacionOh.conciliacionesAprobadas }} · Pendientes: {{ aprobacionOh.pagosPendientes ?? 0 }}</p>
+                @if (resumenAprobacion(aprobacionOh).length > 0) {
+                  <p class="mt-1 text-sm">{{ resumenAprobacion(aprobacionOh).join(' · ') }}</p>
+                }
               }
               @if (aprobacionOh.errores && aprobacionOh.errores.length > 0) {
                 <ul class="mt-2 list-disc pl-5 text-sm">
@@ -940,6 +944,18 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
               }
             </div>
           }
+        }
+
+        @if (hasRequiredOhContext()) {
+          <app-bcp-pagos-pendientes
+            idPrefix="pendientes-oh"
+            [tenantId]="selectedTenantIdOh"
+            [carteraId]="selectedPortfolioIdOh"
+            [subcarteraId]="selectedSubPortfolioIdOh"
+            [refresco]="refrescoPendientes()"
+            (resolver)="resolverPendiente($event, 'oh')"
+            (documentoClick)="abrirResumenPendiente($event, 'oh')"
+          ></app-bcp-pagos-pendientes>
         }
       }
 
@@ -1000,6 +1016,14 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
         (close)="cerrarResumenConciliacion()"
         (refreshRequested)="refrescarResumenConciliacion()"
       ></app-cliente-resumen-conciliacion-drawer>
+
+      <app-pago-pendiente-controles-dialog
+        [pago]="pagoPorResolver()"
+        [tenantId]="contextoResolver().tenantId"
+        [carteraId]="contextoResolver().carteraId"
+        [subcarteraId]="contextoResolver().subcarteraId"
+        (cerrado)="onResolverCerrado($event)"
+      ></app-pago-pendiente-controles-dialog>
     </div>
   `
 })
@@ -1070,6 +1094,13 @@ export class PagosBancariosPage implements OnInit {
   resumenClienteError = signal<string | null>(null);
   resumenClienteDocumento = signal<string | null>(null);
   resumenCliente = signal<ResumenConciliacionCliente | null>(null);
+
+  // Diálogo para resolver un pago pendiente
+  pagoPorResolver = signal<PagoBancoPorResolver | null>(null);
+  refrescoPendientes = signal(0);
+  private origenResolver: 'bcp' | 'oh' = 'bcp';
+  // true si el pago ya está guardado; false si viene de la vista previa del archivo.
+  private resolverPagoGuardado = false;
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
@@ -1297,22 +1328,100 @@ export class PagosBancariosPage implements OnInit {
     });
   }
 
-  // === Carga Masiva ===
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      const file = input.files[0];
-      if (!file.name.toLowerCase().endsWith('.txt')) {
-        this.errorMessage.set('Por favor seleccione un archivo TXT');
-        this.selectedFile.set(null);
-        return;
-      }
-      this.selectedFile.set(file);
-      this.errorMessage.set(null);
-      this.resultado.set(null);
-      this.resultadoAprobacion.set(null);
-      this.archivoAprobado.set(false);
+  // === Resolver pagos pendientes ===
+  resolverFila(row: PrevalidacionArchivoBcp, origen: 'bcp' | 'oh'): void {
+    const fila: any = row;
+    const documento = String(fila.documentoBanco || fila.documento_banco || '').trim();
+    if (!documento) return;
+
+    this.abrirResolver({
+      documento,
+      fechaBanco: aFechaIso(fila.fechaBanco ?? fila.fecha_banco),
+      montoBanco: Number(fila.montoBanco ?? fila.monto_banco ?? 0),
+      numeroOperacion: fila.numeroOperacion ?? fila.numero_operacion ?? null,
+      categoria: fila.categoria ?? null,
+      motivo: fila.motivo ?? fila.estadoPrevalidacion ?? null
+    }, origen, false);
+  }
+
+  resolverPendiente(pago: PagoBancoPendiente, origen: 'bcp' | 'oh'): void {
+    this.abrirResolver({
+      documento: pago.documento,
+      fechaBanco: aFechaIso(pago.fechaBanco),
+      montoBanco: Number(pago.montoBanco),
+      numeroOperacion: pago.numeroOperacion,
+      categoria: pago.categoria,
+      motivo: pago.motivo
+    }, origen, true);
+  }
+
+  abrirResumenPendiente(pago: PagoBancoPendiente, origen: 'bcp' | 'oh'): void {
+    this.abrirResumenConciliacion({ documentoBanco: pago.documento } as PrevalidacionArchivoBcp, origen);
+  }
+
+  contextoResolver(): { tenantId: number; carteraId: number; subcarteraId: number } {
+    return this.origenResolver === 'bcp'
+      ? { tenantId: this.selectedTenantId, carteraId: this.selectedPortfolioId, subcarteraId: this.selectedSubPortfolioId }
+      : { tenantId: this.selectedTenantIdOh, carteraId: this.selectedPortfolioIdOh, subcarteraId: this.selectedSubPortfolioIdOh };
+  }
+
+  onResolverCerrado(evento: { documento: string; huboCambios: boolean }): void {
+    const origen = this.origenResolver;
+    const pagoGuardado = this.resolverPagoGuardado;
+    this.pagoPorResolver.set(null);
+    if (!evento.huboCambios) return;
+
+    // La corrección cambió los pagos del asesor: la vista previa en pantalla ya no es válida.
+    this.recargarVistaPrevia(origen);
+
+    if (!pagoGuardado) {
+      this.refrescoPendientes.update(valor => valor + 1);
+      return;
     }
+    this.bcpService.reevaluarPendientesCliente(evento.documento, this.contextoDe(origen)).subscribe({
+      next: () => this.refrescoPendientes.update(valor => valor + 1),
+      error: () => this.refrescoPendientes.update(valor => valor + 1)
+    });
+  }
+
+  private abrirResolver(pago: PagoBancoPorResolver, origen: 'bcp' | 'oh', pagoGuardado: boolean): void {
+    this.origenResolver = origen;
+    this.resolverPagoGuardado = pagoGuardado;
+    this.pagoPorResolver.set(pago);
+  }
+
+  private recargarVistaPrevia(origen: 'bcp' | 'oh'): void {
+    if (origen === 'bcp' && this.selectedFile() && this.resultado() && !this.archivoAprobado()) {
+      this.procesarArchivo();
+    }
+    if (origen === 'oh' && this.selectedFileOh() && this.resultadoOh() && !this.archivoOhAprobado()) {
+      this.procesarArchivoOh();
+    }
+  }
+
+  private contextoDe(origen: 'bcp' | 'oh'): { tenantId: number; carteraId: number; subcarteraId: number } {
+    return origen === 'bcp'
+      ? { tenantId: this.selectedTenantId, carteraId: this.selectedPortfolioId, subcarteraId: this.selectedSubPortfolioId }
+      : { tenantId: this.selectedTenantIdOh, carteraId: this.selectedPortfolioIdOh, subcarteraId: this.selectedSubPortfolioIdOh };
+  }
+
+  /** Categorías con su cantidad, para el resumen que se muestra después de guardar. */
+  resumenAprobacion(aprobacion: AprobarArchivoBcpResponse): string[] {
+    return Object.entries(aprobacion.resumenCategorias || {})
+      .map(([categoria, total]) => `${infoCategoria(categoria).label}: ${total}`);
+  }
+
+  // === Carga Masiva ===
+  onArchivoSeleccionado(file: File): void {
+    this.selectedFile.set(file);
+    this.errorMessage.set(null);
+    this.resultado.set(null);
+    this.resultadoAprobacion.set(null);
+    this.archivoAprobado.set(false);
+  }
+
+  onArchivoRechazado(mensaje: string): void {
+    this.errorMessage.set(mensaje);
   }
 
   procesarArchivo(): void {
@@ -1351,8 +1460,18 @@ export class PagosBancariosPage implements OnInit {
   getPrevalidacionProcesada(): PrevalidacionArchivoBcp[] {
     const resultado: any = this.resultado();
     const rows = resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
-    return rows.filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
-      && !this.isPagoYaConciliado(row));
+    return rows.filter((row: any) => !this.isFueraDeContexto(row) && !this.isPagoYaConciliado(row));
+  }
+
+  /**
+   * Pagos de clientes que no están en la subcartera elegida. No se guardan aquí:
+   * el mismo archivo se carga después en la subcartera a la que pertenecen.
+   */
+  private isFueraDeContexto(row: any): boolean {
+    const estado = row?.estadoPrevalidacion || row?.estado_prevalidacion;
+    return row?.categoria === 'CLIENTE_NO_ENCONTRADO'
+      || estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
+      || estado === 'DOCUMENTO_NO_EXISTE_EN_CLIENTES';
   }
 
   getPrevalidacionProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
@@ -1390,11 +1509,8 @@ export class PagosBancariosPage implements OnInit {
   }
 
   canAprobarArchivo(): boolean {
-    const prevalidacion = this.getPrevalidacionProcesadaFiltrada();
-
-    return !this.archivoAprobado()
-      && prevalidacion.length > 0
-      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR');
+    // Se guarda todo: un pago en revisión ya no bloquea el archivo.
+    return !this.archivoAprobado() && this.getPrevalidacionProcesadaFiltrada().length > 0;
   }
 
   aprobarArchivo(filasAprobadas: PrevalidacionArchivoBcp[]): void {
@@ -1414,7 +1530,6 @@ export class PagosBancariosPage implements OnInit {
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
       detalles: paresAprobados.map(par => par.detalle),
-      prevalidacion: paresAprobados.map(par => par.prevalidacion),
       tenantId: this.selectedTenantId,
       carteraId: this.selectedPortfolioId,
       subcarteraId: this.selectedSubPortfolioId,
@@ -1429,6 +1544,7 @@ export class PagosBancariosPage implements OnInit {
         if (aprobacion.exitoso) {
           this.selectedFile.set(null);
           this.archivoAprobado.set(true);
+          this.refrescoPendientes.update(valor => valor + 1);
         }
       },
       error: (error) => {
@@ -1462,6 +1578,8 @@ export class PagosBancariosPage implements OnInit {
       pagosInsertados: response?.pagosInsertados ?? 0,
       pagosVerificados: response?.pagosVerificados ?? 0,
       conciliacionesAprobadas: response?.conciliacionesAprobadas ?? 0,
+      pagosPendientes: response?.pagosPendientes ?? 0,
+      resumenCategorias: response?.resumenCategorias ?? {},
       errores
     };
   }
@@ -1471,11 +1589,6 @@ export class PagosBancariosPage implements OnInit {
     const value = row?.[camelKey] ?? row?.[snakeKey];
     if (value === null || value === undefined || value === '') return true;
     return Number(value) === Number(selectedId);
-  }
-
-  private isPrevalidacionLista(row: any): boolean {
-    return !this.isPagoYaConciliado(row)
-      && (row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR');
   }
 
   private isPagoYaConciliado(row: any): boolean {
@@ -1505,27 +1618,21 @@ export class PagosBancariosPage implements OnInit {
       .map((detalle: any, index: number) => ({ detalle, prevalidacion: prevalidacion[index] }))
       .filter(par => !!par.prevalidacion
         && aprobadas.has(par.prevalidacion)
-        && this.isPrevalidacionLista(par.prevalidacion)
+        && !this.isPagoYaConciliado(par.prevalidacion)
         && !this.isPrevalidacionDuplicada(par.prevalidacion));
   }
 
   // === Carga OH ===
-  onFileSelectedOh(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      const file = input.files[0];
-      const ext = file.name.toLowerCase();
-      if (!ext.endsWith('.xlsx') && !ext.endsWith('.xls')) {
-        this.errorMessageOh.set('Por favor seleccione un archivo Excel (.xlsx o .xls)');
-        this.selectedFileOh.set(null);
-        return;
-      }
-      this.selectedFileOh.set(file);
-      this.errorMessageOh.set(null);
-      this.resultadoOh.set(null);
-      this.resultadoAprobacionOh.set(null);
-      this.archivoOhAprobado.set(false);
-    }
+  onArchivoSeleccionadoOh(file: File): void {
+    this.selectedFileOh.set(file);
+    this.errorMessageOh.set(null);
+    this.resultadoOh.set(null);
+    this.resultadoAprobacionOh.set(null);
+    this.archivoOhAprobado.set(false);
+  }
+
+  onArchivoRechazadoOh(mensaje: string): void {
+    this.errorMessageOh.set(mensaje);
   }
 
   procesarArchivoOh(): void {
@@ -1563,8 +1670,11 @@ export class PagosBancariosPage implements OnInit {
 
   getPrevalidacionOhProcesada(): PrevalidacionArchivoBcp[] {
     return this.getPrevalidacionOhConDetalle()
-      .filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
-        && !this.isPagoYaConciliado(row));
+      .filter((row: any) => !this.isFueraDeContexto(row) && !this.isPagoYaConciliado(row));
+  }
+
+  getNoProcesadosOh(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOhConDetalle().filter(row => this.isFueraDeContexto(row));
   }
 
   private getPrevalidacionOhConDetalle(): PrevalidacionArchivoBcp[] {
@@ -1609,11 +1719,7 @@ export class PagosBancariosPage implements OnInit {
   }
 
   canAprobarArchivoOh(): boolean {
-    const prevalidacion = this.getPrevalidacionOhProcesadaFiltrada();
-
-    return !this.archivoOhAprobado()
-      && this.resultadoOh()?.todosAprobables === true
-      && prevalidacion.length > 0;
+    return !this.archivoOhAprobado() && this.getPrevalidacionOhProcesadaFiltrada().length > 0;
   }
 
   aprobarArchivoOh(filasAprobadas: PrevalidacionArchivoBcp[]): void {
@@ -1633,7 +1739,6 @@ export class PagosBancariosPage implements OnInit {
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
       detalles: paresAprobados.map(par => par.detalle),
-      prevalidacion: paresAprobados.map(par => par.prevalidacion),
       tenantId: this.selectedTenantIdOh,
       carteraId: this.selectedPortfolioIdOh,
       subcarteraId: this.selectedSubPortfolioIdOh,
@@ -1648,6 +1753,7 @@ export class PagosBancariosPage implements OnInit {
         if (aprobacion.exitoso) {
           this.selectedFileOh.set(null);
           this.archivoOhAprobado.set(true);
+          this.refrescoPendientes.update(valor => valor + 1);
         }
       },
       error: (error) => {
@@ -1663,7 +1769,7 @@ export class PagosBancariosPage implements OnInit {
     const aprobadas = new Set(filasAprobadas);
 
     return filasAprobadas
-      .filter(row => aprobadas.has(row) && this.isPrevalidacionLista(row))
+      .filter(row => aprobadas.has(row) && !this.isPagoYaConciliado(row))
       .map((row: any) => {
         const index = Number(row.__prevalidacionIndex);
         return { detalle: detalles[index], prevalidacion: prevalidacion[index] };

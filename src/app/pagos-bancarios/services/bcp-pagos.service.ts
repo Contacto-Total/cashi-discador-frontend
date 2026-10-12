@@ -15,6 +15,8 @@ import {
   ArchivoCargaDetalleRequest,
   ArchivoCargaHistorialPage,
   HistorialArchivosCargaRequest,
+  PagoBancoPendiente,
+  ReevaluacionPendientesResponse,
   ResumenConciliacionCliente,
   ResumenConciliacionClienteRequest
 } from '../models/bcp-archivo.model';
@@ -48,6 +50,34 @@ export class BcpPagosService {
   aprobarArchivo(request: AprobarArchivoBcpRequest): Observable<AprobarArchivoBcpResponse> {
     console.log('[BCP] Aprobando archivo:', request.nombreArchivo);
     return this.http.post<AprobarArchivoBcpResponse>(`${this.baseUrl}/aprobar-archivo`, request);
+  }
+
+  /** Pagos guardados que siguen pendientes de conciliar en la subcartera. */
+  listarPagosPendientes(request: ResumenConciliacionClienteRequest): Observable<PagoBancoPendiente[]> {
+    return this.http.get<PagoBancoPendiente[]>(`${this.baseUrl}/pendientes`, { params: this.contextoParams(request) });
+  }
+
+  /** Vuelve a evaluar todos los pendientes de la subcartera. */
+  reevaluarPendientes(request: ResumenConciliacionClienteRequest): Observable<ReevaluacionPendientesResponse> {
+    return this.http.post<ReevaluacionPendientesResponse>(`${this.baseUrl}/pendientes/reevaluar`, null, {
+      params: this.contextoParams(request)
+    });
+  }
+
+  /** Vuelve a evaluar los pendientes de un cliente después de una corrección. */
+  reevaluarPendientesCliente(documento: string, request: ResumenConciliacionClienteRequest): Observable<ReevaluacionPendientesResponse> {
+    return this.http.post<ReevaluacionPendientesResponse>(
+      `${this.baseUrl}/clientes/${encodeURIComponent(documento)}/reevaluar-pendientes`,
+      null,
+      { params: this.contextoParams(request) }
+    );
+  }
+
+  private contextoParams(request: ResumenConciliacionClienteRequest): HttpParams {
+    return new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
   }
 
   obtenerResumenConciliacionCliente(documento: string, request: ResumenConciliacionClienteRequest): Observable<ResumenConciliacionCliente> {
