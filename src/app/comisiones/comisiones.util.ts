@@ -80,7 +80,7 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
 
 /** Por qué un pago no suma, como se muestra */
 export const MOTIVO_INFO: Record<MotivoExclusion, string> = {
-  PAGO_SISTEMA: 'Promesa o pago de un usuario de sistema',
+  PAGO_SISTEMA: 'Pago voluntario (registrado por el supervisor)',
   SUPERVISOR_NO_ASIGNA: 'El supervisor no lo asignó al asesor',
   USUARIO_EXCLUIDO: 'Usuario excluido',
   AGENTE_NO_PARTICIPANTE: 'La gestión es de alguien que no participa',

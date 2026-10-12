@@ -240,8 +240,9 @@ const B = 28;
                                     <td class="n">{{ pg.numeroCuota }}</td>
                                     @if (porCapital()) {
                                       @let suma = d.sumas.get(pg.conciliacionId) ?? 0;
-                                      <td>{{ pg.origenPdp || '—' }}</td>
-                                      <td class="n">{{ pg.montoBase != null ? (pg.montoBase | appNumber:'1.2-2') : '—' }}</td>
+                                      @let montoLibre = !pg.origenPdp && pg.montoBase == null;
+                                      <td [attr.title]="montoLibre ? 'El asesor registró la PDP como excepción con monto libre (sin campo base)' : null">{{ montoLibre ? 'Excepción monto libre' : pg.origenPdp || '—' }}</td>
+                                      <td class="n">{{ montoLibre ? 'No aplica' : pg.montoBase != null ? (pg.montoBase | appNumber:'1.2-2') : '—' }}</td>
                                       <td class="n" [attr.title]="pg.baja30 != null ? 'Baja 30: S/ ' + (pg.baja30 | appNumber:'1.2-2') + ' (' + pg.baja30Fuente + ')' : null">{{ pg.montoPromesa != null ? (pg.montoPromesa | appNumber:'1.2-2') : '—' }}</td>
                                       <td class="n" style="text-align:left">{{ pg.fechaContencion ? diaMes(pg.fechaContencion) : '—' }}</td>
                                       <td class="n" style="color:var(--cmx-ink-3)">{{ pg.recaudo ?? 0 | appNumber:'1.2-2' }}</td>
