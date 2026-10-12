@@ -4,8 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { UserRole } from '../../../core/models/user.model';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -64,7 +62,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   constructor(
     private campaignService: CampaignAdminService,
-    private authService: AuthService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
     private router: Router
@@ -127,7 +124,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
-        this.campaigns = this.filterByUserSubPortfolio(campaigns);
+        this.campaigns = campaigns;
         this.resolveCampaignScopeNames(this.campaigns);
         if (goToLastPage) {
           this.currentPage = this.totalPages || 1;
@@ -424,21 +421,13 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   private refreshCampaignsSilently(): void {
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
-        this.campaigns = this.filterByUserSubPortfolio(campaigns);
+        this.campaigns = campaigns;
         this.resolveCampaignScopeNames(this.campaigns);
       },
       error: (err) => {
         console.error('Error refreshing campaigns:', err);
       }
     });
-  }
-
-  private filterByUserSubPortfolio(campaigns: Campaign[]): Campaign[] {
-    const user = this.authService.getCurrentUser();
-    if (user?.role === UserRole.SUPERVISOR && user.subPortfolioId) {
-      return campaigns.filter(c => c.subPortfolioId === user.subPortfolioId);
-    }
-    return campaigns;
   }
 
   private resolveCampaignScopeNames(campaigns: Campaign[]): void {

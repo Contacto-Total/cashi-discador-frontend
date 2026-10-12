@@ -6,7 +6,6 @@ import { LucideAngularModule } from 'lucide-angular';
 import { PromiseManagementService } from './services/promise-management.service';
 import { PromesaGestion } from './models/promise.model';
 import { AuthService } from '../../../core/services/auth.service';
-import { UserRole } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-promise-management',
@@ -66,15 +65,8 @@ export class PromiseManagementComponent implements OnInit {
 
     observable.subscribe({
       next: (response) => {
-        const user = this.authService.getCurrentUser();
-        if (user?.role === UserRole.SUPERVISOR && user.subPortfolioId) {
-          const filtered = response.content.filter(p => p.idSubcartera === user.subPortfolioId);
-          this.promesas.set(filtered);
-          this.totalElements.set(filtered.length);
-        } else {
-          this.promesas.set(response.content);
-          this.totalElements.set(response.totalElements);
-        }
+        this.promesas.set(response.content);
+        this.totalElements.set(response.totalElements);
         this.totalPages.set(response.totalPages);
         this.loading.set(false);
       },
