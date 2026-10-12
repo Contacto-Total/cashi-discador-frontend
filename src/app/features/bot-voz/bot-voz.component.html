@@ -1226,7 +1226,7 @@
               @if (escalonesCastigo.length && !escalonesElegidos.length) {
                 <p [class]="ui.aviso + ' !m-0'">
                   <span class="flex pt-px"><lucide-angular name="alert-triangle" [size]="14" class="block"></lucide-angular></span>
-                  <span>Sin ningún escalón marcado, Clara no tendrá descuentos que ofrecer.</span>
+                  <span>Sin ningún escalón marcado, Clara no ofrece descuentos: negocia la deuda total en cuotas.</span>
                 </p>
               }
               <span [class]="ui.ayuda">
@@ -1237,7 +1237,7 @@
             <div class="flex flex-col gap-2">
               <span [class]="ui.subetiqueta">Descuentos que ofrece Clara, en orden</span>
               @if (!escalones.length) {
-                <p [class]="ui.ayuda + ' !m-0'">Sin escalones, esta cola hereda la curva de su subcartera.</p>
+                <p [class]="ui.ayuda + ' !m-0'">Sin escalones, Clara no ofrece descuentos: negocia la deuda total en cuotas.</p>
               }
               @for (e of escalones; track $index; let i = $index) {
                 <div class="flex flex-wrap items-center gap-2.5 rounded-lg border px-3 py-2"
