@@ -26,7 +26,8 @@ interface ResumenCategoria {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" aria-labelledby="prevalidacion-titulo">
+    <!-- relative: contiene el caption sr-only; sin esto se sale del scroll de .main-content y estira la página -->
+    <section class="relative bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" aria-labelledby="prevalidacion-titulo">
       <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 id="prevalidacion-titulo" class="text-lg font-semibold text-slate-800 dark:text-white">Resultado de la carga</h2>
@@ -47,7 +48,7 @@ interface ResumenCategoria {
             (click)="filtro = null"
             [attr.aria-pressed]="filtro === null"
             class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
-            [class]="filtro === null ? 'border-slate-800 bg-slate-800 text-white dark:border-white dark:bg-white dark:text-slate-900' : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'"
+            [class]="filtro === null ? 'border-blue-600 bg-blue-600 !text-white' : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'"
           >
             Todas ({{ data.length }})
           </button>

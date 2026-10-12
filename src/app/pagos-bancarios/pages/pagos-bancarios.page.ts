@@ -36,7 +36,8 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
   template: `
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
+    <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
+    <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
       <div class="mb-6 flex items-start justify-between">
         <div>

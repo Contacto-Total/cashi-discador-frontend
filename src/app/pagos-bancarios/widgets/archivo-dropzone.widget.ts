@@ -9,6 +9,8 @@ import { CommonModule } from '@angular/common';
   selector: 'app-archivo-dropzone',
   standalone: true,
   imports: [CommonModule],
+  // relative: contiene el aviso sr-only para que no se salga del scroll de la página
+  host: { class: 'relative block' },
   template: `
     <label
       [attr.for]="inputId"
