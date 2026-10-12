@@ -2,19 +2,24 @@ import { Component, computed, effect, inject, OnInit, signal, untracked } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { concatMap, from, toArray } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaReporte, Justificacion, TipoDia } from './asistencia.models';
+import { AsistenciaDia, AsistenciaReporte, Justificacion, SolicitudPrevista, TipoDia } from './asistencia.models';
 import {
   ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
   fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
 } from './asistencia.estilos';
 import { Visor, VisorArchivoComponent } from './visor-archivo.component';
 import { PaginadorComponent, pagina } from './paginador.component';
+
+const enHoras = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+/** Por debajo de esto, lo que faltó no es algo que pedir: es lo normal de entrar y salir a su hora. */
+const MINIMO_FALTANTE = 10;
 
 type TipoAlerta = 'MARCA' | 'PAUSA' | 'TARDANZA';
 
@@ -537,7 +542,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
           <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-quien">Para quién</label>
-              <select id="eq-quien" [class]="estilos.campo" [(ngModel)]="nueva.idUsuario">
+              <select id="eq-quien" [class]="estilos.campo" [ngModel]="nueva.idUsuario" (ngModelChange)="elegirPersona($event)">
                 @for (p of gente(); track p.idUsuario) {
                   <option [ngValue]="p.idUsuario">{{ p.nombreAgente }}</option>
                 }
@@ -545,36 +550,134 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             </div>
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-tipo">Tipo</label>
-              <select id="eq-tipo" [class]="estilos.campo" [(ngModel)]="nueva.idTipoDia">
+              <select id="eq-tipo" [class]="estilos.campo" [ngModel]="nueva.idTipoDia" (ngModelChange)="elegirTipo($event)">
                 @for (t of tipos(); track t.id) {
                   <option [ngValue]="t.id">{{ t.nombre }}</option>
                 }
               </select>
             </div>
-            <div class="flex gap-3">
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-desde">Desde</label>
-                <input id="eq-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
-                       [(ngModel)]="nueva.fechaDesde">
+
+            <!-- Permiso: primero para cuándo es. Cada caso trae solo lo que le toca. -->
+            @if (modo() === 'permiso') {
+              <div class="flex flex-col gap-1.5">
+                <span [class]="estilos.etiqueta" id="eq-rotulo-cuando">Para cuándo</span>
+                <div class="grid grid-cols-2 gap-2 max-[440px]:grid-cols-1" role="radiogroup" aria-labelledby="eq-rotulo-cuando">
+                  @for (o of CUANDO; track o.valor) {
+                    <button type="button" role="radio" [attr.aria-checked]="cuando() === o.valor"
+                            [class]="estilos.opcion + (cuando() === o.valor ? ' ' + estilos.opcionElegida : '')"
+                            (click)="elegirCuando(o.valor)">
+                      <strong class="text-[13px] font-bold">{{ o.titulo }}</strong>
+                      <small class="text-[11.5px] leading-[1.35] text-[#5f6c80] dark:text-slate-400">{{ o.pie }}</small>
+                    </button>
+                  }
+                </div>
               </div>
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-hasta">Hasta</label>
-                <input id="eq-hasta" type="date" [class]="estilos.campo" [min]="nueva.fechaDesde"
-                       [(ngModel)]="nueva.fechaHasta">
+            }
+
+            @if (verPasado()) {
+              <div class="flex flex-col gap-1.5">
+                <span [class]="estilos.etiqueta">Sus días sin completar</span>
+                <ul class="!m-0 list-none rounded-xl border border-[#e6e9ee] !px-3.5 !py-0.5 dark:border-slate-800">
+                  @for (f of sinCompletar(); track f.fecha) {
+                    <li class="flex items-center justify-between gap-3 border-b border-[#f1f3f6] py-[11px] last:border-0 dark:border-slate-800">
+                      <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-[13px]">
+                        <input type="checkbox" class="h-[13px] w-[13px] cursor-pointer [accent-color:auto]"
+                               [checked]="marcados().has(f.fecha)" (change)="alternarSinCompletar(f.fecha)">
+                        <span class="flex min-w-0 flex-col leading-[1.35]">
+                          <span>{{ f.etiqueta }}</span>
+                          <small class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.detalle }}</small>
+                        </span>
+                      </label>
+                      <span [class]="estilos.pastilla + ' ' + f.clase">{{ f.pastilla }}</span>
+                    </li>
+                  } @empty {
+                    <li class="py-[11px] text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ cargandoRecientes() ? 'Buscando sus días…' : 'No tiene días sin completar' }}</li>
+                  }
+                </ul>
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Solo de semanas sin cerrar. El permiso cubre las horas; la tardanza se mantiene.</p>
               </div>
-            </div>
+            }
+
+            <!-- Un día que viene: lo usan el permiso y la cita médica. -->
+            @if (verFuturo()) {
+              <div class="flex flex-col gap-1.5">
+                <span [class]="estilos.etiqueta" id="eq-rotulo-que">Qué necesita</span>
+                <div class="grid grid-cols-3 gap-0.5 rounded-[10px] border border-[#e6e9ee] p-[3px] dark:border-slate-700"
+                     role="radiogroup" aria-labelledby="eq-rotulo-que">
+                  @for (o of QUE; track o.valor) {
+                    <button type="button" role="radio" [attr.aria-checked]="que() === o.valor"
+                            [class]="estilos.segmento + ' ' + (que() === o.valor ? estilos.segmentoElegido : estilos.segmentoLibre)"
+                            (click)="elegirQue(o.valor)">{{ o.texto }}</button>
+                  }
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <label [class]="estilos.etiqueta" for="eq-dia">{{ que() === 'todo' ? 'Desde' : 'Día' }}</label>
+                  <input id="eq-dia" type="date" [class]="estilos.campo" [attr.min]="primerDiaFuturo()"
+                         [ngModel]="diaFuturo()" (ngModelChange)="cambiarDia($event)">
+                </div>
+                @if (que() === 'todo') {
+                  <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <label [class]="estilos.etiqueta" for="eq-dia-hasta">Hasta</label>
+                    <input id="eq-dia-hasta" type="date" [class]="estilos.campo" [attr.min]="diaFuturo()"
+                           [ngModel]="hastaFuturo()" (ngModelChange)="hastaFuturo.set($event); prever()">
+                  </div>
+                } @else {
+                  <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <label [class]="estilos.etiqueta" for="eq-hora">{{ que() === 'entrar' ? 'Entra a las' : 'Sale a las' }}</label>
+                    <input id="eq-hora" type="time" step="300" [class]="estilos.campo"
+                           [ngModel]="horaElegida()" (ngModelChange)="cambiarHora($event)">
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- El total, siempre a la vista: es lo que la persona queda debiendo. -->
+            @if (modo() !== 'rango') {
+              <div [class]="estilos.calculo" aria-live="polite">
+                <span class="flex min-w-0 flex-col leading-[1.4]">
+                  <strong class="text-[12.5px] font-bold">{{ total().titulo }}</strong>
+                  <small [class]="'text-[11.5px] ' + (total().mal ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#5f6c80] dark:text-slate-400')">{{ total().detalle }}</small>
+                </span>
+                @if (total().minutos !== undefined) {
+                  <span class="text-[22px] font-extrabold tracking-[-0.02em] tabular-nums">{{ total().minutos === null ? '—' : enHoras(total().minutos!) }}</span>
+                }
+              </div>
+            }
+
+            <!-- Los demás tipos: el rango de fechas. Con descanso médico, los días del certificado. -->
+            @if (modo() === 'rango') {
+              <div class="flex gap-3">
+                <div class="flex flex-1 flex-col gap-1.5">
+                  <label [class]="estilos.etiqueta" for="eq-desde">Desde</label>
+                  <input id="eq-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
+                         [(ngModel)]="nueva.fechaDesde">
+                </div>
+                <div class="flex flex-1 flex-col gap-1.5">
+                  <label [class]="estilos.etiqueta" for="eq-hasta">Hasta</label>
+                  <input id="eq-hasta" type="date" [class]="estilos.campo" [min]="nueva.fechaDesde"
+                         [(ngModel)]="nueva.fechaHasta">
+                </div>
+              </div>
+              @if (esDescanso()) {
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Los días del certificado. Son días completos: no cuentan como trabajados, incompletos ni con tardanza.</p>
+              }
+            }
+
+            @if (tipoElegido()?.exigeCertificado) {
+              <div class="flex flex-col gap-1.5">
+                <label [class]="estilos.etiqueta" for="eq-adjunto">{{ modo() === 'cita' ? 'Constancia de la cita' : 'Certificado' }}</label>
+                <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="!bg-transparent [font:revert] file:[all:revert]"
+                       (change)="elegirArchivo($event)">
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Obligatorio para este tipo · hasta 10 MB</p>
+              </div>
+            }
+
             <div class="flex flex-col gap-1.5">
               <label [class]="estilos.etiqueta" for="eq-comentario">Comentario</label>
               <textarea id="eq-comentario" rows="3" maxlength="500" [class]="estilos.area" placeholder="Qué pasó, en una línea"
                         [(ngModel)]="nueva.comentario"></textarea>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="eq-adjunto">Certificado o constancia</label>
-              <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="!bg-transparent [font:revert] file:[all:revert]"
-                     (change)="elegirArchivo($event)">
-              <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                {{ tipoElegido()?.exigeCertificado ? 'Obligatorio para este tipo' : 'Opcional' }} · hasta 10 MB
-              </p>
             </div>
             @if (error()) {
               <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
@@ -644,6 +747,104 @@ export class AsistenciaEquipoComponent implements OnInit {
   private archivo: File | null = null;
   nueva = { idUsuario: null as number | null, idTipoDia: null as number | null,
             fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
+
+  // El formulario es el mismo del asesor: cada tipo pide lo suyo.
+  protected readonly enHoras = enHoras;
+  protected readonly CUANDO = [
+    { valor: 'pasado' as const, titulo: 'Un día que ya pasó', pie: 'No completó su jornada o no vino' },
+    { valor: 'futuro' as const, titulo: 'Hoy o un día que viene', pie: 'Va a salir antes, entrar tarde o faltar' }
+  ];
+  protected readonly QUE = [
+    { valor: 'salir' as const, texto: 'Salir antes' },
+    { valor: 'entrar' as const, texto: 'Entrar más tarde' },
+    { valor: 'todo' as const, texto: 'Todo el día' }
+  ];
+  /** El tipo y la persona elegidos, como signals: de ellos depende qué pide el formulario. */
+  private readonly idTipoNuevo = signal<number | null>(null);
+  private readonly tipoNuevo = computed(() => this.tipos().find(t => t.id === this.idTipoNuevo()) ?? null);
+  readonly esDescanso = computed(() => this.tipoNuevo()?.codigo === 'DESCANSO_MEDICO');
+  /** El que se recupera, por «para cuándo»; la cita médica, solo un día que viene; los demás, por rango. */
+  readonly modo = computed<'permiso' | 'cita' | 'rango'>(() =>
+    this.tipoNuevo()?.recuperable ? 'permiso' : this.tipoNuevo()?.codigo === 'CITA_MEDICA' ? 'cita' : 'rango');
+  readonly cuando = signal<'pasado' | 'futuro'>('pasado');
+  private cuandoElegido = false;
+  readonly verPasado = computed(() => this.modo() === 'permiso' && this.cuando() === 'pasado');
+  readonly verFuturo = computed(() => this.modo() === 'cita' || (this.modo() === 'permiso' && this.cuando() === 'futuro'));
+  readonly que = signal<'salir' | 'entrar' | 'todo'>('salir');
+  readonly diaFuturo = signal('');
+  readonly hastaFuturo = signal('');
+  readonly horaSalir = signal('15:00');
+  readonly horaEntrar = signal('10:00');
+  readonly horaElegida = computed(() => (this.que() === 'entrar' ? this.horaEntrar() : this.horaSalir()));
+  /** Los días de esa persona desde el lunes de la semana pasada, y los que se marcaron. */
+  readonly diasRecientes = signal<AsistenciaDia[]>([]);
+  readonly cargandoRecientes = signal(false);
+  readonly marcados = signal(new Set<string>());
+  readonly faltaMarcar = signal(false);
+  /** Lo que respondió el backend sobre el día que viene: cuánto deberá, o por qué no se puede. */
+  readonly prevista = signal<SolicitudPrevista | null>(null);
+  readonly errorPrevista = signal('');
+  private turnoPrevista = 0;
+  private turnoRecientes = 0;
+
+  /** Sus días sin completar de las semanas abiertas; el que ya tiene una solicitud no sale. */
+  readonly sinCompletar = computed(() => {
+    const filas: { fecha: string; etiqueta: string; detalle: string; falto: number | null; pastilla: string; clase: string }[] = [];
+    for (const d of this.diasRecientes()) {
+      if (d.fecha >= hoy() || d.semanaCerrada || d.idSolicitud || d.estado === 'NO_LABORABLE' || d.estado === 'JUSTIFICADO') {
+        continue;
+      }
+      const jornada = d.minutosJornada ?? 0;
+      const etiqueta = this.diaLargo(d.fecha);
+      if (!d.entrada) {
+        if (jornada > 0) {
+          filas.push({ fecha: d.fecha, etiqueta, detalle: 'No trabajado', falto: jornada, pastilla: `Faltó ${enHoras(jornada)}`,
+            clase: 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300' });
+        }
+      } else if (d.minutosTrabajados == null) {
+        filas.push({ fecha: d.fecha, etiqueta, detalle: 'Faltan marcas', falto: null, pastilla: 'Sin calcular',
+          clase: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' });
+      } else if ((d.minutosFaltantes ?? jornada - d.minutosTrabajados) > MINIMO_FALTANTE) {
+        const falto = d.minutosFaltantes ?? jornada - d.minutosTrabajados;
+        const horas = `${enHoras(d.minutosTrabajados)} de ${enHoras(jornada)}`;
+        filas.push({ fecha: d.fecha, etiqueta, falto, pastilla: `Faltó ${enHoras(falto)}`,
+          clase: 'bg-[#fdeee0] text-[#c2410c] dark:bg-orange-950/50 dark:text-orange-300',
+          detalle: d.estado === 'TARDE' && d.tardanza ? `Llegó tarde ${d.tardanza} · trabajó ${horas}` : `Trabajó ${horas}` });
+      }
+    }
+    return filas;
+  });
+
+  /** El recuadro del total: lo que quedará por recuperar, o por qué no se puede pedir. */
+  readonly total = computed<{ titulo: string; detalle: string; mal: boolean; minutos?: number | null }>(() => {
+    const cita = this.modo() === 'cita';
+    if (this.verPasado()) {
+      const elegidos = this.sinCompletar().filter(f => this.marcados().has(f.fecha));
+      if (!elegidos.length) {
+        return { titulo: 'Horas por recuperar', mal: this.faltaMarcar(), minutos: null,
+          detalle: this.faltaMarcar() ? 'Marca al menos un día' : 'Marca el día que cubre el permiso' };
+      }
+      const sinCalcular = elegidos.filter(f => f.falto === null).length;
+      return { titulo: 'Horas por recuperar', mal: false, minutos: elegidos.reduce((t, f) => t + (f.falto ?? 0), 0),
+        detalle: (elegidos.length === 1 ? elegidos[0].etiqueta
+            : `${elegidos.length} días · ${elegidos.map(f => this.diaCorto(f.fecha)).join(', ')}`)
+          + (sinCalcular ? ` · ${sinCalcular} sin calcular` : '') };
+    }
+    const titulo = cita ? 'No se recupera' : 'Horas por recuperar';
+    if (this.errorPrevista()) {
+      return { titulo: cita ? 'Cita médica' : titulo, detalle: this.errorPrevista(), mal: true, minutos: cita ? undefined : null };
+    }
+    const p = this.prevista();
+    if (!p) {
+      return { titulo, detalle: 'Calculando…', mal: false, minutos: cita ? undefined : null };
+    }
+    const dia = this.diaLargo(this.diaFuturo());
+    const detalle = p.trabajaDesde && p.trabajaHasta
+      ? `${dia} · trabaja de ${p.trabajaDesde.slice(0, 5)} a ${p.trabajaHasta.slice(0, 5)}`
+      : p.dias > 1 ? `${p.dias} días · del ${this.diaCorto(this.diaFuturo())} al ${this.diaCorto(this.hastaFuturo())}`
+      : `${dia} · todo el día`;
+    return { titulo, detalle, mal: false, minutos: cita ? undefined : p.minutos };
+  });
   protected readonly hoyTexto = hoy();
   protected readonly detalleRecuperacion = detalleRecuperacion;
   protected readonly aviso = avisoDeCierre('supervisora');
@@ -1007,9 +1208,165 @@ export class AsistenciaEquipoComponent implements OnInit {
   abrirRegistro(): void {
     this.nueva = { idUsuario: this.gente()[0]?.idUsuario ?? null, idTipoDia: this.tipos()[0]?.id ?? null,
                    fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
+    this.idTipoNuevo.set(this.nueva.idTipoDia);
     this.archivo = null;
     this.error.set('');
+    this.faltaMarcar.set(false);
+    this.cuandoElegido = false;
+    this.cuando.set('pasado');
+    this.que.set('salir');
+    this.horaSalir.set('15:00');
+    this.horaEntrar.set('10:00');
+    const proximo = this.diaHabilDespuesDe(hoy());
+    this.diaFuturo.set(proximo);
+    this.hastaFuturo.set(proximo);
     this.registrando.set(true);
+    this.cargarRecientes();
+    this.prever();
+  }
+
+  elegirPersona(id: number): void {
+    this.nueva.idUsuario = id;
+    this.error.set('');
+    this.cargarRecientes();
+    this.prever();
+  }
+
+  elegirTipo(id: number): void {
+    this.nueva.idTipoDia = id;
+    this.idTipoNuevo.set(id);
+    this.error.set('');
+    this.faltaMarcar.set(false);
+    if (!this.tipoElegido()?.exigeCertificado) {
+      this.archivo = null;
+    }
+    // Lo que lleva anticipación no se pide para hoy.
+    const primero = this.primerDiaFuturo();
+    if (this.diaFuturo() < primero) {
+      this.diaFuturo.set(this.diaHabilDespuesDe(sumarDias(primero, -1)));
+      this.hastaFuturo.set(this.diaFuturo());
+    }
+    this.acomodarCuando();
+    this.prever();
+  }
+
+  /** Los días de esa persona desde el lunes de la semana pasada: de ahí salen los que quedaron sin completar. */
+  private cargarRecientes(): void {
+    const turno = ++this.turnoRecientes;
+    this.marcados.set(new Set());
+    this.diasRecientes.set([]);
+    const idUsuario = this.nueva.idUsuario;
+    if (!idUsuario) {
+      return;
+    }
+    this.cargandoRecientes.set(true);
+    this.servicio.reporte(sumarDias(lunesDe(new Date()), -7), hoy(), this.idSubcartera(), [idUsuario]).subscribe({
+      next: r => {
+        if (turno === this.turnoRecientes) {
+          this.diasRecientes.set((r.dias ?? []).filter(d => d.idUsuario === idUsuario));
+          this.cargandoRecientes.set(false);
+          this.acomodarCuando();
+        }
+      },
+      error: () => {
+        if (turno === this.turnoRecientes) {
+          this.cargandoRecientes.set(false);
+        }
+      }
+    });
+  }
+
+  /** Sin días que cubrir, el permiso se abre en «un día que viene». */
+  private acomodarCuando(): void {
+    if (this.cuandoElegido || this.modo() !== 'permiso' || this.cargandoRecientes()) {
+      return;
+    }
+    const toca = this.sinCompletar().length ? 'pasado' : 'futuro';
+    if (this.cuando() !== toca) {
+      this.cuando.set(toca);
+      this.prever();
+    }
+  }
+
+  elegirCuando(valor: 'pasado' | 'futuro'): void {
+    this.cuandoElegido = true;
+    this.cuando.set(valor);
+    this.error.set('');
+    this.prever();
+  }
+
+  elegirQue(valor: 'salir' | 'entrar' | 'todo'): void {
+    this.que.set(valor);
+    this.prever();
+  }
+
+  cambiarDia(dia: string): void {
+    this.diaFuturo.set(dia);
+    // El rango de «Todo el día» nunca termina antes de empezar.
+    if (!this.hastaFuturo() || this.hastaFuturo() < dia) {
+      this.hastaFuturo.set(dia);
+    }
+    this.prever();
+  }
+
+  cambiarHora(hora: string): void {
+    (this.que() === 'entrar' ? this.horaEntrar : this.horaSalir).set(hora);
+    this.prever();
+  }
+
+  alternarSinCompletar(fecha: string): void {
+    this.marcados.update(m => {
+      const copia = new Set(m);
+      copia.has(fecha) ? copia.delete(fecha) : copia.add(fecha);
+      return copia;
+    });
+    this.faltaMarcar.set(false);
+    this.error.set('');
+  }
+
+  /** El permiso se puede pedir para hoy; lo que lleva anticipación, desde el día que toca. */
+  primerDiaFuturo(): string {
+    return this.primerDia() ?? hoy();
+  }
+
+  /**
+   * Pregunta al backend qué resultaría del día que viene tal como está puesto:
+   * él conoce el horario de esa persona, los feriados y si ya hay otra solicitud.
+   */
+  prever(): void {
+    const turno = ++this.turnoPrevista;
+    this.prevista.set(null);
+    this.errorPrevista.set('');
+    const { idUsuario, idTipoDia } = this.nueva;
+    if (!this.verFuturo() || !idUsuario || !idTipoDia) {
+      return;
+    }
+    const dia = this.diaFuturo();
+    const que = this.que();
+    const hora = this.horaElegida();
+    const hasta = que === 'todo' ? (this.hastaFuturo() || dia) : dia;
+    const falta = !dia ? 'Elige el día' : que !== 'todo' && !hora ? 'Indica la hora'
+      : hasta < dia ? 'La fecha de fin no puede ser anterior a la de inicio' : '';
+    if (falta) {
+      this.errorPrevista.set(falta);
+      return;
+    }
+    this.servicio.solicitudPrevista({
+      idUsuario, idTipoDia, fechaDesde: dia, fechaHasta: hasta,
+      saleALas: que === 'salir' ? hora : null,
+      entraALas: que === 'entrar' ? hora : null
+    }).subscribe({
+      next: p => {
+        if (turno === this.turnoPrevista) {
+          this.prevista.set(p);
+        }
+      },
+      error: respuesta => {
+        if (turno === this.turnoPrevista) {
+          this.errorPrevista.set(respuesta?.error?.error ?? 'No se pudo calcular');
+        }
+      }
+    });
   }
 
   elegirArchivo(evento: Event): void {
@@ -1018,44 +1375,106 @@ export class AsistenciaEquipoComponent implements OnInit {
 
   registrar(): void {
     const tipo = this.tipoElegido();
-    if (!this.nueva.idUsuario || !tipo) {
+    const idUsuario = this.nueva.idUsuario;
+    if (!idUsuario || !tipo) {
       this.error.set('Elige a la persona y el tipo');
       return;
     }
-    if (this.nueva.fechaHasta < this.nueva.fechaDesde) {
-      this.error.set('La fecha final no puede ser anterior a la inicial');
-      return;
-    }
-    const primerDia = this.primerDia();
-    if (primerDia && this.nueva.fechaDesde < primerDia) {
-      this.error.set(avisoAnticipacion(tipo));
-      return;
+
+    // Cada pedido es una solicitud: un tramo de días seguidos, o un día con sus horas.
+    let pedidos: { desde: string; hasta: string; trabajaDesde?: string | null; trabajaHasta?: string | null }[];
+    if (this.verPasado()) {
+      const fechas = this.sinCompletar().filter(f => this.marcados().has(f.fecha)).map(f => f.fecha);
+      if (!fechas.length) {
+        this.faltaMarcar.set(true);
+        return;
+      }
+      pedidos = this.seguidos(fechas);
+    } else if (this.verFuturo()) {
+      const p = this.prevista();
+      if (!p) {
+        return;  // el recuadro ya dice por qué no se puede, o todavía calcula
+      }
+      const porHoras = this.que() !== 'todo';
+      pedidos = [{
+        desde: this.diaFuturo(),
+        hasta: porHoras ? this.diaFuturo() : (this.hastaFuturo() || this.diaFuturo()),
+        trabajaDesde: porHoras ? p.trabajaDesde : null,
+        trabajaHasta: porHoras ? p.trabajaHasta : null
+      }];
+    } else {
+      if (this.nueva.fechaHasta < this.nueva.fechaDesde) {
+        this.error.set('La fecha final no puede ser anterior a la inicial');
+        return;
+      }
+      const primerDia = this.primerDia();
+      if (primerDia && this.nueva.fechaDesde < primerDia) {
+        this.error.set(avisoAnticipacion(tipo));
+        return;
+      }
+      pedidos = [{ desde: this.nueva.fechaDesde, hasta: this.nueva.fechaHasta }];
     }
     if (tipo.exigeCertificado && !this.archivo) {
-      this.error.set(`${tipo.nombre} necesita certificado adjunto`);
+      this.error.set(`${tipo.nombre} necesita ${this.modo() === 'cita' ? 'la constancia adjunta' : 'certificado adjunto'}`);
+      return;
+    }
+    if (!this.nueva.comentario.trim()) {
+      this.error.set('Escribe el motivo: es lo que va a leer RR.HH.');
       return;
     }
 
-    const nombre = this.gente().find(p => p.idUsuario === this.nueva.idUsuario)?.nombreAgente ?? '';
+    const nombre = this.gente().find(p => p.idUsuario === idUsuario)?.nombreAgente ?? '';
+    const comentario = this.nueva.comentario.trim();
+    this.error.set('');
     this.guardando.set(true);
-    this.servicio.crearJustificacion({
-      idUsuario: this.nueva.idUsuario,
-      idTipoDia: tipo.id,
-      fechaDesde: this.nueva.fechaDesde,
-      fechaHasta: this.nueva.fechaHasta,
-      comentario: this.nueva.comentario.trim() || undefined,
-      archivo: this.archivo
-    }).subscribe({
+    from(pedidos).pipe(
+      concatMap(pedido => this.servicio.crearJustificacion({
+        idUsuario, idTipoDia: tipo.id, fechaDesde: pedido.desde, fechaHasta: pedido.hasta, comentario,
+        archivo: tipo.exigeCertificado ? this.archivo : null,
+        trabajaDesde: pedido.trabajaDesde ?? null, trabajaHasta: pedido.trabajaHasta ?? null
+      })),
+      toArray()
+    ).subscribe({
       next: () => {
         this.guardando.set(false);
         this.registrando.set(false);
         this.toast.success(`Registrada para ${nombre} y enviada a RR.HH.`);
+        this.cargar();
       },
       error: respuesta => {
         this.guardando.set(false);
         this.error.set(respuesta?.error?.error ?? 'No se pudo registrar la solicitud');
       }
     });
+  }
+
+  /** Agrupa fechas en tramos de días seguidos: cada tramo es una solicitud. */
+  private seguidos(fechas: string[]): { desde: string; hasta: string }[] {
+    const tramos: { desde: string; hasta: string }[] = [];
+    for (const f of [...fechas].sort()) {
+      const ultimo = tramos[tramos.length - 1];
+      if (ultimo && sumarDias(ultimo.hasta, 1) === f) {
+        ultimo.hasta = f;
+      } else {
+        tramos.push({ desde: f, hasta: f });
+      }
+    }
+    return tramos;
+  }
+
+  /** El siguiente día de lunes a viernes. */
+  private diaHabilDespuesDe(fecha: string): string {
+    let f = sumarDias(fecha, 1);
+    while ([0, 6].includes(new Date(f + 'T00:00:00').getDay())) {
+      f = sumarDias(f, 1);
+    }
+    return f;
+  }
+
+  /** «Lunes 21/09». */
+  private diaLargo(fecha: string): string {
+    const nombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return `${nombres[new Date(fecha + 'T00:00:00').getDay()]} ${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
   }
 
   // ==================== APOYO ====================

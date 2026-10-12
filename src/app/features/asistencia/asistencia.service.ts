@@ -36,7 +36,8 @@ import {
   PropuestaPlan,
   Recuperacion,
   ValidacionPlan,
-  TipoDia
+  TipoDia,
+  SolicitudPrevista
 } from './asistencia.models';
 import { conTipo } from './asistencia.estilos';
 
@@ -314,6 +315,70 @@ export class AsistenciaService {
       cuerpo.append('fechaOrigen', datos.fechaOrigen);
     }
     return this.http.post<{ id: number }>(`${this.url}/justificaciones`, cuerpo);
+  }
+
+  /**
+   * Modifica una solicitud ya enviada. Vuelve al principio de su recorrido. Sin
+   * archivo nuevo se queda con el que tenía.
+   */
+  modificarJustificacion(id: number, datos: {
+    idTipoDia: number;
+    fechaDesde: string;
+    fechaHasta: string;
+    comentario?: string;
+    archivo?: File | null;
+    trabajaDesde?: string | null;
+    trabajaHasta?: string | null;
+  }): Observable<{ id: number }> {
+    const cuerpo = new FormData();
+    cuerpo.append('idTipoDia', String(datos.idTipoDia));
+    cuerpo.append('fechaDesde', datos.fechaDesde);
+    cuerpo.append('fechaHasta', datos.fechaHasta);
+    if (datos.comentario) {
+      cuerpo.append('comentario', datos.comentario);
+    }
+    if (datos.archivo) {
+      cuerpo.append('archivo', datos.archivo);
+    }
+    if (datos.trabajaDesde && datos.trabajaHasta) {
+      cuerpo.append('trabajaDesde', datos.trabajaDesde);
+      cuerpo.append('trabajaHasta', datos.trabajaHasta);
+    }
+    return this.http.put<{ id: number }>(`${this.url}/justificaciones/${id}`, cuerpo);
+  }
+
+  /**
+   * Lo que resultaría de una solicitud antes de enviarla: valida el día y la
+   * hora y dice cuánto quedaría por recuperar. Para un día que viene basta la
+   * hora a la que se sale o a la que se entra.
+   */
+  solicitudPrevista(datos: {
+    idTipoDia: number;
+    fechaDesde: string;
+    fechaHasta: string;
+    saleALas?: string | null;
+    entraALas?: string | null;
+    idUsuario?: number | null;
+    /** Al modificar, la solicitud que se está cambiando. */
+    idSolicitud?: number | null;
+  }): Observable<SolicitudPrevista> {
+    let params = new HttpParams()
+      .set('idTipoDia', datos.idTipoDia)
+      .set('fechaDesde', datos.fechaDesde)
+      .set('fechaHasta', datos.fechaHasta);
+    if (datos.saleALas) {
+      params = params.set('saleALas', datos.saleALas);
+    }
+    if (datos.entraALas) {
+      params = params.set('entraALas', datos.entraALas);
+    }
+    if (datos.idUsuario) {
+      params = params.set('idUsuario', datos.idUsuario);
+    }
+    if (datos.idSolicitud) {
+      params = params.set('idSolicitud', datos.idSolicitud);
+    }
+    return this.http.get<SolicitudPrevista>(`${this.url}/justificaciones/prevista`, { params });
   }
 
   /** Paso 1: la supervisora confirma que la ausencia ocurrió. */
