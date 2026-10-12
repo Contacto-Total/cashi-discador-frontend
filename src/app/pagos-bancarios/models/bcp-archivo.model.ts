@@ -88,7 +88,8 @@ export interface AprobarArchivoBcpRequest {
   nombreArchivo: string;
   cabecera: BcpArchivoCabecera | null;
   detalles: BcpArchivoDetalle[];
-  prevalidacion: PrevalidacionArchivoBcp[];
+  /** El backend vuelve a prevalidar al guardar; ya no hace falta enviarla. */
+  prevalidacion?: PrevalidacionArchivoBcp[];
   tenantId: number;
   carteraId: number;
   subcarteraId: number;
@@ -104,6 +105,8 @@ export interface AprobarArchivoBcpResponse {
   pagosInsertados: number;
   pagosVerificados: number;
   conciliacionesAprobadas: number;
+  pagosPendientes?: number;
+  resumenCategorias?: Record<string, number>;
   errores: string[];
 }
 
@@ -142,6 +145,62 @@ export interface PrevalidacionArchivoBcp {
   montoPago: number | null;
   operacionAgente: string | null;
   estadoPrevalidacion: EstadoPrevalidacionBcp | string;
+  categoria?: CategoriaPagoBanco | string | null;
+  motivo?: string | null;
+  grupoId?: number | null;
+  transaccionId?: number | null;
+  montoEsperado?: number | null;
+  montoFaltante?: number | null;
+}
+
+export type CategoriaPagoBanco =
+  | 'CONCILIADO'
+  | 'CONCILIADO_POR_SUMA'
+  | 'CONCILIADO_CON_DESFASE'
+  | 'PARCIAL_EN_ESPERA'
+  | 'CONCILIADO_POR_PARTES'
+  | 'PAGO_VOLUNTARIO'
+  | 'REQUIERE_REVISION'
+  | 'OMITIDO_POR_FECHA'
+  | 'CLIENTE_NO_ENCONTRADO';
+
+/** Pago bancario guardado que aún no termina de conciliarse. */
+export interface PagoBancoPendiente {
+  id: number;
+  documento: string;
+  fechaBanco: string;
+  montoBanco: number;
+  numeroOperacion: string | null;
+  banco: string;
+  categoria: CategoriaPagoBanco | string;
+  categoriaSugerida: CategoriaPagoBanco | string | null;
+  motivo: string | null;
+  fechaPagoAsesor: string | null;
+  montoPagoAsesor: number | null;
+  grupoId: number | null;
+  montoEsperado: number | null;
+  montoFaltante: number | null;
+  fechaLimiteGrupo: string | null;
+}
+
+export interface ReevaluacionPendientesResponse {
+  exitoso: boolean;
+  mensaje: string;
+  pagosEvaluados?: number;
+  pagosVerificados?: number;
+  conciliacionesAprobadas?: number;
+  pagosPendientes?: number;
+  resumenCategorias?: Record<string, number>;
+}
+
+/** Pago bancario elegido para resolver, venga de la vista previa o de los pendientes guardados. */
+export interface PagoBancoPorResolver {
+  documento: string;
+  fechaBanco: string;
+  montoBanco: number;
+  numeroOperacion: string | null;
+  categoria: string | null;
+  motivo: string | null;
 }
 
 export interface ResumenConciliacionClienteRequest {

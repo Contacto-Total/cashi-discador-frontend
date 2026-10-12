@@ -4,66 +4,128 @@ import { CommonModule } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
 import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
+import {
+  CategoriaPagoInfo,
+  MOTIVOS_REVISION,
+  TONO_BORDE,
+  TONO_FILA,
+  TONO_PILL,
+  fechaCorta,
+  infoCategoria,
+  montoSoles
+} from '../models/categoria-pago';
+
+interface ResumenCategoria {
+  categoria: string;
+  info: CategoriaPagoInfo;
+  total: number;
+}
 
 @Component({
   selector: 'app-bcp-prevalidacion-archivo',
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
-      <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+    <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" aria-labelledby="prevalidacion-titulo">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Prevalidación de pagos BCP</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Comparación entre archivo cargado y pagos registrados por agente</p>
+          <h2 id="prevalidacion-titulo" class="text-lg font-semibold text-slate-800 dark:text-white">Resultado de la carga</h2>
+          <p class="text-xs text-slate-600 dark:text-slate-400">Cada pago del banco comparado con los pagos registrados por el asesor</p>
         </div>
         <div class="text-right">
-          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="completed || approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
-            {{ completed ? 'Guardado' : (approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión') }}
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="completed ? pill('ok') : pill('neutro')">
+            {{ completed ? 'Guardado' : 'Vista previa' }}
           </span>
-          <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{{ data.length }} registro(s)</p>
+          <p class="mt-1 text-[11px] text-slate-600 dark:text-slate-400">{{ data.length }} pago(s)</p>
         </div>
       </div>
 
+      @if (data.length > 0) {
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700" role="group" aria-label="Filtrar por categoría">
+          <button
+            type="button"
+            (click)="filtro = null"
+            [attr.aria-pressed]="filtro === null"
+            class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+            [class]="filtro === null ? 'border-slate-800 bg-slate-800 text-white dark:border-white dark:bg-white dark:text-slate-900' : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'"
+          >
+            Todas ({{ data.length }})
+          </button>
+          @for (item of resumen(); track item.categoria) {
+            <button
+              type="button"
+              (click)="filtro = item.categoria"
+              [attr.aria-pressed]="filtro === item.categoria"
+              class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+              [class]="filtro === item.categoria ? 'border-slate-800 ' + pill(item.info.tono) : 'border-transparent ' + pill(item.info.tono) + ' opacity-80 hover:opacity-100'"
+            >
+              {{ item.info.label }} ({{ item.total }})
+            </button>
+          }
+        </div>
+      }
+
       <div class="overflow-x-auto">
         <table class="min-w-full border-separate border-spacing-y-2 text-xs">
-          <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+          <caption class="sr-only">Pagos del archivo con su categoría de conciliación</caption>
+          <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 uppercase tracking-wide">
             <tr>
-              <th class="px-2 py-2 text-left font-bold w-20">Origen</th>
-              <th class="px-2 py-2 text-left font-bold">Documento</th>
-              <th class="px-2 py-2 text-left font-bold">Fecha</th>
-              <th class="px-2 py-2 text-right font-bold">Monto</th>
-              <th class="px-2 py-2 text-left font-bold">Nro. operación</th>
-              <th class="px-2 py-2 text-left font-bold">Estado</th>
-              <th class="px-2 py-2 text-left font-bold">Problema</th>
-              <th class="px-2 py-2 text-left font-bold">Acción</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold w-20">Origen</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold">Documento</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold">Fecha</th>
+              <th scope="col" class="px-2 py-2 text-right font-bold">Monto</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold">Nro. operación</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold">Categoría</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold">Detalle</th>
+              <th scope="col" class="px-2 py-2 text-left font-bold">Acción</th>
             </tr>
           </thead>
 
-          @for (row of data; track trackRow(row, $index)) {
-            <tbody [class]="getGroupClass(row)">
-              <tr class="border-t-2" [class]="getGroupBorderClass(row)">
-                <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</td>
+          @for (row of filasVisibles(); track trackRow(row, $index)) {
+            <tbody [class]="filaClass(row)">
+              <tr class="border-t-2" [class]="bordeClass(row)">
+                <th scope="row" class="px-2 py-2 text-left font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</th>
                 <td class="px-2 py-2 font-semibold whitespace-nowrap">
-                  <button type="button" (click)="documentoClick.emit(row)" class="text-left text-blue-700 underline-offset-2 hover:underline dark:text-blue-300" [disabled]="!value(row, 'documentoBanco', 'documento_banco')">
+                  <button
+                    type="button"
+                    (click)="documentoClick.emit(row)"
+                    [disabled]="!value(row, 'documentoBanco', 'documento_banco')"
+                    [attr.aria-label]="'Ver resumen del cliente ' + (value(row, 'documentoBanco', 'documento_banco') || '')"
+                    class="rounded text-left text-blue-700 underline underline-offset-2 hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-200"
+                  >
                     {{ value(row, 'documentoBanco', 'documento_banco') || '-' }}
                   </button>
                 </td>
-                <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaBanco', 'fecha_banco') || '-' }}</td>
+                <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(value(row, 'fechaBanco', 'fecha_banco')) }}</td>
                 <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap" rowspan="2">
-                  <span class="inline-flex rounded-full px-2 py-1 text-[10px] font-bold leading-tight" [class]="getEstadoClass(value(row, 'estadoPrevalidacion', 'estado_prevalidacion'))">
-                    {{ getEstadoLabel(value(row, 'estadoPrevalidacion', 'estado_prevalidacion')) }}
+                  <span class="inline-flex rounded-full px-2 py-1 text-[11px] font-bold leading-tight" [class]="pill(info(row).tono)">
+                    {{ info(row).label }}
                   </span>
                 </td>
-                <td class="px-2 py-2 max-w-44 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ getRecomendacion(row).problema }}</td>
-                <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ getRecomendacion(row).accion }}</td>
+                <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ detalle(row) }}</td>
+                <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">
+                  @if (requiereRevision(row)) {
+                    <p class="mb-2">{{ accion(row) }}</p>
+                    <button
+                      type="button"
+                      (click)="resolver.emit(row)"
+                      [attr.aria-label]="'Resolver pago de ' + (value(row, 'documentoBanco', 'documento_banco') || '') + ' por ' + formatMoney(value(row, 'montoBanco', 'monto_banco'))"
+                      class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+                    >
+                      Resolver
+                    </button>
+                  } @else {
+                    {{ accion(row) }}
+                  }
+                </td>
               </tr>
 
               <tr>
-                <td class="px-2 pb-2 pt-1 font-bold text-purple-700 dark:text-purple-300 rounded-bl-lg">AGENTE</td>
+                <th scope="row" class="px-2 pb-2 pt-1 text-left font-bold text-purple-700 dark:text-purple-300 rounded-bl-lg">ASESOR</th>
                 <td class="px-2 pb-2 pt-1 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoAgente', 'documento_agente') || '-' }}</td>
-                <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaPago', 'fecha_pago') || '-' }}</td>
+                <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(value(row, 'fechaPago', 'fecha_pago')) }}</td>
                 <td class="px-2 pb-2 pt-1 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago')) }}</td>
                 <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'operacionAgente', 'operacion_agente') || '-' }}</td>
               </tr>
@@ -71,35 +133,38 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
           } @empty {
             <tbody>
               <tr>
-                <td colspan="8" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="8" class="px-4 py-10 text-center text-sm text-slate-600 dark:text-slate-400">
+                  {{ data.length === 0 ? 'No hay pagos para mostrar.' : 'No hay pagos en esta categoría.' }}
+                </td>
               </tr>
             </tbody>
           }
         </table>
       </div>
 
-      <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex items-center justify-between gap-3">
-        <p class="text-xs text-slate-500 dark:text-slate-400">El guardado se habilita solo cuando todos los registros están listos para aprobar.</p>
+      <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-slate-600 dark:text-slate-400">
+          Se guardan todos los pagos. Los que requieren revisión quedan como pendientes y se pueden resolver después.
+        </p>
         <div class="flex items-center gap-2">
-          @if (tieneFallos()) {
-            <button type="button" (click)="descargarReporteFallos()" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-amber-600 text-white hover:bg-amber-700">
-              Descargar reporte de fallos
+          @if (tienePendientes()) {
+            <button type="button" (click)="descargarReportePendientes()" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-amber-700 text-white hover:bg-amber-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800">
+              Descargar pendientes
             </button>
           }
           @if (showGuardar) {
-            <button type="button" (click)="guardar.emit(getFilasAprobadas())" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
-              {{ isSaving ? 'Guardando...' : 'Guardar' }}
+            <button type="button" (click)="guardar.emit(filasParaGuardar())" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-700 text-white hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed dark:focus-visible:ring-offset-slate-800 dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
+              {{ isSaving ? 'Guardando...' : (completed ? 'Guardado' : 'Guardar todo') }}
             </button>
           }
         </div>
       </div>
-    </div>
+    </section>
   `
 })
 export class BcpPrevalidacionArchivoWidget {
   private fmt = inject(FormatService);
   @Input() data: PrevalidacionArchivoBcp[] = [];
-  @Input() todosAprobables = false;
   @Input() approvalEnabled = false;
   @Input() isSaving = false;
   @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
@@ -107,57 +172,9 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() completed = false;
   @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
   @Output() documentoClick = new EventEmitter<PrevalidacionArchivoBcp>();
+  @Output() resolver = new EventEmitter<PrevalidacionArchivoBcp>();
 
-  private readonly recomendacionesPorEstado: Record<string, { problema: string; accion: string }> = {
-    LISTO_PARA_APROBAR: {
-      problema: 'Pago conciliable',
-      accion: 'Puede aprobarse la carga.'
-    },
-    REQUIERE_REVISION_MONTO: {
-      problema: 'Monto distinto al banco.',
-      accion: 'Revisar y corregir el monto tipificado o verificar si corresponde a un pago parcial.'
-    },
-    PAGO_REGISTRADO_FECHA_DISTINTA_BANCO: {
-      problema: 'Fecha distinta al banco.',
-      accion: 'Corregir la fecha del pago tipificado para que coincida con la fecha bancaria y volver a cargar el archivo.'
-    },
-    PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO: {
-      problema: 'Fecha y monto distintos al banco.',
-      accion: 'Revisar y corregir fecha/monto del pago tipificado antes de volver a cargar.'
-    },
-    DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
-      problema: 'Documento no existe.',
-      accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
-    },
-    CLIENTE_NO_PERTENECE_A_CONTEXTO: {
-      problema: 'Cliente pertenece a otra subcartera.',
-      accion: 'Validar la subcartera correcta para esta carga.'
-    },
-    NO_TIENE_PROMESA: {
-      problema: 'Sin promesa activa.',
-      accion: 'Crear una promesa de pago antes de conciliar.'
-    },
-    PROMESA_SIN_CUOTAS_PENDIENTES: {
-      problema: 'Promesa sin cuotas pendientes.',
-      accion: 'Verificar si la promesa ya fue completada o si corresponde crear una nueva promesa.'
-    },
-    FALTA_TIPIFICACION_CANCELACION: {
-      problema: 'Falta cancelación.',
-      accion: 'Registrar tipificación de cancelación o generar automáticamente el pago asociado.'
-    },
-    FECHA_FUERA_DE_RANGO_DE_PROMESA: {
-      problema: 'Fecha fuera de promesa.',
-      accion: 'Revisar fecha de promesa/cuota o corregir la fecha del pago tipificado.'
-    },
-    PAGO_YA_CONCILIADO_PREVIAMENTE: {
-      problema: 'Este pago ya fue conciliado previamente.',
-      accion: 'No se aprueba ni se envía a conciliación.'
-    },
-    SIN_CANDIDATO: {
-      problema: 'No se encontró candidato de conciliación.',
-      accion: 'Revisión manual requerida.'
-    }
-  };
+  filtro: string | null = null;
 
   value(row: any, camelKey: string, snakeKey?: string): any {
     return row?.[camelKey] ?? (snakeKey ? row?.[snakeKey] : undefined);
@@ -167,32 +184,71 @@ export class BcpPrevalidacionArchivoWidget {
     return `${this.value(row, 'numeroOperacion', 'numero_operacion') || 'sin-op'}-${this.value(row, 'documentoBanco', 'documento_banco') || 'sin-doc'}-${index}`;
   }
 
-  hasAgente(row: PrevalidacionArchivoBcp): boolean {
-    return !!(
-      this.value(row, 'documentoAgente', 'documento_agente') ||
-      this.value(row, 'fechaPago', 'fecha_pago') ||
-      this.value(row, 'montoPago', 'monto_pago') ||
-      this.value(row, 'operacionAgente', 'operacion_agente')
-    );
+  /** Categoría de la fila; las respuestas sin categoría usan el estado de prevalidación. */
+  categoria(row: PrevalidacionArchivoBcp): string {
+    return this.value(row, 'categoria') || this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '';
   }
 
-  isListo(row: PrevalidacionArchivoBcp): boolean {
-    return this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') === 'LISTO_PARA_APROBAR' && this.hasAgente(row) && !this.isDuplicado(row);
+  info(row: PrevalidacionArchivoBcp): CategoriaPagoInfo {
+    return infoCategoria(this.categoria(row));
+  }
+
+  requiereRevision(row: PrevalidacionArchivoBcp): boolean {
+    return this.info(row).tono === 'revision';
+  }
+
+  resumen(): ResumenCategoria[] {
+    const totales = new Map<string, number>();
+    for (const row of this.data) {
+      const categoria = this.categoria(row);
+      totales.set(categoria, (totales.get(categoria) || 0) + 1);
+    }
+    return Array.from(totales.entries()).map(([categoria, total]) => ({
+      categoria,
+      info: infoCategoria(categoria),
+      total
+    }));
+  }
+
+  filasVisibles(): PrevalidacionArchivoBcp[] {
+    // Si el filtro quedó en una categoría que ya no existe tras recargar, se muestran todas.
+    if (this.filtro === null || !this.data.some(row => this.categoria(row) === this.filtro)) {
+      return this.data;
+    }
+    return this.data.filter(row => this.categoria(row) === this.filtro);
+  }
+
+  detalle(row: PrevalidacionArchivoBcp): string {
+    const categoria = this.categoria(row);
+    if (categoria === 'PARCIAL_EN_ESPERA') {
+      const faltante = this.value(row, 'montoFaltante', 'monto_faltante');
+      const esperado = this.value(row, 'montoEsperado', 'monto_esperado');
+      return `Falta ${this.formatMoney(faltante)} de ${this.formatMoney(esperado)}.`;
+    }
+    if (this.requiereRevision(row)) {
+      return this.motivo(row)?.problema || 'No se encontró contra qué conciliar este pago.';
+    }
+    return this.info(row).label;
+  }
+
+  accion(row: PrevalidacionArchivoBcp): string {
+    if (this.requiereRevision(row)) {
+      return this.motivo(row)?.accion || 'Revisión manual requerida.';
+    }
+    return this.info(row).resultado;
+  }
+
+  private motivo(row: PrevalidacionArchivoBcp): { problema: string; accion: string } | undefined {
+    const motivo = this.value(row, 'motivo') || this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
+    return MOTIVOS_REVISION[motivo];
   }
 
   puedeGuardar(): boolean {
-    const todasListas = this.data.length > 0 && this.data.every(row => this.isListo(row));
-    return !this.completed
-      && this.approvalEnabled
-      && todasListas;
+    return !this.completed && this.approvalEnabled && this.filasParaGuardar().length > 0;
   }
 
-  getFilasAprobadas(): PrevalidacionArchivoBcp[] {
-    return this.data.filter(row => this.isListo(row));
-  }
-
-  getFilasAprobables(): PrevalidacionArchivoBcp[] {
-    return this.data.filter(row => this.isListo(row));
+  filasParaGuardar(): PrevalidacionArchivoBcp[] {
+    return this.data.filter(row => !this.isDuplicado(row));
   }
 
   isDuplicado(row: PrevalidacionArchivoBcp): boolean {
@@ -210,49 +266,40 @@ export class BcpPrevalidacionArchivoWidget {
     });
   }
 
-  tieneFallos(): boolean {
-    return this.data.some(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
+  tienePendientes(): boolean {
+    return this.data.some(row => this.requiereRevision(row));
   }
 
-  getRecomendacion(row: PrevalidacionArchivoBcp): { problema: string; accion: string } {
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    return this.recomendacionesPorEstado[estado] || {
-      problema: 'Estado de prevalidación no reconocido.',
-      accion: 'Revisión manual requerida.'
-    };
-  }
-
-  async descargarReporteFallos(): Promise<void> {
-    const fallos = this.data.filter(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
-    if (fallos.length === 0) return;
+  async descargarReportePendientes(): Promise<void> {
+    const pendientes = this.data.filter(row => this.requiereRevision(row));
+    if (pendientes.length === 0) return;
 
     const fechaCarga = new Date();
     const workbook = new Workbook();
     workbook.creator = 'Sistema de Cobranza';
     workbook.created = fechaCarga;
 
-    const ws = workbook.addWorksheet('Incidencias', {
+    const ws = workbook.addWorksheet('Pendientes', {
       properties: { tabColor: { argb: 'EF4444' } }
     });
 
     ws.columns = [
       { width: 6 },
       { width: 16 },
-      { width: 18 },
-      { width: 28 },
+      { width: 22 },
+      { width: 44 },
       { width: 58 },
       { width: 14 },
       { width: 14 },
-      { width: 14 },
-      { width: 20 },
+      { width: 18 },
       { width: 16 },
-      { width: 14 },
+      { width: 16 },
       { width: 20 }
     ];
 
-    ws.mergeCells('A1:L1');
+    ws.mergeCells('A1:K1');
     const title = ws.getCell('A1');
-    title.value = 'INCIDENCIAS DE PREVALIDACIÓN BCP';
+    title.value = 'PAGOS BANCARIOS PENDIENTES DE RESOLVER';
     title.font = { bold: true, size: 16, color: { argb: 'FFFFFF' } };
     title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E293B' } };
     title.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -260,19 +307,14 @@ export class BcpPrevalidacionArchivoWidget {
 
     ws.getCell('A3').value = 'Fecha y hora:';
     ws.getCell('B3').value = this.fmt.dateTime(fechaCarga, true);
-    ws.getCell('D3').value = 'Total incidencias:';
-    ws.getCell('E3').value = fallos.length;
-    ws.getCell('A4').value = 'Indicacion:';
-    ws.getCell('B4').value = 'Corregir primero Documento, Problema y Acción recomendada. Luego volver a cargar el archivo.';
-    ws.mergeCells('B4:L4');
-
-    ['A3', 'D3', 'A4'].forEach(cell => {
+    ws.getCell('D3').value = 'Total pendientes:';
+    ws.getCell('E3').value = pendientes.length;
+    ['A3', 'D3'].forEach(cell => {
       ws.getCell(cell).font = { bold: true, color: { argb: '334155' } };
     });
 
-    let row = 6;
-    const headerRowNumber = row;
-    const headers = ['#', 'Documento', 'Estado', 'Problema', 'Acción recomendada', 'Fecha banco', 'Monto banco', 'Nro. operación', 'Fecha sistema', 'Monto sistema', 'Operación sistema', 'Estado técnico'];
+    const headerRowNumber = 5;
+    const headers = ['#', 'Documento', 'Categoría', 'Problema', 'Acción recomendada', 'Fecha banco', 'Monto banco', 'Nro. operación', 'Fecha asesor', 'Monto asesor', 'Motivo técnico'];
     const headerRow = ws.getRow(headerRowNumber);
     headers.forEach((header, index) => {
       const cell = headerRow.getCell(index + 1);
@@ -282,41 +324,33 @@ export class BcpPrevalidacionArchivoWidget {
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell.border = this.excelBorder();
     });
-    ws.getRow(headerRowNumber).height = 24;
-    row++;
+    headerRow.height = 24;
 
-    fallos.forEach((item, index) => {
-      const estado = this.value(item, 'estadoPrevalidacion', 'estado_prevalidacion') || '';
-      const recomendacion = this.getRecomendacion(item);
-      const dataRow = ws.getRow(row);
+    pendientes.forEach((item, index) => {
+      const montoAsesor = this.value(item, 'montoPago', 'monto_pago');
       const values = [
         index + 1,
         this.value(item, 'documentoBanco', 'documento_banco') || '',
-        this.getEstadoLabel(estado),
-        recomendacion.problema,
-        recomendacion.accion,
-        this.value(item, 'fechaBanco', 'fecha_banco') || '',
+        this.info(item).label,
+        this.detalle(item),
+        this.accion(item),
+        this.fecha(this.value(item, 'fechaBanco', 'fecha_banco')),
         Number(this.value(item, 'montoBanco', 'monto_banco') || 0),
         this.value(item, 'numeroOperacion', 'numero_operacion') || '',
-        this.value(item, 'fechaPago', 'fecha_pago') || '',
-        this.value(item, 'montoPago', 'monto_pago') !== null && this.value(item, 'montoPago', 'monto_pago') !== undefined ? Number(this.value(item, 'montoPago', 'monto_pago')) : '',
-        this.value(item, 'operacionAgente', 'operacion_agente') || '',
-        estado
+        this.fecha(this.value(item, 'fechaPago', 'fecha_pago')),
+        montoAsesor !== null && montoAsesor !== undefined ? Number(montoAsesor) : '',
+        this.value(item, 'motivo') || ''
       ];
 
+      const dataRow = ws.getRow(headerRowNumber + 1 + index);
       values.forEach((value, colIndex) => {
         const cell = dataRow.getCell(colIndex + 1);
         cell.value = value;
-        const fillColor = this.getExcelCellFillColor(estado, colIndex);
-        if (fillColor) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
-        }
         cell.border = this.excelBorder();
         cell.alignment = { vertical: 'top', wrapText: true };
         if (colIndex === 6 || colIndex === 9) cell.numFmt = '"S/." #,##0.00';
       });
       dataRow.height = 34;
-      row++;
     });
 
     ws.autoFilter = {
@@ -326,27 +360,7 @@ export class BcpPrevalidacionArchivoWidget {
     ws.views = [{ state: 'frozen', ySplit: headerRowNumber }];
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }
-
-  private getExcelCellFillColor(estado: string, colIndex: number): string | null {
-    const yellow = 'FEF3C7';
-
-    if (estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO') {
-      return colIndex === 5 || colIndex === 8 ? yellow : null;
-    }
-
-    if (estado === 'REQUIERE_REVISION_MONTO') {
-      return colIndex === 6 || colIndex === 9 ? yellow : null;
-    }
-
-    if (estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') {
-      return colIndex === 5 || colIndex === 6 || colIndex === 8 || colIndex === 9 ? yellow : null;
-    }
-
-    if (estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO') return 'E2E8F0';
-    if (estado !== 'LISTO_PARA_APROBAR') return 'FEE2E2';
-    return null;
+    saveAs(new Blob([buffer]), `pagos-pendientes-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   private excelBorder(): any {
@@ -358,50 +372,23 @@ export class BcpPrevalidacionArchivoWidget {
     };
   }
 
-  getGroupClass(row: PrevalidacionArchivoBcp): string {
-    if (this.isListo(row)) return 'bg-emerald-50/50 dark:bg-emerald-950/10';
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    if (estado === 'REQUIERE_REVISION_MONTO') return 'bg-amber-50/60 dark:bg-amber-950/15';
-    return 'bg-red-50/50 dark:bg-red-950/10';
+  filaClass(row: PrevalidacionArchivoBcp): string {
+    return TONO_FILA[this.info(row).tono];
   }
 
-  getGroupBorderClass(row: PrevalidacionArchivoBcp): string {
-    if (this.isListo(row)) return 'border-emerald-300 dark:border-emerald-700';
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    if (estado === 'REQUIERE_REVISION_MONTO') return 'border-amber-300 dark:border-amber-700';
-    return 'border-red-300 dark:border-red-800';
+  bordeClass(row: PrevalidacionArchivoBcp): string {
+    return TONO_BORDE[this.info(row).tono];
   }
 
-  getEstadoClass(estado: string | null | undefined): string {
-    if (estado === 'LISTO_PARA_APROBAR') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
-    return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  pill(tono: CategoriaPagoInfo['tono']): string {
+    return TONO_PILL[tono];
   }
 
-  getEstadoLabel(estado: string | null | undefined): string {
-    if (estado === 'LISTO_PARA_APROBAR') return 'LISTO';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'REVISIÓN';
-    if (!estado) return '-';
-    return 'ACCIÓN';
-  }
-
-  formatEstado(estado: string | null | undefined): string {
-    if (!estado) return '-';
-    return estado.replace(/_/g, ' ');
-  }
-
-  getDiffClass(value: number | string | null | undefined): string {
-    if (value === null || value === undefined || value === '') return 'text-slate-500 dark:text-slate-400';
-    return Math.abs(Number(value)) === 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300';
+  fecha(value: unknown): string {
+    return fechaCorta(value);
   }
 
   formatMoney(value: number | string | null | undefined): string {
-    if (value === null || value === undefined || value === '') return '-';
-    return `S/ ${Number(value).toFixed(2)}`;
-  }
-
-  formatDiff(value: number | string | null | undefined): string {
-    if (value === null || value === undefined || value === '') return '-';
-    return Number(value).toFixed(2);
+    return montoSoles(value);
   }
 }
