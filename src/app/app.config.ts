@@ -11,6 +11,8 @@ import { Headset, UserSearch, MessageCircleMore, TriangleAlert, Radar, HeartPuls
 import { routes } from './app.routes';
 import { alcanceCatalogoInterceptor } from './core/interceptors/alcance-catalogo.interceptor';
 import { alcanceClientesInterceptor } from './core/interceptors/alcance-clientes.interceptor';
+import { alcanceDocumentoInterceptor } from './core/interceptors/alcance-documento.interceptor';
+import { alcanceTramoInterceptor } from './core/interceptors/alcance-tramo.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { tokenRefreshInterceptor } from './core/interceptors/token-refresh.interceptor';
 
@@ -22,7 +24,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-PE' },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([alcanceCatalogoInterceptor, alcanceClientesInterceptor, tokenRefreshInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([alcanceCatalogoInterceptor, alcanceClientesInterceptor, alcanceDocumentoInterceptor, alcanceTramoInterceptor, tokenRefreshInterceptor, authInterceptor])),
     provideAnimations(),
     importProvidersFrom(
       LucideAngularModule.pick({

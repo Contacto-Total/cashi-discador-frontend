@@ -710,6 +710,12 @@ export class RolesManagementComponent implements OnInit {
       }))
     };
 
+    // Un rol se guarda siempre con alguna subcartera; el de administrador es el único sin límite.
+    if (request.asignaciones.length === 0 && role.name.trim().toUpperCase() !== 'ADMIN') {
+      alert('Marca al menos una subcartera. Un rol no se guarda sin cliente, cartera y subcartera.');
+      return;
+    }
+
     if (role.id) {
       // Editar existente
       this.rolService.actualizar(role.id, request).subscribe({

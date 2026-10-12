@@ -4,8 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ExcepcionesService, ExcepcionPendiente } from './excepciones.service';
 import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '../reports/excepciones-report/excepciones-report.service';
-import { AuthService } from '../../core/services/auth.service';
-import { UserRole } from '../../core/models/user.model';
 import { FormatService } from '@/shared/services/format.service';
 
 @Component({
@@ -404,7 +402,6 @@ import { FormatService } from '@/shared/services/format.service';
 export class ExcepcionesComponent implements OnInit {
   excepcionesService = inject(ExcepcionesService);
   reporteService = inject(ExcepcionesReportService);
-  private authService = inject(AuthService);
   private fmt = inject(FormatService);
 
   // Tab activo
@@ -448,13 +445,6 @@ export class ExcepcionesComponent implements OnInit {
     this.excepcionesService.getExcepcionesPendientes(this.currentPage(), this.pageSize)
       .subscribe({
         next: (response) => {
-          // Supervisores solo ven excepciones de su subcartera
-          const user = this.authService.getCurrentUser();
-          if (user?.role === UserRole.SUPERVISOR && user.subPortfolioId) {
-            const filtered = this.excepcionesService.excepciones().filter(e => e.idSubcartera === user.subPortfolioId);
-            this.excepcionesService.excepciones.set(filtered);
-            this.excepcionesService.totalExcepciones.set(filtered.length);
-          }
           this.totalPages.set(response.totalPages);
         },
         error: (error) => {
@@ -474,12 +464,7 @@ export class ExcepcionesComponent implements OnInit {
       this.filtroEstado || undefined
     ).subscribe({
       next: (response) => {
-        const user = this.authService.getCurrentUser();
-        if (user?.role === UserRole.SUPERVISOR && user.subPortfolioId) {
-          this.historialData.set(response.data.filter((e: any) => e.idSubcartera === user.subPortfolioId));
-        } else {
-          this.historialData.set(response.data);
-        }
+        this.historialData.set(response.data);
         this.historialMetricas.set(response.metricas);
         this.cargandoHistorial.set(false);
       },
