@@ -19,7 +19,8 @@ import {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" [attr.aria-labelledby]="idPrefix + '-titulo'">
+    <!-- relative: contiene el caption sr-only; sin esto se sale del scroll de .main-content y estira la página -->
+    <section class="relative bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" [attr.aria-labelledby]="idPrefix + '-titulo'">
       <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 [id]="idPrefix + '-titulo'" class="text-lg font-semibold text-slate-800 dark:text-white">Pagos pendientes de conciliar</h2>
