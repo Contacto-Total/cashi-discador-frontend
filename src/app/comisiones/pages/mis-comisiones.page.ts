@@ -101,7 +101,7 @@ function claveMes(p: { anio: number; mes: number }): number {
                 <p style="max-width:52ch">Aquí verás cuánto llevas y cómo se arma lo que cobras cuando se configure y recalcule un periodo en el que participas.</p>
               </div>
             } @else if (reporte(); as r) {
-              <cmx-sustento-tab [reporte]="r" [vista]="vistaSustento()!" [fuenteDetalle]="fuenteDetalle" />
+              <cmx-sustento-tab [reporte]="r" [vista]="vistaSustento()!" [fuenteDetalle]="fuenteDetalle" [fuentePagos]="fuentePagos" />
             }
           </div>
         </div>
@@ -123,6 +123,7 @@ export class MisComisionesPage implements OnInit {
   readonly error = signal<string | null>(null);
 
   readonly fuenteDetalle = (id: number) => this.service.miDetalle(id);
+  readonly fuentePagos = (id: number) => this.service.misPagos(id);
 
   readonly actual = computed(() => this.periodos()?.find(p => p.idPeriodo === this.idPeriodo()) ?? null);
 

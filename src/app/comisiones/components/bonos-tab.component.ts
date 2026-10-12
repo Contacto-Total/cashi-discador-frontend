@@ -73,7 +73,7 @@ import { CmxIconComponent } from './cmx-icon.component';
 
               @if (b.tipo === 'LTD') {
                 <div>
-                  <div class="cmx-bsub">Cuenta las gestiones del mes con <code>campo_monto_origen</code></div>
+                  <div class="cmx-bsub">Cuenta las PDP con <code>campo_monto_origen</code> que tienen todas sus cuotas pagadas (en el mes en que se completan)</div>
                   <div class="cmx-borig is-mono">
                     @for (o of origenesLtd; track o) {
                       <label>
@@ -90,7 +90,9 @@ import { CmxIconComponent } from './cmx-icon.component';
                   clientes distintos de sus pagos que suman que tienen PKM.</span>
                 </p>
               }
-              @if (b.tipo !== 'SOBRE') {
+              @if (b.tipo === 'LTD') {
+                <p class="cmx-hint"><span><b>Por tramos:</b> cada nivel paga su monto por cada LTD desde ese nivel hasta antes del siguiente.{{ ejemploTramos(b) }}</span></p>
+              } @else if (b.tipo === 'PKM') {
                 <p class="cmx-hint"><span><b>Los niveles se suman:</b> cada nivel alcanzado paga su monto una vez.{{ ejemploSuma(b) }}</span></p>
               } @else {
                 <p class="cmx-hint"><span>Se compara el {{ metrica() }} en <b>soles</b>, no en porcentaje. Paga el nivel más alto que pase.</span></p>
@@ -134,8 +136,9 @@ import { CmxIconComponent } from './cmx-icon.component';
                     <span class="cmx-money">
                       <span>S/</span>
                       <input type="number" min="0" step="5" [value]="n.monto" [disabled]="soloLectura()"
-                             [attr.aria-label]="'Nivel ' + (j + 1) + ': bono'" (input)="cambiarNivel(i, j, 'monto', $any($event.target).value)" />
+                             [attr.aria-label]="'Nivel ' + (j + 1) + ': bono' + (b.tipo === 'LTD' ? ' por cada LTD' : '')" (input)="cambiarNivel(i, j, 'monto', $any($event.target).value)" />
                     </span>
+                    @if (b.tipo === 'LTD') { por cada LTD }
                     @if (puestos) {
                       2°
                       <span class="cmx-money">
@@ -270,6 +273,24 @@ export class BonosTabComponent {
     }
     const total = n.reduce((s, x) => s + x.monto, 0);
     return ` Con ${n[n.length - 1].desde} ${b.tipo} cobra ${n.map(x => x.monto).join(' + ')} = S/ ${total}.`;
+  }
+
+  /** Ejemplo con el último nivel + 1: cuántas LTD caen en cada tramo y cuánto pagan */
+  ejemploTramos(b: BonoPeriodo): string {
+    const n = b.niveles.filter(x => x.desde != null && x.monto != null).sort((x, y) => x.desde - y.desde);
+    if (!n.length) {
+      return '';
+    }
+    const ltd = n[n.length - 1].desde + 1;
+    const partes = n
+      .map((x, k) => {
+        const hasta = k + 1 < n.length ? n[k + 1].desde - 1 : ltd;
+        const cantidad = Math.max(0, Math.min(ltd, hasta) - x.desde + 1);
+        return { cantidad, monto: x.monto };
+      })
+      .filter(x => x.cantidad > 0);
+    const total = partes.reduce((s, x) => s + x.cantidad * x.monto, 0);
+    return ` Con ${ltd} LTD cobra ${partes.map(x => `${x.cantidad} × ${x.monto}`).join(' + ')} = S/ ${total}.`;
   }
 
   cambiar(i: number, cambio: Partial<BonoPeriodo>): void {
