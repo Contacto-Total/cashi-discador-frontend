@@ -69,6 +69,21 @@ export interface AsistenciaDia {
 
   excesoBreakMin: number | null;
   excesoAlmuerzoMin: number | null;
+
+  /** Lo que faltó de la jornada, tardanza incluida: lo que cubriría un permiso. */
+  minutosFaltantes?: number | null;
+  /** Lo que se señala como debido sin solicitud: sin la tardanza y solo si pasa del mínimo. */
+  minutosDebe?: number | null;
+  /** La solicitud en curso o aprobada que cubre el día: su id, su tipo y en qué va. */
+  idSolicitud?: number | null;
+  solicitud?: string | null;
+  estadoSolicitud?: EstadoJustificacion | null;
+  /** Con un permiso aprobado, lo que queda por recuperar de ese día. */
+  minutosDeuda?: number | null;
+  /** La hora de entrada que autorizó un permiso pedido antes. */
+  entradaAutorizada?: string | null;
+  /** La semana de ese día ya está cerrada: no admite solicitudes. */
+  semanaCerrada?: boolean | null;
 }
 
 /** El corte con el que RR.HH. decide el bono: de lunes a viernes. */
@@ -206,6 +221,24 @@ export interface Justificacion {
   motivoResolucion: string | null;
   /** Alguno de sus días es de una semana cerrada: ya no se revisa ni se aprueba. */
   semanaCerrada?: boolean | null;
+  /** Solo en las propias: si todavía se puede modificar y, si no, por qué. */
+  modificable?: boolean | null;
+  motivoNoModificable?: string | null;
+}
+
+/** Lo que resultaría de una solicitud antes de enviarla. */
+export interface SolicitudPrevista {
+  /** El horario de ese día. */
+  horaEntrada: string | null;
+  horaSalida: string | null;
+  /** Las horas que sí trabaja, armadas con su horario; null si es el día entero. */
+  trabajaDesde: string | null;
+  trabajaHasta: string | null;
+  seRecupera: boolean;
+  /** Lo que quedaría por recuperar; null si el tipo no se recupera. */
+  minutos: number | null;
+  /** Los días de trabajo que cubre. */
+  dias: number;
 }
 
 // ==================== CALENDARIO ====================

@@ -12,6 +12,7 @@ import {
   EstadoAsistencia,
   Justificacion,
   MiPlan,
+  SolicitudPrevista,
   TipoDia
 } from './asistencia.models';
 import {
@@ -21,6 +22,32 @@ import {
 
 const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DESCANSO_MEDICO = 'DESCANSO_MEDICO';
+const CITA_MEDICA = 'CITA_MEDICA';
+/** Por debajo de esto, lo que faltó no es algo que pedir: es lo normal de entrar y salir a su hora. */
+const MINIMO_FALTANTE = 10;
+
+/** Un día sin completar que el permiso puede cubrir. */
+interface DiaSinCompletar {
+  fecha: string;
+  etiqueta: string;
+  /** Qué pasó ese día: «Trabajaste 06:00 de 09:30». */
+  detalle: string;
+  /** Lo que faltó; null si todavía no se puede calcular. */
+  falto: number | null;
+  pastilla: string;
+  clase: string;
+}
+
+/** El recuadro del total: lo que la persona acepta deber al enviar. */
+interface TotalSolicitud {
+  titulo: string;
+  detalle: string;
+  mal: boolean;
+  /** Sin definir en lo que no se recupera; null mientras no hay cifra. */
+  minutos?: number | null;
+  /** La solicitud que ya cubre ese día, para ofrecer modificarla. */
+  repetida: Justificacion | null;
+}
 
 /** Un día del rango de la solicitud, con lo que hoy figura en él. */
 interface DiaQueCubre {
@@ -68,7 +95,14 @@ const ESTILOS = {
   unidad: 'ml-1 text-xs font-semibold text-[#5f6c80] dark:text-slate-400',
   pie: 'mt-auto pt-1.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400',
   icono: 'flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#f1f3f6] text-[#0f172a] dark:bg-slate-800 dark:text-slate-100',
-  titulo: '!mb-3 !mt-0 text-[15px] font-extrabold'
+  titulo: '!mb-3 !mt-0 text-[15px] font-extrabold',
+  botonChico: 'inline-flex h-7 items-center rounded-lg border border-[#8491a3] bg-white px-2.5 text-[12px] font-semibold !text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-200 dark:hover:bg-slate-700',
+  opcion: 'flex flex-col items-start gap-0.5 rounded-[10px] border border-[#8491a3] bg-white px-3 py-2.5 text-left !text-[#0f172a] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:!text-slate-100 dark:hover:bg-slate-700',
+  opcionElegida: '!border-[#0f172a] !bg-[#f4f6f9] shadow-[inset_0_0_0_1px_#0f172a] dark:!border-white dark:!bg-slate-700 dark:shadow-[inset_0_0_0_1px_#ffffff]',
+  segmento: 'h-8 whitespace-nowrap rounded-[7px] px-1.5 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 max-[440px]:px-0.5 max-[440px]:text-[11.5px]',
+  segmentoLibre: '!text-[#5f6c80] hover:!text-[#0f172a] dark:!text-slate-400 dark:hover:!text-slate-100',
+  segmentoElegido: 'bg-[#0f172a] !text-white dark:bg-white dark:!text-[#0f172a]',
+  calculo: 'flex flex-wrap items-center justify-between gap-x-3.5 gap-y-1 rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-3.5 py-2.5 dark:border-slate-700 dark:bg-slate-800'
 } as const;
 
 /**
@@ -120,6 +154,10 @@ const ESTILOS = {
     .p-tarde { background: #fef6e0; color: #92400e }
     .p-falta { background: #fdecec; color: #b91c1c }
     .p-neutro { background: #f1f3f6; color: #5f6c80 }
+    .p-incomp { background: #fdeee0; color: #c2410c }
+    .p-justif { background: #eef2ff; color: #3730a3 }
+    /* Las horas del día y, debajo, qué pasa con él: lo que debe o la solicitud que lo cubre. */
+    .horas-dia { display: flex; flex-direction: column; align-items: flex-start; gap: 3px }
     /* La casilla del navegador, no la verde global de Cashi: así es en la maqueta. */
     .casilla-dia { accent-color: auto; width: 13px; height: 13px; margin: 3px 3px 3px 4px; cursor: pointer }
     .casilla-dia:disabled { cursor: default }
@@ -163,12 +201,16 @@ const ESTILOS = {
     .lista-recupera li { display: grid; grid-template-columns: 140px 1fr auto; gap: 10px; font-size: 13px }
     .marca-celda { display: flex; flex-direction: column; line-height: 1.3 }
     .marca-celda small { font-size: 10.5px; color: #8491a3 }
+    .marca-celda small.tarde { color: #b91c1c; font-weight: 600 }
     :host-context(.dark) .tarjeta { background: #0f172a; border-color: #1e293b }
     :host-context(.dark) .nota-panel { background: #1e293b; color: #94a3b8 }
     :host-context(.dark) .p-ok { background: #052e16; color: #86efac }
     :host-context(.dark) .p-tarde { background: #451a03; color: #fcd34d }
     :host-context(.dark) .p-falta { background: #450a0a; color: #fca5a5 }
     :host-context(.dark) .p-neutro { background: #1e293b; color: #94a3b8 }
+    :host-context(.dark) .p-incomp { background: #431407; color: #fdba74 }
+    :host-context(.dark) .p-justif { background: #1e1b4b; color: #a5b4fc }
+    :host-context(.dark) .marca-celda small.tarde { color: #fca5a5 }
     :host-context(.dark) .kpi .pie { color: #94a3b8 }
     :host-context(.dark) .kpi h3, :host-context(.dark) .pasos li { color: #94a3b8 !important }
     :host-context(.dark) .jornada { background: color-mix(in srgb, #f1f5f9 22%, #0f172a) }
@@ -305,9 +347,11 @@ const ESTILOS = {
 
             <!-- Tus recuperaciones: lo que RR.HH. confirmó, día por día. -->
             @if (misBloques().length) {
-              <div class="tarjeta mb-4">
-                <h2 class="!mb-1 !mt-0 text-[15px] font-extrabold">Tus recuperaciones</h2>
-                <p class="!mb-2.5 !mt-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ textoRecuperaciones() }}</p>
+              <div class="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <h2 class="!m-0 text-[15px] font-extrabold">Tus recuperaciones</h2>
+                <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ textoRecuperaciones() }}</span>
+              </div>
+              <div class="tarjeta mb-4 !py-1">
                 <ul class="lista-limpia lista-recupera">
                   @for (b of misBloques(); track b.fecha) {
                     <li>
@@ -346,7 +390,15 @@ const ESTILOS = {
                           </td>
                           <td [class]="estilos.td">
                             @if (dia.entrada) {
-                              <div class="marca-celda"><span>{{ hhmm(dia.entrada) }}</span><small>previsto {{ dia.horaEntradaHorario ? hhmm(dia.horaEntradaHorario) : '—' }}</small></div>
+                              <div class="marca-celda"><span>{{ hhmm(dia.entrada) }}</span>
+                                @if (dia.estado === 'TARDE' && dia.tardanza) {
+                                  <small class="tarde">tarde {{ dia.tardanza }}</small>
+                                } @else if (dia.entradaAutorizada) {
+                                  <small>autorizado {{ hhmm(dia.entradaAutorizada) }}</small>
+                                } @else {
+                                  <small>previsto {{ dia.horaEntradaHorario ? hhmm(dia.horaEntradaHorario) : '—' }}</small>
+                                }
+                              </div>
                             } @else { <span class="text-[#8491a3]">—</span> }
                           </td>
                           <td [class]="estilos.td">
@@ -365,7 +417,12 @@ const ESTILOS = {
                             } @else { <span class="text-[#8491a3]">—</span> }
                           </td>
                           <td [class]="estilos.td + ' font-bold'">
-                            @if (dia.horasTrabajadas) { {{ dia.horasTrabajadas }} } @else { <span class="text-[#8491a3]">—</span> }
+                            @if (notaDe(dia); as nota) {
+                              <div class="horas-dia">
+                                @if (dia.horasTrabajadas) { <span>{{ dia.horasTrabajadas }}</span> }
+                                <span [class]="'pastilla ' + nota.clase">{{ nota.texto }}</span>
+                              </div>
+                            } @else if (dia.horasTrabajadas) { {{ dia.horasTrabajadas }} } @else { <span class="text-[#8491a3]">—</span> }
                           </td>
                         </tr>
                       } @empty {
@@ -390,8 +447,14 @@ const ESTILOS = {
                           {{ s.tipo }} · {{ diasTexto(s) }}<br>
                           <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ pieSolicitud(s) }}</span>
                         </span>
-                        <span class="shrink-0 rounded-full px-[9px] py-0.5 text-[11.5px] font-bold" [class]="estadoDe(s).clase">
-                          {{ estadoDe(s).texto }}
+                        <span class="flex shrink-0 items-center gap-2">
+                          @if (s.modificable || yaPlanificada(s)) {
+                            <button type="button" [class]="estilos.botonChico" [disabled]="!s.modificable"
+                                    [title]="s.modificable ? '' : (s.motivoNoModificable ?? '')" (click)="abrirSolicitud(s)">Modificar</button>
+                          }
+                          <span class="rounded-full px-[9px] py-0.5 text-[11.5px] font-bold" [class]="estadoDe(s).clase">
+                            {{ estadoDe(s).texto }}
+                          </span>
                         </span>
                       </li>
                     } @empty {
@@ -431,7 +494,7 @@ const ESTILOS = {
                role="dialog" aria-modal="true" aria-labelledby="titulo-solicitud">
             <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
               <div>
-                <h2 id="titulo-solicitud" class="!m-0 text-[15px] font-extrabold">Registrar solicitud</h2>
+                <h2 id="titulo-solicitud" class="!m-0 text-[15px] font-extrabold">{{ editando() ? 'Modificar solicitud' : 'Registrar solicitud' }}</h2>
                 <p class="!mb-0 !mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
                   La revisa tu supervisora y la aprueba RR.HH.
                 </p>
@@ -442,6 +505,11 @@ const ESTILOS = {
             </header>
 
             <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
+              @if (editando() && editando()!.estado !== 'PENDIENTE') {
+                <p class="!m-0 rounded-lg border border-[#fbd391] bg-[#fef6e0] px-3 py-2.5 text-[12px] leading-normal text-[#92400e] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  Al guardar vuelve a «Por revisar»: tu supervisora y RR.HH. la aprueban de nuevo.
+                </p>
+              }
               <div class="flex flex-col gap-1.5">
                 <label [class]="estilos.etiqueta" for="j-tipo">Tipo</label>
                 <select id="j-tipo" [class]="estilos.campo"
@@ -452,6 +520,102 @@ const ESTILOS = {
                 </select>
               </div>
 
+              <!-- Permiso: primero para cuándo es. Cada caso trae solo lo que le toca. -->
+              @if (modo() === 'permiso') {
+                <div class="flex flex-col gap-1.5">
+                  <span [class]="estilos.etiqueta" id="rotulo-cuando">Para cuándo</span>
+                  <div class="grid grid-cols-2 gap-2 max-[440px]:grid-cols-1" role="radiogroup" aria-labelledby="rotulo-cuando">
+                    @for (o of CUANDO; track o.valor) {
+                      <button type="button" role="radio" [attr.aria-checked]="cuando() === o.valor"
+                              [class]="estilos.opcion + (cuando() === o.valor ? ' ' + estilos.opcionElegida : '')"
+                              (click)="elegirCuando(o.valor)">
+                        <strong class="text-[13px] font-bold">{{ o.titulo }}</strong>
+                        <small class="text-[11.5px] leading-[1.35] text-[#5f6c80] dark:text-slate-400">{{ o.pie }}</small>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (verPasado()) {
+                <div class="flex flex-col gap-1.5">
+                  <span [class]="estilos.etiqueta">Tus días sin completar</span>
+                  <div class="tarjeta !px-3.5 !py-0.5">
+                    <ul class="lista-limpia">
+                      @for (f of sinCompletar(); track f.fecha) {
+                        <li>
+                          <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-[13px]">
+                            <input type="checkbox" class="casilla-dia" [checked]="marcados().has(f.fecha)"
+                                   (change)="alternarSinCompletar(f.fecha)">
+                            <span class="flex min-w-0 flex-col leading-[1.35]">
+                              <span>{{ f.etiqueta }}</span>
+                              <small class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.detalle }}</small>
+                            </span>
+                          </label>
+                          <span [class]="'pastilla ' + f.clase">{{ f.pastilla }}</span>
+                        </li>
+                      } @empty {
+                        <li class="!justify-center text-[13px] !text-[#5f6c80] dark:!text-slate-400">{{ cargandoRecientes() ? 'Buscando tus días…' : 'No tienes días sin completar' }}</li>
+                      }
+                    </ul>
+                  </div>
+                  <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Solo de semanas sin cerrar. El permiso cubre las horas; la tardanza se mantiene.</p>
+                </div>
+              }
+
+              <!-- Un día que viene: lo usan el permiso y la cita médica. -->
+              @if (verFuturo()) {
+                <div class="flex flex-col gap-1.5">
+                  <span [class]="estilos.etiqueta" id="rotulo-que">Qué necesitas</span>
+                  <div class="grid grid-cols-3 gap-0.5 rounded-[10px] border border-[#e6e9ee] p-[3px] dark:border-slate-700"
+                       role="radiogroup" aria-labelledby="rotulo-que">
+                    @for (o of QUE; track o.valor) {
+                      <button type="button" role="radio" [attr.aria-checked]="que() === o.valor"
+                              [class]="estilos.segmento + ' ' + (que() === o.valor ? estilos.segmentoElegido : estilos.segmentoLibre)"
+                              (click)="elegirQue(o.valor)">{{ o.texto }}</button>
+                    }
+                  </div>
+                </div>
+                <div class="flex gap-3">
+                  <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <label [class]="estilos.etiqueta" for="j-dia">{{ que() === 'todo' ? 'Desde' : 'Día' }}</label>
+                    <input id="j-dia" type="date" [class]="estilos.campo" [attr.min]="primerDiaFuturo()"
+                           [ngModel]="diaFuturo()" (ngModelChange)="cambiarDia($event)">
+                  </div>
+                  @if (que() === 'todo') {
+                    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <label [class]="estilos.etiqueta" for="j-dia-hasta">Hasta</label>
+                      <input id="j-dia-hasta" type="date" [class]="estilos.campo" [attr.min]="diaFuturo()"
+                             [ngModel]="hastaFuturo()" (ngModelChange)="hastaFuturo.set($event); prever()">
+                    </div>
+                  } @else {
+                    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <label [class]="estilos.etiqueta" for="j-hora">{{ que() === 'entrar' ? 'Entro a las' : 'Salgo a las' }}</label>
+                      <input id="j-hora" type="time" step="300" [class]="estilos.campo"
+                             [ngModel]="horaElegida()" (ngModelChange)="cambiarHora($event)">
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- El total, siempre a la vista: es lo que la persona acepta deber al enviar. -->
+              @if (modo() !== 'rango') {
+                <div [class]="estilos.calculo" aria-live="polite">
+                  <span class="flex min-w-0 flex-col leading-[1.4]">
+                    <strong class="text-[12.5px] font-bold">{{ total().titulo }}</strong>
+                    <small [class]="'text-[11.5px] ' + (total().mal ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#5f6c80] dark:text-slate-400')">{{ total().detalle }}</small>
+                  </span>
+                  @if (total().repetida; as otra) {
+                    <button type="button" [class]="estilos.botonChico" [disabled]="!otra.modificable"
+                            [title]="otra.modificable ? '' : (otra.motivoNoModificable ?? '')" (click)="abrirSolicitud(otra)">Modificarla</button>
+                  } @else if (total().minutos !== undefined) {
+                    <span class="text-[22px] font-extrabold tracking-[-0.02em] tabular-nums">{{ total().minutos === null ? '—' : enHoras(total().minutos!) }}</span>
+                  }
+                </div>
+              }
+
+              <!-- Los demás tipos: el rango de fechas y los días que cubre. Con descanso médico, los del certificado. -->
+              @if (modo() === 'rango') {
               <div class="flex gap-3">
                 <div class="flex flex-1 flex-col gap-1.5">
                   <label [class]="estilos.etiqueta" for="j-desde">Desde</label>
@@ -465,40 +629,9 @@ const ESTILOS = {
                 </div>
               </div>
 
-              <p class="nota-panel">{{ seRecupera()
-                ? 'Salen los días que no completaste desde el lunes de la semana pasada. Para un día que todavía no llega, cambia las fechas.'
-                : 'Sirve para días pasados y para días futuros.' }}</p>
-
-              <!-- Un solo día que todavía no termina: puede trabajar una parte y deber el resto. -->
-              @if (admiteHoras()) {
-                <div class="flex flex-col gap-2">
-                  <label class="flex items-center gap-[9px] text-[13px]">
-                    <input type="checkbox" class="casilla-dia" [checked]="porHoras()"
-                           (change)="porHoras.set(!porHoras()); error.set('')">
-                    <span>Trabajo una parte del día</span>
-                  </label>
-                  @if (porHoras()) {
-                    <div class="flex gap-3">
-                      <div class="flex flex-1 flex-col gap-1.5">
-                        <label [class]="estilos.etiqueta" for="j-trabaja-desde">Trabajo desde</label>
-                        <input id="j-trabaja-desde" type="time" step="300" [class]="estilos.campo"
-                               [ngModel]="trabajaDesde()" (ngModelChange)="trabajaDesde.set($event); error.set('')">
-                      </div>
-                      <div class="flex flex-1 flex-col gap-1.5">
-                        <label [class]="estilos.etiqueta" for="j-trabaja-hasta">Hasta</label>
-                        <input id="j-trabaja-hasta" type="time" step="300" [class]="estilos.campo"
-                               [ngModel]="trabajaHasta()" (ngModelChange)="trabajaHasta.set($event); error.set('')">
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-
-              <!-- Los días del rango con lo que hoy figura. El trabajado solo se marca con descanso médico; con permiso, el que quedó a medias. -->
-              @if (!(admiteHoras() && porHoras())) {
               <div class="flex flex-col gap-1.5">
-                <span class="text-[13px]">Días que cubre</span>
-                <div class="tarjeta !px-3.5 !py-2.5">
+                <span [class]="estilos.etiqueta">{{ esDescanso() ? 'Días del certificado' : 'Días que cubre' }}</span>
+                <div class="tarjeta !px-3.5 !py-0.5">
                   <ul class="lista-limpia">
                     @if (diasQueCubre(); as filas) {
                       @for (f of filas; track f.fecha) {
@@ -511,23 +644,26 @@ const ESTILOS = {
                           <span [class]="'pastilla ' + f.clase">{{ f.texto }}</span>
                         </li>
                       } @empty {
-                        <li class="!justify-center text-[13px] !text-[#5f6c80] dark:!text-slate-400">{{ seRecupera() ? 'No hay días sin completar en esas fechas' : 'Ese rango no tiene días laborables' }}</li>
+                        <li class="!justify-center text-[13px] !text-[#5f6c80] dark:!text-slate-400">Ese rango no tiene días laborables</li>
                       }
                     } @else {
                       <li class="!justify-center text-[13px] !text-[#b91c1c] dark:!text-red-300">La fecha de fin no puede ser anterior a la de inicio</li>
                     }
                   </ul>
                 </div>
+                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ esDescanso()
+                  ? 'Son días completos: no cuentan como trabajados, incompletos ni con tardanza.'
+                  : 'Sirve para días pasados y para días futuros.' }}</p>
               </div>
               }
 
               @if (pideCertificado()) {
               <div class="flex flex-col gap-1.5">
-                <span class="text-[13px]">Certificado</span>
+                <span [class]="estilos.etiqueta">{{ modo() === 'cita' ? 'Constancia de la cita' : 'Certificado' }}</span>
                 <label class="zona-archivo" for="j-archivo">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <strong class="text-[13px] !text-[#0f172a] dark:!text-slate-100">{{ archivo()?.name ?? 'Adjuntar certificado' }}</strong>
-                  <span>Foto o PDF, hasta 10 MB. Obligatorio.</span>
+                  <strong class="text-[13px] !text-[#0f172a] dark:!text-slate-100">{{ archivo()?.name ?? textoAdjunto() }}</strong>
+                  <span>{{ conservaAdjunto() ? 'Foto o PDF, hasta 10 MB. Si no adjuntas otro, queda el que ya tiene.' : 'Foto o PDF, hasta 10 MB. Obligatorio.' }}</span>
                 </label>
                 <input id="j-archivo" type="file" class="sr-only"
                        accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -554,7 +690,7 @@ const ESTILOS = {
             <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
               <button type="button" [class]="estilos.botonSecundario" (click)="cerrarSolicitud()">Cancelar</button>
               <button type="button" [class]="estilos.botonPrimario" (click)="enviar()" [disabled]="enviando()">
-                {{ enviando() ? 'Enviando…' : 'Enviar a revisión' }}
+                {{ enviando() ? (editando() ? 'Guardando…' : 'Enviando…') : (editando() ? 'Guardar cambios' : 'Enviar a revisión') }}
               </button>
             </footer>
           </div>
@@ -583,6 +719,15 @@ export class MiAsistenciaComponent implements OnInit {
   protected readonly DIEZ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   protected readonly enHoras = enHoras;
   protected readonly minutosDe = minutosDe;
+  protected readonly CUANDO = [
+    { valor: 'pasado' as const, titulo: 'Un día que ya pasó', pie: 'No completé mi jornada o no vine' },
+    { valor: 'futuro' as const, titulo: 'Hoy o un día que viene', pie: 'Voy a salir antes, entrar tarde o faltar' }
+  ];
+  protected readonly QUE = [
+    { valor: 'salir' as const, texto: 'Salir antes' },
+    { valor: 'entrar' as const, texto: 'Entrar más tarde' },
+    { valor: 'todo' as const, texto: 'Todo el día' }
+  ];
 
   readonly cargando = signal(false);
   readonly reporte = signal<AsistenciaReporte | null>(null);
@@ -614,14 +759,116 @@ export class MiAsistenciaComponent implements OnInit {
   readonly pideCertificado = computed(() => !!this.tipoNuevo()?.exigeCertificado);
   /** Un permiso que se recupera: cubre lo que faltó ese día y abre esa deuda. */
   readonly seRecupera = computed(() => !!this.tipoNuevo()?.recuperable);
-  /** En un permiso de un solo día que todavía no termina se puede trabajar una parte. */
-  readonly admiteHoras = computed(() => {
-    const { desde, hasta } = this.rango();
-    return this.seRecupera() && !!desde && desde === hasta && desde >= this.hoy();
+  readonly esDescanso = computed(() => this.tipoNuevo()?.codigo === DESCANSO_MEDICO);
+  /**
+   * Cómo se pide cada tipo. El que se recupera, por «para cuándo»; la cita
+   * médica, solo para un día que viene; los demás, por rango de fechas.
+   */
+  readonly modo = computed<'permiso' | 'cita' | 'rango'>(() =>
+    this.seRecupera() ? 'permiso' : this.tipoNuevo()?.codigo === CITA_MEDICA ? 'cita' : 'rango');
+  readonly cuando = signal<'pasado' | 'futuro'>('pasado');
+  readonly verPasado = computed(() => this.modo() === 'permiso' && this.cuando() === 'pasado');
+  readonly verFuturo = computed(() => this.modo() === 'cita' || (this.modo() === 'permiso' && this.cuando() === 'futuro'));
+
+  /** La solicitud que se está modificando; null al registrar una nueva. */
+  readonly editando = signal<Justificacion | null>(null);
+
+  /** Un día que ya pasó: los días desde el lunes de la semana pasada y los que la persona marcó. */
+  readonly diasRecientes = signal<AsistenciaDia[]>([]);
+  readonly cargandoRecientes = signal(false);
+  readonly marcados = signal(new Set<string>());
+  /** Quiso enviar sin marcar ningún día. */
+  readonly faltaMarcar = signal(false);
+  /** Mientras no elija, «para cuándo» se acomoda a si tiene días sin completar. */
+  private cuandoElegido = false;
+
+  /** Un día que viene: qué necesita, qué día y a qué hora. */
+  readonly que = signal<'salir' | 'entrar' | 'todo'>('salir');
+  readonly diaFuturo = signal('');
+  readonly hastaFuturo = signal('');
+  readonly horaSalir = signal('15:00');
+  readonly horaEntrar = signal('10:00');
+  readonly horaElegida = computed(() => (this.que() === 'entrar' ? this.horaEntrar() : this.horaSalir()));
+  /** Lo que respondió el backend sobre ese día: cuánto deberá, o por qué no se puede. */
+  readonly prevista = signal<SolicitudPrevista | null>(null);
+  readonly errorPrevista = signal<{ texto: string; idSolicitud: number | null } | null>(null);
+  private turnoPrevista = 0;
+
+  /**
+   * Los días sin completar de las semanas abiertas: sin entrada, con menos
+   * horas que su jornada o con marcas a medias. El que ya tiene una solicitud
+   * no vuelve a salir, salvo que sea la que se está modificando.
+   */
+  readonly sinCompletar = computed<DiaSinCompletar[]>(() => {
+    const hoy = this.hoy();
+    const propia = this.editando()?.id ?? null;
+    const filas: DiaSinCompletar[] = [];
+    for (const d of this.diasRecientes()) {
+      const suya = !!d.idSolicitud && d.idSolicitud === propia;
+      if (d.fecha >= hoy || d.semanaCerrada || d.estado === 'NO_LABORABLE' || (d.idSolicitud && !suya)
+          || (d.estado === 'JUSTIFICADO' && !suya)) {
+        continue;
+      }
+      const jornada = d.minutosJornada ?? 0;
+      const etiqueta = this.diaLargo(d.fecha);
+      if (!d.entrada) {
+        if (jornada > 0) {
+          filas.push({ fecha: d.fecha, etiqueta, detalle: 'No trabajado', falto: jornada,
+            pastilla: `Faltó ${enHoras(jornada)}`, clase: 'p-falta' });
+        }
+      } else if (d.minutosTrabajados == null) {
+        // Sin todas sus marcas no hay horas: se puede pedir, y se calcula cuando RR.HH. las complete.
+        filas.push({ fecha: d.fecha, etiqueta, detalle: 'Faltan marcas', falto: null, pastilla: 'Sin calcular', clase: 'p-neutro' });
+      } else if ((d.minutosFaltantes ?? jornada - d.minutosTrabajados) > MINIMO_FALTANTE) {
+        const falto = d.minutosFaltantes ?? jornada - d.minutosTrabajados;
+        const horas = `${enHoras(d.minutosTrabajados)} de ${enHoras(jornada)}`;
+        filas.push({ fecha: d.fecha, etiqueta, falto, pastilla: `Faltó ${enHoras(falto)}`, clase: 'p-incomp',
+          detalle: d.estado === 'TARDE' && d.tardanza ? `Llegaste tarde ${d.tardanza} · trabajaste ${horas}` : `Trabajaste ${horas}` });
+      }
+    }
+    return filas;
   });
-  readonly porHoras = signal(false);
-  readonly trabajaDesde = signal('08:00');
-  readonly trabajaHasta = signal('14:00');
+
+  /** El recuadro del total: lo que quedará por recuperar, o por qué no se puede pedir. */
+  readonly total = computed<TotalSolicitud>(() => {
+    const cita = this.modo() === 'cita';
+    if (this.verPasado()) {
+      const elegidos = this.sinCompletar().filter(f => this.marcados().has(f.fecha));
+      if (!elegidos.length) {
+        return { titulo: 'Horas por recuperar', mal: this.faltaMarcar(), minutos: null, repetida: null,
+          detalle: this.faltaMarcar() ? 'Marca al menos un día' : 'Marca el día que cubre el permiso' };
+      }
+      const sinCalcular = elegidos.filter(f => f.falto === null).length;
+      return { titulo: 'Horas por recuperar', mal: false, repetida: null,
+        minutos: elegidos.reduce((t, f) => t + (f.falto ?? 0), 0),
+        detalle: (elegidos.length === 1 ? elegidos[0].etiqueta
+            : `${elegidos.length} días · ${elegidos.map(f => this.corta(f.fecha)).join(', ')}`)
+          + (sinCalcular ? ` · ${sinCalcular} sin calcular` : '') };
+    }
+
+    const titulo = cita ? 'No se recupera' : 'Horas por recuperar';
+    const error = this.errorPrevista();
+    if (error) {
+      return { titulo: cita ? 'Cita médica' : titulo, detalle: error.texto, mal: true, minutos: cita ? undefined : null,
+        repetida: error.idSolicitud ? this.solicitudes().find(x => x.id === error.idSolicitud) ?? null : null };
+    }
+    const p = this.prevista();
+    if (!p) {
+      return { titulo, detalle: 'Calculando…', mal: false, minutos: cita ? undefined : null, repetida: null };
+    }
+    const dia = this.diaLargo(this.diaFuturo());
+    const detalle = p.trabajaDesde && p.trabajaHasta
+      ? `${dia} · trabajas de ${this.hhmm(p.trabajaDesde)} a ${this.hhmm(p.trabajaHasta)}`
+      : p.dias > 1 ? `${p.dias} días · del ${this.corta(this.diaFuturo())} al ${this.corta(this.hastaFuturo())}`
+      : `${dia} · todo el día`;
+    return { titulo, detalle, mal: false, minutos: cita ? undefined : p.minutos, repetida: null };
+  });
+
+  /** Al modificar una que ya trae su adjunto y no cambia de tipo, no hace falta subirlo otra vez. */
+  readonly conservaAdjunto = computed(() => {
+    const e = this.editando();
+    return !!e?.tieneArchivo && e.idTipoDia === this.idTipoNuevo();
+  });
 
   /** El lunes de la semana que se está viendo. */
   readonly lunes = signal(this.lunesDe(new Date()));
@@ -667,7 +914,11 @@ export class MiAsistenciaComponent implements OnInit {
   readonly diasCompletos = computed(() => this.dias().filter(d =>
     (d.estado === 'PUNTUAL' || d.estado === 'TARDE') && !(d.marcasFaltantes ?? []).length).length);
 
-  /** Los días de lunes a viernes del rango, cada uno con lo que hoy figura; NULL si el rango está al revés. */
+  /**
+   * Los días de lunes a viernes del rango, cada uno con lo que hoy figura; NULL
+   * si el rango está al revés. El de una semana cerrada o con otra solicitud no
+   * se puede marcar.
+   */
   readonly diasQueCubre = computed(() => {
     const { desde, hasta } = this.rango();
     if (!desde || !hasta || hasta < desde) {
@@ -675,9 +926,9 @@ export class MiAsistenciaComponent implements OnInit {
     }
     const conocidos = this.diasConocidos();
     const hoy = this.hoy();
+    const propia = this.editando()?.id ?? null;
     // El descanso médico manda sobre las marcas: también cubre el día en que se entró y hubo que salir.
-    const esDescansoMedico = this.tipos().find(t => t.id === this.idTipoNuevo())?.codigo === DESCANSO_MEDICO;
-    const seRecupera = this.seRecupera();
+    const esDescansoMedico = this.esDescanso();
     const filas: DiaQueCubre[] = [];
     for (let f = desde; f <= hasta && filas.length < 31; f = this.sumarDias(f, 1)) {
       const diaSemana = new Date(f + 'T00:00:00').getDay();
@@ -687,31 +938,18 @@ export class MiAsistenciaComponent implements OnInit {
       const d = conocidos.get(f);
       const conEntrada = f <= hoy && !!d && (d.estado === 'PUNTUAL' || d.estado === 'TARDE' || d.estado === 'INCOMPLETO');
       // La tardanza sí se cubre: una cita médica a primera hora hace llegar tarde.
-      const [texto, clase, marcable]: [string, string, boolean] = f > hoy ? ['Aún no llega', 'p-neutro', true]
+      const [texto, clase, marcable]: [string, string, boolean] = d?.idSolicitud && d.idSolicitud !== propia
+          ? [`Ya tiene ${(d.solicitud ?? 'solicitud').toLowerCase()}`, 'p-neutro', false]
+        : d?.semanaCerrada ? ['Semana cerrada', 'p-neutro', false]
+        : f > hoy ? ['Aún no llega', 'p-neutro', true]
+        : f === hoy && !!d?.entrada && !d.salida ? ['En curso', 'p-neutro', true]
         : !d || d.estado === 'FALTA' ? ['No trabajado', 'p-falta', true]
         : d.estado === 'TARDE' ? ['Llegó tarde', 'p-tarde', true]
         : d.estado === 'NO_LABORABLE' ? [d.tipoDia ?? 'No laborable', 'p-neutro', false]
-        : d.estado === 'JUSTIFICADO' ? [d.tipoDia ?? 'Justificado', 'p-neutro', false]
+        : d.estado === 'JUSTIFICADO' ? [d.tipoDia ?? 'Justificado', 'p-neutro', d.idSolicitud === propia && !!propia]
         : ['Trabajado', 'p-ok', esDescansoMedico];
-      const etiqueta = `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`;
-      if (seRecupera && f <= hoy) {
-        // El permiso cubre lo que faltó ese día. Se marca a propósito: es lo que después se recupera.
-        const jornada = d?.minutosJornada ?? 0;
-        if (d && (d.estado === 'NO_LABORABLE' || d.estado === 'JUSTIFICADO')) {
-          continue;
-        }
-        if (!conEntrada) {
-          filas.push({ fecha: f, etiqueta, texto: jornada ? `No trabajado · debe ${enHoras(jornada)}` : 'No trabajado',
-            clase: 'p-falta', marcable: true, sinMarcar: true });
-        } else if (d!.minutosTrabajados == null) {
-          filas.push({ fecha: f, etiqueta, texto: f === hoy ? 'En curso' : 'Faltan marcas', clase: 'p-neutro', marcable: f < hoy, sinMarcar: true });
-        } else if (jornada - d!.minutosTrabajados > 0) {
-          filas.push({ fecha: f, etiqueta, texto: `Trabajó ${enHoras(d!.minutosTrabajados)} de ${enHoras(jornada)} · debe ${enHoras(jornada - d!.minutosTrabajados)}`,
-            clase: 'p-tarde', marcable: true, sinMarcar: true });
-        }
-        continue;
-      }
-      filas.push({ fecha: f, etiqueta, texto, clase, marcable, sinMarcar: esDescansoMedico && conEntrada });
+      filas.push({ fecha: f, etiqueta: `${DIAS_LARGOS[diaSemana]} ${this.corta(f)}`, texto, clase, marcable,
+        sinMarcar: esDescansoMedico && conEntrada });
     }
     return filas;
   });
@@ -928,22 +1166,182 @@ export class MiAsistenciaComponent implements OnInit {
 
   // ==================== SOLICITUD ====================
 
-  abrirSolicitud(): void {
+  /**
+   * Abre el formulario vacío, o con una solicitud ya enviada para modificarla.
+   * Modificar la que ya se revisó o aprobó la devuelve al principio.
+   */
+  abrirSolicitud(sol: Justificacion | null = null): void {
     this.formulario.set(true);
+    this.editando.set(sol);
     this.error.set('');
     this.errorComentario.set(false);
+    this.faltaMarcar.set(false);
     this.archivo.set(null);
+    const tipo = (sol ? this.tipos().find(t => t.id === sol.idTipoDia) : null) ?? this.tipos()[0] ?? null;
     this.nuevo = {
-      idTipoDia: this.tipos()[0]?.id ?? null,
-      fechaDesde: this.hoy(),
-      fechaHasta: this.hoy(),
-      comentario: ''
+      idTipoDia: tipo?.id ?? null,
+      fechaDesde: sol?.fechaDesde ?? this.hoy(),
+      fechaHasta: sol?.fechaHasta ?? this.hoy(),
+      comentario: sol?.comentario ?? ''
     };
     this.idTipoNuevo.set(this.nuevo.idTipoDia);
-    this.porHoras.set(false);
-    // Lo de la semana a la vista ya está: se usa mientras llega lo del rango.
+
+    const proximo = this.diaHabilDespuesDe(this.hoy());
+    this.marcados.set(new Set());
+    this.cuandoElegido = !!sol;
+    this.cuando.set('pasado');
+    this.que.set('salir');
+    this.horaSalir.set('15:00');
+    this.horaEntrar.set('10:00');
+    this.diaFuturo.set(proximo);
+    this.hastaFuturo.set(proximo);
+    if (sol && this.modo() !== 'rango') {
+      this.ponerLoDe(sol);
+    }
+
+    // Lo de la semana a la vista ya está: se usa mientras llega lo demás.
     this.diasConocidos.set(new Map(this.dias().map(d => [d.fecha, d])));
     this.cargarRango();
+    this.cargarRecientes();
+    this.prever();
+  }
+
+  /** Deja el formulario como quedó la solicitud que se va a modificar. */
+  private ponerLoDe(sol: Justificacion): void {
+    const queViene = !!sol.trabajaDesde || sol.fechaDesde >= this.hoy() || this.modo() === 'cita';
+    if (!queViene) {
+      const dias = new Set<string>();
+      for (let f = sol.fechaDesde; f <= sol.fechaHasta; f = this.sumarDias(f, 1)) {
+        dias.add(f);
+      }
+      this.marcados.set(dias);
+      return;
+    }
+    this.cuando.set('futuro');
+    this.diaFuturo.set(sol.fechaDesde);
+    this.hastaFuturo.set(sol.fechaHasta);
+    if (!sol.trabajaDesde || !sol.trabajaHasta) {
+      this.que.set('todo');
+      return;
+    }
+    // Si salía antes o entraba más tarde se sabe al ver su horario de ese día.
+    this.horaSalir.set(this.hhmm(sol.trabajaHasta));
+    this.servicio.solicitudPrevista({ idTipoDia: sol.idTipoDia, fechaDesde: sol.fechaDesde, fechaHasta: sol.fechaDesde,
+                                      idSolicitud: sol.id }).subscribe({
+      next: p => {
+        if (this.editando()?.id === sol.id && p.horaEntrada && this.hhmm(p.horaEntrada) !== this.hhmm(sol.trabajaDesde!)) {
+          this.que.set('entrar');
+          this.horaEntrar.set(this.hhmm(sol.trabajaDesde!));
+          this.prever();
+        }
+      },
+      error: () => { /* sin su horario se queda como «salir antes» */ }
+    });
+  }
+
+  /** Los días desde el lunes de la semana pasada: de ahí salen los que quedaron sin completar. */
+  private cargarRecientes(): void {
+    this.cargandoRecientes.set(true);
+    this.servicio.reporteMio(this.sumarDias(this.lunesDe(new Date()), -7), this.hoy()).subscribe({
+      next: r => {
+        this.diasRecientes.set(r.dias ?? []);
+        this.cargandoRecientes.set(false);
+        this.acomodarCuando();
+      },
+      error: () => this.cargandoRecientes.set(false)
+    });
+  }
+
+  /** Sin días que cubrir, el permiso se abre en «un día que viene». */
+  private acomodarCuando(): void {
+    if (!this.cuandoElegido && this.modo() === 'permiso' && !this.cargandoRecientes()
+        && !this.sinCompletar().length && this.cuando() === 'pasado') {
+      this.cuando.set('futuro');
+      this.prever();
+    }
+  }
+
+  elegirCuando(valor: 'pasado' | 'futuro'): void {
+    this.cuandoElegido = true;
+    this.cuando.set(valor);
+    this.error.set('');
+    this.prever();
+  }
+
+  elegirQue(valor: 'salir' | 'entrar' | 'todo'): void {
+    this.que.set(valor);
+    this.prever();
+  }
+
+  cambiarDia(dia: string): void {
+    this.diaFuturo.set(dia);
+    // El rango de «Todo el día» nunca termina antes de empezar.
+    if (!this.hastaFuturo() || this.hastaFuturo() < dia) {
+      this.hastaFuturo.set(dia);
+    }
+    this.prever();
+  }
+
+  cambiarHora(hora: string): void {
+    (this.que() === 'entrar' ? this.horaEntrar : this.horaSalir).set(hora);
+    this.prever();
+  }
+
+  alternarSinCompletar(fecha: string): void {
+    this.marcados.update(s => {
+      const copia = new Set(s);
+      copia.has(fecha) ? copia.delete(fecha) : copia.add(fecha);
+      return copia;
+    });
+    this.faltaMarcar.set(false);
+    this.error.set('');
+  }
+
+  /** El permiso se puede pedir para hoy; lo que lleva anticipación, desde el día que toca. */
+  primerDiaFuturo(): string {
+    return this.primerDia() ?? this.hoy();
+  }
+
+  /**
+   * Pregunta al backend qué resultaría del día que viene tal como está puesto:
+   * él conoce el horario de ese día, los feriados y si ya hay otra solicitud.
+   */
+  prever(): void {
+    const turno = ++this.turnoPrevista;
+    this.prevista.set(null);
+    this.errorPrevista.set(null);
+    const idTipoDia = this.nuevo.idTipoDia;
+    if (!this.verFuturo() || !idTipoDia) {
+      return;
+    }
+    const dia = this.diaFuturo();
+    const que = this.que();
+    const hora = this.horaElegida();
+    const hasta = que === 'todo' ? (this.hastaFuturo() || dia) : dia;
+    const falta = !dia ? 'Elige el día' : que !== 'todo' && !hora ? 'Indica la hora'
+      : hasta < dia ? 'La fecha de fin no puede ser anterior a la de inicio' : '';
+    if (falta) {
+      this.errorPrevista.set({ texto: falta, idSolicitud: null });
+      return;
+    }
+    this.servicio.solicitudPrevista({
+      idTipoDia, fechaDesde: dia, fechaHasta: hasta,
+      saleALas: que === 'salir' ? hora : null,
+      entraALas: que === 'entrar' ? hora : null,
+      idSolicitud: this.editando()?.id ?? null
+    }).subscribe({
+      next: p => {
+        if (turno === this.turnoPrevista) {
+          this.prevista.set(p);
+        }
+      },
+      error: respuesta => {
+        if (turno === this.turnoPrevista) {
+          this.errorPrevista.set({ texto: respuesta?.error?.error ?? 'No se pudo calcular',
+                                   idSolicitud: respuesta?.error?.idSolicitud ?? null });
+        }
+      }
+    });
   }
 
   /**
@@ -1016,16 +1414,19 @@ export class MiAsistenciaComponent implements OnInit {
     this.nuevo.idTipoDia = id;
     this.idTipoNuevo.set(id);
     this.conEntradaMarcados.set(new Set());
-    this.porHoras.set(false);
     this.error.set('');
+    this.faltaMarcar.set(false);
     if (!this.pideCertificado()) {
       this.archivo.set(null);
     }
-    // Con un permiso que se recupera, las fechas sin tocar pasan a buscar lo que quedó sin completar.
-    if (this.seRecupera() && this.nuevo.fechaDesde === this.hoy() && this.nuevo.fechaHasta === this.hoy()) {
-      this.nuevo.fechaDesde = this.sumarDias(this.lunesDe(new Date()), -7);
-      this.cargarRango();
+    // Lo que lleva anticipación no se pide para hoy.
+    const primero = this.primerDiaFuturo();
+    if (this.diaFuturo() < primero) {
+      this.diaFuturo.set(this.diaHabilDespuesDe(this.sumarDias(primero, -1)));
+      this.hastaFuturo.set(this.diaFuturo());
     }
+    this.acomodarCuando();
+    this.prever();
   }
 
   elegirArchivo(evento: Event): void {
@@ -1035,31 +1436,52 @@ export class MiAsistenciaComponent implements OnInit {
   }
 
   enviar(): void {
-    if (!this.nuevo.idTipoDia) {
+    const idTipoDia = this.nuevo.idTipoDia;
+    if (!idTipoDia) {
       this.error.set('Elige el tipo');
       return;
     }
-    if (this.nuevo.fechaHasta < this.nuevo.fechaDesde) {
-      this.error.set('La fecha final no puede ser anterior a la inicial');
-      return;
+
+    // Cada pedido es una solicitud: un tramo de días seguidos, o un día con sus horas.
+    let pedidos: { desde: string; hasta: string; trabajaDesde?: string | null; trabajaHasta?: string | null }[];
+    if (this.verPasado()) {
+      const fechas = this.sinCompletar().filter(f => this.marcados().has(f.fecha)).map(f => f.fecha);
+      if (!fechas.length) {
+        this.faltaMarcar.set(true);
+        return;
+      }
+      pedidos = this.seguidos(fechas);
+    } else if (this.verFuturo()) {
+      const p = this.prevista();
+      if (!p) {
+        return;  // el recuadro ya dice por qué no se puede, o todavía calcula
+      }
+      const porHoras = this.que() !== 'todo';
+      pedidos = [{
+        desde: this.diaFuturo(),
+        hasta: porHoras ? this.diaFuturo() : (this.hastaFuturo() || this.diaFuturo()),
+        trabajaDesde: porHoras ? p.trabajaDesde : null,
+        trabajaHasta: porHoras ? p.trabajaHasta : null
+      }];
+    } else {
+      if (this.nuevo.fechaHasta < this.nuevo.fechaDesde) {
+        this.error.set('La fecha final no puede ser anterior a la inicial');
+        return;
+      }
+      pedidos = this.tramos();
+      if (!pedidos.length) {
+        this.error.set('Marca al menos un día');
+        return;
+      }
+      const primerDia = this.primerDia();
+      if (primerDia && pedidos[0].desde < primerDia) {
+        this.error.set(avisoAnticipacion(this.tipoElegido()!));
+        return;
+      }
     }
-    const porHoras = this.admiteHoras() && this.porHoras();
-    if (porHoras && (!this.trabajaDesde() || !this.trabajaHasta() || this.trabajaDesde() >= this.trabajaHasta())) {
-      this.error.set('Indica desde y hasta qué hora trabajas ese día');
-      return;
-    }
-    const tramos = porHoras ? [{ desde: this.nuevo.fechaDesde, hasta: this.nuevo.fechaHasta }] : this.tramos();
-    if (!tramos.length) {
-      this.error.set('Marca al menos un día');
-      return;
-    }
-    const primerDia = this.primerDia();
-    if (primerDia && tramos[0].desde < primerDia) {
-      this.error.set(avisoAnticipacion(this.tipoElegido()!));
-      return;
-    }
-    if (this.tipoElegido()?.exigeCertificado && !this.archivo()) {
-      this.error.set(`${this.tipoElegido()!.nombre} necesita certificado adjunto`);
+
+    if (this.tipoElegido()?.exigeCertificado && !this.archivo() && !this.conservaAdjunto()) {
+      this.error.set(`${this.tipoElegido()!.nombre} necesita ${this.modo() === 'cita' ? 'la constancia adjunta' : 'certificado adjunto'}`);
       return;
     }
     if (!this.nuevo.comentario.trim()) {
@@ -1070,34 +1492,94 @@ export class MiAsistenciaComponent implements OnInit {
 
     this.error.set('');
     this.enviando.set(true);
-    const idTipoDia = this.nuevo.idTipoDia;
-    from(tramos).pipe(
-      concatMap(tramo => this.servicio.crearJustificacion({
-        idTipoDia,
-        fechaDesde: tramo.desde,
-        fechaHasta: tramo.hasta,
-        comentario: this.nuevo.comentario.trim(),
-        archivo: this.pideCertificado() ? this.archivo() : null,
-        trabajaDesde: porHoras ? this.trabajaDesde() : null,
-        trabajaHasta: porHoras ? this.trabajaHasta() : null
-      })),
+    const editando = this.editando();
+    const comentario = this.nuevo.comentario.trim();
+    const archivo = this.pideCertificado() ? this.archivo() : null;
+    // Al modificar, el primer tramo es la misma solicitud; si marcó días sueltos, los demás son nuevas.
+    from(pedidos).pipe(
+      concatMap((pedido, i) => {
+        const datos = { idTipoDia, fechaDesde: pedido.desde, fechaHasta: pedido.hasta, comentario, archivo,
+                        trabajaDesde: pedido.trabajaDesde ?? null, trabajaHasta: pedido.trabajaHasta ?? null };
+        return editando && i === 0
+          ? this.servicio.modificarJustificacion(editando.id, datos)
+          : this.servicio.crearJustificacion(datos);
+      }),
       toArray()
     ).subscribe({
       next: hechas => {
         this.enviando.set(false);
         this.cerrarSolicitud();
-        this.toast.success(hechas.length === 1
-          ? 'Solicitud enviada. La revisará tu supervisora'
-          : `${hechas.length} solicitudes enviadas. Las revisará tu supervisora`);
+        this.toast.success(editando
+          ? (editando.estado === 'PENDIENTE' ? 'Solicitud modificada' : 'Solicitud modificada. Vuelve a revisión')
+          : hechas.length === 1
+            ? 'Solicitud enviada. La revisará tu supervisora'
+            : `${hechas.length} solicitudes enviadas. Las revisará tu supervisora`);
         this.cargarSolicitudes();
+        this.cargar();
       },
       error: respuesta => {
         this.enviando.set(false);
-        this.error.set(respuesta?.error?.error ?? 'No se pudo enviar la solicitud');
+        this.error.set(respuesta?.error?.error ?? (editando ? 'No se pudo guardar la solicitud' : 'No se pudo enviar la solicitud'));
         // Si alguna llegó a guardarse, que se vea en la lista.
         this.cargarSolicitudes();
       }
     });
+  }
+
+  /** Agrupa fechas en tramos de días seguidos: cada tramo es una solicitud. */
+  private seguidos(fechas: string[]): { desde: string; hasta: string }[] {
+    const tramos: { desde: string; hasta: string }[] = [];
+    for (const f of [...fechas].sort()) {
+      const ultimo = tramos[tramos.length - 1];
+      if (ultimo && this.sumarDias(ultimo.hasta, 1) === f) {
+        ultimo.hasta = f;
+      } else {
+        tramos.push({ desde: f, hasta: f });
+      }
+    }
+    return tramos;
+  }
+
+  /** El siguiente día de lunes a viernes. */
+  private diaHabilDespuesDe(fecha: string): string {
+    let f = this.sumarDias(fecha, 1);
+    while ([0, 6].includes(new Date(f + 'T00:00:00').getDay())) {
+      f = this.sumarDias(f, 1);
+    }
+    return f;
+  }
+
+  /** La aprobada que ya no se modifica porque su recuperación está en marcha: se enseña, deshabilitada. */
+  yaPlanificada(s: Justificacion): boolean {
+    return s.estado === 'APROBADA' && s.modificable === false && (s.motivoNoModificable ?? '').startsWith('RR.HH.');
+  }
+
+  protected textoAdjunto(): string {
+    return this.modo() === 'cita' ? 'Adjuntar constancia' : 'Adjuntar certificado';
+  }
+
+  /**
+   * Qué pasa con las horas del día, que la tabla no dice: la solicitud que lo
+   * cubre y lo que queda por recuperar, o lo que debe si no pidió nada. Lo que
+   * faltó por llegar tarde ya lo dice la tardanza.
+   */
+  notaDe(d: AsistenciaDia): { texto: string; clase: string } | null {
+    if (d.solicitud && d.estadoSolicitud === 'APROBADA') {
+      return { texto: d.minutosDeuda ? `${d.solicitud} · debe ${enHoras(d.minutosDeuda)}` : d.solicitud, clase: 'p-justif' };
+    }
+    if (d.solicitud && d.estadoSolicitud) {
+      return { texto: `${d.solicitud} en revisión`, clase: 'p-neutro' };
+    }
+    if (d.estado === 'NO_LABORABLE' || d.estado === 'JUSTIFICADO') {
+      return null;
+    }
+    if (d.minutosDebe) {
+      return { texto: `Debe ${enHoras(d.minutosDebe)}`, clase: 'p-incomp' };
+    }
+    if (d.fecha === this.hoy()) {
+      return d.entrada && !d.salida ? { texto: 'En curso', clase: 'p-neutro' } : null;
+    }
+    return d.estado === 'FALTA' ? { texto: 'No trabajado', clase: 'p-falta' } : null;
   }
 
   /** Abre el certificado en otra pestaña; no se descarga sin pedirlo. */
