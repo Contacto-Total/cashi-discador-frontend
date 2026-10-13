@@ -245,16 +245,30 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     this.pagina = 0;
   }
 
-  // ---------- el reparto de hoy ----------
+  // ---------- el reparto ----------
 
-  /** Quién lleva qué de lo que repartió el sistema esta mañana. */
-  get repartidasHoy(): RepartoAsesor[] {
+  /**
+   * Quién lleva qué de lo que repartió el sistema.
+   *
+   * Se mira el VENCIMIENTO de la promesa, no el día en que se repartió. El reparto
+   * entrega la promesa el día antes de vencer, así que mirando el día del reparto la
+   * que se entregó ayer para hoy no salía en ninguna parte: fuera de la cola por tener
+   * dueño y fuera de esta columna por no haberse repartido hoy.
+   *
+   * Se mantiene un día de atraso —el de gracia, el mismo que respeta el discador de
+   * campañas— para que la vencida sin gestionar se vea una vez como no atendida. A
+   * partir de ahí la recupera la campaña y esta pantalla deja de perseguirla.
+   *
+   * El filtro de día manda también aquí: si no, elegir una fecha vaciaba la cola y
+   * dejaba la columna con otro día delante, y la promesa repartida —que nunca está en
+   * la cola porque ya tiene dueño— no aparecía por ninguna parte.
+   */
+  get repartidas(): RepartoAsesor[] {
     if (!this.esSupervision) return [];
-    const hoy = BotAgendaComponent.iso(new Date());
     const cuenta = new Map<number, RepartoAsesor>();
     for (const c of this.casos) {
       if (c.tipo !== 'PROMESA' || !c.idAgenteAsignado) continue;
-      if ((c.asignadoAt || '').slice(0, 10) !== hoy) continue;
+      if (!this.enLaColumna(c)) continue;
       const ficha = this.asesores.find((a) => a.id === c.idAgenteAsignado);
       const fila = cuenta.get(c.idAgenteAsignado) ?? {
         idAgente: c.idAgenteAsignado,
@@ -270,14 +284,26 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     return [...cuenta.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
 
-  get totalRepartidoHoy(): number {
-    return this.repartidasHoy.reduce((s, r) => s + r.cuantas, 0);
+  get totalRepartido(): number {
+    return this.repartidas.reduce((s, r) => s + r.cuantas, 0);
   }
 
-  /** Las promesas de un asesor, incluidas las que dejó vencer: es el control de ella. */
+  /**
+   * Qué promesas de un asesor entran en la columna: las de la ventana de seguimiento,
+   * o las del día elegido si hay filtro. La misma regla para la tarjeta y para su
+   * ficha, que si no el número de arriba no cuadraba con la lista de abajo.
+   */
+  private enLaColumna(c: CasoAgendaBot): boolean {
+    const dia = (c.cuando || '').slice(0, 10);
+    if (this.filtroDia) return dia === this.filtroDia;
+    return dia >= BotAgendaComponent.iso(BotAgendaComponent.enDias(-1));
+  }
+
+  /** Las promesas de un asesor, incluida la que dejó vencer ayer: es el control de ella. */
   promesasDe(r: RepartoAsesor): CasoAgendaBot[] {
     return this.casos
       .filter((c) => c.tipo === 'PROMESA' && c.idAgenteAsignado === r.idAgente)
+      .filter((c) => this.enLaColumna(c))
       .sort((a, b) => (a.cuando || '').localeCompare(b.cuando || ''));
   }
 
