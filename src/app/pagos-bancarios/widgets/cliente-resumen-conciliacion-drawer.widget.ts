@@ -126,8 +126,11 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                             @for (cuota of promesa.cuotas; track cuota.cuotaId) {
                               <tr class="align-top hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                 <td class="px-1.5 py-1.5">
-                                  <p class="font-semibold text-slate-900 dark:text-white">Cuota {{ cuota.numeroCuota }}</p>
-                                  <span class="mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="getEstadoClass(cuota.estado)">{{ cuota.estado }}</span>
+                                  <!-- Con Corregir, el estado sube a la línea del número para no pasar de dos líneas -->
+                                  <p class="flex items-center gap-1" [class.flex-wrap]="!permiteCorregir">
+                                    <span class="whitespace-nowrap font-semibold text-slate-900 dark:text-white">Cuota {{ cuota.numeroCuota }}</span>
+                                    <span class="inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="getEstadoClass(cuota.estado)">{{ cuota.estado }}</span>
+                                  </p>
                                   @if (permiteCorregir) {
                                     <button type="button" (click)="corregirCuota.emit({ promesa: promesa, cuota: cuota })" [attr.aria-label]="'Corregir cuota ' + cuota.numeroCuota + ' de la gestión ' + promesa.idGestion" class="mt-1 block rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold !text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
                                       Corregir
@@ -139,8 +142,16 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                   <p class="font-semibold">S/ {{ formatMoney(cuota.montoPromesa) }}</p>
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
-                                  @if (hasValue(getPbpAgentFecha(cuota))) {
-                                    <p>{{ formatDate(getPbpAgentFecha(cuota)) }}</p>
+                                  @if (hasValue(getPbpAgentFecha(cuota)) || cuota.pagos.length > 1) {
+                                    <p class="flex items-center gap-1">
+                                      <span class="whitespace-nowrap">{{ formatDate(getPbpAgentFecha(cuota)) }}</span>
+                                      @if (cuota.pagos.length > 1) {
+                                        <span class="shrink-0 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" [attr.title]="cuota.pagos.length + ' pagos registrados en esta cuota'">
+                                          <span aria-hidden="true">{{ cuota.pagos.length }}</span>
+                                          <span class="sr-only">{{ cuota.pagos.length }} pagos registrados</span>
+                                        </span>
+                                      }
+                                    </p>
                                   }
                                   @if (getPbpAgentMonto(cuota) !== null && getPbpAgentMonto(cuota) !== undefined) {
                                     <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(getPbpAgentMonto(cuota)) }}</p>
@@ -149,8 +160,8 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                 <td class="px-1.5 py-1.5">
                                   @if (cuota.pagos.length > 0) {
                                     <button type="button" (click)="abrirDetallePagos(promesa, cuota)" [attr.aria-label]="'Ver detalle de ' + cuota.pagos.length + ' pago(s) de la cuota ' + cuota.numeroCuota" class="block w-full rounded-md p-1 text-left hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-950/30">
-                                      <span class="flex flex-wrap gap-1">
-                                        <span class="rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
+                                      <span class="flex gap-1 overflow-hidden whitespace-nowrap">
+                                        <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
                                           {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
                                         </span>
                                         @for (id of getPagoBancarioIds(cuota); track id) {
@@ -160,21 +171,11 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                           <span class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Op. {{ operacion }}</span>
                                         }
                                       </span>
-                                      <span class="mt-0.5 block space-y-0.5 text-[9px] text-slate-600 dark:text-slate-400">
-                                        @for (pago of cuota.pagos; track pago.pagoCuotaId) {
-                                          <span class="flex min-w-0 items-center gap-1">
-                                            @if ((cuota.adjuntos || []).length > 0) {
-                                              @if (pago.tieneVoucher) {
-                                                <svg class="h-2.5 w-2.5 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M21.4 11.6 12.2 20.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
-                                              } @else {
-                                                <span class="shrink-0 font-bold text-amber-600 dark:text-amber-400" aria-hidden="true">✕</span>
-                                              }
-                                            }
-                                            <span class="truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</span>
-                                          </span>
-                                        }
+                                      <!-- Solo el primer pago; el resto se ve en el detalle -->
+                                      <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[9px] text-slate-600 dark:text-slate-400">
+                                        <span class="truncate">{{ formatDate(cuota.pagos[0].fechaPago) }}{{ hasValue(cuota.pagos[0].banco) ? ' · ' + cuota.pagos[0].banco : '' }} · S/ {{ formatMoney(cuota.pagos[0].montoPago) }}</span>
+                                        <span class="shrink-0 whitespace-nowrap font-bold text-blue-700 underline underline-offset-2 dark:text-blue-300">Ver {{ cuota.pagos.length === 1 ? 'pago' : cuota.pagos.length + ' pagos' }}</span>
                                       </span>
-                                      <span class="mt-1 block text-[9px] font-bold text-blue-700 underline underline-offset-2 dark:text-blue-300">Ver {{ cuota.pagos.length === 1 ? 'pago' : cuota.pagos.length + ' pagos' }}</span>
                                     </button>
                                   }
                                 </td>
@@ -185,7 +186,10 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                       <span class="rounded-full bg-blue-600 px-1 text-[8px] leading-3 text-white dark:bg-blue-400 dark:text-slate-900">{{ cuota.adjuntos!.length }}</span>
                                     </button>
                                     @if (getPagosConVoucher(cuota) < cuota.pagos.length) {
-                                      <p class="mt-1 text-[9px] font-semibold leading-tight text-amber-600 dark:text-amber-400">{{ getPagosConVoucher(cuota) }} de {{ cuota.pagos.length }} pagos con voucher</p>
+                                      <p class="mt-0.5 truncate text-[9px] font-semibold leading-tight text-amber-600 dark:text-amber-400" [attr.title]="getPagosConVoucher(cuota) + ' de ' + cuota.pagos.length + ' pagos con voucher'">
+                                        <span aria-hidden="true">{{ getPagosConVoucher(cuota) }}/{{ cuota.pagos.length }} con voucher</span>
+                                        <span class="sr-only">{{ getPagosConVoucher(cuota) }} de {{ cuota.pagos.length }} pagos con voucher</span>
+                                      </p>
                                     }
                                   } @else {
                                     <span class="text-slate-400 dark:text-slate-500">—</span>
