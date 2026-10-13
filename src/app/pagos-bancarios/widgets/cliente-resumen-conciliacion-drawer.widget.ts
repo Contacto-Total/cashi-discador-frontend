@@ -3,16 +3,14 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { A11yModule } from '@angular/cdk/a11y';
 import { AdjuntoResumenConciliacion, CuotaResumenConciliacion, PagoResumenConciliacion, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 import { BcpPagosService } from '../services/bcp-pagos.service';
-import { CorreccionPagosService } from '../services/correccion-pagos.service';
-import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/correccion-pagos.model';
 
 @Component({
   selector: 'app-cliente-resumen-conciliacion-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, A11yModule],
   template: `
     @if (open) {
       <div
@@ -49,7 +47,7 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
             } @else if (error) {
               <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
             } @else if (resumen) {
-              <div class="mb-3 grid grid-cols-4 gap-2">
+              <div class="mb-3 grid grid-cols-3 gap-2">
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <p class="line-clamp-3 text-[10px] leading-tight text-slate-500 dark:text-slate-400">Carta de no adeudo disponible</p>
                   <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
@@ -62,10 +60,6 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Intentos cancelación</p>
                   <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ getIntentosCancelacion().length }}</p>
                 </div>
-                <button type="button" (click)="abrirPagoVoluntario()" class="rounded-lg border border-red-300 bg-red-600 p-2 text-left text-white shadow-sm transition-colors hover:bg-red-700 dark:border-red-800">
-                  <p class="text-[10px] font-bold uppercase tracking-wide text-red-100">Acción crítica</p>
-                  <p class="mt-0.5 text-sm font-black">Pago voluntario</p>
-                </button>
               </div>
 
               <div class="mb-3 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
@@ -134,20 +128,15 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                 <td class="px-1.5 py-1.5">
                                   <p class="font-semibold text-slate-900 dark:text-white">Cuota {{ cuota.numeroCuota }}</p>
                                   <span class="mt-0.5 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="getEstadoClass(cuota.estado)">{{ cuota.estado }}</span>
+                                  @if (permiteCorregir) {
+                                    <button type="button" (click)="corregirCuota.emit({ promesa: promesa, cuota: cuota })" [attr.aria-label]="'Corregir cuota ' + cuota.numeroCuota + ' de la gestión ' + promesa.idGestion" class="mt-1 block rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold !text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                                      Corregir
+                                    </button>
+                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   <p>{{ formatDate(cuota.fechaPromesa) }}</p>
                                   <p class="font-semibold">S/ {{ formatMoney(cuota.montoPromesa) }}</p>
-                                  @if (canAmpliarVencimiento(promesa, cuota)) {
-                                    <button type="button" (click)="abrirAmpliarVencimiento(promesa, cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
-                                      Ampliar
-                                    </button>
-                                  }
-                                  @if (canRegularizarPagoPagado(promesa, cuota)) {
-                                    <button type="button" (click)="abrirRegularizarPagoPagado(cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
-                                      Ampliar
-                                    </button>
-                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   @if (hasValue(getPbpAgentFecha(cuota))) {
@@ -156,53 +145,37 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                   @if (getPbpAgentMonto(cuota) !== null && getPbpAgentMonto(cuota) !== undefined) {
                                     <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(getPbpAgentMonto(cuota)) }}</p>
                                   }
-                                  @if (getPagoModificable(cuota)) {
-                                    <button type="button" (click)="abrirModificarPago(cuota)" class="mt-1 rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-blue-700">
-                                      Modificar
-                                    </button>
-                                  }
-                                  @if (canCrearPago(cuota)) {
-                                    <button type="button" (click)="abrirCrearPago(cuota)" class="mt-1 rounded-md bg-emerald-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-emerald-700">
-                                      Crear Pago
-                                    </button>
-                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5">
-                                  <div class="flex flex-wrap gap-1">
-                                    @if (cuota.pagos.length > 0) {
-                                      <span class="rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
-                                        {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
-                                      </span>
-                                    }
-                                    @for (id of getPagoBancarioIds(cuota); track id) {
-                                      <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Pb {{ id }}</span>
-                                    }
-                                    @for (operacion of getOperaciones(cuota); track operacion) {
-                                      <span class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Op. {{ operacion }}</span>
-                                    }
-                                  </div>
                                   @if (cuota.pagos.length > 0) {
-                                    <div class="mt-0.5 space-y-0.5 text-[9px] text-slate-500 dark:text-slate-400">
-                                      @for (pago of cuota.pagos; track pago.pagoCuotaId) {
-                                        <div class="flex items-center justify-between gap-1">
-                                          <p class="flex min-w-0 items-center gap-1">
+                                    <button type="button" (click)="abrirDetallePagos(promesa, cuota)" [attr.aria-label]="'Ver detalle de ' + cuota.pagos.length + ' pago(s) de la cuota ' + cuota.numeroCuota" class="block w-full rounded-md p-1 text-left hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-950/30">
+                                      <span class="flex flex-wrap gap-1">
+                                        <span class="rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
+                                          {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
+                                        </span>
+                                        @for (id of getPagoBancarioIds(cuota); track id) {
+                                          <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Pb {{ id }}</span>
+                                        }
+                                        @for (operacion of getOperaciones(cuota); track operacion) {
+                                          <span class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Op. {{ operacion }}</span>
+                                        }
+                                      </span>
+                                      <span class="mt-0.5 block space-y-0.5 text-[9px] text-slate-600 dark:text-slate-400">
+                                        @for (pago of cuota.pagos; track pago.pagoCuotaId) {
+                                          <span class="flex min-w-0 items-center gap-1">
                                             @if ((cuota.adjuntos || []).length > 0) {
                                               @if (pago.tieneVoucher) {
-                                                <svg class="h-2.5 w-2.5 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" role="img" aria-label="Con voucher"><title>Con voucher</title><path d="M21.4 11.6 12.2 20.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+                                                <svg class="h-2.5 w-2.5 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M21.4 11.6 12.2 20.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
                                               } @else {
-                                                <span class="shrink-0 font-bold text-amber-600 dark:text-amber-400" title="Sin voucher" aria-label="Sin voucher">✕</span>
+                                                <span class="shrink-0 font-bold text-amber-600 dark:text-amber-400" aria-hidden="true">✕</span>
                                               }
                                             }
                                             <span class="truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</span>
-                                          </p>
-                                          @if (canEliminarPago(promesa, pago)) {
-                                            <button type="button" (click)="abrirEliminarPago(pago)" class="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-red-700">
-                                              Eliminar pago
-                                            </button>
-                                          }
-                                        </div>
-                                      }
-                                    </div>
+                                          </span>
+                                        }
+                                      </span>
+                                      <span class="mt-1 block text-[9px] font-bold text-blue-700 underline underline-offset-2 dark:text-blue-300">Ver {{ cuota.pagos.length === 1 ? 'pago' : cuota.pagos.length + ' pagos' }}</span>
+                                    </button>
                                   }
                                 </td>
                                 <td class="px-1.5 py-1.5">
@@ -239,257 +212,111 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
         </aside>
       </div>
 
-      @if (crearPagoModalOpen) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarCrearPago()">
-          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Crear pago</h3>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Cuota {{ cuotaCrearPago?.numeroCuota }} · S/ {{ formatMoney(cuotaCrearPago?.montoPromesa) }}</p>
-            </div>
 
-            <div class="space-y-3 px-4 py-4">
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
-                <input type="date" [(ngModel)]="crearPagoFecha" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+      @if (detallePromesa && detalleCuota) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarDetallePagos()">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="detalle-pagos-titulo"
+            cdkTrapFocus
+            [cdkTrapFocusAutoCapture]="true"
+            class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            (click)="$event.stopPropagation()"
+          >
+            <header class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+              <div class="min-w-0">
+                <h3 id="detalle-pagos-titulo" cdkFocusInitial tabindex="-1" class="text-base font-bold text-slate-900 focus:outline-none dark:text-white">
+                  Pagos de la cuota {{ detalleCuota.numeroCuota }}
+                </h3>
+                <p class="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-400">
+                  Gestión {{ detallePromesa.idGestion }} · {{ detallePromesa.nombreAgente || 'Sin agente' }} · Cliente {{ documento || resumen?.documento }}
+                </p>
               </div>
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
-                <input type="number" min="0.01" step="0.01" [(ngModel)]="crearPagoMonto" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-              </div>
-
-              @if (crearPagoError) {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ crearPagoError }}</div>
-              }
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-              <button type="button" (click)="cerrarCrearPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="crearPago()" [disabled]="!canGuardarCrearPago() || creandoPago" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-                {{ creandoPago ? 'Creando...' : 'Crear Pago' }}
+              <button type="button" (click)="cerrarDetallePagos()" aria-label="Cerrar" class="shrink-0 rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
               </button>
-            </div>
-          </div>
-        </div>
-      }
+            </header>
 
-      @if (modificarPagoModalOpen) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarModificarPago()">
-          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Modificar pago cuota</h3>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pago #{{ pagoModificar?.pagoCuotaId }} · Cuota {{ pagoModificar?.numeroCuota }}</p>
-            </div>
-
-            <div class="space-y-3 px-4 py-4">
-              <div class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
+            <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              <dl class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-800/60">
                 <div>
-                  <span class="block text-slate-500 dark:text-slate-400">Fecha actual</span>
-                  <span class="font-semibold text-slate-900 dark:text-white">{{ formatDate(pagoModificar?.fechaPago) }}</span>
+                  <dt class="text-xs text-slate-600 dark:text-slate-400">Vence</dt>
+                  <dd class="font-semibold text-slate-900 dark:text-white">{{ formatDate(detalleCuota.fechaPromesa) || '—' }}</dd>
                 </div>
                 <div>
-                  <span class="block text-slate-500 dark:text-slate-400">Monto actual</span>
-                  <span class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pagoModificar?.montoPago) }}</span>
+                  <dt class="text-xs text-slate-600 dark:text-slate-400">Monto promesa</dt>
+                  <dd class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(detalleCuota.montoPromesa) }}</dd>
                 </div>
-              </div>
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha</label>
-                <input type="date" [(ngModel)]="modificarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-              </div>
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nuevo monto</label>
-                <input type="number" min="0.01" step="0.01" [(ngModel)]="modificarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-              </div>
+                <div>
+                  <dt class="text-xs text-slate-600 dark:text-slate-400">Total de pagos</dt>
+                  <dd class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(getTotalPagos(detalleCuota)) }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-slate-600 dark:text-slate-400">Estado</dt>
+                  <dd><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-bold" [class]="getEstadoClass(detalleCuota.estado)">{{ detalleCuota.estado }}</span></dd>
+                </div>
+              </dl>
 
-              @if (modificarPagoError) {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ modificarPagoError }}</div>
-              }
+              <div class="relative overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                <table class="min-w-full text-xs">
+                  <caption class="sr-only">Pagos registrados en la cuota {{ detalleCuota.numeroCuota }}</caption>
+                  <thead class="bg-slate-100 text-left text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <tr>
+                      <th scope="col" class="px-3 py-2 font-bold">Fecha de pago</th>
+                      <th scope="col" class="px-3 py-2 text-right font-bold">Monto</th>
+                      <th scope="col" class="px-3 py-2 font-bold">Banco</th>
+                      <th scope="col" class="px-3 py-2 font-bold">Nro. operación</th>
+                      <th scope="col" class="px-3 py-2 font-bold">Conciliación</th>
+                      <th scope="col" class="px-3 py-2 font-bold">Voucher</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                    @for (pago of detalleCuota.pagos; track pago.pagoCuotaId) {
+                      <tr class="align-top">
+                        <td class="whitespace-nowrap px-3 py-2 text-slate-800 dark:text-slate-200">{{ formatDate(pago.fechaPago) }}</td>
+                        <td class="whitespace-nowrap px-3 py-2 text-right font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pago.montoPago) }}</td>
+                        <td class="px-3 py-2 text-slate-800 dark:text-slate-200">{{ pago.banco || '—' }}</td>
+                        <td class="px-3 py-2 font-mono text-slate-800 dark:text-slate-200">{{ pago.numeroOperacion || '—' }}</td>
+                        <td class="px-3 py-2">
+                          @if (pago.verificadoBanco) {
+                            <span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
+                            <p class="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                              {{ formatDateTime(pago.fechaVerificacion) }}
+                              @if (pago.pagoBancarioId) {
+                                · Pago bancario {{ pago.pagoBancarioId }}
+                              }
+                            </p>
+                          } @else {
+                            <span class="inline-flex rounded-full bg-slate-200 px-2 py-0.5 font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">No verificado</span>
+                          }
+                        </td>
+                        <td class="px-3 py-2 text-slate-800 dark:text-slate-200">
+                          @if ((detalleCuota.adjuntos || []).length === 0) {
+                            —
+                          } @else {
+                            {{ pago.tieneVoucher ? 'Con voucher' : 'Sin voucher' }}
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-              <button type="button" (click)="cerrarModificarPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="modificarPago()" [disabled]="!canGuardarModificarPago() || modificandoPago" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-                {{ modificandoPago ? 'Guardando...' : 'Guardar cambios' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      @if (regularizarPagoModalOpen) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarRegularizarPagoPagado()">
-          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Regularizar pago pagado</h3>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pago #{{ pagoRegularizar?.pagoCuotaId }} · Cuota {{ cuotaRegularizar?.numeroCuota }}</p>
-            </div>
-
-            <div class="space-y-3 px-4 py-4">
-              <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
-                Esta acción mueve la fecha del pago registrado por el agente y la fecha de vencimiento de la cuota. Solo aplica a pagos no verificados por banco.
-              </div>
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha banco</label>
-                <input type="date" [(ngModel)]="regularizarFechaPagoBanco" [min]="regularizarFechaMin" [max]="regularizarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                <p class="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Máximo 3 días desde {{ formatDate(cuotaRegularizar?.fechaPromesa) }}.</p>
-              </div>
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Observaciones</label>
-                <textarea [(ngModel)]="regularizarObservaciones" rows="2" class="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" placeholder="Banco registró el pago días después"></textarea>
-              </div>
-
-              @if (regularizarPagoError) {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ regularizarPagoError }}</div>
-              }
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-              <button type="button" (click)="cerrarRegularizarPagoPagado()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="regularizarPagoPagado()" [disabled]="!canGuardarRegularizarPagoPagado() || regularizandoPago" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-                {{ regularizandoPago ? 'Guardando...' : 'Regularizar' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      @if (ampliarModalOpen) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarAmpliarVencimiento()">
-          <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Ampliar vencimiento</h3>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Cuota {{ cuotaAmpliar?.numeroCuota }} · Vence {{ formatDate(cuotaAmpliar?.fechaPromesa) }} · máximo {{ formatDate(getAmpliarFechaMax()) }}
-              </p>
-            </div>
-
-            <div class="space-y-3 px-4 py-4">
-              <div class="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
-                <button type="button" (click)="ampliarModo = 'corta'" class="rounded-md px-2 py-1.5 transition-colors" [class]="ampliarModo === 'corta' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
-                  Hasta 3 días
+            <footer class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-700">
+              @if ((detalleCuota.adjuntos || []).length > 0) {
+                <button type="button" (click)="abrirVisorVoucher(detallePromesa, detalleCuota)" class="rounded-lg border border-blue-600 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50">
+                  Ver {{ detalleCuota.adjuntos!.length === 1 ? 'voucher' : detalleCuota.adjuntos!.length + ' vouchers' }}
                 </button>
-                <button type="button" (click)="setAmpliarModoMayor()" [disabled]="!ampliarMayorHabilitada" class="rounded-md px-2 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40" [class]="ampliarModo === 'mayor' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
-                  1 cuota dentro mes
-                </button>
-              </div>
-
-              @if (ampliarModo === 'corta') {
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento <span class="font-normal text-slate-500 dark:text-slate-400">(usar fecha que banco registró)</span></label>
-                  <input type="date" [(ngModel)]="ampliarFechaVencimientoNueva" [min]="ampliarFechaMin" [max]="ampliarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                </div>
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto registrado en banco</label>
-                  <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                </div>
-                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  <input type="checkbox" [(ngModel)]="ampliarPagoCorrespondeAsesor" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
-                  Pago corresponde al asesor original
-                </label>
               } @else {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
-                  Se creará una nueva promesa y el pago se asignará al sistema. Disponible solo para promesas de una cuota.
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
-                    <input type="date" [(ngModel)]="ampliarMayorFechaPago" [min]="ampliarMayorFechaMin" [max]="ampliarMayorFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                  </div>
-                  <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
-                    <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMayorMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                  </div>
-                </div>
+                <p class="text-xs text-slate-600 dark:text-slate-400">La cuota no tiene vouchers adjuntos.</p>
               }
-
-              @if (ampliarError) {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ ampliarError }}</div>
-              }
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-              <button type="button" (click)="cerrarAmpliarVencimiento()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="guardarAmpliacion()" [disabled]="!canGuardarAmpliacion() || ampliandoVencimiento" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-                {{ ampliandoVencimiento ? 'Ampliando...' : 'Ampliar' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      @if (pagoVoluntarioModalOpen) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarPagoVoluntario()">
-          <div class="w-full max-w-md rounded-xl border border-red-200 bg-white shadow-2xl dark:border-red-900 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">
-              <h3 class="text-sm font-black text-red-800 dark:text-red-200">Pago voluntario al sistema</h3>
-              <p class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
-                Esta acción es única y no se puede revertir. Si la fecha o el monto son incorrectos, se aplicarán sanciones.
-              </p>
-            </div>
-
-            <div class="space-y-3 px-4 py-4">
-              <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
-                Úsalo solo para pagos fuera de lógica normal de promesas o pagos antiguos que impiden el match del extracto bancario.
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
-                  <input type="date" [(ngModel)]="pagoVoluntarioFecha" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                </div>
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
-                  <input type="number" min="0.01" step="0.01" [(ngModel)]="pagoVoluntarioMonto" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                </div>
-              </div>
-
-              @if (pagoVoluntarioError) {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ pagoVoluntarioError }}</div>
-              }
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-red-200 px-4 py-3 dark:border-red-900">
-              <button type="button" (click)="cerrarPagoVoluntario()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="crearPagoVoluntario()" [disabled]="!canCrearPagoVoluntario() || creandoPagoVoluntario" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-                {{ creandoPagoVoluntario ? 'Creando...' : 'Confirmar pago voluntario' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      @if (eliminarPagoModalOpen) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarEliminarPago()">
-          <div class="w-full max-w-md rounded-xl border border-red-200 bg-white shadow-2xl dark:border-red-900 dark:bg-slate-900" (click)="$event.stopPropagation()">
-            <div class="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">
-              <h3 class="text-sm font-black text-red-800 dark:text-red-200">Eliminar pago</h3>
-              <p class="mt-1 text-xs text-red-700 dark:text-red-300">Pago #{{ pagoEliminar?.pagoCuotaId }} · Transacción {{ pagoEliminar?.transaccionId }}</p>
-            </div>
-
-            <div class="space-y-3 px-4 py-4">
-              <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
-                Se eliminará el pago completo y todas las aplicaciones de su transacción. La promesa se recalculará.
-              </div>
-              <div class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
-                <div>
-                  <span class="block text-slate-500 dark:text-slate-400">Fecha</span>
-                  <span class="font-semibold text-slate-900 dark:text-white">{{ formatDate(pagoEliminar?.fechaPago) }}</span>
-                </div>
-                <div>
-                  <span class="block text-slate-500 dark:text-slate-400">Monto</span>
-                  <span class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pagoEliminar?.montoPago) }}</span>
-                </div>
-              </div>
-
-              @if (eliminarPagoError) {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ eliminarPagoError }}</div>
-              }
-            </div>
-
-            <div class="flex justify-end gap-2 border-t border-red-200 px-4 py-3 dark:border-red-900">
-              <button type="button" (click)="cerrarEliminarPago()" [disabled]="eliminandoPago" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="eliminarPago()" [disabled]="!pagoEliminar || eliminandoPago" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-                {{ eliminandoPago ? 'Eliminando...' : 'Eliminar pago' }}
-              </button>
-            </div>
+              <button type="button" (click)="cerrarDetallePagos()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cerrar</button>
+            </footer>
           </div>
         </div>
       }
@@ -566,7 +393,6 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
 })
 export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDestroy {
   private fmt = inject(FormatService);
-  private correccionPagosService = inject(CorreccionPagosService);
   private bcpPagosService = inject(BcpPagosService);
   private sanitizer = inject(DomSanitizer);
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
@@ -580,56 +406,13 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   @Input() carteraId: number | null = null;
   @Input() subcarteraId: number | null = null;
   @Output() close = new EventEmitter<void>();
-  @Output() refreshRequested = new EventEmitter<void>();
+  /** Muestra el botón Corregir en cada cuota. El panel no corrige: solo avisa qué cuota se eligió. */
+  @Input() permiteCorregir = false;
+  @Output() corregirCuota = new EventEmitter<{ promesa: PromesaResumenConciliacion; cuota: CuotaResumenConciliacion }>();
 
-  cuotasValidas: CuotaValidaTipificar[] = [];
-  pagosModificables: PagoPendienteConciliacion[] = [];
-  isLoadingCuotasValidas = false;
-  crearPagoModalOpen = false;
-  cuotaCrearPago: CuotaResumenConciliacion | null = null;
-  crearPagoFecha = '';
-  crearPagoMonto: number | null = null;
-  crearPagoError: string | null = null;
-  creandoPago = false;
-  ampliarModalOpen = false;
-  cuotaAmpliar: CuotaResumenConciliacion | null = null;
-  ampliarFechaVencimientoNueva = '';
-  ampliarFechaMin = '';
-  ampliarFechaMax = '';
-  ampliarMontoPago: number | null = null;
-  ampliarPagoCorrespondeAsesor = true;
-  ampliarError: string | null = null;
-  ampliandoVencimiento = false;
-  ampliarModo: 'corta' | 'mayor' = 'corta';
-  ampliarMayorHabilitada = false;
-  ampliarMayorFechaPago = '';
-  ampliarMayorFechaMin = '';
-  ampliarMayorFechaMax = '';
-  ampliarMayorMontoPago: number | null = null;
-  pagoVoluntarioModalOpen = false;
-  pagoVoluntarioFecha = '';
-  pagoVoluntarioMonto: number | null = null;
-  pagoVoluntarioError: string | null = null;
-  creandoPagoVoluntario = false;
-  modificarPagoModalOpen = false;
-  pagoModificar: PagoPendienteConciliacion | null = null;
-  modificarFechaPago = '';
-  modificarMontoPago: number | null = null;
-  modificarPagoError: string | null = null;
-  modificandoPago = false;
-  regularizarPagoModalOpen = false;
-  cuotaRegularizar: CuotaResumenConciliacion | null = null;
-  pagoRegularizar: PagoPendienteConciliacion | null = null;
-  regularizarFechaPagoBanco = '';
-  regularizarFechaMin = '';
-  regularizarFechaMax = '';
-  regularizarObservaciones = 'Banco registró el pago días después';
-  regularizarPagoError: string | null = null;
-  regularizandoPago = false;
-  eliminarPagoModalOpen = false;
-  pagoEliminar: PagoResumenConciliacion | null = null;
-  eliminarPagoError: string | null = null;
-  eliminandoPago = false;
+  detallePromesa: PromesaResumenConciliacion | null = null;
+  detalleCuota: CuotaResumenConciliacion | null = null;
+
   visorVoucherPromesa: PromesaResumenConciliacion | null = null;
   visorVoucherCuota: CuotaResumenConciliacion | null = null;
   visorVoucherIndice = 0;
@@ -640,12 +423,9 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   private visorVoucherSub: Subscription | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
-      this.cargarCuotasValidasTipificar();
-      this.cargarPagosModificables();
-    }
-    if (changes['open'] && !this.open) {
+    if ((changes['open'] && !this.open) || changes['resumen']) {
       this.cerrarVisorVoucher();
+      this.cerrarDetallePagos();
     }
   }
 
@@ -655,9 +435,27 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    // El visor se abre encima del detalle: se cierra primero.
     if (this.visorVoucherCuota) {
       this.cerrarVisorVoucher();
+    } else if (this.detalleCuota) {
+      this.cerrarDetallePagos();
     }
+  }
+
+  abrirDetallePagos(promesa: PromesaResumenConciliacion, cuota: CuotaResumenConciliacion): void {
+    if (!(cuota.pagos || []).length) return;
+    this.detallePromesa = promesa;
+    this.detalleCuota = cuota;
+  }
+
+  cerrarDetallePagos(): void {
+    this.detallePromesa = null;
+    this.detalleCuota = null;
+  }
+
+  getTotalPagos(cuota: CuotaResumenConciliacion): number {
+    return (cuota.pagos || []).reduce((total, pago) => total + Number(pago.montoPago || 0), 0);
   }
 
   @HostListener('document:keydown.arrowleft')
@@ -792,456 +590,20 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   hasValue(value: unknown): boolean {
     return value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== '-';
   }
-
-  canCrearPago(cuota: CuotaResumenConciliacion): boolean {
-    if (this.isLoadingCuotasValidas || this.creandoPago) return false;
-    if (cuota.estado === 'PAGADA') return false;
-    if (this.hasValue(cuota.fechaPagoReal) || cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) return false;
-    if (this.getPrimeraCuotaSinPago()?.cuotaId !== cuota.cuotaId) return false;
-    return this.cuotasValidas.some(item => item.cuotaId === cuota.cuotaId);
-  }
-
-  getPagoModificable(cuota: CuotaResumenConciliacion): PagoPendienteConciliacion | null {
-    const pagosNoVerificados = (cuota.pagos || []).filter(pago => pago.verificadoBanco === false);
-    if (pagosNoVerificados.length === 0) return null;
-
-    return this.pagosModificables.find(item => item.cuotaId === cuota.cuotaId
-      && pagosNoVerificados.some(pago => pago.pagoCuotaId === item.pagoCuotaId)) || null;
-  }
-
+  /** Sin pago real en la cuota, se muestra el pago del asesor que aún no verifica el banco. */
   getPbpAgentFecha(cuota: CuotaResumenConciliacion): string | null {
     if (this.hasValue(cuota.fechaPagoReal)) return cuota.fechaPagoReal;
-    return this.getPagoModificable(cuota)?.fechaPago || null;
+    return this.getPagoNoVerificado(cuota)?.fechaPago || null;
   }
 
   getPbpAgentMonto(cuota: CuotaResumenConciliacion): number | null {
     const montoReal = cuota.montoPagadoReal;
     if (montoReal !== null && montoReal !== undefined && Number(montoReal) > 0) return montoReal;
-    return this.getPagoModificable(cuota)?.montoPago ?? montoReal ?? null;
+    return this.getPagoNoVerificado(cuota)?.montoPago ?? montoReal ?? null;
   }
 
-  canAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
-    if (this.ampliandoVencimiento) return false;
-    const target = this.getPrimeraCuotaVencidaUltimaPromesaVencida();
-    return target?.promesa.idGestion === promesa.idGestion && target.cuota.cuotaId === cuota.cuotaId;
-  }
-
-  canRegularizarPagoPagado(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
-    if (this.regularizandoPago) return false;
-    if (String(promesa.estadoPago || '').toUpperCase() !== 'PAGADA') return false;
-    if ((promesa.cuotas || []).length !== 1) return false;
-    if (String(cuota.estado || '').toUpperCase() !== 'PAGADA') return false;
-    return !!this.getPagoModificable(cuota);
-  }
-
-  canEliminarPago(promesa: ResumenConciliacionCliente['promesas'][number], pago: PagoResumenConciliacion): boolean {
-    return pago.verificadoBanco === false
-      && String(promesa.estadoPago || '').toUpperCase() === 'PAGADA';
-  }
-
-  abrirEliminarPago(pago: PagoResumenConciliacion): void {
-    if (!this.hasRequiredContext() || pago.verificadoBanco !== false) return;
-
-    this.pagoEliminar = pago;
-    this.eliminarPagoError = null;
-    this.eliminarPagoModalOpen = true;
-  }
-
-  cerrarEliminarPago(): void {
-    if (this.eliminandoPago) return;
-    this.eliminarPagoModalOpen = false;
-    this.pagoEliminar = null;
-    this.eliminarPagoError = null;
-  }
-
-  eliminarPago(): void {
-    if (!this.pagoEliminar || !this.hasRequiredContext()) return;
-
-    this.eliminandoPago = true;
-    this.eliminarPagoError = null;
-
-    this.correccionPagosService.eliminarPago(this.pagoEliminar.pagoCuotaId, {
-      tenantId: Number(this.tenantId),
-      carteraId: Number(this.carteraId),
-      subcarteraId: Number(this.subcarteraId)
-    }).subscribe({
-      next: () => {
-        this.eliminandoPago = false;
-        this.cerrarEliminarPago();
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.eliminarPagoError = this.getEliminarPagoError(error);
-        this.eliminandoPago = false;
-      }
-    });
-  }
-
-  abrirCrearPago(cuota: CuotaResumenConciliacion): void {
-    if (!this.canCrearPago(cuota)) return;
-    this.cuotaCrearPago = cuota;
-    this.crearPagoFecha = this.toDateInputValue(cuota.fechaPromesa);
-    this.crearPagoMonto = Number(cuota.montoPromesa || 0);
-    this.crearPagoError = null;
-    this.crearPagoModalOpen = true;
-  }
-
-  cerrarCrearPago(): void {
-    if (this.creandoPago) return;
-    this.crearPagoModalOpen = false;
-    this.cuotaCrearPago = null;
-    this.crearPagoError = null;
-  }
-
-  canGuardarCrearPago(): boolean {
-    return !!this.cuotaCrearPago && !!this.crearPagoFecha && Number(this.crearPagoMonto) > 0 && this.hasRequiredContext();
-  }
-
-  crearPago(): void {
-    if (!this.cuotaCrearPago || !this.canGuardarCrearPago()) return;
-
-    const documento = this.getDocumento();
-    if (!documento) return;
-
-    this.creandoPago = true;
-    this.crearPagoError = null;
-
-    this.correccionPagosService.crearCancelacion(
-      this.cuotaCrearPago.cuotaId,
-      {
-        tenantId: Number(this.tenantId),
-        carteraId: Number(this.carteraId),
-        subcarteraId: Number(this.subcarteraId)
-      },
-      {
-        documento,
-        fechaPago: this.crearPagoFecha,
-        montoPago: Number(this.crearPagoMonto)
-      }
-    ).subscribe({
-      next: () => {
-        this.creandoPago = false;
-        this.crearPagoModalOpen = false;
-        this.cuotaCrearPago = null;
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.crearPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago.';
-        this.creandoPago = false;
-      }
-    });
-  }
-
-  abrirModificarPago(cuota: CuotaResumenConciliacion): void {
-    const pago = this.getPagoModificable(cuota);
-    if (!pago) return;
-
-    this.pagoModificar = pago;
-    this.modificarFechaPago = this.toDateInputValue(pago.fechaPago);
-    this.modificarMontoPago = Number(pago.montoPago || 0);
-    this.modificarPagoError = null;
-    this.modificarPagoModalOpen = true;
-  }
-
-  cerrarModificarPago(): void {
-    if (this.modificandoPago) return;
-    this.modificarPagoModalOpen = false;
-    this.pagoModificar = null;
-    this.modificarPagoError = null;
-  }
-
-  canGuardarModificarPago(): boolean {
-    return !!this.pagoModificar
-      && !!this.modificarFechaPago
-      && Number(this.modificarMontoPago) > 0
-      && this.hasRequiredContext();
-  }
-
-  modificarPago(): void {
-    if (!this.pagoModificar || !this.canGuardarModificarPago()) return;
-
-    this.modificandoPago = true;
-    this.modificarPagoError = null;
-
-    this.correccionPagosService.corregirPago(
-      this.pagoModificar.pagoCuotaId,
-      {
-        tenantId: Number(this.tenantId),
-        carteraId: Number(this.carteraId),
-        subcarteraId: Number(this.subcarteraId)
-      },
-      {
-        fechaPago: this.modificarFechaPago,
-        montoPago: Number(this.modificarMontoPago)
-      }
-    ).subscribe({
-      next: () => {
-        this.modificandoPago = false;
-        this.modificarPagoModalOpen = false;
-        this.pagoModificar = null;
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.modificarPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo modificar el pago.';
-        this.modificandoPago = false;
-      }
-    });
-  }
-
-  abrirRegularizarPagoPagado(cuota: CuotaResumenConciliacion): void {
-    const pago = this.getPagoModificable(cuota);
-    if (!pago) return;
-
-    const fechaPromesa = this.toDateInputValue(cuota.fechaPromesa);
-    this.cuotaRegularizar = cuota;
-    this.pagoRegularizar = pago;
-    this.regularizarFechaMin = fechaPromesa;
-    this.regularizarFechaMax = this.addDays(fechaPromesa, 3);
-    this.regularizarFechaPagoBanco = this.toDateInputValue(pago.fechaPago) || fechaPromesa;
-    this.regularizarObservaciones = 'Banco registró el pago días después';
-    this.regularizarPagoError = null;
-    this.regularizarPagoModalOpen = true;
-  }
-
-  cerrarRegularizarPagoPagado(): void {
-    if (this.regularizandoPago) return;
-    this.regularizarPagoModalOpen = false;
-    this.cuotaRegularizar = null;
-    this.pagoRegularizar = null;
-    this.regularizarPagoError = null;
-  }
-
-  canGuardarRegularizarPagoPagado(): boolean {
-    return !!this.cuotaRegularizar
-      && !!this.pagoRegularizar
-      && !!this.regularizarFechaPagoBanco
-      && this.hasRequiredContext()
-      && this.regularizarFechaPagoBanco >= this.regularizarFechaMin
-      && this.regularizarFechaPagoBanco <= this.regularizarFechaMax;
-  }
-
-  regularizarPagoPagado(): void {
-    if (!this.cuotaRegularizar || !this.pagoRegularizar || !this.canGuardarRegularizarPagoPagado()) return;
-
-    const documento = this.getDocumento();
-    if (!documento) return;
-
-    this.regularizandoPago = true;
-    this.regularizarPagoError = null;
-
-    this.correccionPagosService.regularizarPagoPagado(
-      this.cuotaRegularizar.cuotaId,
-      {
-        tenantId: Number(this.tenantId),
-        carteraId: Number(this.carteraId),
-        subcarteraId: Number(this.subcarteraId)
-      },
-      {
-        documento,
-        fechaPagoBanco: this.regularizarFechaPagoBanco,
-        pagoCuotaId: this.pagoRegularizar.pagoCuotaId,
-        observaciones: this.regularizarObservaciones || undefined
-      }
-    ).subscribe({
-      next: () => {
-        this.regularizandoPago = false;
-        this.regularizarPagoModalOpen = false;
-        this.cuotaRegularizar = null;
-        this.pagoRegularizar = null;
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.regularizarPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo regularizar el pago pagado.';
-        this.regularizandoPago = false;
-      }
-    });
-  }
-
-  abrirAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): void {
-    if (!this.canAmpliarVencimiento(promesa, cuota)) return;
-
-    const fechaPromesa = this.toDateInputValue(cuota.fechaPromesa);
-    const fechaMax = this.addDays(fechaPromesa, 3);
-
-    this.cuotaAmpliar = cuota;
-    this.ampliarFechaMin = fechaPromesa;
-    this.ampliarFechaMax = fechaMax;
-    this.ampliarFechaVencimientoNueva = fechaMax;
-    this.ampliarMontoPago = Number(cuota.montoPromesa || 0);
-    this.ampliarPagoCorrespondeAsesor = true;
-    this.ampliarModo = 'corta';
-    this.ampliarMayorFechaMin = this.addDays(fechaPromesa, 4);
-    this.ampliarMayorFechaMax = this.endOfMonth(fechaPromesa);
-    this.ampliarMayorHabilitada = this.isCuotaUnica(cuota) && this.ampliarMayorFechaMin <= this.ampliarMayorFechaMax;
-    this.ampliarMayorFechaPago = this.ampliarMayorFechaMin <= this.ampliarMayorFechaMax ? this.ampliarMayorFechaMin : '';
-    this.ampliarMayorMontoPago = Number(cuota.montoPromesa || 0);
-    this.ampliarError = null;
-    this.ampliarModalOpen = true;
-  }
-
-  setAmpliarModoMayor(): void {
-    if (!this.ampliarMayorHabilitada) return;
-    this.ampliarModo = 'mayor';
-  }
-
-  getAmpliarFechaMax(): string {
-    return this.ampliarModo === 'mayor' ? this.ampliarMayorFechaMax : this.ampliarFechaMax;
-  }
-
-  cerrarAmpliarVencimiento(): void {
-    if (this.ampliandoVencimiento) return;
-    this.ampliarModalOpen = false;
-    this.cuotaAmpliar = null;
-    this.ampliarError = null;
-  }
-
-  canGuardarAmpliacion(): boolean {
-    if (this.ampliarModo === 'mayor') {
-      return !!this.cuotaAmpliar
-        && this.ampliarMayorHabilitada
-        && !!this.ampliarMayorFechaPago
-        && Number(this.ampliarMayorMontoPago) > 0
-        && this.hasRequiredContext()
-        && this.ampliarMayorFechaPago >= this.ampliarMayorFechaMin
-        && this.ampliarMayorFechaPago <= this.ampliarMayorFechaMax;
-    }
-
-    return !!this.cuotaAmpliar
-      && !!this.ampliarFechaVencimientoNueva
-      && Number(this.ampliarMontoPago) > 0
-      && this.hasRequiredContext()
-      && this.ampliarFechaVencimientoNueva >= this.ampliarFechaMin
-      && this.ampliarFechaVencimientoNueva <= this.ampliarFechaMax;
-  }
-
-  guardarAmpliacion(): void {
-    if (this.ampliarModo === 'mayor') {
-      this.crearPromesaSistemaPagoBanco();
-      return;
-    }
-
-    this.ampliarVencimiento();
-  }
-
-  ampliarVencimiento(): void {
-    if (!this.cuotaAmpliar || !this.canGuardarAmpliacion()) return;
-
-    const documento = this.getDocumento();
-    if (!documento) return;
-
-    this.ampliandoVencimiento = true;
-    this.ampliarError = null;
-
-    this.correccionPagosService.ampliarVencimiento(
-      this.cuotaAmpliar.cuotaId,
-      {
-        tenantId: Number(this.tenantId),
-        carteraId: Number(this.carteraId),
-        subcarteraId: Number(this.subcarteraId)
-      },
-      {
-        documento,
-        fechaPago: this.ampliarFechaVencimientoNueva,
-        montoPago: Number(this.ampliarMontoPago),
-        pagoCorrespondeAsesor: this.ampliarPagoCorrespondeAsesor
-      }
-    ).subscribe({
-      next: () => {
-        this.ampliandoVencimiento = false;
-        this.ampliarModalOpen = false;
-        this.cuotaAmpliar = null;
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo ampliar el vencimiento.';
-        this.ampliandoVencimiento = false;
-      }
-    });
-  }
-
-  crearPromesaSistemaPagoBanco(): void {
-    if (!this.cuotaAmpliar || !this.canGuardarAmpliacion()) return;
-
-    const documento = this.getDocumento();
-    if (!documento) return;
-
-    this.ampliandoVencimiento = true;
-    this.ampliarError = null;
-
-    this.correccionPagosService.crearPromesaSistemaPagoBanco(
-      this.cuotaAmpliar.cuotaId,
-      {
-        tenantId: Number(this.tenantId),
-        carteraId: Number(this.carteraId),
-        subcarteraId: Number(this.subcarteraId)
-      },
-      {
-        documento,
-        fechaPago: this.ampliarMayorFechaPago,
-        montoPago: Number(this.ampliarMayorMontoPago)
-      }
-    ).subscribe({
-      next: () => {
-        this.ampliandoVencimiento = false;
-        this.ampliarModalOpen = false;
-        this.cuotaAmpliar = null;
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear la nueva promesa.';
-        this.ampliandoVencimiento = false;
-      }
-    });
-  }
-
-  abrirPagoVoluntario(): void {
-    this.pagoVoluntarioFecha = '';
-    this.pagoVoluntarioMonto = null;
-    this.pagoVoluntarioError = null;
-    this.pagoVoluntarioModalOpen = true;
-  }
-
-  cerrarPagoVoluntario(): void {
-    if (this.creandoPagoVoluntario) return;
-    this.pagoVoluntarioModalOpen = false;
-    this.pagoVoluntarioError = null;
-  }
-
-  canCrearPagoVoluntario(): boolean {
-    return !!this.getDocumento()
-      && !!this.pagoVoluntarioFecha
-      && Number(this.pagoVoluntarioMonto) > 0
-      && this.hasRequiredContext();
-  }
-
-  crearPagoVoluntario(): void {
-    if (!this.canCrearPagoVoluntario()) return;
-
-    this.creandoPagoVoluntario = true;
-    this.pagoVoluntarioError = null;
-
-    this.correccionPagosService.crearPagoVoluntarioSistema(
-      {
-        tenantId: Number(this.tenantId),
-        carteraId: Number(this.carteraId),
-        subcarteraId: Number(this.subcarteraId)
-      },
-      {
-        documento: this.getDocumento(),
-        fechaPago: this.pagoVoluntarioFecha,
-        montoPago: Number(this.pagoVoluntarioMonto)
-      }
-    ).subscribe({
-      next: () => {
-        this.creandoPagoVoluntario = false;
-        this.pagoVoluntarioModalOpen = false;
-        this.refreshRequested.emit();
-      },
-      error: (error) => {
-        this.pagoVoluntarioError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago voluntario.';
-        this.creandoPagoVoluntario = false;
-      }
-    });
+  private getPagoNoVerificado(cuota: CuotaResumenConciliacion): PagoResumenConciliacion | null {
+    return (cuota.pagos || []).find(pago => pago.verificadoBanco === false) || null;
   }
 
   hasPagoVerificado(cuota: any): boolean {
@@ -1289,121 +651,8 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
     return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
   }
 
-  private cargarCuotasValidasTipificar(): void {
-    if (!this.open || !this.hasRequiredContext() || !this.getDocumento()) {
-      this.cuotasValidas = [];
-      return;
-    }
-
-    this.isLoadingCuotasValidas = true;
-    this.correccionPagosService.buscarCuotasValidasTipificar({
-      documento: this.getDocumento(),
-      tenantId: Number(this.tenantId),
-      carteraId: Number(this.carteraId),
-      subcarteraId: Number(this.subcarteraId)
-    }).subscribe({
-      next: (cuotas) => {
-        this.cuotasValidas = cuotas;
-        this.isLoadingCuotasValidas = false;
-      },
-      error: () => {
-        this.cuotasValidas = [];
-        this.isLoadingCuotasValidas = false;
-      }
-    });
-  }
-
-  private cargarPagosModificables(): void {
-    if (!this.open || !this.hasRequiredContext() || !this.getDocumento()) {
-      this.pagosModificables = [];
-      return;
-    }
-
-    this.correccionPagosService.buscarPendientesConciliacion({
-      documento: this.getDocumento(),
-      tenantId: Number(this.tenantId),
-      carteraId: Number(this.carteraId),
-      subcarteraId: Number(this.subcarteraId)
-    }).subscribe({
-      next: (pagos) => {
-        this.pagosModificables = pagos;
-      },
-      error: () => {
-        this.pagosModificables = [];
-      }
-    });
-  }
-
-  private getPrimeraCuotaSinPago(): CuotaResumenConciliacion | null {
-    return this.resumen?.promesas
-      .flatMap(promesa => promesa.cuotas || [])
-      .find(cuota => cuota.estado !== 'PAGADA'
-        && !this.hasValue(cuota.fechaPagoReal)
-        && (cuota.montoPagadoReal === null || cuota.montoPagadoReal === undefined)) || null;
-  }
-
-  private getPrimeraCuotaVencidaUltimaPromesaVencida(): { promesa: ResumenConciliacionCliente['promesas'][number]; cuota: CuotaResumenConciliacion } | null {
-    const promesa = [...(this.resumen?.promesas || [])]
-      .sort((a, b) => this.getTime(b.fechaGestion) - this.getTime(a.fechaGestion))[0];
-
-    if (!promesa) return null;
-    if (String(promesa.estadoPago || '').toUpperCase() !== 'VENCIDA') return null;
-
-    const cuota = [...(promesa.cuotas || [])]
-      .filter(cuota => String(cuota.estado || '').toUpperCase() === 'VENCIDA')
-      .sort((a, b) => this.getTime(a.fechaPromesa) - this.getTime(b.fechaPromesa) || a.numeroCuota - b.numeroCuota)[0] || null;
-
-    return cuota ? { promesa, cuota } : null;
-  }
-
   private hasRequiredContext(): boolean {
     return Number(this.tenantId) > 0 && Number(this.carteraId) > 0 && Number(this.subcarteraId) > 0;
   }
 
-  private getDocumento(): string {
-    return String(this.documento || this.resumen?.documento || '').trim();
-  }
-
-  private getEliminarPagoError(error: any): string {
-    const messages: Record<string, string> = {
-      PAGO_CUOTA_NO_ENCONTRADO: 'El pago ya no existe o fue eliminado.',
-      PAGO_CUOTA_FUERA_DE_CONTEXTO: 'El pago no pertenece a la cartera o subcartera seleccionada.',
-      PAGO_CUOTA_SIN_GESTION_ASOCIADA: 'El pago no tiene una promesa asociada y no puede eliminarse.',
-      ELIMINACION_SOLO_PERMITIDA_PARA_PROMESA_PAGADA: 'Solo se pueden eliminar pagos de promesas que están pagadas.',
-      PAGO_VERIFICADO_POR_BANCO_NO_ELIMINABLE: 'No se puede eliminar porque el pago ya fue validado por banco.',
-      TRANSACCION_CON_PAGOS_FUERA_DE_GESTION: 'La transacción tiene aplicaciones inconsistentes y no puede eliminarse.'
-    };
-    const code = error?.error?.message;
-
-    return messages[code] || 'No se pudo eliminar el pago. Intenta actualizar la información.';
-  }
-
-  private toDateInputValue(value: string | null | undefined): string {
-    if (!value) return '';
-    return String(value).slice(0, 10);
-  }
-
-  private addDays(value: string, days: number): string {
-    const [year, month, day] = value.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    date.setDate(date.getDate() + days);
-    return this.toDateInputValue(date.toISOString());
-  }
-
-  private endOfMonth(value: string): string {
-    const [year, month] = value.split('-').map(Number);
-    const date = new Date(year, month, 0);
-    return this.toDateInputValue(date.toISOString());
-  }
-
-  private isCuotaUnica(cuota: CuotaResumenConciliacion): boolean {
-    const promesa = (this.resumen?.promesas || []).find(item => (item.cuotas || []).some(row => row.cuotaId === cuota.cuotaId));
-    return (promesa?.cuotas || []).length === 1;
-  }
-
-  private getTime(value: string | null | undefined): number {
-    if (!value) return 0;
-    const time = new Date(value).getTime();
-    return Number.isNaN(time) ? 0 : time;
-  }
 }

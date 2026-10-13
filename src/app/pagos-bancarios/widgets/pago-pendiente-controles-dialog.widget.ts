@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { Observable, forkJoin } from 'rxjs';
 import { CorreccionPagosService } from '../services/correccion-pagos.service';
-import { PagoBancoPorResolver } from '../models/bcp-archivo.model';
+import { CuotaResumenConciliacion, PagoBancoPorResolver, PromesaResumenConciliacion } from '../models/bcp-archivo.model';
 import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/correccion-pagos.model';
 import { MOTIVOS_REVISION, aFechaIso, diasEntre, fechaCorta, montoSoles } from '../models/categoria-pago';
 
@@ -24,26 +24,47 @@ interface PagosPorFecha {
   pagos: PagoAsesor[];
 }
 
-type Control = 'crear' | 'ampliar' | 'promesa' | 'voluntario';
+/**
+ * Corrección que no parte de un pago bancario: desde una cuota del cliente,
+ * o del cliente en general cuando no se indica cuota.
+ */
+export interface CorreccionClienteContexto {
+  documento: string;
+  promesa?: PromesaResumenConciliacion | null;
+  cuota?: CuotaResumenConciliacion | null;
+}
+
+type Control = 'crear' | 'ampliar' | 'promesa' | 'regularizar' | 'voluntario';
 
 const DIAS_AMPLIACION = 3;
 
+function sumarDias(fechaIso: string, dias: number): string {
+  const [year, month, day] = fechaIso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + dias)).toISOString().slice(0, 10);
+}
+
+function finDeMes(fechaIso: string): string {
+  const [year, month] = fechaIso.split('-').map(Number);
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+}
+
 /**
- * Diálogo para resolver un pago bancario pendiente.
- * Reúne los controles de corrección disponibles y permite corregir cada pago del asesor por separado.
+ * Diálogo con los controles de corrección de pagos.
+ * Se abre para resolver un pago bancario pendiente (`pago`) o para corregir una cuota o un cliente (`cliente`).
+ * Permite corregir cada pago del asesor por separado.
  */
 @Component({
   selector: 'app-pago-pendiente-controles-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, A11yModule],
   template: `
-    @if (pago; as banco) {
+    @if (abierto()) {
       <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrar()">
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="ppc-titulo"
-          aria-describedby="ppc-resumen"
+          [attr.aria-describedby]="pago || cuotaActual() ? 'ppc-resumen' : null"
           cdkTrapFocus
           [cdkTrapFocusAutoCapture]="true"
           class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
@@ -53,9 +74,9 @@ const DIAS_AMPLIACION = 3;
           <header class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
             <div>
               <h2 id="ppc-titulo" cdkFocusInitial tabindex="-1" class="text-base font-bold text-slate-900 focus:outline-none dark:text-white">
-                Resolver pago bancario
+                {{ titulo() }}
               </h2>
-              <p class="text-xs text-slate-600 dark:text-slate-400">Cliente {{ banco.documento }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-400">Cliente {{ documentoActual() }}</p>
             </div>
             <button
               type="button"
@@ -72,6 +93,7 @@ const DIAS_AMPLIACION = 3;
 
           <div class="flex-1 space-y-5 overflow-y-auto px-5 py-4">
             <!-- Pago del banco -->
+            @if (pago; as banco) {
             <section id="ppc-resumen" class="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
               <h3 class="text-xs font-bold uppercase tracking-wide text-blue-900 dark:text-blue-200">Pago del banco</h3>
               <dl class="mt-2 grid grid-cols-3 gap-3 text-sm">
@@ -90,6 +112,35 @@ const DIAS_AMPLIACION = 3;
               </dl>
               <p class="mt-2 text-sm text-slate-800 dark:text-slate-200">{{ problema() }}</p>
             </section>
+            } @else if (cuotaActual(); as cuota) {
+              <section id="ppc-resumen" class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                  Cuota {{ cuota.numeroCuota }}
+                  @if (cliente?.promesa; as promesa) {
+                    <span class="font-normal normal-case text-slate-600 dark:text-slate-400">· Gestión {{ promesa.idGestion }} · {{ promesa.nombreAgente || 'Sin agente' }}</span>
+                  }
+                </h3>
+                <dl class="mt-2 grid grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <dt class="text-xs text-slate-600 dark:text-slate-400">Vence</dt>
+                    <dd class="font-semibold text-slate-900 dark:text-white">{{ fecha(cuota.fechaPromesa) }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-slate-600 dark:text-slate-400">Monto promesa</dt>
+                    <dd class="font-semibold text-slate-900 dark:text-white">{{ monto(cuota.montoPromesa) }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-slate-600 dark:text-slate-400">Estado</dt>
+                    <dd class="font-semibold text-slate-900 dark:text-white">{{ cuota.estado }}</dd>
+                  </div>
+                </dl>
+                @if (pagosVerificados(cuota) > 0) {
+                  <p class="mt-2 text-sm text-slate-800 dark:text-slate-200">
+                    {{ pagosVerificados(cuota) }} pago(s) de esta cuota ya están verificados por el banco y no se pueden modificar ni eliminar.
+                  </p>
+                }
+              </section>
+            }
 
             <div aria-live="polite">
               @if (mensajeExito(); as texto) {
@@ -111,11 +162,11 @@ const DIAS_AMPLIACION = 3;
               <!-- Pagos del asesor, por fecha -->
               <section aria-labelledby="ppc-pagos-titulo">
                 <h3 id="ppc-pagos-titulo" class="text-sm font-bold text-slate-900 dark:text-white">Pagos registrados por el asesor</h3>
-                <p class="text-xs text-slate-600 dark:text-slate-400">Pagos sin conciliar del cliente. Cada uno se corrige por separado.</p>
+                <p class="text-xs text-slate-600 dark:text-slate-400">Pagos sin conciliar {{ cuotaActual() ? 'de esta cuota' : 'del cliente' }}. Cada uno se corrige por separado.</p>
 
                 @if (pagosPorFecha().length === 0) {
                   <p class="mt-2 rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400">
-                    El cliente no tiene pagos registrados sin conciliar.
+                    {{ cuotaActual() ? 'La cuota no tiene pagos registrados sin conciliar.' : 'El cliente no tiene pagos registrados sin conciliar.' }}
                   </p>
                 }
 
@@ -123,7 +174,9 @@ const DIAS_AMPLIACION = 3;
                   <div class="mt-3">
                     <h4 class="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">
                       {{ fecha(grupo.fecha) }}
-                      <span class="font-normal normal-case text-slate-600 dark:text-slate-400">· {{ etiquetaDesfase(grupo.fecha) }}</span>
+                      @if (pago) {
+                        <span class="font-normal normal-case text-slate-600 dark:text-slate-400">· {{ etiquetaDesfase(grupo.fecha) }}</span>
+                      }
                     </h4>
                     <ul class="mt-1 space-y-2">
                       @for (item of grupo.pagos; track item.clave) {
@@ -177,8 +230,10 @@ const DIAS_AMPLIACION = 3;
                                 </div>
                               </div>
                               <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-                                <button type="button" (click)="usarDatosDelBanco()" [class]="btnSecundario">Usar fecha y monto del banco</button>
-                                <div class="flex gap-2">
+                                @if (pago) {
+                                  <button type="button" (click)="usarDatosDelBanco()" [class]="btnSecundario">Usar fecha y monto del banco</button>
+                                }
+                                <div class="ml-auto flex gap-2">
                                   <button type="button" (click)="cancelarEdicion()" [disabled]="guardando()" [class]="btnSecundario">Cancelar</button>
                                   <button type="submit" [disabled]="!formValido() || guardando()" [class]="btnPrimario">{{ guardando() ? 'Guardando...' : 'Guardar cambios' }}</button>
                                 </div>
@@ -205,7 +260,7 @@ const DIAS_AMPLIACION = 3;
               <!-- Otros controles -->
               <section aria-labelledby="ppc-controles-titulo">
                 <h3 id="ppc-controles-titulo" class="text-sm font-bold text-slate-900 dark:text-white">Otras acciones</h3>
-                <p class="text-xs text-slate-600 dark:text-slate-400">Los formularios vienen con la fecha y el monto del banco.</p>
+                <p class="text-xs text-slate-600 dark:text-slate-400">{{ pago ? 'Los formularios vienen con la fecha y el monto del banco.' : 'Los formularios vienen con la fecha y el monto de la cuota. Cámbialos por los datos reales del pago.' }}</p>
 
                 <div class="mt-2 space-y-2">
                   <!-- Crear pago en una cuota -->
@@ -215,7 +270,7 @@ const DIAS_AMPLIACION = 3;
                         <span>
                           <span class="block text-sm font-semibold">Crear pago en una cuota</span>
                           <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">
-                            {{ cuotas().length === 0 ? 'No disponible: el cliente no tiene cuotas pendientes en su última promesa.' : 'El asesor no registró la cancelación de este pago.' }}
+                            {{ ayuda('crear') }}
                           </span>
                         </span>
                         <span aria-hidden="true">{{ control() === 'crear' ? '−' : '+' }}</span>
@@ -224,7 +279,7 @@ const DIAS_AMPLIACION = 3;
                     @if (control() === 'crear') {
                       <form id="ppc-control-crear" class="border-t border-slate-200 p-3 dark:border-slate-700" (ngSubmit)="guardarCrear()">
                         <label for="ppc-crear-cuota" [class]="labelClass">Cuota</label>
-                        <select id="ppc-crear-cuota" name="cuota" required [(ngModel)]="formCuotaId" [class]="inputClass">
+                        <select id="ppc-crear-cuota" name="cuota" required [(ngModel)]="formCuotaId" (ngModelChange)="alCambiarCuota()" [class]="inputClass">
                           @for (cuota of cuotas(); track cuota.cuotaId) {
                             <option [ngValue]="cuota.cuotaId">{{ describirCuota(cuota) }}</option>
                           }
@@ -253,7 +308,7 @@ const DIAS_AMPLIACION = 3;
                         <span>
                           <span class="block text-sm font-semibold">Ampliar vencimiento de una cuota</span>
                           <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">
-                            {{ cuotasAmpliables().length === 0 ? 'No disponible: no hay cuotas vencidas a 3 días o menos de la fecha del banco.' : 'La cuota venció y el pago llegó hasta 3 días después. Mueve el vencimiento y crea el pago.' }}
+                            {{ ayuda('ampliar') }}
                           </span>
                         </span>
                         <span aria-hidden="true">{{ control() === 'ampliar' ? '−' : '+' }}</span>
@@ -262,7 +317,7 @@ const DIAS_AMPLIACION = 3;
                     @if (control() === 'ampliar') {
                       <form id="ppc-control-ampliar" class="border-t border-slate-200 p-3 dark:border-slate-700" (ngSubmit)="guardarAmpliar()">
                         <label for="ppc-ampliar-cuota" [class]="labelClass">Cuota vencida</label>
-                        <select id="ppc-ampliar-cuota" name="cuota" required [(ngModel)]="formCuotaId" [class]="inputClass">
+                        <select id="ppc-ampliar-cuota" name="cuota" required [(ngModel)]="formCuotaId" (ngModelChange)="alCambiarCuota()" [class]="inputClass">
                           @for (cuota of cuotasAmpliables(); track cuota.cuotaId) {
                             <option [ngValue]="cuota.cuotaId">{{ describirCuota(cuota) }}</option>
                           }
@@ -270,7 +325,10 @@ const DIAS_AMPLIACION = 3;
                         <div class="mt-3 grid grid-cols-2 gap-3">
                           <div>
                             <label for="ppc-ampliar-fecha" [class]="labelClass">Nueva fecha de vencimiento</label>
-                            <input id="ppc-ampliar-fecha" type="date" name="fecha" required [(ngModel)]="formFecha" [class]="inputClass" />
+                            <input id="ppc-ampliar-fecha" type="date" name="fecha" required [attr.min]="fechaMin()" [attr.max]="fechaMax()" [attr.aria-describedby]="fechaMin() ? 'ppc-ampliar-rango' : null" [(ngModel)]="formFecha" [class]="inputClass" />
+                            @if (fechaMin()) {
+                              <p id="ppc-ampliar-rango" class="mt-1 text-xs text-slate-600 dark:text-slate-400">Entre {{ fecha(fechaMin()) }} y {{ fecha(fechaMax()) }}.</p>
+                            }
                           </div>
                           <div>
                             <label for="ppc-ampliar-monto" [class]="labelClass">Monto del banco (S/)</label>
@@ -282,7 +340,7 @@ const DIAS_AMPLIACION = 3;
                           El pago corresponde al asesor original
                         </label>
                         <div class="mt-3 flex justify-end">
-                          <button type="submit" [disabled]="!formValido() || !formCuotaId || guardando()" [class]="btnPrimario">{{ guardando() ? 'Guardando...' : 'Ampliar y crear pago' }}</button>
+                          <button type="submit" [disabled]="!formValido() || !fechaEnRango() || !formCuotaId || guardando()" [class]="btnPrimario">{{ guardando() ? 'Guardando...' : 'Ampliar y crear pago' }}</button>
                         </div>
                       </form>
                     }
@@ -295,7 +353,7 @@ const DIAS_AMPLIACION = 3;
                         <span>
                           <span class="block text-sm font-semibold">Crear promesa del sistema</span>
                           <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">
-                            {{ cuotasPromesaSistema().length === 0 ? 'No disponible: no hay cuotas vencidas hace más de 3 días en el mismo mes del pago.' : 'La promesa de una sola cuota venció hace más de 3 días. El pago se asigna al sistema, no al asesor.' }}
+                            {{ ayuda('promesa') }}
                           </span>
                         </span>
                         <span aria-hidden="true">{{ control() === 'promesa' ? '−' : '+' }}</span>
@@ -304,7 +362,7 @@ const DIAS_AMPLIACION = 3;
                     @if (control() === 'promesa') {
                       <form id="ppc-control-promesa" class="border-t border-slate-200 p-3 dark:border-slate-700" (ngSubmit)="guardarPromesaSistema()">
                         <label for="ppc-promesa-cuota" [class]="labelClass">Cuota vencida</label>
-                        <select id="ppc-promesa-cuota" name="cuota" required [(ngModel)]="formCuotaId" [class]="inputClass">
+                        <select id="ppc-promesa-cuota" name="cuota" required [(ngModel)]="formCuotaId" (ngModelChange)="alCambiarCuota()" [class]="inputClass">
                           @for (cuota of cuotasPromesaSistema(); track cuota.cuotaId) {
                             <option [ngValue]="cuota.cuotaId">{{ describirCuota(cuota) }}</option>
                           }
@@ -312,7 +370,10 @@ const DIAS_AMPLIACION = 3;
                         <div class="mt-3 grid grid-cols-2 gap-3">
                           <div>
                             <label for="ppc-promesa-fecha" [class]="labelClass">Fecha de pago</label>
-                            <input id="ppc-promesa-fecha" type="date" name="fecha" required [(ngModel)]="formFecha" [class]="inputClass" />
+                            <input id="ppc-promesa-fecha" type="date" name="fecha" required [attr.min]="fechaMin()" [attr.max]="fechaMax()" [attr.aria-describedby]="fechaMin() ? 'ppc-promesa-rango' : null" [(ngModel)]="formFecha" [class]="inputClass" />
+                            @if (fechaMin()) {
+                              <p id="ppc-promesa-rango" class="mt-1 text-xs text-slate-600 dark:text-slate-400">Entre {{ fecha(fechaMin()) }} y {{ fecha(fechaMax()) }}.</p>
+                            }
                           </div>
                           <div>
                             <label for="ppc-promesa-monto" [class]="labelClass">Monto (S/)</label>
@@ -320,11 +381,38 @@ const DIAS_AMPLIACION = 3;
                           </div>
                         </div>
                         <div class="mt-3 flex justify-end">
-                          <button type="submit" [disabled]="!formValido() || !formCuotaId || guardando()" [class]="btnPrimario">{{ guardando() ? 'Creando...' : 'Crear promesa del sistema' }}</button>
+                          <button type="submit" [disabled]="!formValido() || !fechaEnRango() || !formCuotaId || guardando()" [class]="btnPrimario">{{ guardando() ? 'Creando...' : 'Crear promesa del sistema' }}</button>
                         </div>
                       </form>
                     }
                   </div>
+
+                  <!-- Regularizar pago de una promesa pagada -->
+                  @if (cuotaActual()) {
+                    <div class="rounded-lg border border-slate-200 dark:border-slate-700">
+                      <h4>
+                        <button type="button" (click)="alternarControl('regularizar')" [disabled]="!pagoRegularizable() || guardando()" [attr.aria-expanded]="control() === 'regularizar'" aria-controls="ppc-control-regularizar" [class]="btnAcordeon">
+                          <span>
+                            <span class="block text-sm font-semibold">Regularizar fecha de un pago ya registrado</span>
+                            <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">{{ ayuda('regularizar') }}</span>
+                          </span>
+                          <span aria-hidden="true">{{ control() === 'regularizar' ? '−' : '+' }}</span>
+                        </button>
+                      </h4>
+                      @if (control() === 'regularizar') {
+                        <form id="ppc-control-regularizar" class="border-t border-slate-200 p-3 dark:border-slate-700" (ngSubmit)="guardarRegularizar()">
+                          <label for="ppc-regularizar-fecha" [class]="labelClass">Fecha en que el banco registró el pago</label>
+                          <input id="ppc-regularizar-fecha" type="date" name="fecha" required [attr.min]="fechaMin()" [attr.max]="fechaMax()" aria-describedby="ppc-regularizar-rango" [(ngModel)]="formFecha" [class]="inputClass" />
+                          <p id="ppc-regularizar-rango" class="mt-1 text-xs text-slate-600 dark:text-slate-400">Entre {{ fecha(fechaMin()) }} y {{ fecha(fechaMax()) }}. Se mueven la fecha del pago y el vencimiento de la cuota.</p>
+                          <label for="ppc-regularizar-observaciones" class="mt-3" [class]="labelClass">Observaciones</label>
+                          <textarea id="ppc-regularizar-observaciones" name="observaciones" rows="2" [(ngModel)]="formObservaciones" class="resize-none" [class]="inputClass"></textarea>
+                          <div class="mt-3 flex justify-end">
+                            <button type="submit" [disabled]="!formFecha || !fechaEnRango() || guardando()" [class]="btnPrimario">{{ guardando() ? 'Guardando...' : 'Regularizar' }}</button>
+                          </div>
+                        </form>
+                      }
+                    </div>
+                  }
 
                   <!-- Pago voluntario -->
                   <div class="rounded-lg border border-red-200 dark:border-red-900">
@@ -378,6 +466,8 @@ const DIAS_AMPLIACION = 3;
 export class PagoPendienteControlesDialogWidget implements OnChanges {
   /** Pago a resolver. El diálogo está abierto mientras tenga valor. */
   @Input() pago: PagoBancoPorResolver | null = null;
+  /** Corrección desde una cuota o un cliente, sin pago bancario. Abre el diálogo igual que `pago`. */
+  @Input() cliente: CorreccionClienteContexto | null = null;
   @Input() tenantId = 0;
   @Input() carteraId = 0;
   @Input() subcarteraId = 0;
@@ -400,6 +490,8 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   cuotas = signal<CuotaValidaTipificar[]>([]);
   cuotasAmpliables = signal<CuotaValidaTipificar[]>([]);
   cuotasPromesaSistema = signal<CuotaValidaTipificar[]>([]);
+  /** Pago sin verificar de la cuota abierta, si su promesa admite regularizar la fecha. */
+  pagoRegularizable = signal<PagoPendienteConciliacion | null>(null);
 
   editando = signal<string | null>(null);
   eliminando = signal<string | null>(null);
@@ -410,12 +502,13 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   formCuotaId: number | null = null;
   formPagoDelAsesor = true;
   formConfirmaVoluntario = false;
+  formObservaciones = '';
   huboCambios = false;
 
   constructor(private correccionService: CorreccionPagosService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['pago'] && this.pago) {
+    if ((changes['pago'] || changes['cliente']) && this.abierto()) {
       this.huboCambios = false;
       this.mensajeExito.set(null);
       this.errorAccion.set(null);
@@ -424,9 +517,32 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
     }
   }
 
+  abierto(): boolean {
+    return !!this.pago || !!this.cliente;
+  }
+
+  documentoActual(): string {
+    return String(this.pago?.documento || this.cliente?.documento || '').trim();
+  }
+
+  /** Cuota desde la que se abrió el diálogo. Con un pago bancario no hay cuota fija. */
+  cuotaActual(): CuotaResumenConciliacion | null {
+    return this.pago ? null : this.cliente?.cuota || null;
+  }
+
+  titulo(): string {
+    if (this.pago) return 'Resolver pago bancario';
+    const cuota = this.cuotaActual();
+    return cuota ? `Corregir cuota ${cuota.numeroCuota}` : 'Corregir pagos del cliente';
+  }
+
+  pagosVerificados(cuota: CuotaResumenConciliacion): number {
+    return (cuota.pagos || []).filter(item => item.verificadoBanco === true).length;
+  }
+
   cargar(): void {
-    if (!this.pago) return;
-    const request = { documento: this.pago.documento, ...this.contexto() };
+    if (!this.abierto()) return;
+    const request = { documento: this.documentoActual(), ...this.contexto() };
 
     this.cargando.set(true);
     this.errorCarga.set(null);
@@ -435,8 +551,13 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
       cuotas: this.correccionService.buscarCuotasValidasTipificar(request)
     }).subscribe({
       next: ({ pagos, cuotas }) => {
-        this.pagosPorFecha.set(this.agruparPorFecha(pagos || []));
+        const cuotaId = this.cuotaActual()?.cuotaId;
+        const grupos = this.agruparPorFecha(pagos || []);
+        this.pagosPorFecha.set(!cuotaId ? grupos : grupos
+          .map(grupo => ({ ...grupo, pagos: grupo.pagos.filter(item => item.cuotas.some(c => c.cuotaId === cuotaId)) }))
+          .filter(grupo => grupo.pagos.length > 0));
         this.asignarCuotas(cuotas || []);
+        this.pagoRegularizable.set(this.buscarPagoRegularizable(pagos || []));
         this.cargando.set(false);
       },
       error: () => {
@@ -447,8 +568,8 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   }
 
   cerrar(): void {
-    if (!this.pago || this.guardando()) return;
-    this.cerrado.emit({ documento: this.pago.documento, huboCambios: this.huboCambios });
+    if (!this.abierto() || this.guardando()) return;
+    this.cerrado.emit({ documento: this.documentoActual(), huboCambios: this.huboCambios });
   }
 
   // ----- Pagos del asesor -----
@@ -508,24 +629,79 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   alternarControl(control: Control): void {
     const abrir = this.control() !== control;
     this.cerrarFormularios();
-    if (!abrir || !this.pago) return;
+    if (!abrir || !this.abierto()) return;
 
-    this.formFecha = aFechaIso(this.pago.fechaBanco);
-    this.formMonto = Number(this.pago.montoBanco);
-    const disponibles = control === 'ampliar'
-      ? this.cuotasAmpliables()
-      : control === 'promesa'
-        ? this.cuotasPromesaSistema()
-        : this.cuotas();
+    const disponibles = this.cuotasDe(control);
     this.formCuotaId = disponibles.length > 0 ? disponibles[0].cuotaId : null;
     this.control.set(control);
+    this.prellenar();
+  }
+
+  alCambiarCuota(): void {
+    // Con pago bancario los datos son los del banco y no dependen de la cuota elegida.
+    if (!this.pago) this.prellenar();
+  }
+
+  /** Fecha mínima del formulario abierto. Null con pago bancario: ahí manda la fecha del banco. */
+  fechaMin(): string | null {
+    return this.rangoFechas()?.min ?? null;
+  }
+
+  fechaMax(): string | null {
+    return this.rangoFechas()?.max ?? null;
+  }
+
+  fechaEnRango(): boolean {
+    const rango = this.rangoFechas();
+    return !rango || (!!this.formFecha && this.formFecha >= rango.min && this.formFecha <= rango.max);
+  }
+
+  ayuda(control: Control): string {
+    const conBanco = !!this.pago;
+    switch (control) {
+      case 'crear':
+        if (this.cuotas().length > 0) return 'El asesor no registró la cancelación de este pago.';
+        return this.cuotaActual()
+          ? 'No disponible: esta cuota no admite un pago nuevo (ya está pagada o no es de la última promesa).'
+          : 'No disponible: el cliente no tiene cuotas pendientes en su última promesa.';
+      case 'ampliar':
+        if (this.cuotasAmpliables().length > 0) return 'La cuota venció y el pago llegó hasta 3 días después. Mueve el vencimiento y crea el pago.';
+        if (conBanco) return 'No disponible: no hay cuotas vencidas a 3 días o menos de la fecha del banco.';
+        return this.cuotaActual() ? 'No disponible: la cuota no está vencida.' : 'No disponible: el cliente no tiene cuotas vencidas en su última promesa.';
+      case 'promesa':
+        if (this.cuotasPromesaSistema().length > 0) return 'La promesa de una sola cuota venció hace más de 3 días. El pago se asigna al sistema, no al asesor.';
+        if (conBanco) return 'No disponible: no hay cuotas vencidas hace más de 3 días en el mismo mes del pago.';
+        return 'No disponible: solo aplica a promesas vencidas de una sola cuota, con pago dentro del mismo mes.';
+      case 'regularizar':
+        return this.pagoRegularizable()
+          ? 'El banco registró el pago hasta 3 días después del vencimiento.'
+          : 'No disponible: solo aplica a promesas pagadas de una sola cuota con un pago aún no verificado por el banco.';
+      default:
+        return '';
+    }
+  }
+
+  guardarRegularizar(): void {
+    const cuota = this.cuotaActual();
+    const pago = this.pagoRegularizable();
+    if (!cuota || !pago || !this.formFecha || !this.fechaEnRango()) return;
+    this.ejecutar(
+      this.correccionService.regularizarPagoPagado(cuota.cuotaId, this.contexto(), {
+        documento: this.documentoActual(),
+        fechaPagoBanco: this.formFecha,
+        pagoCuotaId: pago.pagoCuotaId,
+        observaciones: this.formObservaciones.trim() || undefined
+      }),
+      'Fecha del pago regularizada.',
+      'No se pudo regularizar el pago.'
+    );
   }
 
   guardarCrear(): void {
-    if (!this.pago || !this.formValido() || !this.formCuotaId) return;
+    if (!this.abierto() || !this.formValido() || !this.formCuotaId) return;
     this.ejecutar(
       this.correccionService.crearCancelacion(this.formCuotaId, this.contexto(), {
-        documento: this.pago.documento,
+        documento: this.documentoActual(),
         fechaPago: this.formFecha,
         montoPago: Number(this.formMonto)
       }),
@@ -535,10 +711,10 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   }
 
   guardarAmpliar(): void {
-    if (!this.pago || !this.formValido() || !this.formCuotaId) return;
+    if (!this.abierto() || !this.formValido() || !this.formCuotaId) return;
     this.ejecutar(
       this.correccionService.ampliarVencimiento(this.formCuotaId, this.contexto(), {
-        documento: this.pago.documento,
+        documento: this.documentoActual(),
         fechaPago: this.formFecha,
         montoPago: Number(this.formMonto),
         pagoCorrespondeAsesor: this.formPagoDelAsesor
@@ -549,10 +725,10 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   }
 
   guardarPromesaSistema(): void {
-    if (!this.pago || !this.formValido() || !this.formCuotaId) return;
+    if (!this.abierto() || !this.formValido() || !this.formCuotaId) return;
     this.ejecutar(
       this.correccionService.crearPromesaSistemaPagoBanco(this.formCuotaId, this.contexto(), {
-        documento: this.pago.documento,
+        documento: this.documentoActual(),
         fechaPago: this.formFecha,
         montoPago: Number(this.formMonto)
       }),
@@ -562,10 +738,10 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   }
 
   guardarVoluntario(): void {
-    if (!this.pago || !this.formValido() || !this.formConfirmaVoluntario) return;
+    if (!this.abierto() || !this.formValido() || !this.formConfirmaVoluntario) return;
     this.ejecutar(
       this.correccionService.crearPagoVoluntarioSistema(this.contexto(), {
-        documento: this.pago.documento,
+        documento: this.documentoActual(),
         fechaPago: this.formFecha,
         montoPago: Number(this.formMonto)
       }),
@@ -658,6 +834,78 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
     this.formCuotaId = null;
     this.formPagoDelAsesor = true;
     this.formConfirmaVoluntario = false;
+    this.formObservaciones = '';
+  }
+
+  private cuotasDe(control: Control): CuotaValidaTipificar[] {
+    if (control === 'ampliar') return this.cuotasAmpliables();
+    if (control === 'promesa') return this.cuotasPromesaSistema();
+    if (control === 'crear') return this.cuotas();
+    return [];
+  }
+
+  /** Vencimiento de la cuota sobre la que actúa el formulario abierto. */
+  private fechaPromesaDelFormulario(): string {
+    if (this.control() === 'regularizar') return aFechaIso(this.cuotaActual()?.fechaPromesa);
+    const cuota = this.cuotasDe(this.control() as Control).find(c => c.cuotaId === this.formCuotaId);
+    return cuota ? aFechaIso(cuota.fechaPromesa) : '';
+  }
+
+  private rangoFechas(): { min: string; max: string } | null {
+    if (this.pago) return null;
+    const control = this.control();
+    const vence = this.fechaPromesaDelFormulario();
+    if (!vence) return null;
+    if (control === 'ampliar' || control === 'regularizar') {
+      return { min: vence, max: sumarDias(vence, DIAS_AMPLIACION) };
+    }
+    if (control === 'promesa') {
+      return { min: sumarDias(vence, DIAS_AMPLIACION + 1), max: finDeMes(vence) };
+    }
+    return null;
+  }
+
+  private prellenar(): void {
+    const control = this.control();
+    if (this.pago) {
+      this.formFecha = aFechaIso(this.pago.fechaBanco);
+      this.formMonto = Number(this.pago.montoBanco);
+      return;
+    }
+    if (control === 'voluntario') {
+      this.formFecha = '';
+      this.formMonto = null;
+      return;
+    }
+    if (control === 'regularizar') {
+      const pago = this.pagoRegularizable();
+      const rango = this.rangoFechas();
+      const fechaPago = aFechaIso(pago?.fechaPago);
+      this.formFecha = rango && fechaPago >= rango.min && fechaPago <= rango.max ? fechaPago : rango?.min || '';
+      this.formObservaciones = 'Banco registró el pago días después';
+      return;
+    }
+
+    const cuota = this.cuotasDe(control as Control).find(c => c.cuotaId === this.formCuotaId);
+    const rango = this.rangoFechas();
+    this.formMonto = cuota ? Number(cuota.montoPromesa) : null;
+    if (control === 'ampliar') {
+      this.formFecha = rango?.max || '';
+    } else if (control === 'promesa') {
+      this.formFecha = rango?.min || '';
+    } else {
+      this.formFecha = cuota ? aFechaIso(cuota.fechaPromesa) : '';
+    }
+  }
+
+  private buscarPagoRegularizable(pagos: PagoPendienteConciliacion[]): PagoPendienteConciliacion | null {
+    const cuota = this.cuotaActual();
+    const promesa = this.cliente?.promesa;
+    if (!cuota || !promesa) return null;
+    if (String(promesa.estadoPago || '').toUpperCase() !== 'PAGADA') return null;
+    if ((promesa.cuotas || []).length !== 1) return null;
+    if (String(cuota.estado || '').toUpperCase() !== 'PAGADA') return null;
+    return pagos.find(item => item.cuotaId === cuota.cuotaId) || null;
   }
 
   /**
@@ -698,7 +946,11 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   }
 
   private asignarCuotas(cuotas: CuotaValidaTipificar[]): void {
-    const fechaBanco = this.pago ? aFechaIso(this.pago.fechaBanco) : '';
+    if (!this.pago) {
+      this.asignarCuotasSinBanco(cuotas);
+      return;
+    }
+    const fechaBanco = aFechaIso(this.pago.fechaBanco);
     const vencidas = cuotas.filter(c => c.estadoCuota === 'VENCIDA' && !!fechaBanco);
 
     this.cuotas.set(cuotas);
@@ -708,6 +960,22 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
       const fechaPromesa = aFechaIso(c.fechaPromesa);
       return diasEntre(fechaPromesa, fechaBanco) > DIAS_AMPLIACION
         && fechaPromesa.slice(0, 7) === fechaBanco.slice(0, 7);
+    }));
+  }
+
+  /** Sin pago bancario no hay fecha de referencia: se ofrecen las cuotas por su estado y el backend valida las fechas. */
+  private asignarCuotasSinBanco(cuotas: CuotaValidaTipificar[]): void {
+    const cuotaId = this.cuotaActual()?.cuotaId;
+    const disponibles = cuotaId ? cuotas.filter(c => c.cuotaId === cuotaId) : cuotas;
+    const vencidas = disponibles.filter(c => c.estadoCuota === 'VENCIDA');
+    const promesa = this.cliente?.promesa;
+
+    this.cuotas.set(disponibles);
+    this.cuotasAmpliables.set(vencidas);
+    this.cuotasPromesaSistema.set(vencidas.filter(c => {
+      const vence = aFechaIso(c.fechaPromesa);
+      const cuotaUnica = !promesa || (promesa.cuotas || []).length === 1;
+      return cuotaUnica && sumarDias(vence, DIAS_AMPLIACION + 1) <= finDeMes(vence);
     }));
   }
 
