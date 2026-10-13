@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Tenant } from '../../maintenance/models/tenant.model';
@@ -6,6 +6,7 @@ import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.mode
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { BcpPagosService } from '../services/bcp-pagos.service';
+import { MenuLateralService } from '@/shared/services/menu-lateral.service';
 import { ArchivoCargaDetalleItem, ArchivoCargaHistorialItem } from '../models/bcp-archivo.model';
 
 @Component({
@@ -208,7 +209,22 @@ export class HistorialCargasBcpWidget implements OnInit {
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
     private bcpService: BcpPagosService
-  ) {}
+  ) {
+    // El detalle es un panel lateral: pliega el menú principal mientras está abierto.
+    const menuLateral = inject(MenuLateralService);
+    let menuPlegado = false;
+    const sincronizar = (plegar: boolean) => {
+      if (plegar === menuPlegado) return;
+      menuPlegado = plegar;
+      if (plegar) {
+        menuLateral.panelAbierto();
+      } else {
+        menuLateral.panelCerrado();
+      }
+    };
+    effect(() => sincronizar(this.detalleOpen()));
+    inject(DestroyRef).onDestroy(() => sincronizar(false));
+  }
 
   ngOnInit(): void {
     this.tenantService.getAllTenants().subscribe({
