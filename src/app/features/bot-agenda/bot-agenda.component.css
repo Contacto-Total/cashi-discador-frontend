@@ -125,14 +125,18 @@
 /* ---------- la columna del reparto ---------- */
 .reparto { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
 
-/* Las tarjetas se reparten el alto de la columna y van alternando lado. Así tres o
-   cinco asesores llenan lo mismo sin dejar un hueco muerto al final, y el zigzag hace
-   que el espacio entre ellas se lea como intención y no como sobra. */
-.asesores { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; height: 100%; }
+/* Las tarjetas van una tras otra alternando lado: el zigzag hace que el espacio entre
+   ellas se lea como intención y no como sobra. Arriba y no repartidas por el alto de la
+   columna: con dos asesores frente a una lista larga, repartirlas dejaba medio metro de
+   vacío entre la primera y la última. */
+.asesores { display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; }
 .asesor {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--alto-tarjeta);
   width: 86%;
   cursor: pointer;
   text-align: left;
@@ -145,7 +149,7 @@
   animation: entrar 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .asesor:nth-child(even) { align-self: flex-end; }
-.asesor:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tono) 55%, #e6e9ee); }
+.asesor:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tono) 55%, #e6e9ee); background: #f4f6f9; }
 .asesor:active { transform: translateY(0); transition-duration: 0.08s; }
 .asesor:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .asesor[aria-pressed='true'] { border-color: var(--tono); box-shadow: inset 0 0 0 1px var(--tono); }
@@ -290,6 +294,8 @@
 :host-context(body.dark-theme) .caso-cerrado { background: #0b1220; border-color: #172033; }
 :host-context(html.dark) .asesor,
 :host-context(body.dark-theme) .asesor { background: #0f172a; border-color: #1e293b; }
+:host-context(html.dark) .asesor:hover,
+:host-context(body.dark-theme) .asesor:hover { background: #1e293b; }
 :host-context(html.dark) .figura,
 :host-context(body.dark-theme) .figura {
   background: color-mix(in srgb, var(--tono) 18%, #0f172a);
