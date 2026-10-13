@@ -7,20 +7,22 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { BcpPagosService } from '../../services/bcp-pagos.service';
-import { ResumenConciliacionCliente } from '../../models/bcp-archivo.model';
+import { CuotaResumenConciliacion, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../../models/bcp-archivo.model';
 import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-resumen-conciliacion-drawer.widget';
+import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '../../widgets/pago-pendiente-controles-dialog.widget';
 
 @Component({
   selector: 'app-correccion-pagos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ClienteResumenConciliacionDrawerWidget],
+  imports: [CommonModule, FormsModule, RouterLink, ClienteResumenConciliacionDrawerWidget, PagoPendienteControlesDialogWidget],
   template: `
-    <div class="min-h-screen bg-slate-50 p-4 dark:bg-slate-900">
+    <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
+    <div class="relative min-h-screen bg-slate-50 p-4 dark:bg-slate-900">
       <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 class="text-xl font-bold text-slate-800 dark:text-white">Corrección de pagos</h1>
           <p class="text-sm text-slate-600 dark:text-slate-400">
-            Busca un cliente por DNI y contexto para revisar y corregir pagos desde su resumen.
+            Busca un cliente por DNI y contexto. Usa Corregir en una cuota para modificar sus pagos, crear uno nuevo o ampliar el vencimiento.
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -146,9 +148,25 @@ import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-re
         }
       </section>
 
+      @if (resumenCliente()) {
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            Para un pago que no corresponde a ninguna cuota, como un pago voluntario, usa las acciones del cliente.
+          </p>
+          <button
+            type="button"
+            (click)="abrirCorreccionCliente()"
+            class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800"
+          >
+            Acciones del cliente
+          </button>
+        </div>
+      }
+
       <app-cliente-resumen-conciliacion-drawer
         [open]="resumenVisible()"
         mode="inline"
+        [permiteCorregir]="true"
         [loading]="isLoadingResumenCliente()"
         [error]="resumenClienteError()"
         [documento]="resumenClienteDocumento()"
@@ -157,8 +175,16 @@ import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-re
         [carteraId]="selectedPortfolioId"
         [subcarteraId]="selectedSubPortfolioId"
         (close)="cerrarResumenCliente()"
-        (refreshRequested)="abrirResumenCliente()"
+        (corregirCuota)="abrirCorreccionCuota($event)"
       ></app-cliente-resumen-conciliacion-drawer>
+
+      <app-pago-pendiente-controles-dialog
+        [cliente]="correccion()"
+        [tenantId]="selectedTenantId"
+        [carteraId]="selectedPortfolioId"
+        [subcarteraId]="selectedSubPortfolioId"
+        (cerrado)="onCorreccionCerrada($event)"
+      ></app-pago-pendiente-controles-dialog>
     </div>
   `
 })
@@ -176,6 +202,8 @@ export class CorreccionPagosPage implements OnInit {
   resumenClienteError = signal<string | null>(null);
   resumenClienteDocumento = signal<string | null>(null);
   resumenCliente = signal<ResumenConciliacionCliente | null>(null);
+  /** Cuota o cliente en corrección. El diálogo está abierto mientras tenga valor. */
+  correccion = signal<CorreccionClienteContexto | null>(null);
 
   documento = '';
   selectedTenantId = 0;
@@ -268,10 +296,10 @@ export class CorreccionPagosPage implements OnInit {
     this.abrirResumenCliente();
   }
 
-  abrirResumenCliente(): void {
+  abrirResumenCliente(documentoResumen?: string): void {
     if (!this.canVerResumen()) return;
 
-    const documento = this.documento.trim();
+    const documento = (documentoResumen || this.documento).trim();
     if (!documento) return;
 
     this.resumenDrawerOpen.set(true);
@@ -299,6 +327,35 @@ export class CorreccionPagosPage implements OnInit {
 
   cerrarResumenCliente(): void {
     this.resumenDrawerOpen.set(false);
+  }
+
+  abrirCorreccionCuota(evento: { promesa: PromesaResumenConciliacion; cuota: CuotaResumenConciliacion }): void {
+    const documento = this.documentoDelResumen();
+    if (!documento) return;
+    this.correccion.set({ documento, promesa: evento.promesa, cuota: evento.cuota });
+  }
+
+  abrirCorreccionCliente(): void {
+    const documento = this.documentoDelResumen();
+    if (!documento) return;
+    this.correccion.set({ documento });
+  }
+
+  onCorreccionCerrada(evento: { documento: string; huboCambios: boolean }): void {
+    this.correccion.set(null);
+    if (!evento.huboCambios) return;
+
+    // La corrección puede hacer que un pago bancario pendiente ya calce: se reevalúa antes de refrescar.
+    const refrescar = () => this.abrirResumenCliente(evento.documento);
+    this.bcpPagosService.reevaluarPendientesCliente(evento.documento, {
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
+    }).subscribe({ next: refrescar, error: refrescar });
+  }
+
+  private documentoDelResumen(): string {
+    return String(this.resumenCliente()?.documento || this.resumenClienteDocumento() || '').trim();
   }
 
   private clearResults(): void {

@@ -1015,7 +1015,6 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
         [carteraId]="resumenCliente()?.carteraId || selectedPortfolioId || selectedPortfolioIdOh"
         [subcarteraId]="resumenCliente()?.subcarteraId || selectedSubPortfolioId || selectedSubPortfolioIdOh"
         (close)="cerrarResumenConciliacion()"
-        (refreshRequested)="refrescarResumenConciliacion()"
       ></app-cliente-resumen-conciliacion-drawer>
 
       <app-pago-pendiente-controles-dialog
