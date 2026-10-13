@@ -13,9 +13,9 @@ export const adminOrOperacionesGuard: CanActivateFn = (route, state) => {
     return false;
   }
 
-  // Check if user has ADMIN or OPERACIONES role
+  // Check if user has ADMIN or an OPERACIONES role (e.g. "OPERACIONES TRAMO 5")
   const currentUser = authService.getCurrentUser();
-  const esOperaciones = (currentUser?.roles ?? []).some(rol => rol.toUpperCase() === 'OPERACIONES');
+  const esOperaciones = (currentUser?.roles ?? []).some(rol => rol.toUpperCase().includes('OPERACIONES'));
   if (currentUser && (currentUser.role === UserRole.ADMIN || esOperaciones)) {
     return true;
   }
