@@ -365,16 +365,18 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard]
   },
   {
-    // Periodos de seguimiento: reemplaza funcionalmente a horarios-recordatorios
-    // como el lugar donde se decide que clientes ve el asesor.
+    // Unica pantalla de configuracion del seguimiento: periodos + horarios.
     path: 'admin/maintenance/seguimiento-periodos',
     loadComponent: () => import('./maintenance/components/seguimiento-periodos/seguimiento-periodos.component').then(m => m.SeguimientoPeriodosComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    // La pantalla de horarios se fusiono con la de seguimiento. Se deja la ruta
+    // vieja redirigiendo porque la entrada del menu (que vive en BD) apunta
+    // aqui: asi sigue funcionando sin tocar Configuracion de Menu.
     path: 'admin/maintenance/horarios-recordatorios',
-    loadComponent: () => import('./maintenance/components/horarios-recordatorios/horarios-recordatorios.component').then(m => m.HorariosRecordatoriosComponent),
-    canActivate: [authGuard, adminGuard]
+    redirectTo: 'admin/maintenance/seguimiento-periodos',
+    pathMatch: 'full'
   },
   {
     path: 'admin/maintenance/umbrales-estado',

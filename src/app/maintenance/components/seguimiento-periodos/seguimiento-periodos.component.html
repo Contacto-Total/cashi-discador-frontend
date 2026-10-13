@@ -2,10 +2,11 @@
 
   <header class="sp-cabecera">
     <div>
-      <h1>Períodos de seguimiento</h1>
+      <h1>Seguimiento</h1>
       <p>
         Un período es un mes. Al activarlo se genera el padrón de clientes del segmento
-        y cada día se reparte la lista entre los asesores por round robin.
+        y cada día se reparte la lista entre los asesores por round robin. Los horarios
+        son las ventanas en las que el asesor puede trabajarla.
       </p>
     </div>
   </header>
@@ -53,16 +54,40 @@
           <option *ngFor="let s of filteredSubPortfolios" [ngValue]="s.id">{{ s.subPortfolioName }}</option>
         </select>
       </label>
-      <button type="button" class="sp-btn sp-btn-primario"
+      <button type="button" class="sp-btn sp-btn-primario" *ngIf="tab === 'periodos'"
               [disabled]="!selectedSubcartera || saving" (click)="nuevo()">
         <lucide-angular name="plus" [size]="16"></lucide-angular>
         Nuevo período
       </button>
+      <button type="button" class="sp-btn" *ngIf="tab === 'horarios'"
+              [disabled]="!selectedSubcartera || saving" (click)="crearHorariosDefecto()">
+        <lucide-angular name="wand-2" [size]="16"></lucide-angular>
+        Horarios por defecto
+      </button>
+      <button type="button" class="sp-btn sp-btn-primario" *ngIf="tab === 'horarios'"
+              [disabled]="!selectedSubcartera || saving" (click)="nuevoHorario()">
+        <lucide-angular name="plus" [size]="16"></lucide-angular>
+        Nuevo horario
+      </button>
     </div>
   </section>
 
+  <!-- Pestañas -->
+  <nav class="sp-tabs" *ngIf="selectedSubcartera">
+    <button type="button" class="sp-tab" [class.sp-tab-activo]="tab === 'periodos'"
+            (click)="tab = 'periodos'">
+      <lucide-angular name="calendar-range" [size]="16"></lucide-angular>
+      Períodos
+    </button>
+    <button type="button" class="sp-tab" [class.sp-tab-activo]="tab === 'horarios'"
+            (click)="tab = 'horarios'">
+      <lucide-angular name="clock" [size]="16"></lucide-angular>
+      Horarios
+    </button>
+  </nav>
+
   <!-- Períodos -->
-  <section class="sp-tarjeta" *ngIf="selectedSubcartera">
+  <section class="sp-tarjeta" *ngIf="selectedSubcartera && tab === 'periodos'">
     <h2>Períodos de esta subcartera</h2>
 
     <p class="sp-vacio" *ngIf="!loading && periodos.length === 0">
@@ -122,8 +147,58 @@
     </table>
   </section>
 
+  <!-- Horarios -->
+  <section class="sp-tarjeta" *ngIf="selectedSubcartera && tab === 'horarios'">
+    <h2>Horarios de esta subcartera</h2>
+    <p class="sp-ayuda">
+      Fuera de estas ventanas el asesor no ve el botón de seguimiento. Se guardan por
+      subcartera, así que valen para todos los períodos y no hay que rehacerlos cada mes.
+    </p>
+
+    <p class="sp-vacio" *ngIf="horarios.length === 0">
+      Sin horarios configurados: el seguimiento se puede trabajar a cualquier hora.
+      Los sugeridos son 8-9am, 2-3pm y 5-6pm.
+    </p>
+
+    <table class="sp-tabla" *ngIf="horarios.length > 0">
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th>Desde</th>
+          <th>Hasta</th>
+          <th>Estado</th>
+          <th class="sp-acciones-col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let h of horarios" [class.sp-fila-inactiva]="!h.activo">
+          <td>{{ h.descripcion || 'Sin descripción' }}</td>
+          <td class="sp-tenue">{{ horaParaInput(h.horaInicio) }}</td>
+          <td class="sp-tenue">{{ horaParaInput(h.horaFin) }}</td>
+          <td>
+            <span [class]="h.activo ? 'chip chip-activo' : 'chip chip-cerrado'">
+              {{ h.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+          </td>
+          <td class="sp-acciones">
+            <button type="button" class="sp-btn sp-btn-chico" (click)="alternarHorario(h)">
+              {{ h.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+            <button type="button" class="sp-btn sp-btn-chico" (click)="editarHorario(h)">
+              Editar
+            </button>
+            <button type="button" class="sp-btn sp-btn-chico sp-btn-peligro"
+                    (click)="eliminarHorario(h)">
+              Eliminar
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
   <!-- Cobertura -->
-  <section class="sp-tarjeta" *ngIf="cobertura">
+  <section class="sp-tarjeta" *ngIf="cobertura && tab === 'periodos'">
     <h2>Cobertura del {{ cobertura.fecha }}</h2>
 
     <div class="sp-metricas">
@@ -245,10 +320,11 @@
                    [ngModelOptions]="{standalone: true}">
             <span>Promesas vencidas (rotas)</span>
           </label>
-          <label *ngIf="form.incluyeVencidas">
-            <span>Máximo de días hacia atrás (vacío = sin tope)</span>
-            <input type="number" [(ngModel)]="form.diasVencidasMax" min="1">
-          </label>
+          <p class="sp-ayuda" *ngIf="form.incluyeVencidas">
+            Entran las que cayeron dentro del mes en curso, menos las de ayer (período
+            de gracia). Si el cliente renegoció y tiene una promesa pendiente, sale de
+            vencidas y se reparte por la nueva el día que venza.
+          </p>
 
           <label class="sp-check">
             <input type="checkbox" [(ngModel)]="form.incluyeVigentes"
@@ -304,6 +380,55 @@
         <button type="button" class="sp-btn" (click)="cerrarModal()">Cancelar</button>
         <button type="button" class="sp-btn sp-btn-primario" [disabled]="saving" (click)="guardar()">
           {{ saving ? 'Guardando…' : (editMode ? 'Guardar' : 'Crear en BORRADOR') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal de horario -->
+  <div class="sp-modal-fondo" *ngIf="showModalHorario" (click)="cerrarModalHorario()">
+    <div class="sp-modal" (click)="$event.stopPropagation()">
+      <header>
+        <h2>{{ editModeHorario ? 'Editar horario' : 'Nuevo horario' }}</h2>
+        <button type="button" (click)="cerrarModalHorario()">
+          <lucide-angular name="x" [size]="18"></lucide-angular>
+        </button>
+      </header>
+
+      <div class="sp-modal-cuerpo">
+        <label>
+          <span>Descripción</span>
+          <input type="text" [(ngModel)]="horarioForm.descripcion"
+                 placeholder="Ej: Mañana, Tarde 1, Tarde 2">
+        </label>
+
+        <div class="sp-fila">
+          <label>
+            <span>Desde</span>
+            <input type="time" [(ngModel)]="horarioForm.horaInicio">
+          </label>
+          <label>
+            <span>Hasta</span>
+            <input type="time" [(ngModel)]="horarioForm.horaFin">
+          </label>
+        </div>
+
+        <label class="sp-check">
+          <input type="checkbox" [(ngModel)]="horarioForm.activo"
+                 [ngModelOptions]="{standalone: true}">
+          <span>Activo</span>
+        </label>
+
+        <p class="sp-ayuda">
+          La hora de inicio entra y la de fin no: 08:00–09:00 deja de valer a las 09:00 en punto.
+        </p>
+      </div>
+
+      <footer>
+        <button type="button" class="sp-btn" (click)="cerrarModalHorario()">Cancelar</button>
+        <button type="button" class="sp-btn sp-btn-primario" [disabled]="saving"
+                (click)="guardarHorario()">
+          {{ saving ? 'Guardando…' : 'Guardar' }}
         </button>
       </footer>
     </div>

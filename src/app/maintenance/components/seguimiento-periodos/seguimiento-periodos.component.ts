@@ -12,20 +12,33 @@ import {
   SeguimientoPeriodo
 } from '../../../core/models/seguimiento.model';
 import { CampaignAdminService, GrupoAsesor } from '../../../core/services/campaign-admin.service';
+import {
+  ConfiguracionHorarioRecordatorio,
+  RecordatoriosService
+} from '../../../core/services/recordatorios.service';
 import { TenantService } from '../../services/tenant.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { Tenant } from '../../models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../models/portfolio.model';
 
 /**
- * Períodos de seguimiento por subcartera.
+ * Seguimiento: la única pantalla de configuración del módulo.
  *
- * Un período es un mes. El supervisor lo crea en BORRADOR, elige el segmento y
- * qué promesas entran, y al ACTIVARLO se genera el padrón y empiezan a salir las
- * listas diarias repartidas por round robin.
+ * Dos pestañas, porque son dos ámbitos de guardado distintos:
  *
- * La configuración solo se puede tocar en BORRADOR: una vez activo, cambiar el
- * segmento dejaría un padrón que no se corresponde con su regla.
+ *  - PERÍODOS: un mes por subcartera. El supervisor lo crea en BORRADOR, elige
+ *    el segmento y qué promesas entran, y al ACTIVARLO se genera el padrón y
+ *    empiezan a salir las listas diarias repartidas por round robin. La config
+ *    solo se toca en BORRADOR: ya activo, cambiar el segmento dejaría un padrón
+ *    que no se corresponde con su regla.
+ *
+ *  - HORARIOS: las ventanas en las que el asesor puede trabajar el seguimiento.
+ *    Se guardan por SUBCARTERA, no por período, para no obligar al supervisor a
+ *    volver a escribir Mañana/Tarde 1/Tarde 2 cada mes.
+ *
+ * Reemplaza a horarios-recordatorios, que además editaba las reglas de promesas
+ * en configuracion_recordatorio_subcartera; esas reglas ahora viven en el
+ * período y esa tabla quedó huérfana.
  */
 @Component({
   selector: 'app-seguimiento-periodos',
@@ -39,6 +52,8 @@ export class SeguimientoPeriodosComponent implements OnInit {
   readonly camposSegmento = CAMPOS_SEGMENTO;
   readonly estadosSegmento = ESTADOS_SEGMENTO;
   readonly motivosExclusion = MOTIVOS_EXCLUSION;
+
+  tab: 'periodos' | 'horarios' = 'periodos';
 
   tenants: Tenant[] = [];
   filteredPortfolios: Portfolio[] = [];
@@ -63,9 +78,17 @@ export class SeguimientoPeriodosComponent implements OnInit {
   /** Los valores del segmento se editan como checks y se guardan como CSV. */
   valoresSeleccionados: Record<string, boolean> = {};
 
+  // ==================== HORARIOS ====================
+
+  horarios: ConfiguracionHorarioRecordatorio[] = [];
+  showModalHorario = false;
+  editModeHorario = false;
+  horarioForm: ConfiguracionHorarioRecordatorio = this.horarioVacio();
+
   constructor(
     private seguimientoService: SeguimientoService,
     private campaignAdminService: CampaignAdminService,
+    private recordatoriosService: RecordatoriosService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService
   ) {}
@@ -85,6 +108,7 @@ export class SeguimientoPeriodosComponent implements OnInit {
     this.filteredPortfolios = [];
     this.filteredSubPortfolios = [];
     this.periodos = [];
+    this.horarios = [];
     this.cobertura = null;
 
     if (!this.selectedTenant) return;
@@ -98,6 +122,7 @@ export class SeguimientoPeriodosComponent implements OnInit {
     this.selectedSubcartera = null;
     this.filteredSubPortfolios = [];
     this.periodos = [];
+    this.horarios = [];
     this.cobertura = null;
 
     if (!this.selectedPortfolio) return;
@@ -112,9 +137,11 @@ export class SeguimientoPeriodosComponent implements OnInit {
     this.periodoCobertura = null;
     if (!this.selectedSubcartera) {
       this.periodos = [];
+      this.horarios = [];
       return;
     }
     this.cargarPeriodos();
+    this.cargarHorarios();
     this.campaignAdminService.getGruposBySubcartera(this.selectedSubcartera).subscribe({
       next: g => this.grupos = g,
       error: () => this.grupos = []
@@ -271,6 +298,131 @@ export class SeguimientoPeriodosComponent implements OnInit {
     });
   }
 
+  // ==================== HORARIOS ====================
+
+  /**
+   * Trae también los inactivos: el supervisor tiene que poder ver y reactivar
+   * un tramo apagado, no solo los que están en uso.
+   */
+  private cargarHorarios(): void {
+    if (!this.selectedSubcartera) return;
+    this.recordatoriosService.obtenerHorarios(this.selectedSubcartera, true).subscribe({
+      next: h => this.horarios = h,
+      error: () => this.error = 'No se pudieron cargar los horarios'
+    });
+  }
+
+  nuevoHorario(): void {
+    if (!this.selectedSubcartera) return;
+    this.horarioForm = { ...this.horarioVacio(), idSubcartera: this.selectedSubcartera };
+    this.editModeHorario = false;
+    this.showModalHorario = true;
+  }
+
+  editarHorario(h: ConfiguracionHorarioRecordatorio): void {
+    this.horarioForm = {
+      ...h,
+      horaInicio: this.horaParaInput(h.horaInicio),
+      horaFin: this.horaParaInput(h.horaFin)
+    };
+    this.editModeHorario = true;
+    this.showModalHorario = true;
+  }
+
+  cerrarModalHorario(): void {
+    this.showModalHorario = false;
+    this.horarioForm = this.horarioVacio();
+  }
+
+  guardarHorario(): void {
+    this.error = null;
+    if (this.horarioForm.horaFin <= this.horarioForm.horaInicio) {
+      this.error = 'La hora de fin tiene que ser posterior a la de inicio';
+      return;
+    }
+    this.saving = true;
+    this.recordatoriosService.guardarHorario({
+      ...this.horarioForm,
+      horaInicio: this.horaParaBackend(this.horarioForm.horaInicio),
+      horaFin: this.horaParaBackend(this.horarioForm.horaFin)
+    }).subscribe({
+      next: () => {
+        this.saving = false;
+        this.cerrarModalHorario();
+        this.aviso = 'Horario guardado.';
+        this.cargarHorarios();
+      },
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.mensaje || 'No se pudo guardar el horario';
+      }
+    });
+  }
+
+  eliminarHorario(h: ConfiguracionHorarioRecordatorio): void {
+    if (!h.id) return;
+    if (!confirm(`¿Eliminar el horario ${this.horaParaInput(h.horaInicio)} - ${this.horaParaInput(h.horaFin)}?`)) {
+      return;
+    }
+    this.recordatoriosService.eliminarHorario(h.id).subscribe({
+      next: () => {
+        this.aviso = 'Horario eliminado.';
+        this.cargarHorarios();
+      },
+      error: () => this.error = 'No se pudo eliminar el horario'
+    });
+  }
+
+  alternarHorario(h: ConfiguracionHorarioRecordatorio): void {
+    if (!h.id) return;
+    this.recordatoriosService.cambiarEstadoHorario(h.id, !h.activo).subscribe({
+      next: () => this.cargarHorarios(),
+      error: () => this.error = 'No se pudo cambiar el estado del horario'
+    });
+  }
+
+  crearHorariosDefecto(): void {
+    if (!this.selectedSubcartera) return;
+    if (!confirm('Esto crea los horarios por defecto (8-9am, 2-3pm, 5-6pm) y borra los que ya existan. ¿Continuar?')) {
+      return;
+    }
+    this.saving = true;
+    this.recordatoriosService.crearHorariosDefecto(this.selectedSubcartera).subscribe({
+      next: () => {
+        this.saving = false;
+        this.aviso = 'Horarios por defecto creados.';
+        this.cargarHorarios();
+      },
+      error: () => {
+        this.saving = false;
+        this.error = 'No se pudieron crear los horarios por defecto';
+      }
+    });
+  }
+
+  /** '08:00:00' -> '08:00' (lo que espera un <input type="time">). */
+  horaParaInput(hora?: string): string {
+    if (!hora) return '08:00';
+    const p = hora.split(':');
+    return `${p[0]}:${p[1]}`;
+  }
+
+  /** '08:00' -> '08:00:00' (lo que espera el LocalTime del backend). */
+  private horaParaBackend(hora: string): string {
+    if (!hora) return '08:00:00';
+    return hora.split(':').length === 2 ? `${hora}:00` : hora;
+  }
+
+  private horarioVacio(): ConfiguracionHorarioRecordatorio {
+    return {
+      idSubcartera: 0,
+      horaInicio: '08:00',
+      horaFin: '09:00',
+      descripcion: '',
+      activo: true
+    };
+  }
+
   // ==================== HELPERS DE VISTA ====================
 
   nombreMes(mes?: number): string {
@@ -300,7 +452,7 @@ export class SeguimientoPeriodosComponent implements OnInit {
   descripcionPromesas(p: SeguimientoPeriodo): string {
     const partes: string[] = [];
     if (p.incluyeVencidas) {
-      partes.push(p.diasVencidasMax ? `vencidas (hasta ${p.diasVencidasMax} días atrás)` : 'vencidas (sin tope)');
+      partes.push('vencidas del mes (sin ayer)');
     }
     if (p.incluyeVigentes) {
       const d = p.diasVigentesAdelante || 0;
@@ -334,7 +486,6 @@ export class SeguimientoPeriodosComponent implements OnInit {
       segmentoValores: 'PR',
       incluyeVencidas: true,
       incluyeVigentes: true,
-      diasVencidasMax: null,
       diasVigentesAdelante: 0,
       idGrupoAsesores: null,
       bajaPorPagoCumplido: true,
