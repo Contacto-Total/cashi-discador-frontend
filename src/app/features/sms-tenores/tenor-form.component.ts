@@ -510,6 +510,17 @@ interface ParteMensaje {
 
                 <div role="group" aria-labelledby="tenor-restricciones" class="flex flex-col gap-[9px] xl:border-l xl:border-[#eef1f5] xl:pl-6 dark:border-slate-800">
                   <span id="tenor-restricciones" [class]="estilos.etiqueta">Restricciones</span>
+                  <label class="flex flex-col gap-1 text-[13px]">
+                    <span>Rotas acumuladas</span>
+                    <select [ngModel]="incluirRotas" (ngModelChange)="incluirRotas = $event; marcarCambio()" [class]="estilos.campo">
+                      @if (incluirRotas === null) {
+                        <option [ngValue]="null" disabled>Configuración anterior · elegir Sí o No</option>
+                      }
+                      <option [ngValue]="true">Sí, incluir Rotas</option>
+                      <option [ngValue]="false">No, excluir Rotas</option>
+                    </select>
+                    <span class="text-xs text-[#5f6c80] dark:text-slate-400">Cuotas vencidas hasta hoy, sin límite de mes. Al incluirlas se exceptúan del filtro de promesa vigente, conservando los demás filtros.</span>
+                  </label>
                   <label class="relative flex cursor-pointer items-start gap-[9px] text-[13px]">
                     <input type="checkbox" class="peer sr-only" [ngModel]="sinPromesaVigente" (ngModelChange)="sinPromesaVigente = $event; marcarCambio()" />
                     <span [class]="estilos.casilla"><lucide-angular name="check" [size]="11" [strokeWidth]="3.4" class="block"></lucide-angular></span>
@@ -831,6 +842,7 @@ export class TenorFormComponent implements OnInit {
   plantilla = '';
   rangos: RangoTenor[] = [];
   sinPromesaVigente = true;
+  incluirRotas: boolean | null = false;
   soloNoContenido = false;
   /** Si el archivo empieza con los contactos de control. Marcado por defecto. */
   incluirContactosControl = true;
@@ -1421,6 +1433,7 @@ export class TenorFormComponent implements OnInit {
         this.combinadas = (tenor.combinadas ?? []).map(c => ({ ...c, columnas: [...c.columnas] }));
         this.columnasExcel = [...(tenor.columnasExcel ?? [])];
         this.sinPromesaVigente = tenor.restricciones.sinPromesaVigente;
+        this.incluirRotas = tenor.restricciones.incluirRotas ?? null;
         this.soloNoContenido = tenor.restricciones.soloNoContenido;
         this.incluirContactosControl = tenor.incluirContactosControl ?? true;
         this.idInquilino = tenor.idInquilino;
@@ -1504,6 +1517,7 @@ export class TenorFormComponent implements OnInit {
       })),
       restricciones: {
         sinPromesaVigente: this.sinPromesaVigente,
+        incluirRotas: this.incluirRotas,
         // Fija en el backend; se manda en true para que lo guardado diga lo que se aplica.
         sinListaNegra: true,
         soloNoContenido: this.soloNoContenido

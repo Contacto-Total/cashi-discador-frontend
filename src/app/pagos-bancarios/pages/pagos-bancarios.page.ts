@@ -274,6 +274,14 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
             ></app-bcp-no-procesados>
           }
 
+          @if (getOmitidosPorFecha().length > 0) {
+            <app-bcp-no-procesados
+              [data]="getOmitidosPorFecha()"
+              title="Pagos omitidos por fecha"
+              description="El pago es anterior a la fecha en que el cliente entró a la subcartera. Estos registros se muestran como referencia: no se guardan ni se envían a conciliación."
+            ></app-bcp-no-procesados>
+          }
+
           @if (resultado()?.prevalidacionNoProcesados && resultado()!.prevalidacionNoProcesados!.length > 0) {
             <app-bcp-no-procesados [data]="resultado()!.prevalidacionNoProcesados!"></app-bcp-no-procesados>
           }
@@ -923,6 +931,14 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
             ></app-bcp-no-procesados>
           }
 
+          @if (getOmitidosPorFechaOh().length > 0) {
+            <app-bcp-no-procesados
+              [data]="getOmitidosPorFechaOh()"
+              title="Pagos omitidos por fecha"
+              description="El pago es anterior a la fecha en que el cliente entró a la subcartera. Estos registros se muestran como referencia: no se guardan ni se envían a conciliación."
+            ></app-bcp-no-procesados>
+          }
+
           @if (getNoProcesadosOh().length > 0) {
             <app-bcp-no-procesados [data]="getNoProcesadosOh()"></app-bcp-no-procesados>
           }
@@ -1460,7 +1476,19 @@ export class PagosBancariosPage implements OnInit {
   getPrevalidacionProcesada(): PrevalidacionArchivoBcp[] {
     const resultado: any = this.resultado();
     const rows = resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
-    return rows.filter((row: any) => !this.isFueraDeContexto(row) && !this.isPagoYaConciliado(row));
+    return rows.filter((row: any) => !this.isFueraDeContexto(row) && !this.isOmitidoPorFecha(row) && !this.isPagoYaConciliado(row));
+  }
+
+  /**
+   * Pagos con fecha anterior a la creación del cliente en la subcartera: no corresponden
+   * a la gestión de la empresa, así que no se aprueban ni se guardan.
+   */
+  private isOmitidoPorFecha(row: any): boolean {
+    return row?.categoria === 'OMITIDO_POR_FECHA';
+  }
+
+  getOmitidosPorFecha(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOriginal().filter(row => this.isOmitidoPorFecha(row));
   }
 
   /**
@@ -1618,6 +1646,7 @@ export class PagosBancariosPage implements OnInit {
       .map((detalle: any, index: number) => ({ detalle, prevalidacion: prevalidacion[index] }))
       .filter(par => !!par.prevalidacion
         && aprobadas.has(par.prevalidacion)
+        && !this.isOmitidoPorFecha(par.prevalidacion)
         && !this.isPagoYaConciliado(par.prevalidacion)
         && !this.isPrevalidacionDuplicada(par.prevalidacion));
   }
@@ -1670,7 +1699,11 @@ export class PagosBancariosPage implements OnInit {
 
   getPrevalidacionOhProcesada(): PrevalidacionArchivoBcp[] {
     return this.getPrevalidacionOhConDetalle()
-      .filter((row: any) => !this.isFueraDeContexto(row) && !this.isPagoYaConciliado(row));
+      .filter((row: any) => !this.isFueraDeContexto(row) && !this.isOmitidoPorFecha(row) && !this.isPagoYaConciliado(row));
+  }
+
+  getOmitidosPorFechaOh(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOhConDetalle().filter(row => this.isOmitidoPorFecha(row));
   }
 
   getNoProcesadosOh(): PrevalidacionArchivoBcp[] {
@@ -1769,7 +1802,7 @@ export class PagosBancariosPage implements OnInit {
     const aprobadas = new Set(filasAprobadas);
 
     return filasAprobadas
-      .filter(row => aprobadas.has(row) && !this.isPagoYaConciliado(row))
+      .filter(row => aprobadas.has(row) && !this.isOmitidoPorFecha(row) && !this.isPagoYaConciliado(row))
       .map((row: any) => {
         const index = Number(row.__prevalidacionIndex);
         return { detalle: detalles[index], prevalidacion: prevalidacion[index] };
