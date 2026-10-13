@@ -966,7 +966,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
 
       <!-- Modal de confirmación de eliminación -->
       @if (showDeleteModal()) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1100]">
           <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <div class="flex items-center gap-3 mb-4">
               <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">

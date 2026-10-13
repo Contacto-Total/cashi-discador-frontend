@@ -24,7 +24,7 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
   template: `
     @if (open) {
       <div
-        [class]="mode === 'drawer' ? 'fixed inset-0 z-50 flex justify-end bg-transparent' : 'mt-4'"
+        [class]="mode === 'drawer' ? 'fixed inset-0 z-[1100] flex justify-end bg-transparent' : 'mt-4'"
         (click)="onBackdropClick()">
         <aside
           [class]="mode === 'drawer'
@@ -37,7 +37,7 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
     }
 
     @if (visorVoucherPromesa && visorVoucherCuota) {
-      <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4" (click)="cerrarVisorVoucher()">
+      <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/60 p-4" (click)="cerrarVisorVoucher()">
         <div role="dialog" aria-modal="true" aria-labelledby="visor-voucher-titulo-lectura" class="grid max-h-[92vh] w-full max-w-4xl grid-cols-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-2xl md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
           <div class="flex min-h-[320px] items-center justify-center bg-slate-100 p-5 dark:bg-slate-800/60">
             @if (visorVoucherCargando) {

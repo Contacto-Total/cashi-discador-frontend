@@ -22,7 +22,7 @@ import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '.
         <div>
           <h1 class="text-xl font-bold text-slate-800 dark:text-white">Corrección de pagos</h1>
           <p class="text-sm text-slate-600 dark:text-slate-400">
-            Busca un cliente por DNI y contexto. Usa Corregir en una cuota para modificar sus pagos, crear uno nuevo o ampliar el vencimiento.
+            Busca un cliente por DNI y contexto. Haz clic en una cuota para ver sus pagos y corregirlos, crear uno nuevo o ampliar el vencimiento.
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -164,6 +164,7 @@ import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '.
       }
 
       <app-cliente-resumen-conciliacion-drawer
+        #panelResumen
         [open]="resumenVisible()"
         mode="inline"
         [permiteCorregir]="true"
@@ -183,6 +184,8 @@ import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '.
         [tenantId]="selectedTenantId"
         [carteraId]="selectedPortfolioId"
         [subcarteraId]="selectedSubPortfolioId"
+        [cerrarConEscape]="!panelResumen.visorVoucherCuota"
+        (verVouchers)="panelResumen.abrirVisorVoucher($event.promesa, $event.cuota)"
         (cerrado)="onCorreccionCerrada($event)"
       ></app-pago-pendiente-controles-dialog>
     </div>

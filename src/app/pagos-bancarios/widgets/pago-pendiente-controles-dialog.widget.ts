@@ -35,6 +35,7 @@ export interface CorreccionClienteContexto {
 }
 
 type Control = 'crear' | 'ampliar' | 'promesa' | 'regularizar' | 'voluntario';
+type Pestana = 'pagos' | 'corregir';
 
 const DIAS_AMPLIACION = 3;
 
@@ -59,7 +60,7 @@ function finDeMes(fechaIso: string): string {
   imports: [CommonModule, FormsModule, A11yModule],
   template: `
     @if (abierto()) {
-      <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrar()">
+      <div class="fixed inset-0 z-[1110] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrar()">
         <div
           role="dialog"
           aria-modal="true"
@@ -67,9 +68,9 @@ function finDeMes(fechaIso: string): string {
           [attr.aria-describedby]="pago || cuotaActual() ? 'ppc-resumen' : null"
           cdkTrapFocus
           [cdkTrapFocusAutoCapture]="true"
-          class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
           (click)="$event.stopPropagation()"
-          (keydown.escape)="cerrar()"
+          (keydown.escape)="cerrarConEscape && cerrar()"
         >
           <header class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
             <div>
@@ -91,7 +92,34 @@ function finDeMes(fechaIso: string): string {
             </button>
           </header>
 
-          <div class="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+          @if (cuotaActual(); as cuota) {
+            <div role="tablist" aria-label="Secciones de la cuota" class="flex gap-1 border-b border-slate-200 px-5 dark:border-slate-700" (keydown)="alNavegarPestanas($event)">
+              @for (item of pestanas; track item.id) {
+                <button
+                  type="button"
+                  role="tab"
+                  [id]="'ppc-tab-' + item.id"
+                  [attr.aria-selected]="pestana() === item.id"
+                  [attr.aria-controls]="'ppc-panel-' + item.id"
+                  [attr.tabindex]="pestana() === item.id ? 0 : -1"
+                  (click)="pestana.set(item.id)"
+                  class="-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                  [class]="pestana() === item.id
+                    ? 'border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'"
+                >
+                  {{ item.label }}{{ item.id === 'pagos' ? ' (' + cuota.pagos.length + ')' : '' }}
+                </button>
+              }
+            </div>
+          }
+
+          <div
+            class="flex-1 space-y-5 overflow-y-auto px-5 py-4"
+            [attr.role]="cuotaActual() ? 'tabpanel' : null"
+            [attr.id]="cuotaActual() ? 'ppc-panel-' + pestana() : null"
+            [attr.aria-labelledby]="cuotaActual() ? 'ppc-tab-' + pestana() : null"
+          >
             <!-- Pago del banco -->
             @if (pago; as banco) {
             <section id="ppc-resumen" class="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
@@ -120,7 +148,7 @@ function finDeMes(fechaIso: string): string {
                     <span class="font-normal normal-case text-slate-600 dark:text-slate-400">· Gestión {{ promesa.idGestion }} · {{ promesa.nombreAgente || 'Sin agente' }}</span>
                   }
                 </h3>
-                <dl class="mt-2 grid grid-cols-3 gap-3 text-sm">
+                <dl class="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <div>
                     <dt class="text-xs text-slate-600 dark:text-slate-400">Vence</dt>
                     <dd class="font-semibold text-slate-900 dark:text-white">{{ fecha(cuota.fechaPromesa) }}</dd>
@@ -130,11 +158,15 @@ function finDeMes(fechaIso: string): string {
                     <dd class="font-semibold text-slate-900 dark:text-white">{{ monto(cuota.montoPromesa) }}</dd>
                   </div>
                   <div>
+                    <dt class="text-xs text-slate-600 dark:text-slate-400">Total de pagos</dt>
+                    <dd class="font-semibold text-slate-900 dark:text-white">{{ monto(totalPagos(cuota)) }}</dd>
+                  </div>
+                  <div>
                     <dt class="text-xs text-slate-600 dark:text-slate-400">Estado</dt>
                     <dd class="font-semibold text-slate-900 dark:text-white">{{ cuota.estado }}</dd>
                   </div>
                 </dl>
-                @if (pagosVerificados(cuota) > 0) {
+                @if (pestana() === 'corregir' && pagosVerificados(cuota) > 0) {
                   <p class="mt-2 text-sm text-slate-800 dark:text-slate-200">
                     {{ pagosVerificados(cuota) }} pago(s) de esta cuota ya están verificados por el banco y no se pueden modificar ni eliminar.
                   </p>
@@ -151,7 +183,68 @@ function finDeMes(fechaIso: string): string {
               <p role="alert" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">{{ texto }}</p>
             }
 
-            @if (cargando()) {
+            @if (cuotaEnPagos(); as cuota) {
+              <!-- Pestaña Pagos: todos los pagos de la cuota, solo lectura -->
+              @if (huboCambios) {
+                <p class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">Hiciste correcciones en esta cuota. La lista se actualiza al cerrar.</p>
+              }
+              @if (cuota.pagos.length === 0) {
+                <p class="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400">La cuota no tiene pagos registrados.</p>
+              } @else {
+                <div class="relative overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                  <table class="min-w-full text-xs">
+                    <caption class="sr-only">Pagos registrados en la cuota {{ cuota.numeroCuota }}</caption>
+                    <thead class="bg-slate-100 text-left text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      <tr>
+                        <th scope="col" class="px-3 py-2 font-bold">Fecha de pago</th>
+                        <th scope="col" class="px-3 py-2 text-right font-bold">Monto</th>
+                        <th scope="col" class="px-3 py-2 font-bold">Banco</th>
+                        <th scope="col" class="px-3 py-2 font-bold">Nro. operación</th>
+                        <th scope="col" class="px-3 py-2 font-bold">Conciliación</th>
+                        <th scope="col" class="px-3 py-2 font-bold">Voucher</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                      @for (item of cuota.pagos; track item.pagoCuotaId) {
+                        <tr class="align-top">
+                          <td class="whitespace-nowrap px-3 py-2 text-slate-800 dark:text-slate-200">{{ fecha(item.fechaPago) }}</td>
+                          <td class="whitespace-nowrap px-3 py-2 text-right font-semibold text-slate-900 dark:text-white">{{ monto(item.montoPago) }}</td>
+                          <td class="px-3 py-2 text-slate-800 dark:text-slate-200">{{ item.banco || '—' }}</td>
+                          <td class="px-3 py-2 font-mono text-slate-800 dark:text-slate-200">{{ item.numeroOperacion || '—' }}</td>
+                          <td class="px-3 py-2">
+                            @if (item.verificadoBanco) {
+                              <span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
+                              @if (item.pagoBancarioId) {
+                                <p class="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">Pago bancario {{ item.pagoBancarioId }}</p>
+                              }
+                            } @else {
+                              <span class="inline-flex rounded-full bg-slate-200 px-2 py-0.5 font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">No verificado</span>
+                            }
+                          </td>
+                          <td class="px-3 py-2 text-slate-800 dark:text-slate-200">
+                            @if ((cuota.adjuntos || []).length === 0) {
+                              —
+                            } @else {
+                              {{ item.tieneVoucher ? 'Con voucher' : 'Sin voucher' }}
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                @if ((cuota.adjuntos || []).length > 0) {
+                  <button type="button" (click)="verVouchers.emit({ promesa: cliente!.promesa!, cuota: cuota })" class="cursor-pointer rounded-lg border border-blue-600 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50">
+                    Ver {{ cuota.adjuntos!.length === 1 ? 'voucher' : cuota.adjuntos!.length + ' vouchers' }}
+                  </button>
+                } @else {
+                  <p class="text-xs text-slate-600 dark:text-slate-400">La cuota no tiene vouchers adjuntos.</p>
+                }
+                <button type="button" (click)="pestana.set('corregir')" [class]="btnSecundario">Ir a corregir</button>
+              </div>
+            } @else if (cargando()) {
               <p role="status" class="py-6 text-center text-sm text-slate-600 dark:text-slate-400">Cargando pagos y cuotas del cliente...</p>
             } @else if (errorCarga(); as texto) {
               <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
@@ -262,11 +355,12 @@ function finDeMes(fechaIso: string): string {
                 <h3 id="ppc-controles-titulo" class="text-sm font-bold text-slate-900 dark:text-white">Otras acciones</h3>
                 <p class="text-xs text-slate-600 dark:text-slate-400">{{ pago ? 'Los formularios vienen con la fecha y el monto del banco.' : 'Los formularios vienen con la fecha y el monto de la cuota. Cámbialos por los datos reales del pago.' }}</p>
 
-                <div class="mt-2 space-y-2">
+                <!-- El orden visual pone primero las acciones disponibles; las deshabilitadas no reciben foco -->
+                <div class="mt-2 flex flex-col gap-2">
                   <!-- Crear pago en una cuota -->
-                  <div class="rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div class="rounded-lg border border-slate-200 dark:border-slate-700" [class]="ordenDe('crear')">
                     <h4>
-                      <button type="button" (click)="alternarControl('crear')" [disabled]="cuotas().length === 0 || guardando()" [attr.aria-expanded]="control() === 'crear'" aria-controls="ppc-control-crear" [class]="btnAcordeon">
+                      <button type="button" (click)="alternarControl('crear')" [disabled]="!disponible('crear') || guardando()" [attr.aria-expanded]="control() === 'crear'" aria-controls="ppc-control-crear" [class]="btnAcordeon">
                         <span>
                           <span class="block text-sm font-semibold">Crear pago en una cuota</span>
                           <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">
@@ -302,9 +396,9 @@ function finDeMes(fechaIso: string): string {
                   </div>
 
                   <!-- Ampliar vencimiento -->
-                  <div class="rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div class="rounded-lg border border-slate-200 dark:border-slate-700" [class]="ordenDe('ampliar')">
                     <h4>
-                      <button type="button" (click)="alternarControl('ampliar')" [disabled]="cuotasAmpliables().length === 0 || guardando()" [attr.aria-expanded]="control() === 'ampliar'" aria-controls="ppc-control-ampliar" [class]="btnAcordeon">
+                      <button type="button" (click)="alternarControl('ampliar')" [disabled]="!disponible('ampliar') || guardando()" [attr.aria-expanded]="control() === 'ampliar'" aria-controls="ppc-control-ampliar" [class]="btnAcordeon">
                         <span>
                           <span class="block text-sm font-semibold">Ampliar vencimiento de una cuota</span>
                           <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">
@@ -347,9 +441,9 @@ function finDeMes(fechaIso: string): string {
                   </div>
 
                   <!-- Promesa del sistema -->
-                  <div class="rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div class="rounded-lg border border-slate-200 dark:border-slate-700" [class]="ordenDe('promesa')">
                     <h4>
-                      <button type="button" (click)="alternarControl('promesa')" [disabled]="cuotasPromesaSistema().length === 0 || guardando()" [attr.aria-expanded]="control() === 'promesa'" aria-controls="ppc-control-promesa" [class]="btnAcordeon">
+                      <button type="button" (click)="alternarControl('promesa')" [disabled]="!disponible('promesa') || guardando()" [attr.aria-expanded]="control() === 'promesa'" aria-controls="ppc-control-promesa" [class]="btnAcordeon">
                         <span>
                           <span class="block text-sm font-semibold">Crear promesa del sistema</span>
                           <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">
@@ -389,9 +483,9 @@ function finDeMes(fechaIso: string): string {
 
                   <!-- Regularizar pago de una promesa pagada -->
                   @if (cuotaActual()) {
-                    <div class="rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div class="rounded-lg border border-slate-200 dark:border-slate-700" [class]="ordenDe('regularizar')">
                       <h4>
-                        <button type="button" (click)="alternarControl('regularizar')" [disabled]="!pagoRegularizable() || guardando()" [attr.aria-expanded]="control() === 'regularizar'" aria-controls="ppc-control-regularizar" [class]="btnAcordeon">
+                        <button type="button" (click)="alternarControl('regularizar')" [disabled]="!disponible('regularizar') || guardando()" [attr.aria-expanded]="control() === 'regularizar'" aria-controls="ppc-control-regularizar" [class]="btnAcordeon">
                           <span>
                             <span class="block text-sm font-semibold">Regularizar fecha de un pago ya registrado</span>
                             <span class="block text-xs font-normal text-slate-600 dark:text-slate-400">{{ ayuda('regularizar') }}</span>
@@ -415,7 +509,7 @@ function finDeMes(fechaIso: string): string {
                   }
 
                   <!-- Pago voluntario -->
-                  <div class="rounded-lg border border-red-200 dark:border-red-900">
+                  <div class="order-2 rounded-lg border border-red-200 dark:border-red-900">
                     <h4>
                       <button type="button" (click)="alternarControl('voluntario')" [disabled]="guardando()" [attr.aria-expanded]="control() === 'voluntario'" aria-controls="ppc-control-voluntario" [class]="btnAcordeon">
                         <span>
@@ -471,7 +565,18 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   @Input() tenantId = 0;
   @Input() carteraId = 0;
   @Input() subcarteraId = 0;
+  /** False mientras hay otro diálogo abierto encima (el visor de vouchers), para que Esc no cierre los dos. */
+  @Input() cerrarConEscape = true;
   @Output() cerrado = new EventEmitter<{ documento: string; huboCambios: boolean }>();
+  /** Pide abrir el visor de vouchers de la cuota. El visor vive en el panel de resumen. */
+  @Output() verVouchers = new EventEmitter<{ promesa: PromesaResumenConciliacion; cuota: CuotaResumenConciliacion }>();
+
+  readonly pestanas: { id: Pestana; label: string }[] = [
+    { id: 'pagos', label: 'Pagos' },
+    { id: 'corregir', label: 'Corregir' }
+  ];
+  /** Pestaña activa al abrir una cuota. Sin cuota el diálogo solo muestra los controles. */
+  pestana = signal<Pestana>('pagos');
 
   readonly labelClass = 'mb-1 block text-xs font-semibold text-slate-800 dark:text-slate-200';
   readonly inputClass = 'w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 dark:border-slate-500 dark:bg-slate-800 dark:text-white';
@@ -512,6 +617,7 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
       this.huboCambios = false;
       this.mensajeExito.set(null);
       this.errorAccion.set(null);
+      this.pestana.set('pagos');
       this.cerrarFormularios();
       this.cargar();
     }
@@ -533,7 +639,39 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   titulo(): string {
     if (this.pago) return 'Resolver pago bancario';
     const cuota = this.cuotaActual();
-    return cuota ? `Corregir cuota ${cuota.numeroCuota}` : 'Corregir pagos del cliente';
+    return cuota ? `Cuota ${cuota.numeroCuota}` : 'Corregir pagos del cliente';
+  }
+
+  /** Cuota a listar cuando la pestaña activa es Pagos. */
+  cuotaEnPagos(): CuotaResumenConciliacion | null {
+    return this.pestana() === 'pagos' ? this.cuotaActual() : null;
+  }
+
+  totalPagos(cuota: CuotaResumenConciliacion): number {
+    return (cuota.pagos || []).reduce((total, item) => total + Number(item.montoPago || 0), 0);
+  }
+
+  alNavegarPestanas(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const siguiente: Pestana = this.pestana() === 'pagos' ? 'corregir' : 'pagos';
+    this.pestana.set(siguiente);
+    (event.currentTarget as HTMLElement).querySelector<HTMLElement>(`#ppc-tab-${siguiente}`)?.focus();
+  }
+
+  disponible(control: Control): boolean {
+    switch (control) {
+      case 'crear': return this.cuotas().length > 0;
+      case 'ampliar': return this.cuotasAmpliables().length > 0;
+      case 'promesa': return this.cuotasPromesaSistema().length > 0;
+      case 'regularizar': return !!this.pagoRegularizable();
+      default: return true;
+    }
+  }
+
+  /** Disponibles primero, el pago voluntario (order-2) después y las no disponibles al final. */
+  ordenDe(control: Control): string {
+    return this.disponible(control) ? 'order-1' : 'order-3';
   }
 
   pagosVerificados(cuota: CuotaResumenConciliacion): number {

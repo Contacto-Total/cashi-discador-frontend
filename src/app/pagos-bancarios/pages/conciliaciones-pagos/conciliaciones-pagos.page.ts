@@ -30,7 +30,7 @@ import { ConciliacionPagosResultadosWidget } from '../../widgets/conciliacion-pa
         }
 
         @if (isLoading()) {
-          <div class="fixed inset-0 bg-slate-950/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div class="fixed inset-0 bg-slate-950/30 backdrop-blur-sm flex items-center justify-center z-[1100]">
             <div class="rounded-2xl bg-white dark:bg-slate-800 px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-xl">
               Consultando posibles matches...
             </div>

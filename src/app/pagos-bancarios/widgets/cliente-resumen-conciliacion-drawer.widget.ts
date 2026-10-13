@@ -14,7 +14,7 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
   template: `
     @if (open) {
       <div
-        [ngClass]="mode === 'drawer' ? 'fixed inset-0 z-50 flex justify-end bg-transparent' : 'mt-4'"
+        [ngClass]="mode === 'drawer' ? 'fixed inset-0 z-[1100] flex justify-end bg-transparent' : 'mt-4'"
         (click)="onBackdropClick()"
       >
         <aside
@@ -124,18 +124,17 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                           </thead>
                           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                             @for (cuota of promesa.cuotas; track cuota.cuotaId) {
-                              <tr class="align-top hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                              <!-- La fila abre la cuota con el mouse; el botón del número hace lo mismo con teclado -->
+                              <tr class="align-top hover:bg-slate-50 dark:hover:bg-slate-800/50" [class.cursor-pointer]="cuotaAbrible(cuota)" (click)="abrirCuota(promesa, cuota)">
                                 <td class="px-1.5 py-1.5">
-                                  <!-- Con Corregir, el estado sube a la línea del número para no pasar de dos líneas -->
-                                  <p class="flex items-center gap-1" [class.flex-wrap]="!permiteCorregir">
-                                    <span class="whitespace-nowrap font-semibold text-slate-900 dark:text-white">Cuota {{ cuota.numeroCuota }}</span>
+                                  <p class="flex flex-wrap items-center gap-1">
+                                    @if (cuotaAbrible(cuota)) {
+                                      <button type="button" (click)="$event.stopPropagation(); abrirCuota(promesa, cuota)" [attr.aria-label]="'Abrir cuota ' + cuota.numeroCuota + ' de la gestión ' + promesa.idGestion" class="cursor-pointer whitespace-nowrap rounded font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-200">Cuota {{ cuota.numeroCuota }}</button>
+                                    } @else {
+                                      <span class="whitespace-nowrap font-semibold text-slate-900 dark:text-white">Cuota {{ cuota.numeroCuota }}</span>
+                                    }
                                     <span class="inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="getEstadoClass(cuota.estado)">{{ cuota.estado }}</span>
                                   </p>
-                                  @if (permiteCorregir) {
-                                    <button type="button" (click)="corregirCuota.emit({ promesa: promesa, cuota: cuota })" [attr.aria-label]="'Corregir cuota ' + cuota.numeroCuota + ' de la gestión ' + promesa.idGestion" class="mt-1 block rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold !text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
-                                      Corregir
-                                    </button>
-                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   <p>{{ formatDate(cuota.fechaPromesa) }}</p>
@@ -159,7 +158,7 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                 </td>
                                 <td class="px-1.5 py-1.5">
                                   @if (cuota.pagos.length > 0) {
-                                    <button type="button" (click)="abrirDetallePagos(promesa, cuota)" [attr.aria-label]="'Ver detalle de ' + cuota.pagos.length + ' pago(s) de la cuota ' + cuota.numeroCuota" class="block w-full rounded-md p-1 text-left hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-950/30">
+                                    <div>
                                       <span class="flex gap-1 overflow-hidden whitespace-nowrap">
                                         <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
                                           {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
@@ -174,14 +173,16 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                       <!-- Solo el primer pago; el resto se ve en el detalle -->
                                       <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[9px] text-slate-600 dark:text-slate-400">
                                         <span class="truncate">{{ formatDate(cuota.pagos[0].fechaPago) }}{{ hasValue(cuota.pagos[0].banco) ? ' · ' + cuota.pagos[0].banco : '' }} · S/ {{ formatMoney(cuota.pagos[0].montoPago) }}</span>
-                                        <span class="shrink-0 whitespace-nowrap font-bold text-blue-700 underline underline-offset-2 dark:text-blue-300">Ver {{ cuota.pagos.length === 1 ? 'pago' : cuota.pagos.length + ' pagos' }}</span>
+                                        @if (cuota.pagos.length > 1) {
+                                          <span class="shrink-0 whitespace-nowrap font-bold text-slate-700 dark:text-slate-300">+{{ cuota.pagos.length - 1 }} más</span>
+                                        }
                                       </span>
-                                    </button>
+                                    </div>
                                   }
                                 </td>
                                 <td class="px-1.5 py-1.5">
                                   @if ((cuota.adjuntos || []).length > 0) {
-                                    <button type="button" (click)="abrirVisorVoucher(promesa, cuota)" [attr.aria-label]="'Ver voucher de la cuota ' + cuota.numeroCuota" class="inline-flex items-center gap-1 rounded-md border border-blue-600 bg-blue-50 px-1.5 py-1 text-[9px] font-bold text-blue-700 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50">
+                                    <button type="button" (click)="$event.stopPropagation(); abrirVisorVoucher(promesa, cuota)" [attr.aria-label]="'Ver voucher de la cuota ' + cuota.numeroCuota" class="inline-flex items-center gap-1 rounded-md border border-blue-600 bg-blue-50 px-1.5 py-1 text-[9px] font-bold text-blue-700 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50">
                                       Ver
                                       <span class="rounded-full bg-blue-600 px-1 text-[8px] leading-3 text-white dark:bg-blue-400 dark:text-slate-900">{{ cuota.adjuntos!.length }}</span>
                                     </button>
@@ -218,14 +219,14 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
 
 
       @if (detallePromesa && detalleCuota) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarDetallePagos()">
+        <div class="fixed inset-0 z-[1110] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarDetallePagos()">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="detalle-pagos-titulo"
             cdkTrapFocus
             [cdkTrapFocusAutoCapture]="true"
-            class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
             (click)="$event.stopPropagation()"
           >
             <header class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
@@ -326,7 +327,7 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
       }
 
       @if (visorVoucherPromesa && visorVoucherCuota) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4" (click)="cerrarVisorVoucher()">
+        <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/60 p-4" (click)="cerrarVisorVoucher()">
           <div role="dialog" aria-modal="true" aria-labelledby="visor-voucher-titulo" class="grid max-h-[92vh] w-full max-w-4xl grid-cols-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-2xl md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
             <div class="flex min-h-[320px] items-center justify-center bg-slate-100 p-5 dark:bg-slate-800/60">
               @if (visorVoucherCargando) {
@@ -410,7 +411,10 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   @Input() carteraId: number | null = null;
   @Input() subcarteraId: number | null = null;
   @Output() close = new EventEmitter<void>();
-  /** Muestra el botón Corregir en cada cuota. El panel no corrige: solo avisa qué cuota se eligió. */
+  /**
+   * Con true, abrir una cuota avisa a la pantalla (corregirCuota) para que muestre sus pagos y controles.
+   * Con false, el panel muestra su propio detalle de pagos, de solo lectura.
+   */
   @Input() permiteCorregir = false;
   @Output() corregirCuota = new EventEmitter<{ promesa: PromesaResumenConciliacion; cuota: CuotaResumenConciliacion }>();
 
@@ -444,6 +448,19 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
       this.cerrarVisorVoucher();
     } else if (this.detalleCuota) {
       this.cerrarDetallePagos();
+    }
+  }
+
+  /** Sin corrección, una cuota sin pagos no tiene nada que mostrar. */
+  cuotaAbrible(cuota: CuotaResumenConciliacion): boolean {
+    return this.permiteCorregir || (cuota.pagos || []).length > 0;
+  }
+
+  abrirCuota(promesa: PromesaResumenConciliacion, cuota: CuotaResumenConciliacion): void {
+    if (this.permiteCorregir) {
+      this.corregirCuota.emit({ promesa, cuota });
+    } else {
+      this.abrirDetallePagos(promesa, cuota);
     }
   }
 

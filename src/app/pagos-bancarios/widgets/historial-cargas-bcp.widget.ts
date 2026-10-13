@@ -109,7 +109,7 @@ import { ArchivoCargaDetalleItem, ArchivoCargaHistorialItem } from '../models/bc
       </section>
 
       @if (detalleOpen()) {
-        <div class="fixed inset-0 z-50 flex justify-end bg-transparent" (click)="cerrarDetalle()">
+        <div class="fixed inset-0 z-[1100] flex justify-end bg-transparent" (click)="cerrarDetalle()">
           <aside class="h-screen w-[760px] max-w-[96vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
             <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
               <div class="flex items-start justify-between gap-4">
