@@ -221,6 +221,22 @@ const ESTILOS = {
                   }
                 </div>
 
+                @if (t.estado === 'ACTIVO') {
+                  <label class="flex flex-col gap-1">
+                    <span [class]="estilos.etiqueta">Rotas acumuladas</span>
+                    <select [ngModel]="t.restricciones.incluirRotas ?? null"
+                            (ngModelChange)="cambiarRotas(t, $event)"
+                            [disabled]="ocupado() !== null || (vistaPrevia()?.id === t.id && previewCargando())" [class]="estilos.select">
+                      @if (t.restricciones.incluirRotas == null) {
+                        <option [ngValue]="null" disabled>Configuración anterior · elegir Sí o No</option>
+                      }
+                      <option [ngValue]="true">Sí, incluir Rotas</option>
+                      <option [ngValue]="false">No, excluir Rotas</option>
+                    </select>
+                    <span class="text-xs text-[#5f6c80] dark:text-slate-400">Cuotas vencidas hasta hoy; conserva los demás filtros del tenor.</span>
+                  </label>
+                }
+
                 <div class="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-2 border-t pt-3"
                      [ngClass]="alerta(t) ? 'border-[#f3e6cc] dark:border-amber-900/60' : 'border-[#eef1f5] dark:border-slate-800'">
                   <div class="flex flex-col gap-0.5">
@@ -529,10 +545,23 @@ const ESTILOS = {
 
             <div class="flex flex-col gap-1.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-3 text-[12.5px] dark:border-slate-800 dark:bg-slate-950/40">
               <span [class]="estilos.etiqueta">Filtros</span>
+              <label class="flex flex-col gap-1">
+                <span>Rotas acumuladas</span>
+                <select [ngModel]="t.restricciones.incluirRotas ?? null"
+                        (ngModelChange)="cambiarRotas(t, $event)"
+                        [disabled]="ocupado() !== null || previewCargando()" [class]="estilos.select">
+                  @if (t.restricciones.incluirRotas == null) {
+                    <option [ngValue]="null" disabled>Configuración anterior · elegir Sí o No</option>
+                  }
+                  <option [ngValue]="true">Sí, incluir Rotas</option>
+                  <option [ngValue]="false">No, excluir Rotas</option>
+                </select>
+                <span class="text-xs text-[#5f6c80] dark:text-slate-400">Cuotas vencidas hasta hoy, sin límite de mes. Se guarda y recalcula este tenor.</span>
+              </label>
               @for (r of t.rangos; track $index) {
                 <span class="flex items-center gap-1.5 tabular-nums"><lucide-angular name="filter" [size]="12" class="block text-[#5f6c80]"></lucide-angular>{{ r.columna }}: {{ r.min === null ? 'sin mínimo' : miles(r.min) }} – {{ r.max === null ? 'sin máximo' : miles(r.max) }}</span>
               }
-              @if (t.restricciones.sinPromesaVigente) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin promesa vigente</span> }
+              @if (t.restricciones.sinPromesaVigente) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin promesa vigente{{ t.restricciones.incluirRotas ? ', incluyendo Rotas seleccionadas' : '' }}</span> }
               <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin lista negra, pago cumplido ni saldo en cero</span>
               @if (t.restricciones.soloNoContenido) { <span class="flex items-center gap-1.5"><lucide-angular name="check" [size]="12" class="block text-[#15803d]"></lucide-angular>Sin los clientes contenidos</span> }
             </div>
@@ -849,6 +878,33 @@ export class TenoresListaComponent implements OnInit {
       },
       error: err => {
         this.toast.error(mensajeDeError(err, 'No se pudo recalcular el tenor.'));
+        this.ocupado.set(null);
+      }
+    });
+  }
+
+  cambiarRotas(t: Tenor, incluir: boolean): void {
+    if (this.ocupado() !== null || t.estado !== 'ACTIVO'
+        || (this.vistaPrevia()?.id === t.id && this.previewCargando())) {
+      return;
+    }
+    this.ocupado.set(t.id);
+    const borrador = borradorDe(t);
+    borrador.restricciones = { ...t.restricciones, incluirRotas: incluir };
+    this.api.actualizar(t.id, borrador).subscribe({
+      next: actualizado => {
+        this.reemplazar(actualizado);
+        this.ocupado.set(null);
+        if (this.vistaPrevia()?.id === t.id) {
+          this.previewMensaje.set(null);
+          this.previewTotal.set(0);
+          this.previewError.set(null);
+          this.cargarMensaje(actualizado, 0);
+        }
+        this.toast.success('Filtro de Rotas guardado y conteo recalculado.');
+      },
+      error: err => {
+        this.toast.error(mensajeDeError(err, 'No se pudo guardar el filtro de Rotas.'));
         this.ocupado.set(null);
       }
     });
