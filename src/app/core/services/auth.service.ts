@@ -74,6 +74,34 @@ export class AuthService {
 
     // Programar renovación proactiva si ya hay token
     this.scheduleProactiveRefresh();
+
+    // Diferido: los interceptores piden este servicio y aún se está construyendo.
+    if (user && localStorage.getItem(this.TOKEN_KEY)) {
+      setTimeout(() => this.sincronizarRoles());
+    }
+  }
+
+  /**
+   * Completa los roles de la sesión con los que el usuario tiene asignados en la base.
+   * El login puede traer solo uno, y una sesión guardada no se entera de los roles que se le
+   * asignaron después. Solo actualiza la lista de roles: el rol base no cambia hasta el próximo login.
+   */
+  private sincronizarRoles(): void {
+    this.http.get<{ roles?: string[] }>(`${environment.apiUrl}/menu/alcance`).subscribe({
+      next: respuesta => {
+        const user = this.getCurrentUser();
+        const roles = (respuesta?.roles ?? []).filter(rol => !!rol && rol.trim() !== '');
+        if (!user || roles.length === 0) return;
+
+        const actuales = new Set((user.roles ?? []).map(rol => this.normalizarRol(rol)));
+        const iguales = roles.length === actuales.size && roles.every(rol => actuales.has(this.normalizarRol(rol)));
+        if (iguales) return;
+
+        user.roles = roles;
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+      },
+      error: () => { /* se conservan los roles del login */ }
+    });
   }
 
   private startTokenCheck(): void {
@@ -295,6 +323,7 @@ export class AuthService {
 
         // Programar renovación proactiva del nuevo token
         this.scheduleProactiveRefresh();
+        this.sincronizarRoles();
       })
     );
   }
@@ -395,7 +424,8 @@ export class AuthService {
   }
 
   private normalizarRol(rol: string): string {
-    return rol.toUpperCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return rol.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   getCurrentUserId(): number | null {

@@ -7,6 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { FormatService } from '@/shared/services/format.service';
 import { ClientSearchService } from '../../../../../core/services/client-search.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { ROL_ADMIN, ROLES_ADMINISTRACION_CARTAS, ROLES_SUPERVISION_CARTAS } from '../../../../gestor-cartas/roles-cartas';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -22,8 +23,10 @@ export class NoDebtLetterPageComponent {
   letterForm: FormGroup;
 
   private readonly authService = inject(AuthService);
-  readonly puedeEmitirCartasPropias =
-    this.authService.hasAnyRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR TRAMO PROPIO');
+  /** Se evalúa en cada render: los roles de la sesión pueden completarse después de cargar la página. */
+  get puedeEmitirCartasPropias(): boolean {
+    return this.authService.hasAnyRole(ROL_ADMIN, ...ROLES_SUPERVISION_CARTAS, ...ROLES_ADMINISTRACION_CARTAS);
+  }
 
   isLoading = false;
   mostrarDocumento = false;
