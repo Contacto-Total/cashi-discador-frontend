@@ -3,15 +3,25 @@
        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="d"/></svg>
 </ng-template>
 
-<!-- Aviso de que el discador volvió a responder: arriba a la derecha, fondo de tarjeta y color en el borde. -->
+<!-- Aviso de que el discador volvió a responder, con el aspecto de los avisos emergentes: fondo, borde y
+     texto en el color del aviso y un anillo que se consume mientras sigue en pantalla. -->
 <div role="status"
-     class="font-cashi pointer-events-none fixed top-4 right-4 z-[9000] flex w-[min(calc(100vw-2rem),20rem)] items-start gap-2.5 rounded-lg border border-(--ok-pt) bg-card py-3 pr-3 pl-3.5 shadow-[0_4px_12px_var(--sombra)] transition-[translate,opacity] duration-[350ms] ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none"
+     class="font-cashi pointer-events-none fixed top-5 right-5 z-[9000] flex w-max max-w-[calc(100vw-2.5rem)] items-center gap-2.5 rounded-lg border border-(--ok-ln) bg-(--ok-bg) px-3.5 py-3 text-[.875rem] leading-[1.45] font-medium text-(--ok) antialiased shadow-[0_4px_12px_var(--sombra)] transition-[translate,opacity] duration-[350ms] ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none"
      [ngClass]="nota() ? 'translate-x-0 opacity-100' : 'translate-x-[calc(100%+1.5rem)] opacity-0'">
-  <svg class="mt-px size-[1.125rem] flex-none text-(--ok-pt)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.listo"/></svg>
+  <span class="relative grid size-7 flex-none place-items-center">
+    <svg viewBox="0 0 28 28" aria-hidden="true" class="absolute inset-0 size-full -rotate-90 fill-none stroke-[2.5]">
+      <circle cx="14" cy="14" r="12.5" style="stroke: color-mix(in oklab, var(--ok-pt) 24%, transparent)"></circle>
+      @if (nota()) {
+        <circle cx="14" cy="14" r="12.5" pathLength="100"
+                class="animate-[cashi-aviso-vida_linear_forwards] [stroke-dasharray:100px] [stroke-linecap:round] motion-reduce:animate-none"
+                style="stroke: var(--ok-pt)" [style.animation-duration.ms]="duracionNota"></circle>
+      }
+    </svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="relative size-4 fill-none stroke-current stroke-[2.6] [stroke-linecap:round] [stroke-linejoin:round]"><path d="M19 7 10 16l-5-5"></path></svg>
+  </span>
   <div>
-    <span class="block text-[.875rem] font-semibold text-foreground">Discador en línea</span>
-    <span class="block text-[.75rem] text-muted-foreground">Liberar disponible</span>
+    <span class="block font-semibold">Discador en línea</span>
+    <span class="block text-[.75rem]">Liberar disponible</span>
   </div>
 </div>
 
