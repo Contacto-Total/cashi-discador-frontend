@@ -38,6 +38,7 @@ import { CuentaSidebar, SidebarComponent } from './shared/ui/sidebar/sidebar.com
 import { EstadoMenu } from './shared/ui/estado-menu.component';
 import { EstadoAsesorService } from './features/agent-dashboard/estado-asesor.service';
 import { CajaTarjetasDirective } from './shared/ui/caja-tarjetas.directive';
+import { MenuLateralService } from './shared/services/menu-lateral.service';
 
 @Component({
   selector: 'app-root',
@@ -77,6 +78,8 @@ export class AppComponent implements OnInit, OnDestroy {
   // Sidebar state
   isSidebarCollapsed = false;
   isMobileSidebarOpen = false;
+  /** El menú lo plegó un panel lateral derecho: al cerrarse el panel vuelve a abrirse. */
+  private menuPlegadoPorPanel = false;
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
@@ -117,7 +120,8 @@ export class AppComponent implements OnInit, OnDestroy {
     public mantenimiento: MantenimientoService,
     // Se pide aquí para que exista desde el arranque: al crearse aplica el tamaño de texto guardado.
     private fontSizeService: FontSizeService,
-    public estadoAsesor: EstadoAsesorService
+    public estadoAsesor: EstadoAsesorService,
+    private menuLateral: MenuLateralService
   ) {}
 
   /**
@@ -202,6 +206,17 @@ export class AppComponent implements OnInit, OnDestroy {
     // Si el asesor esta en la cola y abre una pantalla que no maneja estado, pasa a
     // EN_LINEA para que el discador no le timbre estando en otra pantalla.
     this.agentPresence.iniciar();
+
+    // Un panel lateral derecho pliega el menú mientras está abierto, para dejarle espacio a la pantalla.
+    this.menuLateral.solicitudes$.subscribe(solicitud => {
+      if (solicitud === 'plegar') {
+        this.menuPlegadoPorPanel = !this.isSidebarCollapsed;
+        this.isSidebarCollapsed = true;
+      } else {
+        if (this.menuPlegadoPorPanel) this.isSidebarCollapsed = false;
+        this.menuPlegadoPorPanel = false;
+      }
+    });
 
     // Auto-colapsar sidebar en pantalla de tipificación
     this.router.events.pipe(

@@ -63,6 +63,10 @@ export class ReportePagosBancariosResultadosWidget {
       workbook.creator = 'Sistema de Cobranza';
       workbook.created = new Date();
 
+      // Solo cartera propia trae periodo de compra (cartera nueva o antigua).
+      const conPeriodoCompra = this.reporte.incluyePeriodoCompra === true;
+      const ultimaColumna = conPeriodoCompra ? 'N' : 'M';
+
       const worksheet = workbook.addWorksheet('Pagos bancarios');
       worksheet.columns = [
         { header: 'Fecha banco', key: 'fechaBanco', width: 16 },
@@ -77,10 +81,11 @@ export class ReportePagosBancariosResultadosWidget {
         { header: 'Agencia', key: 'agencia', width: 20 },
         { header: 'Referencia', key: 'referencia', width: 28 },
         { header: 'Monto banco', key: 'montoBanco', width: 16 },
-        { header: 'Estado', key: 'estado', width: 16 }
+        { header: 'Estado', key: 'estado', width: 16 },
+        ...(conPeriodoCompra ? [{ header: 'Periodo compra', key: 'periodoCompra', width: 18 }] : [])
       ];
 
-      worksheet.mergeCells('A1:M1');
+      worksheet.mergeCells(`A1:${ultimaColumna}1`);
       const titulo = worksheet.getCell('A1');
       titulo.value = `REPORTE DE PAGOS BANCARIOS - ${this.reporte.banco}`;
       titulo.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
@@ -99,7 +104,7 @@ export class ReportePagosBancariosResultadosWidget {
       headerRow.values = [
         'Fecha banco', 'Hora atención', 'Documento', 'Código depositante', 'Nro. operación',
         'Nro. operación canal', 'Medio atención', 'Banco', 'Sucursal', 'Agencia', 'Referencia',
-        'Monto banco', 'Estado'
+        'Monto banco', 'Estado', ...(conPeriodoCompra ? ['Periodo compra'] : [])
       ];
       headerRow.eachCell(cell => {
         cell.font = { bold: true, color: { argb: 'FFFFFF' } };
@@ -116,14 +121,26 @@ export class ReportePagosBancariosResultadosWidget {
           montoBanco: pago.montoBanco || 0, estado: pago.procesado ? 'Conciliado' : 'Pendiente'
         });
         row.getCell('montoBanco').numFmt = '"S/." #,##0.00';
+        if (conPeriodoCompra) {
+          const mesCompra = this.mesDePeriodo(pago.periodoCompra);
+          const celda = row.getCell('periodoCompra');
+          celda.value = mesCompra ?? pago.periodoCompra ?? '';
+          if (mesCompra) celda.numFmt = 'mmm-yyyy';
+        }
       });
 
-      worksheet.autoFilter = { from: 'A5', to: 'M5' };
+      worksheet.autoFilter = { from: 'A5', to: `${ultimaColumna}5` };
       worksheet.views = [{ state: 'frozen', ySplit: 5 }];
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), `reporte-pagos-bancarios-${this.reporte.banco.toLowerCase()}-${this.reporte.periodo}.xlsx`);
     } finally {
       this.descargando = false;
     }
+  }
+
+  /** Convierte un periodo aaaamm al primer día de ese mes; null si no viene en ese formato. */
+  private mesDePeriodo(periodo: string | null | undefined): Date | null {
+    const partes = /^([0-9]{4})(0[1-9]|1[0-2])$/.exec((periodo ?? '').trim());
+    return partes ? new Date(Date.UTC(Number(partes[1]), Number(partes[2]) - 1, 1)) : null;
   }
 }

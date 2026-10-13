@@ -72,12 +72,17 @@ function finDeMes(fechaIso: string): string {
           (click)="$event.stopPropagation()"
           (keydown.escape)="cerrarConEscape && cerrar()"
         >
-          <header class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
-            <div>
-              <h2 id="ppc-titulo" cdkFocusInitial tabindex="-1" class="text-base font-bold text-slate-900 focus:outline-none dark:text-white">
-                {{ titulo() }}
-              </h2>
-              <p class="text-xs text-slate-600 dark:text-slate-400">Cliente {{ documentoActual() }}</p>
+          <header class="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-3 dark:border-slate-700">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 id="ppc-titulo" cdkFocusInitial tabindex="-1" class="text-base font-bold text-slate-900 focus:outline-none dark:text-white">
+                  {{ titulo() }}
+                </h2>
+                @if (cuotaActual(); as cuota) {
+                  <span class="rounded-full px-2 py-0.5 text-[11px] font-bold" [class]="estadoClass(cuota.estado)">{{ cuota.estado }}</span>
+                }
+              </div>
+              <p class="truncate text-xs text-slate-600 dark:text-slate-400">{{ subtitulo() }}</p>
             </div>
             <button
               type="button"
@@ -92,7 +97,7 @@ function finDeMes(fechaIso: string): string {
             </button>
           </header>
 
-          @if (cuotaActual(); as cuota) {
+          @if (cuotaActual()) {
             <div role="tablist" aria-label="Secciones de la cuota" class="flex gap-1 border-b border-slate-200 px-5 dark:border-slate-700" (keydown)="alNavegarPestanas($event)">
               @for (item of pestanas; track item.id) {
                 <button
@@ -108,14 +113,14 @@ function finDeMes(fechaIso: string): string {
                     ? 'border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300'
                     : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'"
                 >
-                  {{ item.label }}{{ item.id === 'pagos' ? ' (' + cuota.pagos.length + ')' : '' }}
+                  {{ item.label }}
                 </button>
               }
             </div>
           }
 
           <div
-            class="flex-1 space-y-5 overflow-y-auto px-5 py-4"
+            class="flex-1 space-y-4 overflow-y-auto px-5 py-4"
             [attr.role]="cuotaActual() ? 'tabpanel' : null"
             [attr.id]="cuotaActual() ? 'ppc-panel-' + pestana() : null"
             [attr.aria-labelledby]="cuotaActual() ? 'ppc-tab-' + pestana() : null"
@@ -141,34 +146,20 @@ function finDeMes(fechaIso: string): string {
               <p class="mt-2 text-sm text-slate-800 dark:text-slate-200">{{ problema() }}</p>
             </section>
             } @else if (cuotaActual(); as cuota) {
-              <section id="ppc-resumen" class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
-                  Cuota {{ cuota.numeroCuota }}
-                  @if (cliente?.promesa; as promesa) {
-                    <span class="font-normal normal-case text-slate-600 dark:text-slate-400">· Gestión {{ promesa.idGestion }} · {{ promesa.nombreAgente || 'Sin agente' }}</span>
-                  }
-                </h3>
-                <dl class="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                  <div>
-                    <dt class="text-xs text-slate-600 dark:text-slate-400">Vence</dt>
-                    <dd class="font-semibold text-slate-900 dark:text-white">{{ fecha(cuota.fechaPromesa) }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-slate-600 dark:text-slate-400">Monto promesa</dt>
-                    <dd class="font-semibold text-slate-900 dark:text-white">{{ monto(cuota.montoPromesa) }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-slate-600 dark:text-slate-400">Total de pagos</dt>
-                    <dd class="font-semibold text-slate-900 dark:text-white">{{ monto(totalPagos(cuota)) }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-slate-600 dark:text-slate-400">Estado</dt>
-                    <dd class="font-semibold text-slate-900 dark:text-white">{{ cuota.estado }}</dd>
-                  </div>
-                </dl>
+              <section id="ppc-resumen" aria-label="Resumen de la cuota" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-slate-700 dark:text-slate-300">
+                  <p>
+                    Pagado <span class="text-sm font-bold text-slate-900 dark:text-white">{{ monto(totalPagos(cuota)) }}</span>
+                    de {{ monto(cuota.montoPromesa) }}
+                    @if (saldo(cuota) > 0) {
+                      <span class="ml-1 font-semibold text-amber-800 dark:text-amber-300">· Falta {{ monto(saldo(cuota)) }}</span>
+                    }
+                  </p>
+                  <p>Vence <span class="font-semibold text-slate-900 dark:text-white">{{ fecha(cuota.fechaPromesa) }}</span></p>
+                </div>
                 @if (pestana() === 'corregir' && pagosVerificados(cuota) > 0) {
-                  <p class="mt-2 text-sm text-slate-800 dark:text-slate-200">
-                    {{ pagosVerificados(cuota) }} pago(s) de esta cuota ya están verificados por el banco y no se pueden modificar ni eliminar.
+                  <p class="mt-1 text-xs text-slate-700 dark:text-slate-300">
+                    {{ pagosVerificados(cuota) }} pago(s) ya están verificados por el banco y no se pueden modificar ni eliminar.
                   </p>
                 }
               </section>
@@ -191,59 +182,42 @@ function finDeMes(fechaIso: string): string {
               @if (cuota.pagos.length === 0) {
                 <p class="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-600 dark:border-slate-600 dark:text-slate-400">La cuota no tiene pagos registrados.</p>
               } @else {
-                <div class="relative overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                  <table class="min-w-full text-xs">
-                    <caption class="sr-only">Pagos registrados en la cuota {{ cuota.numeroCuota }}</caption>
-                    <thead class="bg-slate-100 text-left text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      <tr>
-                        <th scope="col" class="px-3 py-2 font-bold">Fecha de pago</th>
-                        <th scope="col" class="px-3 py-2 text-right font-bold">Monto</th>
-                        <th scope="col" class="px-3 py-2 font-bold">Banco</th>
-                        <th scope="col" class="px-3 py-2 font-bold">Nro. operación</th>
-                        <th scope="col" class="px-3 py-2 font-bold">Conciliación</th>
-                        <th scope="col" class="px-3 py-2 font-bold">Voucher</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                      @for (item of cuota.pagos; track item.pagoCuotaId) {
-                        <tr class="align-top">
-                          <td class="whitespace-nowrap px-3 py-2 text-slate-800 dark:text-slate-200">{{ fecha(item.fechaPago) }}</td>
-                          <td class="whitespace-nowrap px-3 py-2 text-right font-semibold text-slate-900 dark:text-white">{{ monto(item.montoPago) }}</td>
-                          <td class="px-3 py-2 text-slate-800 dark:text-slate-200">{{ item.banco || '—' }}</td>
-                          <td class="px-3 py-2 font-mono text-slate-800 dark:text-slate-200">{{ item.numeroOperacion || '—' }}</td>
-                          <td class="px-3 py-2">
-                            @if (item.verificadoBanco) {
-                              <span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
-                              @if (item.pagoBancarioId) {
-                                <p class="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">Pago bancario {{ item.pagoBancarioId }}</p>
-                              }
-                            } @else {
-                              <span class="inline-flex rounded-full bg-slate-200 px-2 py-0.5 font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">No verificado</span>
+                <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div aria-hidden="true" [class]="filaPago" class="bg-slate-100 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span>Fecha</span>
+                    <span class="text-right">Monto</span>
+                    <span>Banco y operación</span>
+                    <span>Conciliación</span>
+                  </div>
+                  <ul [attr.aria-label]="'Pagos registrados en la cuota ' + cuota.numeroCuota" class="divide-y divide-slate-200 dark:divide-slate-700">
+                    @for (item of cuota.pagos; track item.pagoCuotaId) {
+                      <!-- relative: contiene las etiquetas sr-only de la fila -->
+                      <li [class]="filaPago" class="relative py-2 text-xs text-slate-800 dark:text-slate-200">
+                        <span class="whitespace-nowrap"><span class="sr-only">Fecha </span>{{ fecha(item.fechaPago) }}</span>
+                        <span class="whitespace-nowrap text-right font-bold text-slate-900 dark:text-white"><span class="sr-only">Monto </span>{{ monto(item.montoPago) }}</span>
+                        <span class="min-w-0 truncate text-slate-600 dark:text-slate-400">{{ detallePago(item, cuota) }}</span>
+                        <span class="flex flex-wrap items-center gap-1.5">
+                          @if (item.verificadoBanco) {
+                            <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
+                            @if (item.pagoBancarioId) {
+                              <span class="text-[11px] text-slate-600 dark:text-slate-400">Pb {{ item.pagoBancarioId }}</span>
                             }
-                          </td>
-                          <td class="px-3 py-2 text-slate-800 dark:text-slate-200">
-                            @if ((cuota.adjuntos || []).length === 0) {
-                              —
-                            } @else {
-                              {{ item.tieneVoucher ? 'Con voucher' : 'Sin voucher' }}
-                            }
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+                          } @else {
+                            <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">No verificado</span>
+                          }
+                        </span>
+                      </li>
+                    }
+                  </ul>
                 </div>
               }
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                @if ((cuota.adjuntos || []).length > 0) {
-                  <button type="button" (click)="verVouchers.emit({ promesa: cliente!.promesa!, cuota: cuota })" class="cursor-pointer rounded-lg border border-blue-600 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50">
-                    Ver {{ cuota.adjuntos!.length === 1 ? 'voucher' : cuota.adjuntos!.length + ' vouchers' }}
-                  </button>
-                } @else {
-                  <p class="text-xs text-slate-600 dark:text-slate-400">La cuota no tiene vouchers adjuntos.</p>
-                }
-                <button type="button" (click)="pestana.set('corregir')" [class]="btnSecundario">Ir a corregir</button>
-              </div>
+              @if ((cuota.adjuntos || []).length > 0) {
+                <button type="button" (click)="verVouchers.emit({ promesa: cliente!.promesa!, cuota: cuota })" class="cursor-pointer rounded-lg border border-blue-600 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50">
+                  Ver {{ cuota.adjuntos!.length === 1 ? 'voucher' : cuota.adjuntos!.length + ' vouchers' }}
+                </button>
+              } @else {
+                <p class="text-xs text-slate-600 dark:text-slate-400">La cuota no tiene vouchers adjuntos.</p>
+              }
             } @else if (cargando()) {
               <p role="status" class="py-6 text-center text-sm text-slate-600 dark:text-slate-400">Cargando pagos y cuotas del cliente...</p>
             } @else if (errorCarga(); as texto) {
@@ -583,6 +557,8 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   readonly btnPrimario = 'rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-900';
   readonly btnPeligro = 'rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-900';
   readonly btnSecundario = 'rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800';
+  /** Columnas de la lista de pagos: fecha, monto, banco y operación, conciliación. */
+  readonly filaPago = 'grid grid-cols-[5rem_5.5rem_minmax(0,1fr)_auto] items-center gap-x-3 px-3';
   readonly btnAcordeon = 'flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white dark:hover:bg-slate-800';
 
   cargando = signal(false);
@@ -640,6 +616,36 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
     if (this.pago) return 'Resolver pago bancario';
     const cuota = this.cuotaActual();
     return cuota ? `Cuota ${cuota.numeroCuota}` : 'Corregir pagos del cliente';
+  }
+
+  subtitulo(): string {
+    const promesa = this.cuotaActual() ? this.cliente?.promesa : null;
+    const cliente = `Cliente ${this.documentoActual()}`;
+    return promesa ? `Gestión ${promesa.idGestion} · ${promesa.nombreAgente || 'Sin agente'} · ${cliente}` : cliente;
+  }
+
+  estadoClass(estado: string | null | undefined): string {
+    switch (String(estado || '').toUpperCase()) {
+      case 'PAGADA': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+      case 'VENCIDA': return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+      case 'PARCIAL': return 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300';
+      default: return 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
+    }
+  }
+
+  /** Lo que falta pagar de la cuota; 0 si ya está cubierta. */
+  saldo(cuota: CuotaResumenConciliacion): number {
+    const falta = Number(cuota.montoPromesa || 0) - this.totalPagos(cuota);
+    return falta > 0.005 ? Math.round(falta * 100) / 100 : 0;
+  }
+
+  /** Banco, número de operación y voucher de un pago, en una sola línea. Omite lo que no tiene. */
+  detallePago(item: CuotaResumenConciliacion['pagos'][number], cuota: CuotaResumenConciliacion): string {
+    const partes: string[] = [];
+    if (item.banco) partes.push(String(item.banco));
+    if (item.numeroOperacion) partes.push(`Op. ${item.numeroOperacion}`);
+    if ((cuota.adjuntos || []).length > 0) partes.push(item.tieneVoucher ? 'con voucher' : 'sin voucher');
+    return partes.join(' · ') || 'Sin banco ni operación';
   }
 
   /** Cuota a listar cuando la pestaña activa es Pagos. */

@@ -490,7 +490,7 @@ export class ProduccionReportComponent implements OnInit {
       error: error => {
         console.error('Error guardando meta:', error);
         this.guardandoMeta.set(false);
-        alert('No se pudo guardar la meta. Verifica que no exista otra para el mismo mes.');
+        alert(error?.error?.message || error?.error?.mensaje || 'No se pudo guardar la meta.');
       }
     });
   }

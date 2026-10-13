@@ -6,6 +6,7 @@ export interface ReportePagosBancarios {
   pagina: number;
   tamanoPagina: number;
   totalPaginas: number;
+  incluyePeriodoCompra?: boolean;
   pagos: DetallePagoBancario[];
 }
 
@@ -26,4 +27,5 @@ export interface DetallePagoBancario {
   procesado: boolean | null;
   cuotaAplicadaId: number | null;
   transaccionIdAplicada: number | null;
+  periodoCompra?: string | null;
 }

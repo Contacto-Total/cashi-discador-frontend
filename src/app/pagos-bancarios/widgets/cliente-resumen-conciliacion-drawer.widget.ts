@@ -2,6 +2,7 @@ import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, Out
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { FormatService } from '@/shared/services/format.service';
+import { MenuLateralService } from '@/shared/services/menu-lateral.service';
 import { CommonModule } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { AdjuntoResumenConciliacion, CuotaResumenConciliacion, PagoResumenConciliacion, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
@@ -400,6 +401,8 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   private fmt = inject(FormatService);
   private bcpPagosService = inject(BcpPagosService);
   private sanitizer = inject(DomSanitizer);
+  private menuLateral = inject(MenuLateralService);
+  private menuPlegado = false;
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
   @Input() loading = false;
@@ -431,6 +434,9 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   private visorVoucherSub: Subscription | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['open'] || changes['mode']) {
+      this.sincronizarMenu(this.open && this.mode === 'drawer');
+    }
     if ((changes['open'] && !this.open) || changes['resumen']) {
       this.cerrarVisorVoucher();
       this.cerrarDetallePagos();
@@ -439,6 +445,18 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
 
   ngOnDestroy(): void {
     this.liberarVoucherActual();
+    this.sincronizarMenu(false);
+  }
+
+  /** Como panel lateral, pliega el menú principal mientras está abierto. */
+  private sincronizarMenu(plegar: boolean): void {
+    if (plegar === this.menuPlegado) return;
+    this.menuPlegado = plegar;
+    if (plegar) {
+      this.menuLateral.panelAbierto();
+    } else {
+      this.menuLateral.panelCerrado();
+    }
   }
 
   @HostListener('document:keydown.escape')
