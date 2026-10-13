@@ -177,18 +177,21 @@
                 <div class="h-[60px] rounded-md bg-(--esq)"></div>
                 <div class="h-[22px] w-[60%] rounded-md bg-(--esq)"></div>
               </div>
-              <!-- Aviso de mantenimiento, como lo recibe el asesor -->
+              <!-- Aviso de mantenimiento, como lo recibe el asesor: fondo, borde y texto en el color del aviso
+                   y el signo dentro de un anillo. No se cierra solo, por eso el anillo va entero. -->
               <div role="status"
-                   class="absolute top-2 right-2 z-[3] flex w-[min(calc(100%-16px),236px)] items-start gap-2 rounded-lg border border-[#f59e0b] bg-card py-2.5 pr-2 pl-[11px] text-left text-[12px] leading-[1.45] text-foreground shadow-[0_4px_12px_var(--sombra)] transition-[translate,opacity] duration-300 motion-reduce:transition-none"
+                   class="absolute top-2 right-2 z-[3] flex w-max max-w-[calc(100%-16px)] items-center gap-2 rounded-lg border border-(--am-ln) bg-(--am-bg) py-[9px] pr-2 pl-2.5 text-left text-[12px] leading-[1.45] font-medium text-(--am) shadow-[0_4px_12px_var(--sombra)] transition-[translate,opacity] duration-300 motion-reduce:transition-none"
                    [ngClass]="avisoAsesor() ? 'translate-x-0 opacity-100' : 'translate-x-[400px] opacity-0'">
-                <svg class="mt-px size-[15px] flex-none text-[#f59e0b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="I.alerta"/></svg>
+                <span class="relative grid size-[22px] flex-none place-items-center">
+                  <svg class="absolute inset-0 size-full fill-none stroke-[2.5]" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12.5" style="stroke: var(--am-pt)"/></svg>
+                  <svg class="relative size-3 fill-none stroke-current stroke-[2.6] [stroke-linecap:round] [stroke-linejoin:round]" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v7"/><path d="M12 17.5h.01"/></svg>
+                </span>
                 <div class="min-w-0 flex-1">
                   <span class="block text-[12px] font-semibold">{{ avisoAsesor()?.titulo }}</span>
-                  <span class="block text-[12px] text-muted-foreground tabular-nums">{{ avisoAsesor()?.texto }}</span>
+                  <span class="block text-[11px] tabular-nums">{{ avisoAsesor()?.texto }}</span>
                 </div>
                 @if (avisoAsesor()?.cerrable) {
-                  <button type="button" class="flex flex-none cursor-pointer rounded-[5px] border-0 bg-transparent p-0.5 text-muted-foreground hover:bg-(--line2)"
+                  <button type="button" class="flex flex-none cursor-pointer rounded-[5px] border-0 bg-transparent p-0.5 text-(--am) hover:bg-(--am-ln)"
                           (click)="avisoCerrado.set(true)" aria-label="Cerrar aviso">
                     <svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
                          stroke-linecap="round" aria-hidden="true"><path [attr.d]="I.x"/></svg>
