@@ -58,11 +58,8 @@
       @for (g of grupos(); track g.nombre) {
         <p class="mx-2 mt-[.875rem] mb-[.25rem] text-[.8125rem] font-bold text-foreground @max-[37.5rem]/tabla:ml-1">{{ g.nombre }}</p>
         @for (e of g.estados; track clave(e)) {
-          <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'" [style.--tinta]="tinta(e)">
-            <div class="flex min-w-0 items-center gap-2.5">
-              <lucide-angular [name]="ficha(e).icono" [size]="20" [ngClass]="'flex flex-none text-(--tinta)'"></lucide-angular>
-              <span class="min-w-0 overflow-hidden text-[.875rem] font-normal text-ellipsis whitespace-nowrap">{{ ficha(e).nombre }}</span>
-            </div>
+          <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'">
+            <span class="min-w-0 overflow-hidden text-[.875rem] font-normal text-ellipsis whitespace-nowrap text-foreground/80">{{ ficha(e).nombre }}</span>
 
             <!-- Revertir va al final de la escala: la barra le cede el sitio solo en las filas que lo llevan. -->
             <div class="flex min-w-0 items-center gap-2">
