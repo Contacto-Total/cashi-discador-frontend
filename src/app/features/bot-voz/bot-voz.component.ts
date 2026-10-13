@@ -2393,6 +2393,23 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.campos.filter((c) => !this.agregados.some((a) => a.codigo === c.codigo));
   }
 
+  /**
+   * Los campos del desplegable por grupos, en el orden en que los manda el backend.
+   *
+   * El estado del cliente no es una columna de la cartera —sale de
+   * `estado_cliente_calculado`, igual que el tipo de contacto de una campaña— y
+   * mezclarlo con las columnas haría creer que el fichero del cliente lo trae.
+   */
+  gruposDeCampos(): { nombre: string; campos: any[] }[] {
+    const grupos: { nombre: string; campos: any[] }[] = [];
+    for (const c of this.camposDisponibles()) {
+      const nombre = c.grupo || 'Campos de la cartera';
+      const g = grupos.find((x) => x.nombre === nombre);
+      if (g) g.campos.push(c); else grupos.push({ nombre, campos: [c] });
+    }
+    return grupos;
+  }
+
   agregarFiltro(): void {
     const campo = this.campos.find((c) => c.codigo === this.campoAAgregar);
     if (!campo) return;
