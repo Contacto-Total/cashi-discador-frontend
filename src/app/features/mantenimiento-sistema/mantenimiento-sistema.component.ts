@@ -71,8 +71,7 @@ const ICONOS = {
   flujo: 'm3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8',
   grupo: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   historial: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5M12 7v5l4 2',
-  subida: 'M16 16l-4-4-4 4 M12 12v9 M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3',
-  listo: 'M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3'
+  subida: 'M16 16l-4-4-4 4 M12 12v9 M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3'
 };
 
 const AVISO = 10 * 60_000;
@@ -117,8 +116,9 @@ export class MantenimientoSistemaComponent implements OnInit, OnDestroy {
   readonly enviando = signal(false);
   readonly error = signal<string | null>(null);
   readonly avisoCerrado = signal(false);
-  /** Aviso de que el discador volvio a responder. */
+  /** Aviso de que el discador volvio a responder, y lo que dura en pantalla. */
   readonly nota = signal(false);
+  readonly duracionNota = NOTA;
   /** Fila recien agregada al historial, para resaltarla una vez. */
   readonly filaNueva = signal<number | null>(null);
 
