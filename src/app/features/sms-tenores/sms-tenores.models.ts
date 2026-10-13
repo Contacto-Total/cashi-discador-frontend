@@ -10,6 +10,8 @@ export interface RestriccionesTenor {
   sinPromesaVigente: boolean;
   sinListaNegra: boolean;
   soloNoContenido: boolean;
+  /** null/ausente conserva el comportamiento de los tenores anteriores. */
+  incluirRotas?: boolean | null;
 }
 
 /**
