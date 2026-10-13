@@ -7,10 +7,6 @@
         <h1 class="titulo-pagina">Agenda del bot</h1>
         <p class="sub">Llamadas de Clara que necesitan a una persona.</p>
       </div>
-      <button type="button" (click)="cargar()" [class]="ui.botonAlto">
-        <lucide-angular name="refresh-cw" [size]="15" [class.animate-spin]="cargando" class="block"></lucide-angular>
-        Actualizar
-      </button>
     </div>
 
     <div class="flex flex-wrap items-end gap-3">
@@ -38,7 +34,7 @@
 
   <!-- ===================== CONTENIDO ===================== -->
   <div class="contenido">
-    <div class="tablero grid items-stretch gap-4" [class.con-reparto]="repartidasHoy.length">
+    <div class="tablero grid items-stretch gap-4" [class.con-reparto]="repartidas.length">
 
       <!-- Cola de lo pendiente -->
       <div class="flex min-w-0 flex-col gap-2">
@@ -188,17 +184,17 @@
       </div>
 
       <!-- Lo que repartió el sistema esta mañana -->
-      @if (repartidasHoy.length) {
+      @if (repartidas.length) {
         <aside class="reparto">
           <div class="cabecera-columna justify-between">
-            <h2 [class]="ui.rotulo">Promesas repartidas hoy</h2>
+            <h2 [class]="ui.rotulo">Promesas repartidas</h2>
             <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400" role="status">
-              {{ totalRepartidoHoy }}
+              {{ totalRepartido }}
             </span>
           </div>
 
           <div class="asesores">
-            @for (r of repartidasHoy; track r.idAgente; let i = $index) {
+            @for (r of repartidas; track r.idAgente; let i = $index) {
               <button type="button" class="asesor" (click)="abrirAsesor(r)"
                       [attr.aria-pressed]="asesorAbierto?.idAgente === r.idAgente"
                       [style.--tono]="tonoDe(r.subcartera)"
@@ -332,7 +328,7 @@
       <div class="flex flex-col gap-4 px-[18px] py-4">
         <div class="grid grid-cols-2 gap-2">
           <div class="dato">
-            <span [class]="ui.etiqueta">Repartidas hoy</span>
+            <span [class]="ui.etiqueta">Promesas</span>
             <span class="dato-valor tabular-nums">{{ r.cuantas }}</span>
           </div>
           <div class="dato">
