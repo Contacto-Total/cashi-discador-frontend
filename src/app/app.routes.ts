@@ -365,6 +365,13 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard]
   },
   {
+    // Periodos de seguimiento: reemplaza funcionalmente a horarios-recordatorios
+    // como el lugar donde se decide que clientes ve el asesor.
+    path: 'admin/maintenance/seguimiento-periodos',
+    loadComponent: () => import('./maintenance/components/seguimiento-periodos/seguimiento-periodos.component').then(m => m.SeguimientoPeriodosComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
     path: 'admin/maintenance/horarios-recordatorios',
     loadComponent: () => import('./maintenance/components/horarios-recordatorios/horarios-recordatorios.component').then(m => m.HorariosRecordatoriosComponent),
     canActivate: [authGuard, adminGuard]

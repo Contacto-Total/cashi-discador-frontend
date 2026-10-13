@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CampaignService } from '../../core/services/campaign.service';
 import { SipService } from '../../core/services/sip.service';
 import { RecordatoriosService } from '../../core/services/recordatorios.service';
+import { SeguimientoService } from '../../core/services/seguimiento.service';
 import {
   AgentStatus,
   AgentState,
@@ -109,6 +110,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private campaignService: CampaignService,
     private recordatoriosService: RecordatoriosService,
+    private seguimientoService: SeguimientoService,
     private router: Router,
     private sipService: SipService,
     private umbralesService: UmbralesEstadoService,
@@ -302,19 +304,47 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Cuántos clientes le tocan hoy al asesor.
+   *
+   * Sale de la lista del día ya repartida (seguimiento_lista_item), no de
+   * recalcular las cuotas con la configuración de la subcartera como antes. El
+   * número que ve el asesor es exactamente el que le asignó el round robin:
+   * antes el badge contaba una cosa y la pantalla le entregaba otra.
+   *
+   * Si la subcartera no tiene período activo, miLista() devuelve null y el
+   * botón no se muestra. Eso no es un error: es que el supervisor no lo encendió.
+   */
   private checkRecordatoriosDisponibles(): void {
-    if (!this.userId) return;
+    if (!this.userId || !this.subPortfolioId) {
+      this.recordatoriosPendientes = 0;
+      this.recordatoriosHabilitado = false;
+      return;
+    }
 
-    this.recordatoriosService.getMisRecordatoriosSiEnHorario(this.userId, this.subPortfolioId || undefined).subscribe({
-      next: ({ recordatorios, horarioInfo }) => {
-        const pendientes = recordatorios.filter(r => !r.yaLlamoHoy);
-        this.recordatoriosPendientes = pendientes.length;
-        this.recordatoriosHabilitado = (!horarioInfo || horarioInfo.permitido) && pendientes.length > 0;
-      },
-      error: () => {
+    const idSubcartera = this.subPortfolioId;
+
+    // Sin items: el badge solo necesita los contadores y esto consulta cada 60s.
+    this.seguimientoService.miLista(this.userId, idSubcartera, false).subscribe(lista => {
+      if (!lista) {
         this.recordatoriosPendientes = 0;
         this.recordatoriosHabilitado = false;
+        return;
       }
+
+      this.recordatoriosPendientes = lista.pendientes;
+
+      // El horario sigue mandando: la ventana la define la subcartera y el
+      // período no la reemplaza.
+      this.recordatoriosService.verificarHorario(idSubcartera).subscribe({
+        next: horario => {
+          this.recordatoriosHabilitado = horario.permitido && lista.pendientes > 0;
+        },
+        error: () => {
+          // Si no se puede verificar, no se bloquea al asesor por eso.
+          this.recordatoriosHabilitado = lista.pendientes > 0;
+        }
+      });
     });
   }
 

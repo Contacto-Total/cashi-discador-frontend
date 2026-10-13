@@ -1,0 +1,311 @@
+<div class="sp-contenedor">
+
+  <header class="sp-cabecera">
+    <div>
+      <h1>Períodos de seguimiento</h1>
+      <p>
+        Un período es un mes. Al activarlo se genera el padrón de clientes del segmento
+        y cada día se reparte la lista entre los asesores por round robin.
+      </p>
+    </div>
+  </header>
+
+  <!-- Avisos -->
+  <div class="sp-alerta sp-alerta-error" *ngIf="error">
+    <lucide-angular name="alert-triangle" [size]="18"></lucide-angular>
+    <span>{{ error }}</span>
+    <button type="button" (click)="descartarAviso()">
+      <lucide-angular name="x" [size]="16"></lucide-angular>
+    </button>
+  </div>
+  <div class="sp-alerta sp-alerta-ok" *ngIf="aviso">
+    <lucide-angular name="check-circle" [size]="18"></lucide-angular>
+    <span>{{ aviso }}</span>
+    <button type="button" (click)="descartarAviso()">
+      <lucide-angular name="x" [size]="16"></lucide-angular>
+    </button>
+  </div>
+
+  <!-- Selección de subcartera -->
+  <section class="sp-tarjeta">
+    <h2>Subcartera</h2>
+    <div class="sp-cascada">
+      <label>
+        <span>Inquilino</span>
+        <select [(ngModel)]="selectedTenant" (ngModelChange)="onTenantChange()">
+          <option [ngValue]="null">Selecciona…</option>
+          <option *ngFor="let t of tenants" [ngValue]="t.id">{{ t.tenantName }}</option>
+        </select>
+      </label>
+      <label>
+        <span>Cartera</span>
+        <select [(ngModel)]="selectedPortfolio" (ngModelChange)="onPortfolioChange()"
+                [disabled]="!selectedTenant">
+          <option [ngValue]="null">Selecciona…</option>
+          <option *ngFor="let p of filteredPortfolios" [ngValue]="p.id">{{ p.portfolioName }}</option>
+        </select>
+      </label>
+      <label>
+        <span>Subcartera</span>
+        <select [(ngModel)]="selectedSubcartera" (ngModelChange)="onSubcarteraChange()"
+                [disabled]="!selectedPortfolio">
+          <option [ngValue]="null">Selecciona…</option>
+          <option *ngFor="let s of filteredSubPortfolios" [ngValue]="s.id">{{ s.subPortfolioName }}</option>
+        </select>
+      </label>
+      <button type="button" class="sp-btn sp-btn-primario"
+              [disabled]="!selectedSubcartera || saving" (click)="nuevo()">
+        <lucide-angular name="plus" [size]="16"></lucide-angular>
+        Nuevo período
+      </button>
+    </div>
+  </section>
+
+  <!-- Períodos -->
+  <section class="sp-tarjeta" *ngIf="selectedSubcartera">
+    <h2>Períodos de esta subcartera</h2>
+
+    <p class="sp-vacio" *ngIf="!loading && periodos.length === 0">
+      No hay períodos. Crea uno y actívalo para que los asesores empiecen a ver clientes.
+    </p>
+    <p class="sp-vacio" *ngIf="loading">Cargando…</p>
+
+    <table class="sp-tabla" *ngIf="periodos.length > 0">
+      <thead>
+        <tr>
+          <th>Período</th>
+          <th>Estado</th>
+          <th>Segmento</th>
+          <th>Promesas que entran</th>
+          <th>Reparto entre</th>
+          <th>Bajas</th>
+          <th class="sp-acciones-col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of periodos">
+          <td class="sp-periodo">{{ nombreMes(p.mes) }} {{ p.anio }}</td>
+          <td><span [class]="claseEstado(p.estado)">{{ p.estado }}</span></td>
+          <td class="sp-tenue">{{ descripcionSegmento(p) }}</td>
+          <td class="sp-tenue">{{ descripcionPromesas(p) }}</td>
+          <td class="sp-tenue">{{ nombreGrupo(p.idGrupoAsesores) }}</td>
+          <td class="sp-tenue">
+            <span *ngIf="p.bajaPorCuotasMes">Cuotas del mes pagadas</span>
+            <span *ngIf="p.bajaPorCuotasMes && p.bajaPorPagoCumplido"> · </span>
+            <span *ngIf="p.bajaPorPagoCumplido">pago_cumplido</span>
+            <span *ngIf="!p.bajaPorCuotasMes && !p.bajaPorPagoCumplido">Ninguna</span>
+          </td>
+          <td class="sp-acciones">
+            <button type="button" class="sp-btn sp-btn-chico"
+                    *ngIf="p.estado === 'BORRADOR'" [disabled]="saving" (click)="editar(p)">
+              Editar
+            </button>
+            <button type="button" class="sp-btn sp-btn-chico sp-btn-primario"
+                    *ngIf="p.estado === 'BORRADOR'" [disabled]="saving" (click)="activar(p)">
+              Activar
+            </button>
+            <button type="button" class="sp-btn sp-btn-chico"
+                    *ngIf="p.estado === 'ACTIVO'" [disabled]="saving" (click)="verCobertura(p)">
+              Cobertura
+            </button>
+            <button type="button" class="sp-btn sp-btn-chico"
+                    *ngIf="p.estado === 'ACTIVO'" [disabled]="saving" (click)="regenerarLista(p)">
+              Regenerar lista
+            </button>
+            <button type="button" class="sp-btn sp-btn-chico sp-btn-peligro"
+                    *ngIf="p.estado === 'ACTIVO'" [disabled]="saving" (click)="cerrar(p)">
+              Cerrar
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Cobertura -->
+  <section class="sp-tarjeta" *ngIf="cobertura">
+    <h2>Cobertura del {{ cobertura.fecha }}</h2>
+
+    <div class="sp-metricas">
+      <div class="sp-metrica">
+        <span class="sp-metrica-valor">{{ cobertura.padronActivo }}</span>
+        <span class="sp-metrica-label">En el padrón</span>
+      </div>
+      <div class="sp-metrica">
+        <span class="sp-metrica-valor">{{ cobertura.padronExcluido }}</span>
+        <span class="sp-metrica-label">Dados de baja</span>
+      </div>
+      <div class="sp-metrica" *ngIf="cobertura.lista">
+        <span class="sp-metrica-valor">{{ cobertura.lista.totalItems }}</span>
+        <span class="sp-metrica-label">Repartidos hoy</span>
+      </div>
+      <div class="sp-metrica" *ngIf="cobertura.lista">
+        <span class="sp-metrica-valor">{{ cobertura.lista.totalAsesores }}</span>
+        <span class="sp-metrica-label">Asesores</span>
+      </div>
+    </div>
+
+    <p class="sp-vacio" *ngIf="!cobertura.lista">
+      Todavía no hay lista para hoy. El job la arma a las 08:00, o puedes forzarla con
+      «Regenerar lista».
+    </p>
+
+    <div *ngIf="cobertura.exclusiones.length > 0" class="sp-exclusiones">
+      <h3>Por qué salieron del padrón</h3>
+      <ul>
+        <li *ngFor="let e of cobertura.exclusiones">
+          <strong>{{ e.total }}</strong> — {{ etiquetaMotivo(e.motivo) }}
+        </li>
+      </ul>
+    </div>
+
+    <table class="sp-tabla" *ngIf="cobertura.asesores.length > 0">
+      <thead>
+        <tr>
+          <th>Asesor</th>
+          <th>Asignados</th>
+          <th>Pendientes</th>
+          <th>En llamada</th>
+          <th>Trabajados</th>
+          <th>Descartados</th>
+          <th>Avance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of cobertura.asesores">
+          <td>{{ a.asesor }}</td>
+          <td>{{ a.asignados }}</td>
+          <td>{{ a.pendientes }}</td>
+          <td>{{ a.enLlamada }}</td>
+          <td>{{ a.completadas }}</td>
+          <td>{{ a.descartadas }}</td>
+          <td>
+            <div class="sp-barra">
+              <div class="sp-barra-relleno" [style.width.%]="avance(a)"></div>
+            </div>
+            <span class="sp-tenue">{{ avance(a) }}%</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Modal -->
+  <div class="sp-modal-fondo" *ngIf="showModal" (click)="cerrarModal()">
+    <div class="sp-modal" (click)="$event.stopPropagation()">
+      <header>
+        <h2>{{ editMode ? 'Editar período' : 'Nuevo período' }}</h2>
+        <button type="button" (click)="cerrarModal()">
+          <lucide-angular name="x" [size]="18"></lucide-angular>
+        </button>
+      </header>
+
+      <div class="sp-modal-cuerpo">
+
+        <div class="sp-fila">
+          <label>
+            <span>Año</span>
+            <input type="number" [(ngModel)]="form.anio" min="2024" max="2100">
+          </label>
+          <label>
+            <span>Mes</span>
+            <select [(ngModel)]="form.mes">
+              <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">
+                {{ nombreMes(m) }}
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <fieldset>
+          <legend>Segmento: qué clientes forman el padrón</legend>
+          <p class="sp-ayuda">
+            Sale de <code>estado_cliente_calculado</code>. Estos clientes se mantienen todo
+            el mes; lo que rota cada día es cuál de sus promesas toca llamar.
+          </p>
+          <label>
+            <span>Campo</span>
+            <select [(ngModel)]="form.segmentoCampo">
+              <option *ngFor="let c of camposSegmento" [ngValue]="c.valor">{{ c.etiqueta }}</option>
+            </select>
+          </label>
+          <div class="sp-checks">
+            <label class="sp-check" *ngFor="let e of estadosSegmento">
+              <input type="checkbox" [(ngModel)]="valoresSeleccionados[e.valor]"
+                     [ngModelOptions]="{standalone: true}">
+              <span>{{ e.etiqueta }}</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Promesas: qué entra a la lista de cada día</legend>
+          <label class="sp-check">
+            <input type="checkbox" [(ngModel)]="form.incluyeVencidas"
+                   [ngModelOptions]="{standalone: true}">
+            <span>Promesas vencidas (rotas)</span>
+          </label>
+          <label *ngIf="form.incluyeVencidas">
+            <span>Máximo de días hacia atrás (vacío = sin tope)</span>
+            <input type="number" [(ngModel)]="form.diasVencidasMax" min="1">
+          </label>
+
+          <label class="sp-check">
+            <input type="checkbox" [(ngModel)]="form.incluyeVigentes"
+                   [ngModelOptions]="{standalone: true}">
+            <span>Promesas vigentes</span>
+          </label>
+          <label *ngIf="form.incluyeVigentes">
+            <span>Días hacia adelante (0 = solo las que vencen hoy)</span>
+            <input type="number" [(ngModel)]="form.diasVigentesAdelante" min="0">
+          </label>
+          <p class="sp-ayuda">
+            Si un cliente tiene vencida y vigente a la vez, se le llama por la vencida.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Reparto</legend>
+          <label>
+            <span>Grupo de asesores</span>
+            <select [(ngModel)]="form.idGrupoAsesores">
+              <option [ngValue]="null">Todos los asesores de la subcartera</option>
+              <option *ngFor="let g of grupos" [ngValue]="g.id">
+                {{ g.nombre }} ({{ g.totalMiembros }})
+              </option>
+            </select>
+          </label>
+          <p class="sp-ayuda">
+            El reparto es round robin y se rehace cada día, así que un cliente puede
+            caer en un asesor distinto mañana.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Bajas: cuándo sale un cliente del padrón</legend>
+          <label class="sp-check">
+            <input type="checkbox" [(ngModel)]="form.bajaPorCuotasMes"
+                   [ngModelOptions]="{standalone: true}">
+            <span>Cuando todas sus cuotas de este mes estén PAGADA</span>
+          </label>
+          <label class="sp-check">
+            <input type="checkbox" [(ngModel)]="form.bajaPorPagoCumplido"
+                   [ngModelOptions]="{standalone: true}">
+            <span>Cuando tenga <code>pago_cumplido = 1</code> en la base</span>
+          </label>
+          <p class="sp-ayuda">
+            La primera es inmediata (la ve el discador). La segunda solo se mueve con la
+            carga diaria de la base, así que puede tardar hasta un día.
+          </p>
+        </fieldset>
+      </div>
+
+      <footer>
+        <button type="button" class="sp-btn" (click)="cerrarModal()">Cancelar</button>
+        <button type="button" class="sp-btn sp-btn-primario" [disabled]="saving" (click)="guardar()">
+          {{ saving ? 'Guardando…' : (editMode ? 'Guardar' : 'Crear en BORRADOR') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>

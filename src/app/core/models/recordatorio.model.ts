@@ -1,4 +1,10 @@
 export interface RecordatorioPromesa {
+  /**
+   * Item de seguimiento_lista_item del que sale esta ficha. Se necesita para
+   * soltarlo si el asesor cancela: si no, el cliente queda tomado hasta que lo
+   * libere el reaper de los 30 minutos y nadie mas lo puede llamar.
+   */
+  idItem?: number | null;
   idCuota: number;
   numeroCuota: number;
   totalCuotas: number;

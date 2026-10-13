@@ -6673,6 +6673,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   private onSaveSuccess(resultadoCodigo: string, gestionCodigo: string) {
+    // Si venimos del seguimiento, dejar el resultado REAL de la tipificación para
+    // que /seguimiento lo mande al cerrar el item. Antes se mandaba 'CONTESTADO'
+    // fijo y la tabla quedaba diciendo que todas las llamadas se contestaron.
+    if (sessionStorage.getItem('recordatorioEnCurso')) {
+      const real = (resultadoCodigo || '').trim() || (gestionCodigo || '').trim();
+      if (real && real !== '-') {
+        sessionStorage.setItem('seguimientoResultado', real);
+      }
+    }
+
     // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
     // Todas las ramas de este método terminan navegando fuera de la pantalla.
     this.salidaAutorizada = true;

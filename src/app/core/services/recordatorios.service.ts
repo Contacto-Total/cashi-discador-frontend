@@ -155,7 +155,9 @@ export class RecordatoriosService {
     let params = '';
     const queryParams: string[] = [];
 
-    if (resultado) queryParams.push(`resultado=${resultado}`);
+    // Encodeado porque ya no es un codigo fijo: es la etiqueta de la
+    // tipificacion, con espacios y acentos.
+    if (resultado) queryParams.push(`resultado=${encodeURIComponent(resultado)}`);
     if (uuidLlamada) queryParams.push(`uuidLlamada=${uuidLlamada}`);
     if (observaciones) queryParams.push(`observaciones=${encodeURIComponent(observaciones)}`);
 

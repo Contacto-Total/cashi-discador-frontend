@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { RecordatoriosService } from '../../core/services/recordatorios.service';
+import { SeguimientoService } from '../../core/services/seguimiento.service';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SipService } from '../../core/services/sip.service';
@@ -279,6 +280,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private recordatoriosService: RecordatoriosService,
+    private seguimientoService: SeguimientoService,
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
     private sipService: SipService
@@ -421,10 +423,16 @@ export class SeguimientoPage implements OnInit, OnDestroy {
 
     const agentId = this.userId;
 
-    this.recordatoriosService.completarActual(agentId, 'CONTESTADO').subscribe({
+    // El resultado real lo dejó collection-management al guardar la gestión.
+    // Antes aquí iba 'CONTESTADO' fijo, así que la tabla decía que todas las
+    // llamadas se contestaron y no había forma de medir si el seguimiento sirve.
+    const resultado = sessionStorage.getItem('seguimientoResultado') || 'CONTESTADO';
+
+    this.recordatoriosService.completarActual(agentId, resultado).subscribe({
       next: (response) => {
-        console.log('[Seguimiento] Recordatorio completado:', response);
+        console.log('[Seguimiento] Recordatorio completado:', resultado, response);
         sessionStorage.removeItem('recordatorioEnCurso');
+        sessionStorage.removeItem('seguimientoResultado');
 
         if (response.terminado) {
           this.mostrarFinalizacion();
@@ -456,6 +464,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error completando recordatorio:', err);
         sessionStorage.removeItem('recordatorioEnCurso');
+        sessionStorage.removeItem('seguimientoResultado');
         this.mostrarFinalizacion();
       }
     });
@@ -583,10 +592,25 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       this.limpiarLlamadaCancelada();
     }
 
-    // 3. Volver al estado initial (quedarse en la página)
+    // 3. Devolver el cliente a la cola. El item quedó tomado al pedirlo, así que
+    //    si no se suelta queda bloqueado media hora (hasta que lo libere el
+    //    reaper del backend) y nadie más puede llamarlo.
+    this.soltarItemActual();
+
+    // 4. Volver al estado initial (quedarse en la página)
     this.llamadaIniciada = false;
     this.recordatorioActual = null;
     this.pageState = 'initial';
+  }
+
+  /** Suelta el item tomado, si hay uno. Silencioso: cancelar no debe fallar. */
+  private soltarItemActual(): void {
+    const idItem = this.recordatorioActual?.idItem;
+    if (!idItem || !this.authService.isAuthenticated()) return;
+    this.seguimientoService.soltarItem(idItem).subscribe({
+      next: () => console.log('[Seguimiento] Item', idItem, 'devuelto a la cola'),
+      error: () => {}
+    });
   }
 
   /**
@@ -597,6 +621,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
    */
   volverAlDashboard(): void {
     this.limpiarIntervals();
+    this.soltarItemActual();
     this.limpiarLlamadaCancelada();
     this.sipService.blockIncomingCallsMode(false);
 
