@@ -463,7 +463,11 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   hora(iso?: string): string {
     if (!iso) return '—';
-    return new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    // En 24 h, como la maqueta: con el formato de es-PE sale "11:38 a. m." y ese
+    // sufijo parte la hora en dos lineas dentro de la columna de 74 px de la tarjeta.
+    return new Date(iso).toLocaleTimeString('es-PE', {
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
   }
 
   /** «lunes 28 de septiembre», con hoy, ayer y mañana dichos por su nombre. */
