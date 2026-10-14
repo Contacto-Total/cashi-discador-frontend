@@ -66,6 +66,8 @@ interface Fila {
   nivel: number;
   raiz: number;
   ancestros: TypificationTreeNodeV2[];
+  /** Fila de la lista que el nodo pasa a sus opciones (el motivo de no pago); `node` es quien la define. */
+  lista?: boolean;
 }
 
 interface EstadoEliminar {
@@ -188,11 +190,17 @@ export class TypificationMaintenanceComponent implements OnInit {
     }
     const abiertos = this.desplegadosDe(id);
     const filas: Fila[] = [];
+    // La lista que un nodo pasa a sus opciones se ve como un nivel entre él y ellas: el asesor la
+    // elige antes del detalle. En el catálogo sigue siendo un campo de ese nodo.
     const bajar = (nodes: TypificationTreeNodeV2[], nivel: number, raiz: number, ancestros: TypificationTreeNodeV2[]) => nodes.forEach(n => {
       const r = nivel === 1 ? n.typification.id : raiz;
       filas.push({ node: n, nivel, raiz: r, ancestros });
       if (n.children.length && (nivel > 1 || abiertos.includes(n.typification.id))) {
-        bajar(n.children, nivel + 1, r, [...ancestros, n]);
+        const conLista = d.lista?.tipificacionId === n.typification.id;
+        if (conLista) {
+          filas.push({ node: n, nivel: nivel + 1, raiz: r, ancestros: [...ancestros, n], lista: true });
+        }
+        bajar(n.children, nivel + (conLista ? 2 : 1), r, [...ancestros, n]);
       }
     });
     bajar(d.arbol, 1, 0, []);
@@ -446,6 +454,16 @@ export class TypificationMaintenanceComponent implements OnInit {
     return Object.keys(this.borrador(f.node.typification.id)).length > 0;
   }
 
+  /** Clave de la fila: la de la lista comparte nodo con la tipificación que la define. */
+  clave(f: Fila): string {
+    return (f.lista ? 'lista-' : '') + f.node.typification.id;
+  }
+
+  /** Motivos activos de la lista de la subcartera abierta. */
+  motivosActivos(): number {
+    return this.motivos().filter(m => m.activo).length;
+  }
+
   finales(n: TypificationTreeNodeV2): number {
     return n.children.length ? n.children.reduce((s, x) => s + this.finales(x), 0) : 1;
   }
@@ -455,10 +473,6 @@ export class TypificationMaintenanceComponent implements OnInit {
     const d = this.datosActual(), tip = f.node.typification.id;
     const propios = (d?.campos[tip] ?? []);
     const pills: string[] = [];
-    if (d?.lista?.tipificacionId === tip) {
-      const n = this.finales(f.node);
-      pills.push(`${d.lista.etiqueta.toLowerCase()} · ${n} ${n === 1 ? 'opción' : 'opciones'}`);
-    }
     propios.filter(c => !(String(c.tipoCampo).toUpperCase() === 'SELECT' && c.aplicaADescendientes))
       .forEach(c => pills.push((c.labelCampo || c.nombreCampo).toLowerCase()));
     return pills;
