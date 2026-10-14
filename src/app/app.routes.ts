@@ -157,6 +157,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/reports/produccion-report/produccion-report.component').then(m => m.ProduccionReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'reports/entregables',
+    loadComponent: () => import('./features/reports/entregables-report/entregables-report.component').then(m => m.EntregablesReportComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // SMS
@@ -373,6 +378,12 @@ export const routes: Routes = [
     path: 'admin/maintenance/umbrales-estado',
     loadComponent: () => import('./maintenance/components/umbrales-estado/umbrales-estado.component').then(m => m.UmbralesEstadoComponent),
     canActivate: [authGuard, adminOrOperacionesGuard]
+  },
+  {
+    // Programacion y nombres de los reportes entregables de cada subcartera.
+    path: 'admin/maintenance/entregables-reporte',
+    loadComponent: () => import('./maintenance/components/entregables-reporte/entregables-reporte.component').then(m => m.EntregablesReporteComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
   },
 
   // ========================================
