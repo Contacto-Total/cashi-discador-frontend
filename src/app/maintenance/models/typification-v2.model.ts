@@ -30,9 +30,23 @@ export interface TypificationCatalogV2 {
   colorSugerido?: string;
   iconoSugerido?: string;
   esSistema: boolean;
+  // Opción de la tipificación base de Cashi a la que va esta opción (vale para todas las carteras)
+  idTipificacionBase?: number | null;
   fechaCreacion: string;
   fechaActualizacion: string;
   fechaEliminacion?: string;
+}
+
+/** Opción de la tipificación base de Cashi: dos niveles iguales para todos los clientes. */
+export interface TipificacionBase {
+  id: number;
+  codigo: string;
+  nivel1: string;
+  nivel2: string;
+  accion?: string | null;
+  invalidaTelefono: boolean;
+  origen: string;
+  orden: number;
 }
 
 export interface TenantTypificationConfigV2 {

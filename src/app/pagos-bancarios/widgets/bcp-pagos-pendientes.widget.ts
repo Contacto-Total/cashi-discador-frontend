@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import { BcpPagosService } from '../services/bcp-pagos.service';
 import { PagoBancoPendiente } from '../models/bcp-archivo.model';
 import {
@@ -10,6 +11,9 @@ import {
   infoCategoria,
   montoSoles
 } from '../models/categoria-pago';
+import { coincideDocumento, cortarPagina } from '../models/paginacion';
+import { BuscadorDocumentoWidget } from './buscador-documento.widget';
+import { TablaPaginacionWidget } from './tabla-paginacion.widget';
 
 /**
  * Pagos bancarios guardados que siguen pendientes de conciliar en la subcartera.
@@ -17,7 +21,7 @@ import {
 @Component({
   selector: 'app-bcp-pagos-pendientes',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, A11yModule, BuscadorDocumentoWidget, TablaPaginacionWidget],
   template: `
     <!-- relative: contiene el caption sr-only; sin esto se sale del scroll de .main-content y estira la página -->
     <section class="relative bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" [attr.aria-labelledby]="idPrefix + '-titulo'">
@@ -26,7 +30,17 @@ import {
           <h2 [id]="idPrefix + '-titulo'" class="text-lg font-semibold text-slate-800 dark:text-white">Pagos pendientes de conciliar</h2>
           <p class="text-xs text-slate-600 dark:text-slate-400">Pagos ya guardados de esta subcartera que esperan una corrección o el resto del monto</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <app-buscador-documento [inputId]="idPrefix + '-buscar'" [valor]="busqueda()" (valorChange)="buscar($event)"></app-buscador-documento>
+          <button
+            type="button"
+            (click)="alternarNoCorresponden()"
+            [attr.aria-pressed]="verNoCorresponden()"
+            [disabled]="cargando() || reevaluando()"
+            class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800"
+          >
+            {{ verNoCorresponden() ? 'Ver pendientes' : 'Ver no corresponden' }}
+          </button>
           <button
             type="button"
             (click)="cargar()"
@@ -38,7 +52,7 @@ import {
           <button
             type="button"
             (click)="reevaluar()"
-            [disabled]="cargando() || reevaluando() || pagos().length === 0"
+            [disabled]="cargando() || reevaluando() || verNoCorresponden() || pagos().length === 0"
             class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-800"
           >
             {{ reevaluando() ? 'Reevaluando...' : 'Reevaluar pendientes' }}
@@ -55,10 +69,65 @@ import {
         <p role="alert" class="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">{{ texto }}</p>
       }
 
-      @if (cargando()) {
+      @if (verNoCorresponden()) {
+        @if (cargando()) {
+          <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Cargando pagos que no corresponden...</p>
+        } @else if (noCorresponden().length === 0) {
+          <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos marcados como no corresponde en esta subcartera.</p>
+        } @else if (noCorrespondenFiltrados().length === 0) {
+          <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos con ese documento.</p>
+        } @else {
+          <p class="border-b border-slate-200 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
+            Pagos guardados que un supervisor sacó de pendientes porque no corresponden a la gestión de la empresa. El motivo queda en el histórico de correcciones.
+          </p>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <caption class="sr-only">Pagos bancarios marcados como no corresponde</caption>
+              <thead class="bg-slate-100 text-xs uppercase tracking-wide text-slate-700 dark:bg-slate-700/60 dark:text-slate-200">
+                <tr>
+                  <th scope="col" class="px-3 py-2 text-left font-bold">Documento</th>
+                  <th scope="col" class="px-3 py-2 text-left font-bold">Fecha banco</th>
+                  <th scope="col" class="px-3 py-2 text-right font-bold">Monto banco</th>
+                  <th scope="col" class="px-3 py-2 text-left font-bold">Operación</th>
+                  <th scope="col" class="px-3 py-2 text-left font-bold">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                @for (pago of paginaNoCorresponden(); track pago.id) {
+                  <tr>
+                    <th scope="row" class="px-3 py-2 text-left font-semibold whitespace-nowrap text-slate-900 dark:text-white">{{ pago.documento }}</th>
+                    <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(pago.fechaBanco) }}</td>
+                    <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ monto(pago.montoBanco) }}</td>
+                    <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ pago.numeroOperacion || '-' }}</td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <button
+                        type="button"
+                        (click)="restaurar(pago)"
+                        [disabled]="guardando()"
+                        [attr.aria-label]="'Volver a pendientes el pago de ' + pago.documento + ' por ' + monto(pago.montoBanco)"
+                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800"
+                      >
+                        Volver a pendientes
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <app-tabla-paginacion
+            [total]="noCorrespondenFiltrados().length"
+            [pagina]="pagina()"
+            etiqueta="pagos que no corresponden"
+            (paginaChange)="pagina.set($event)"
+          ></app-tabla-paginacion>
+        }
+      } @else if (cargando()) {
         <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Cargando pagos pendientes...</p>
       } @else if (pagos().length === 0) {
         <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes en esta subcartera.</p>
+      } @else if (pendientesFiltrados().length === 0) {
+        <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes con ese documento.</p>
       } @else {
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
@@ -75,7 +144,7 @@ import {
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-              @for (pago of pagos(); track pago.id) {
+              @for (pago of paginaPendientes(); track pago.id) {
                 <tr class="align-top">
                   <th scope="row" class="px-3 py-2 text-left font-semibold whitespace-nowrap">
                     <button
@@ -104,14 +173,24 @@ import {
                   </td>
                   <td class="px-3 py-2 whitespace-nowrap">
                     @if (pago.categoria === 'REQUIERE_REVISION') {
-                      <button
-                        type="button"
-                        (click)="resolver.emit(pago)"
-                        [attr.aria-label]="'Resolver pago de ' + pago.documento + ' por ' + monto(pago.montoBanco)"
-                        class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
-                      >
-                        Resolver
-                      </button>
+                      <div class="flex items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="resolver.emit(pago)"
+                          [attr.aria-label]="'Resolver pago de ' + pago.documento + ' por ' + monto(pago.montoBanco)"
+                          class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+                        >
+                          Resolver
+                        </button>
+                        <button
+                          type="button"
+                          (click)="abrirNoCorresponde(pago, $event)"
+                          [attr.aria-label]="'Marcar que no corresponde el pago de ' + pago.documento + ' por ' + monto(pago.montoBanco)"
+                          class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800"
+                        >
+                          No corresponde
+                        </button>
+                      </div>
                     } @else {
                       <span class="text-xs text-slate-600 dark:text-slate-400">En espera del banco</span>
                     }
@@ -121,8 +200,74 @@ import {
             </tbody>
           </table>
         </div>
+        <app-tabla-paginacion
+          [total]="pendientesFiltrados().length"
+          [pagina]="pagina()"
+          etiqueta="pagos pendientes de conciliar"
+          (paginaChange)="pagina.set($event)"
+        ></app-tabla-paginacion>
       }
     </section>
+
+    @if (pagoNoCorresponde(); as pago) {
+      <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarNoCorresponde()">
+        <div
+          role="dialog"
+          aria-modal="true"
+          [attr.aria-labelledby]="idPrefix + '-nc-titulo'"
+          [attr.aria-describedby]="idPrefix + '-nc-desc'"
+          cdkTrapFocus
+          [cdkTrapFocusAutoCapture]="true"
+          (click)="$event.stopPropagation()"
+          (keydown.escape)="cerrarNoCorresponde()"
+          class="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-800"
+        >
+          <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+            <h3 [id]="idPrefix + '-nc-titulo'" class="text-base font-semibold text-slate-900 dark:text-white">Marcar que no corresponde</h3>
+            <p [id]="idPrefix + '-nc-desc'" class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Pago de {{ pago.documento }} del {{ fecha(pago.fechaBanco) }} por {{ monto(pago.montoBanco) }}.
+              Se conserva, deja de estar pendiente y se puede volver a pendientes después.
+            </p>
+          </div>
+          <form class="px-5 py-4" (submit)="confirmarNoCorresponde($event)">
+            <label [for]="idPrefix + '-nc-motivo'" class="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Motivo <span class="font-normal text-slate-600 dark:text-slate-400">(obligatorio)</span>
+            </label>
+            <textarea
+              [id]="idPrefix + '-nc-motivo'"
+              rows="3"
+              maxlength="500"
+              required
+              [value]="motivoNoCorresponde()"
+              (input)="motivoNoCorresponde.set($any($event.target).value)"
+              [attr.aria-invalid]="errorNoCorresponde() ? true : null"
+              [attr.aria-describedby]="errorNoCorresponde() ? idPrefix + '-nc-error' : null"
+              placeholder="Ej.: en agosto el cliente estaba con otra empresa"
+              class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+            ></textarea>
+            @if (errorNoCorresponde(); as texto) {
+              <p [id]="idPrefix + '-nc-error'" role="alert" class="mt-1 text-sm text-red-700 dark:text-red-300">{{ texto }}</p>
+            }
+            <div class="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                (click)="cerrarNoCorresponde()"
+                class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                [disabled]="guardando()"
+                class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-800"
+              >
+                {{ guardando() ? 'Guardando...' : 'Marcar' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
   `
 })
 export class BcpPagosPendientesWidget implements OnChanges {
@@ -141,16 +286,36 @@ export class BcpPagosPendientesWidget implements OnChanges {
   mensaje = signal<string | null>(null);
   error = signal<string | null>(null);
 
+  /** Muestra los pagos marcados como «no corresponde» en lugar de los pendientes. */
+  verNoCorresponden = signal(false);
+  noCorresponden = signal<PagoBancoPendiente[]>([]);
+  pagoNoCorresponde = signal<PagoBancoPendiente | null>(null);
+  motivoNoCorresponde = signal('');
+  errorNoCorresponde = signal<string | null>(null);
+  guardando = signal(false);
+  busqueda = signal('');
+  /** Página de la lista visible; se comparte entre pendientes y no corresponden. */
+  pagina = signal(1);
+  /** Botón que abrió el diálogo: recibe el foco al cerrarlo. */
+  private origenDialogo: HTMLElement | null = null;
+
   constructor(private bcpService: BcpPagosService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
       this.mensaje.set(null);
+      this.verNoCorresponden.set(false);
+      this.busqueda.set('');
+      this.pagina.set(1);
     }
     this.cargar();
   }
 
   cargar(): void {
+    if (this.verNoCorresponden()) {
+      this.cargarNoCorresponden();
+      return;
+    }
     if (!this.tieneContexto()) {
       this.pagos.set([]);
       return;
@@ -184,6 +349,110 @@ export class BcpPagosPendientesWidget implements OnChanges {
       error: err => {
         this.reevaluando.set(false);
         this.error.set(err?.error?.mensaje || 'No se pudieron reevaluar los pagos pendientes.');
+      }
+    });
+  }
+
+  alternarNoCorresponden(): void {
+    this.verNoCorresponden.update(valor => !valor);
+    this.mensaje.set(null);
+    this.pagina.set(1);
+    this.cargar();
+  }
+
+  buscar(texto: string): void {
+    this.busqueda.set(texto);
+    this.pagina.set(1);
+  }
+
+  pendientesFiltrados(): PagoBancoPendiente[] {
+    return this.pagos().filter(pago => coincideDocumento(pago.documento, this.busqueda()));
+  }
+
+  paginaPendientes(): PagoBancoPendiente[] {
+    return cortarPagina(this.pendientesFiltrados(), this.pagina());
+  }
+
+  noCorrespondenFiltrados(): PagoBancoPendiente[] {
+    return this.noCorresponden().filter(pago => coincideDocumento(pago.documento, this.busqueda()));
+  }
+
+  paginaNoCorresponden(): PagoBancoPendiente[] {
+    return cortarPagina(this.noCorrespondenFiltrados(), this.pagina());
+  }
+
+  private cargarNoCorresponden(): void {
+    if (!this.tieneContexto()) {
+      this.noCorresponden.set([]);
+      return;
+    }
+    this.cargando.set(true);
+    this.error.set(null);
+    this.bcpService.listarNoCorresponden(this.contexto()).subscribe({
+      next: pagos => {
+        this.noCorresponden.set(pagos || []);
+        this.cargando.set(false);
+      },
+      error: () => {
+        this.error.set('No se pudieron cargar los pagos que no corresponden.');
+        this.cargando.set(false);
+      }
+    });
+  }
+
+  abrirNoCorresponde(pago: PagoBancoPendiente, evento: Event): void {
+    this.origenDialogo = evento.currentTarget as HTMLElement | null;
+    this.motivoNoCorresponde.set('');
+    this.errorNoCorresponde.set(null);
+    this.pagoNoCorresponde.set(pago);
+  }
+
+  cerrarNoCorresponde(): void {
+    if (this.guardando()) return;
+    this.pagoNoCorresponde.set(null);
+    this.origenDialogo?.focus();
+    this.origenDialogo = null;
+  }
+
+  confirmarNoCorresponde(evento: Event): void {
+    evento.preventDefault();
+    const pago = this.pagoNoCorresponde();
+    const motivo = this.motivoNoCorresponde().trim();
+    if (!pago) return;
+    if (!motivo) {
+      this.errorNoCorresponde.set('Escribe el motivo.');
+      return;
+    }
+    this.guardando.set(true);
+    this.errorNoCorresponde.set(null);
+    this.bcpService.marcarNoCorresponde(pago.id, motivo, this.contexto()).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.pagoNoCorresponde.set(null);
+        // La fila desaparece de la lista: el foco no puede volver a su botón.
+        this.origenDialogo = null;
+        this.mensaje.set(`El pago de ${pago.documento} por ${this.monto(pago.montoBanco)} ya no está pendiente.`);
+        this.cargar();
+      },
+      error: err => {
+        this.guardando.set(false);
+        this.errorNoCorresponde.set(err?.error?.mensaje || 'No se pudo marcar el pago.');
+      }
+    });
+  }
+
+  restaurar(pago: PagoBancoPendiente): void {
+    this.guardando.set(true);
+    this.error.set(null);
+    this.bcpService.restaurarPendiente(pago.id, this.contexto()).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.mensaje.set(`El pago de ${pago.documento} por ${this.monto(pago.montoBanco)} volvió a pendientes.`);
+        this.cargar();
+      },
+      error: err => {
+        this.guardando.set(false);
+        this.error.set(err?.error?.mensaje || 'No se pudo devolver el pago a pendientes.');
       }
     });
   }

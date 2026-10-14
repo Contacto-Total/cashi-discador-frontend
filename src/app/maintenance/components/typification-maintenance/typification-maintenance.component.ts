@@ -11,6 +11,7 @@ import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
 import {
   AdditionalFieldV2,
   TenantTypificationConfigV2,
+  TipificacionBase,
   TypificationCatalogV2,
   TypificationTreeNodeV2,
   UpdateTypificationConfigCommandV2
@@ -66,6 +67,8 @@ interface Fila {
   nivel: number;
   raiz: number;
   ancestros: TypificationTreeNodeV2[];
+  /** Fila de la lista que el nodo pasa a sus opciones (el motivo de no pago); `node` es quien la define. */
+  lista?: boolean;
 }
 
 interface EstadoEliminar {
@@ -117,8 +120,11 @@ export class TypificationMaintenanceComponent implements OnInit {
   readonly COLORES = COLORES;
 
   /** Columnas de la cabecera y de cada fila: tipificación, campos, habilitada y editar. */
-  readonly REJILLA = 'grid grid-cols-[minmax(0,1fr)_auto_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2 '
-    + '@max-[44rem]/tabla:grid-cols-[minmax(0,1fr)_auto_3.5rem_1.75rem]';
+  readonly REJILLA = 'grid grid-cols-[minmax(0,1fr)_auto_12rem_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2 '
+    + '@max-[44rem]/tabla:grid-cols-[minmax(0,1fr)_auto_9.5rem_3.5rem_1.75rem]';
+  /** Lista de la tipificación base; sin asignar va en ámbar. */
+  readonly LISTA_BASE = 'font-cashi m-0! h-auto! w-full min-w-0 rounded-lg! border! px-2! py-[.3125rem]! text-[.8125rem]! leading-[1.5]! text-ellipsis outline-none '
+    + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
   readonly REJILLA_LISTA = 'grid grid-cols-[6rem_minmax(0,1fr)_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2';
   readonly LISTA = 'font-cashi m-0! h-auto! w-full rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-2.5! py-2! text-[.875rem]! leading-[1.5]! text-ellipsis text-foreground! outline-none '
     + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
@@ -148,6 +154,24 @@ export class TypificationMaintenanceComponent implements OnInit {
   /** Tipos de contacto desplegados por subcartera; al entrar a una, todos plegados. */
   private readonly desplegados = signal<Record<number, number[]>>({});
   readonly pestana = signal<'arbol' | 'lista'>('arbol');
+  /** Opciones de la tipificación base y lo que se cambió sin guardar (por tipificación del catálogo:
+      vale para todas las carteras). null = quitar la base. */
+  readonly bases = signal<TipificacionBase[]>([]);
+  private readonly basesTrabajo = signal<Record<number, number | null>>({});
+  /** Grupo base elegido en la fila de un tipo de contacto (por id del nivel 1), mientras no se guarde. */
+  private readonly gruposTrabajo = signal<Record<number, string>>({});
+  readonly basesPorGrupo = computed(() => {
+    const grupos: { nombre: string; opciones: TipificacionBase[] }[] = [];
+    for (const b of this.bases()) {
+      const g = grupos.find(x => x.nombre === b.nivel1);
+      if (g) {
+        g.opciones.push(b);
+      } else {
+        grupos.push({ nombre: b.nivel1, opciones: [b] });
+      }
+    }
+    return grupos;
+  });
   /** Tipificación con la edición abierta debajo de su fila. */
   readonly abierta = signal<number | null>(null);
   /** Cambia cuando hay que volver a crear los campos de texto: solo toman el valor al nacer. */
@@ -188,11 +212,17 @@ export class TypificationMaintenanceComponent implements OnInit {
     }
     const abiertos = this.desplegadosDe(id);
     const filas: Fila[] = [];
+    // La lista que un nodo pasa a sus opciones se ve como un nivel entre él y ellas: el asesor la
+    // elige antes del detalle. En el catálogo sigue siendo un campo de ese nodo.
     const bajar = (nodes: TypificationTreeNodeV2[], nivel: number, raiz: number, ancestros: TypificationTreeNodeV2[]) => nodes.forEach(n => {
       const r = nivel === 1 ? n.typification.id : raiz;
       filas.push({ node: n, nivel, raiz: r, ancestros });
       if (n.children.length && (nivel > 1 || abiertos.includes(n.typification.id))) {
-        bajar(n.children, nivel + 1, r, [...ancestros, n]);
+        const conLista = d.lista?.tipificacionId === n.typification.id;
+        if (conLista) {
+          filas.push({ node: n, nivel: nivel + 1, raiz: r, ancestros: [...ancestros, n], lista: true });
+        }
+        bajar(n.children, nivel + (conLista ? 2 : 1), r, [...ancestros, n]);
       }
     });
     bajar(d.arbol, 1, 0, []);
@@ -200,7 +230,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   });
 
   readonly cambios = computed(() => {
-    let n = 0;
+    let n = Object.keys(this.basesTrabajo()).length;
     for (const porTip of Object.values(this.borradores())) {
       n += Object.keys(porTip).length;
     }
@@ -227,6 +257,7 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarAmbito();
+    this.api.getTipificacionesBase().pipe(catchError(() => of([] as TipificacionBase[]))).subscribe(b => this.bases.set(b));
   }
 
   // ---------------------------------------------------------------- Carga
@@ -443,7 +474,75 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   cambiada(f: Fila): boolean {
-    return Object.keys(this.borrador(f.node.typification.id)).length > 0;
+    return Object.keys(this.borrador(f.node.typification.id)).length > 0 || f.node.typification.id in this.basesTrabajo();
+  }
+
+  /** Opción base de la fila: la que se está cambiando o la guardada. */
+  baseDe(f: Fila): number | null {
+    return this.baseDeNodo(f.node);
+  }
+
+  private baseDeNodo(n: TypificationTreeNodeV2): number | null {
+    const tip = n.typification.id, t = this.basesTrabajo();
+    return tip in t ? t[tip] : n.typification.idTipificacionBase ?? null;
+  }
+
+  private finalesDe(n: TypificationTreeNodeV2): TypificationTreeNodeV2[] {
+    return n.children.length ? n.children.flatMap(h => this.finalesDe(h)) : [n];
+  }
+
+  /** Grupo base de un tipo de contacto: el elegido en su fila o, si no, el que comparten sus opciones. */
+  grupoDe(raiz: TypificationTreeNodeV2): string {
+    const elegido = this.gruposTrabajo()[raiz.typification.id];
+    if (elegido) {
+      return elegido;
+    }
+    const grupos = new Set(this.finalesDe(raiz).map(n => this.bases().find(b => b.id === this.baseDeNodo(n))?.nivel1).filter(Boolean));
+    return grupos.size === 1 ? [...grupos][0] as string : '';
+  }
+
+  /** Opciones que ofrece la lista de una opción final: solo las del grupo de su tipo de contacto
+      (sin las del discador, salvo la que ya tenga). Sin grupo, todas. */
+  opcionesBase(f: Fila): TipificacionBase[] {
+    const raiz = f.ancestros[0], grupo = raiz ? this.grupoDe(raiz) : '', actual = this.baseDe(f);
+    return this.bases().filter(b => (!grupo || b.nivel1 === grupo) && (b.origen !== 'DISCADOR' || b.id === actual));
+  }
+
+  /** Al cambiar el grupo, cada opción pasa a la del mismo nombre en el grupo nuevo; si no hay, queda sin asignar. */
+  elegirGrupo(f: Fila, grupo: string): void {
+    this.gruposTrabajo.update(g => ({ ...g, [f.node.typification.id]: grupo }));
+    for (const n of this.finalesDe(f.node)) {
+      const actual = this.bases().find(b => b.id === this.baseDeNodo(n));
+      if (!actual || actual.nivel1 === grupo) {
+        continue;
+      }
+      const igual = this.bases().find(b => b.nivel1 === grupo && b.nivel2 === actual.nivel2);
+      this.elegirBase({ node: n, nivel: 0, raiz: 0, ancestros: [] }, igual ? String(igual.id) : '');
+    }
+  }
+
+  rotuloBase(f: Fila): string {
+    const b = this.bases().find(x => x.id === this.baseDe(f));
+    return b ? `${b.nivel1} › ${b.nivel2}` : 'Sin asignar';
+  }
+
+  elegirBase(f: Fila, valor: string): void {
+    const tip = f.node.typification.id, nueva = valor ? Number(valor) : null;
+    const guardada = f.node.typification.idTipificacionBase ?? null;
+    this.basesTrabajo.update(t => {
+      const { [tip]: _, ...resto } = t;
+      return nueva === guardada ? resto : { ...resto, [tip]: nueva };
+    });
+  }
+
+  /** Clave de la fila: la de la lista comparte nodo con la tipificación que la define. */
+  clave(f: Fila): string {
+    return (f.lista ? 'lista-' : '') + f.node.typification.id;
+  }
+
+  /** Motivos activos de la lista de la subcartera abierta. */
+  motivosActivos(): number {
+    return this.motivos().filter(m => m.activo).length;
   }
 
   finales(n: TypificationTreeNodeV2): number {
@@ -455,10 +554,6 @@ export class TypificationMaintenanceComponent implements OnInit {
     const d = this.datosActual(), tip = f.node.typification.id;
     const propios = (d?.campos[tip] ?? []);
     const pills: string[] = [];
-    if (d?.lista?.tipificacionId === tip) {
-      const n = this.finales(f.node);
-      pills.push(`${d.lista.etiqueta.toLowerCase()} · ${n} ${n === 1 ? 'opción' : 'opciones'}`);
-    }
     propios.filter(c => !(String(c.tipoCampo).toUpperCase() === 'SELECT' && c.aplicaADescendientes))
       .forEach(c => pills.push((c.labelCampo || c.nombreCampo).toLowerCase()));
     return pills;
@@ -515,6 +610,10 @@ export class TypificationMaintenanceComponent implements OnInit {
       const { [f.node.typification.id]: _, ...resto } = todos[id] ?? {};
       return { ...todos, [id]: resto };
     });
+    this.basesTrabajo.update(t => {
+      const { [f.node.typification.id]: _, ...resto } = t;
+      return resto;
+    });
     this.version.update(n => n + 1);
   }
 
@@ -569,6 +668,8 @@ export class TypificationMaintenanceComponent implements OnInit {
   descartar(): void {
     const datos = this.datos();
     this.borradores.set({});
+    this.basesTrabajo.set({});
+    this.gruposTrabajo.set({});
     this.motivosTrabajo.set(Object.fromEntries(Object.entries(datos).filter(([, d]) => d.lista).map(([id, d]) => [id, d.motivos.map(x => ({ ...x }))])));
     this.version.update(n => n + 1);
   }
@@ -582,6 +683,9 @@ export class TypificationMaintenanceComponent implements OnInit {
       return;
     }
     const estados: Observable<unknown>[] = [], personales: Observable<unknown>[] = [], listas: Observable<unknown>[] = [];
+    // La base es del catálogo: vale para todas las carteras que usan la opción.
+    const basesCambiadas = Object.entries(this.basesTrabajo());
+    const conBase = basesCambiadas.map(([tip, base]) => this.api.asignarTipificacionBase(Number(tip), base));
     const tocadas = new Set<number>();
     for (const [idTexto, porTip] of Object.entries(this.borradores())) {
       const id = Number(idTexto), a = this.ambito().find(x => x.subId === id), d = this.datos()[id];
@@ -627,18 +731,21 @@ export class TypificationMaintenanceComponent implements OnInit {
     }
 
     this.guardando.set(true);
-    from([...estados, ...personales, ...listas]).pipe(concatMap(p => p), toArray()).subscribe({
-      next: () => this.alGuardar(tocadas, true),
-      error: err => this.alGuardar(tocadas, false, err?.error?.error || err?.error?.message)
+    from([...estados, ...personales, ...conBase, ...listas]).pipe(concatMap(p => p), toArray()).subscribe({
+      next: () => this.alGuardar(tocadas, true, undefined, basesCambiadas.length > 0),
+      error: err => this.alGuardar(tocadas, false, err?.error?.error || err?.error?.message, basesCambiadas.length > 0)
     });
   }
 
   /** Tras guardar (o fallar a medias) se vuelve a leer lo que quedó en las subcarteras tocadas. */
-  private alGuardar(tocadas: Set<number>, ok: boolean, mensaje?: string): void {
+  private alGuardar(tocadas: Set<number>, ok: boolean, mensaje?: string, cambioCatalogo = false): void {
     this.guardando.set(false);
     this.borradores.set({});
+    this.basesTrabajo.set({});
+    this.gruposTrabajo.set({});
     this.abierta.set(null);
-    this.datos.update(d => Object.fromEntries(Object.entries(d).filter(([id]) => !tocadas.has(Number(id)))));
+    // Un cambio de base es del catálogo: se vuelven a leer todas las subcarteras.
+    this.datos.update(d => cambioCatalogo ? {} : Object.fromEntries(Object.entries(d).filter(([id]) => !tocadas.has(Number(id)))));
     this.motivosTrabajo.update(m => Object.fromEntries(Object.entries(m).filter(([id]) => !tocadas.has(Number(id)))));
     const id = this.sub();
     if (id) {

@@ -49,9 +49,26 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
               <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
             } @else if (resumen) {
               <div class="mb-3 grid grid-cols-3 gap-2">
-                <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                  <p class="line-clamp-3 text-[10px] leading-tight text-slate-500 dark:text-slate-400">Carta de no adeudo disponible</p>
+                <div class="group relative rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                  <p class="line-clamp-3 pr-5 text-[10px] leading-tight text-slate-500 dark:text-slate-400">Carta de no adeudo disponible</p>
                   <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
+                  <!-- Acción discreta: solo aparece al pasar el mouse o al llegar con el teclado. -->
+                  @if (puedeRecalcular()) {
+                    <button
+                      type="button"
+                      (click)="recalcularPagoCumplido()"
+                      [disabled]="recalculando || enEspera"
+                      [title]="enEspera ? 'Espera unos segundos para volver a recalcular' : 'Recalcular con los pagos verificados por el banco'"
+                      aria-label="Recalcular carta de no adeudo"
+                      class="absolute right-1 top-1 rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 hover:text-slate-700 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 group-hover:opacity-100 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    >
+                      <svg class="h-3.5 w-3.5" [class.animate-spin]="recalculando" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+                        <path d="M21 3v6h-6"/>
+                      </svg>
+                    </button>
+                  }
+                  <p class="text-[10px] leading-tight text-slate-500 dark:text-slate-400" role="status" aria-live="polite">{{ mensajeRecalculo }}</p>
                 </div>
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Promesas</p>
@@ -433,6 +450,14 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   private visorVoucherObjectUrl: string | null = null;
   private visorVoucherSub: Subscription | null = null;
 
+  /** Recálculo de la carta de no adeudo (PAGO_CUMPLIDO). */
+  recalculando = false;
+  /** Tras recalcular hay una espera corta, para que no se repita en ráfaga. */
+  enEspera = false;
+  mensajeRecalculo = '';
+  private esperaRecalculo: ReturnType<typeof setTimeout> | null = null;
+  private static readonly ESPERA_RECALCULO_MS = 30000;
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['mode']) {
       this.sincronizarMenu(this.open && this.mode === 'drawer');
@@ -440,10 +465,60 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
     if ((changes['open'] && !this.open) || changes['resumen']) {
       this.cerrarVisorVoucher();
       this.cerrarDetallePagos();
+      this.mensajeRecalculo = '';
     }
   }
 
+  puedeRecalcular(): boolean {
+    return !!this.documentoActual() && !!this.contextoRecalculo();
+  }
+
+  recalcularPagoCumplido(): void {
+    const documento = this.documentoActual();
+    const contexto = this.contextoRecalculo();
+    if (!documento || !contexto || this.recalculando || this.enEspera) return;
+
+    this.recalculando = true;
+    this.mensajeRecalculo = '';
+    this.bcpPagosService.recalcularPagoCumplido(documento, contexto).subscribe({
+      next: respuesta => {
+        this.recalculando = false;
+        if (this.resumen) {
+          this.resumen = { ...this.resumen, pagoCumplido: respuesta.pagoCumplido };
+        }
+        this.mensajeRecalculo = respuesta.cambio ? 'Actualizado' : 'Sin cambios';
+        this.iniciarEspera();
+      },
+      error: err => {
+        this.recalculando = false;
+        this.mensajeRecalculo = err?.error?.mensaje || 'No se pudo recalcular';
+        this.iniciarEspera();
+      }
+    });
+  }
+
+  private documentoActual(): string | null {
+    return this.documento || this.resumen?.documento || null;
+  }
+
+  private contextoRecalculo(): { tenantId: number; carteraId: number; subcarteraId: number } | null {
+    const tenantId = Number(this.tenantId ?? this.resumen?.tenantId);
+    const carteraId = Number(this.carteraId ?? this.resumen?.carteraId);
+    const subcarteraId = Number(this.subcarteraId ?? this.resumen?.subcarteraId);
+    return tenantId > 0 && carteraId > 0 && subcarteraId > 0 ? { tenantId, carteraId, subcarteraId } : null;
+  }
+
+  private iniciarEspera(): void {
+    this.enEspera = true;
+    if (this.esperaRecalculo) clearTimeout(this.esperaRecalculo);
+    this.esperaRecalculo = setTimeout(() => {
+      this.enEspera = false;
+      this.esperaRecalculo = null;
+    }, ClienteResumenConciliacionDrawerWidget.ESPERA_RECALCULO_MS);
+  }
+
   ngOnDestroy(): void {
+    if (this.esperaRecalculo) clearTimeout(this.esperaRecalculo);
     this.liberarVoucherActual();
     this.sincronizarMenu(false);
   }
