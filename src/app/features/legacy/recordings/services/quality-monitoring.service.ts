@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { catchError, retry, throwError } from 'rxjs';
+import { catchError, Observable, retry, throwError } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   AdjustRequest,
@@ -47,6 +47,21 @@ export class QualityMonitoringService {
     return this.modo === 'discador'
       ? `${this.baseUrl}/evaluacion/${idx}/audio?parte=${parte}`
       : null;
+  }
+
+  /**
+   * El audio de una parte como blob, para guardarlo en el disco.
+   *
+   * Es el MISMO endpoint que alimenta al reproductor, y a proposito: pide por `idx` y
+   * la key la resuelve el servidor. Un endpoint de descarga que recibiera la key seria
+   * un lector de cualquier objeto del bucket, que es justo lo que se evito aca.
+   *
+   * En legacy devuelve null: esas gestiones se bajan por nombre con
+   * RecordingDownloadService, que es la unica pista que tienen las filas de FOH.
+   */
+  descargarAudio(idx: number, parte: number): Observable<Blob> | null {
+    const url = this.urlDeAudio(idx, parte);
+    return url === null ? null : this.http.get(url, { responseType: 'blob' });
   }
 
   httpOptions = {

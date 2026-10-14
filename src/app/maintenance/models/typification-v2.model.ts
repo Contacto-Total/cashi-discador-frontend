@@ -130,6 +130,8 @@ export interface AdditionalFieldV2 {
   longitudMaxima?: number;
   fuenteValor?: FieldDataSourceV2;
   campoTablaDinamica?: string;
+  // El campo se muestra también en todas las tipificaciones que cuelgan de esta
+  aplicaADescendientes?: boolean;
   // Campos para respuesta con valores dinámicos
   dataSource?: string;
   sourceField?: string;

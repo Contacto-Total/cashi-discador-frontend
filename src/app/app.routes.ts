@@ -157,6 +157,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/reports/produccion-report/produccion-report.component').then(m => m.ProduccionReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'reports/entregables',
+    loadComponent: () => import('./features/reports/entregables-report/entregables-report.component').then(m => m.EntregablesReportComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // SMS
@@ -365,21 +370,29 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard]
   },
   {
-    // Periodos de seguimiento: reemplaza funcionalmente a horarios-recordatorios
-    // como el lugar donde se decide que clientes ve el asesor.
+    // Unica pantalla de configuracion del seguimiento: periodos + horarios.
     path: 'admin/maintenance/seguimiento-periodos',
     loadComponent: () => import('./maintenance/components/seguimiento-periodos/seguimiento-periodos.component').then(m => m.SeguimientoPeriodosComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    // La pantalla de horarios se fusiono con la de seguimiento. Se deja la ruta
+    // vieja redirigiendo porque la entrada del menu (que vive en BD) apunta
+    // aqui: asi sigue funcionando sin tocar Configuracion de Menu.
     path: 'admin/maintenance/horarios-recordatorios',
-    loadComponent: () => import('./maintenance/components/horarios-recordatorios/horarios-recordatorios.component').then(m => m.HorariosRecordatoriosComponent),
-    canActivate: [authGuard, adminGuard]
+    redirectTo: 'admin/maintenance/seguimiento-periodos',
+    pathMatch: 'full'
   },
   {
     path: 'admin/maintenance/umbrales-estado',
     loadComponent: () => import('./maintenance/components/umbrales-estado/umbrales-estado.component').then(m => m.UmbralesEstadoComponent),
     canActivate: [authGuard, adminOrOperacionesGuard]
+  },
+  {
+    // Programacion y nombres de los reportes entregables de cada subcartera.
+    path: 'admin/maintenance/entregables-reporte',
+    loadComponent: () => import('./maintenance/components/entregables-reporte/entregables-reporte.component').then(m => m.EntregablesReporteComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
   },
 
   // ========================================

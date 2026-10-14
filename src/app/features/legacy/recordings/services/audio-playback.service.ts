@@ -163,6 +163,18 @@ export class AudioPlaybackService implements OnDestroy {
     return this.partes[this.indice] ?? null;
   }
 
+  /**
+   * El object URL de la parte que esta sonando, si ya se descargo.
+   *
+   * Lo usa la descarga para no volver a pedir el archivo: en el discador cada pedido
+   * dispara una conversion con ffmpeg del lado del servidor, y bajar lo que el
+   * navegador ya tiene en memoria la ahorra entera.
+   */
+  get urlParteActual(): string | null {
+    const parte = this.parteActual;
+    return parte ? this.urls.get(parte.orden) ?? null : null;
+  }
+
   get hayVarias(): boolean {
     return this.partes.length > 1;
   }

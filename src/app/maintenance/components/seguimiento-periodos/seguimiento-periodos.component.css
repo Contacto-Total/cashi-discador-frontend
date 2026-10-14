@@ -109,7 +109,10 @@
   color: var(--text-secondary, #64748b);
 }
 
-select, input[type="number"] {
+select,
+input[type="number"],
+input[type="text"],
+input[type="time"] {
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border-color, #cbd5e1);
   border-radius: 0.5rem;
@@ -199,6 +202,39 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
   margin: 0;
   max-width: 70ch;
 }
+
+/* ---------- Pestañas ---------- */
+.sp-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 1rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.sp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.sp-tab:hover { color: var(--text-primary, #0f172a); }
+
+.sp-tab-activo {
+  color: var(--primary-color, #2563eb);
+  border-bottom-color: var(--primary-color, #2563eb);
+}
+
+/* Un tramo apagado se sigue viendo, pero se nota que no cuenta. */
+.sp-fila-inactiva td { opacity: 0.55; }
 
 /* ---------- Chips de estado ---------- */
 .chip {
@@ -411,6 +447,8 @@ legend {
 
 :host-context(.dark) select,
 :host-context(.dark) input[type="number"],
+:host-context(.dark) input[type="text"],
+:host-context(.dark) input[type="time"],
 :host-context(.dark) .sp-btn {
   background: #0f172a;
   border-color: #334155;
@@ -432,6 +470,10 @@ legend {
 :host-context(.dark) .sp-alerta-error { background: #450a0a; color: #fecaca; }
 :host-context(.dark) .sp-alerta-ok { background: #052e16; color: #bbf7d0; }
 :host-context(.dark) .chip-cerrado { background: #334155; color: #cbd5e1; }
+:host-context(.dark) .sp-tabs { border-bottom-color: #334155; }
+:host-context(.dark) .sp-tab { background: none; border-color: transparent; color: #94a3b8; }
+:host-context(.dark) .sp-tab:hover { color: #f1f5f9; }
+:host-context(.dark) .sp-tab-activo { color: #4ade80; border-bottom-color: #4ade80; }
 
 /* ---------- Pantalla chica ---------- */
 @media (max-width: 760px) {

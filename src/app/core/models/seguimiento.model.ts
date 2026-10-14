@@ -46,7 +46,11 @@ export interface SeguimientoPeriodo {
   // Promesas: que entra a la lista de cada dia
   incluyeVencidas?: boolean;
   incluyeVigentes?: boolean;
-  /** null = sin tope hacia atras */
+  /**
+   * SIN USO. Las vencidas entran por mes: las que cayeron dentro del mes en
+   * curso hasta T-2 (ayer es periodo de gracia). Se deja porque el backend
+   * sigue devolviendo la columna.
+   */
   diasVencidasMax?: number | null;
   /** 0 = solo las que vencen hoy */
   diasVigentesAdelante?: number;

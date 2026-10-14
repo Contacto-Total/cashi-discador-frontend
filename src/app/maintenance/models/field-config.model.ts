@@ -93,6 +93,9 @@ export interface FieldConfig {
 
   // Validaciones personalizadas
   validationRules?: string;
+
+  // El campo se muestra también en todas las tipificaciones que cuelgan de esta
+  aplicaADescendientes?: boolean;
 }
 
 /**

@@ -1,0 +1,249 @@
+<div [class]="ui.raiz">
+
+  <!-- ============ Cabecera ============ -->
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div class="flex min-w-0 flex-col gap-1">
+      <a routerLink="/reports/entregables"
+         class="inline-flex w-fit items-center gap-1 text-[12.5px] font-bold text-[#2563eb] hover:text-[#1d4ed8] dark:text-blue-400">
+        <lucide-angular name="chevron-left" [size]="14"></lucide-angular>
+        Reportes entregables
+      </a>
+      <h1 [class]="ui.titulo">Mantenimiento de entregables</h1>
+      <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
+    </div>
+    <button type="button" (click)="nuevo()" [class]="ui.primario"
+            [disabled]="!seleccion()?.idSubcartera || cargando() || consultas().length === 0">
+      <lucide-angular name="plus" [size]="15"></lucide-angular>
+      Nuevo entregable
+    </button>
+  </div>
+
+  <div class="mb-4">
+    <app-filtro-subcartera (seleccion)="onSeleccion($event)"></app-filtro-subcartera>
+  </div>
+
+  @if (!seleccion()?.idSubcartera) {
+    <div [class]="ui.vacio">
+      <lucide-angular name="calendar-clock" [size]="36" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+      Elige proveedor, cartera y subcartera para ver y editar sus entregables.
+    </div>
+  } @else if (cargando()) {
+    <div class="h-[320px] animate-pulse rounded-xl bg-[#e9edf2] motion-reduce:animate-none dark:bg-slate-800" aria-hidden="true"></div>
+  } @else {
+
+    @if (consultas().length === 0) {
+      <div [class]="ui.vacio">
+        <lucide-angular name="inbox" [size]="36" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+        <p class="!m-0 font-bold text-[#334155] dark:text-slate-200">{{ seleccion()?.subcartera }} todavía no tiene consultas registradas.</p>
+        <p class="mt-1">Un entregable sale de una consulta del procedimiento de la subcartera. Primero hay que crearla y registrarla.</p>
+      </div>
+    } @else {
+
+      <!-- ============ Tabla de entregables ============ -->
+      <div [class]="ui.tarjeta + ' eui-sube mb-4 overflow-x-auto'">
+        <table class="w-full border-separate border-spacing-0">
+          <thead>
+            <tr>
+              <th [class]="ui.th + ' text-left'">Entregable</th>
+              <th [class]="ui.th + ' text-left'">Consulta</th>
+              <th [class]="ui.th + ' text-left'">Se repite</th>
+              <th [class]="ui.th + ' text-left'">Hora límite</th>
+              <th [class]="ui.th + ' text-left'">Periodo programado</th>
+              <th [class]="ui.th + ' text-left'">Nombre del archivo</th>
+              <th [class]="ui.th + ' text-left'">Estado</th>
+              <th [class]="ui.th + ' text-right'"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of filas(); track f.e.id) {
+              <tr [class]="f.e.id === borrador()?.id ? '[&>td]:bg-[#f5f9ff] dark:[&>td]:bg-blue-950/30' : 'hover:[&>td]:bg-[#f8fafc] dark:hover:[&>td]:bg-slate-800/60'">
+                <td [class]="ui.td + ' text-left'"><span class="text-[13px] font-bold text-[#0f172a] dark:text-slate-100">{{ f.e.nombre }}</span></td>
+                <td [class]="ui.td + ' text-left'"><span [class]="ui.codigoGris">{{ f.codigo }}</span></td>
+                <td [class]="ui.td + ' text-left'">{{ f.repeticion }}</td>
+                <td [class]="ui.td + ' text-left tabular-nums'">{{ f.hora }}</td>
+                <td [class]="ui.td + ' text-left'">{{ f.periodo }}</td>
+                <td [class]="ui.td + ' text-left'"><span [class]="ui.mono + ' text-[11px]'">{{ f.e.patronArchivo }}</span></td>
+                <td [class]="ui.td + ' text-left'"><span [class]="claseEstado(f.e.activo)">{{ f.e.activo ? 'Activo' : 'Inactivo' }}</span></td>
+                <td [class]="ui.td + ' text-right'">
+                  <button type="button" (click)="editar(f.e)" [class]="ui.chico" [attr.aria-label]="'Editar ' + f.e.nombre">Editar</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="px-4 py-10 text-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+                  <lucide-angular name="inbox" [size]="36" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+                  Esta subcartera todavía no tiene entregables. Crea el primero con Nuevo entregable.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ============ Formulario ============ -->
+      @if (borrador(); as b) {
+        <div [class]="ui.tarjeta + ' eui-entra flex flex-col gap-4 px-[18px] py-4'">
+
+          <div class="flex flex-wrap items-start justify-between gap-2.5">
+            <div class="min-w-0">
+              <h2 class="!m-0 text-[17px] font-extrabold tracking-[-0.015em]">{{ b.id === null ? 'Nuevo entregable' : 'Editar · ' + b.nombre }}</h2>
+              <p [class]="ui.subtitulo">Lo que se guarda aquí es lo que usa la pantalla de reportes desde ese momento.</p>
+            </div>
+            @if (sucio()) {
+              <span class="eui-aparece whitespace-nowrap rounded-full border border-[#f3e2c0] bg-[#fdf6e7] px-2.5 py-1 text-[11.5px] font-bold text-[#92400e] dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                Cambios sin guardar
+              </span>
+            }
+          </div>
+
+          <div class="flex flex-wrap items-stretch gap-3">
+
+            <!-- Qué es -->
+            <div [class]="ui.bloque + ' flex-[1_1_300px]'">
+              <span [class]="ui.label">Qué es</span>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="me-nombre" [class]="ui.campo">Nombre</label>
+                <input id="me-nombre" type="text" maxlength="120" [ngModel]="b.nombre" (ngModelChange)="cambiar({ nombre: $event })"
+                       [class]="ui.input + ' w-full'"/>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <span [class]="ui.campo">Consulta</span>
+                <div [class]="ui.segmentos">
+                  @for (c of consultas(); track c.id) {
+                    <button type="button" (click)="elegirConsulta(c)" [attr.aria-pressed]="b.idConsulta === c.id"
+                            [class]="segmento(b.idConsulta === c.id) + ' ' + ui.mono">{{ c.codigo }}</button>
+                  }
+                </div>
+                <span [class]="ui.ayuda">{{ consultaBorrador()?.descripcion }}</span>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <span [class]="ui.campo">Estado</span>
+                <div [class]="ui.segmentos">
+                  <button type="button" (click)="cambiar({ activo: true })" [attr.aria-pressed]="b.activo" [class]="segmento(b.activo)">Activo</button>
+                  <button type="button" (click)="cambiar({ activo: false })" [attr.aria-pressed]="!b.activo" [class]="segmento(!b.activo)">Inactivo</button>
+                </div>
+                <span [class]="ui.ayuda">Inactivo: deja de salir en la pantalla de reportes, sin borrarse.</span>
+              </div>
+            </div>
+
+            <!-- Cuándo toca y qué periodo saca -->
+            <div [class]="ui.bloque + ' flex-[1_1_300px]'">
+              <span [class]="ui.label">Cuándo toca y qué periodo saca</span>
+
+              <div class="flex flex-col gap-1.5">
+                <span [class]="ui.campo">Se repite</span>
+                <div [class]="ui.segmentos">
+                  @for (r of repeticiones; track r.valor) {
+                    <button type="button" (click)="elegirRepeticion(r.valor)" [attr.aria-pressed]="b.repeticion === r.valor"
+                            [class]="segmento(b.repeticion === r.valor)">{{ r.texto }}</button>
+                  }
+                </div>
+              </div>
+
+              @if (b.repeticion === 'DIARIO' || b.repeticion === 'SEMANAL') {
+                <div class="eui-entra flex flex-col gap-1.5">
+                  <span [class]="ui.campo">Días de la semana</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (d of dias; track d.valor) {
+                      <button type="button" (click)="alternarDia(d.valor)" [attr.aria-pressed]="b.diasSemana.includes(d.valor)"
+                              [attr.aria-label]="d.nombre" [class]="claseDia(b.diasSemana.includes(d.valor))">{{ d.letra }}</button>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (b.repeticion !== 'PEDIDO') {
+                <div class="flex flex-wrap items-end gap-2.5">
+                  @if (b.repeticion === 'MENSUAL') {
+                    <div class="eui-entra flex flex-col gap-1.5">
+                      <label for="me-diames" [class]="ui.campo">Día del mes</label>
+                      <input id="me-diames" type="number" min="1" max="31" [ngModel]="b.diaMes" (ngModelChange)="cambiarDiaMes($event)"
+                             [class]="ui.input + ' w-24'"/>
+                    </div>
+                  }
+                  <div class="flex flex-col gap-1.5">
+                    <label for="me-hora" [class]="ui.campo">Hora límite</label>
+                    <input id="me-hora" type="time" [ngModel]="b.horaLimite" (ngModelChange)="cambiar({ horaLimite: $event })"
+                           [class]="ui.input + ' w-[130px]'"/>
+                  </div>
+                </div>
+              }
+
+              <span [class]="ui.ayuda">{{ ayudaRepeticion[b.repeticion] }}</span>
+
+              <div class="flex flex-col gap-1.5 border-t border-[#e6e9ee] pt-3 dark:border-slate-700">
+                <span [class]="ui.campo">Periodo programado</span>
+                <div [class]="ui.segmentos">
+                  @for (p of periodos(); track p.valor) {
+                    <button type="button" (click)="cambiar({ periodoProgramado: p.valor })" [attr.aria-pressed]="b.periodoProgramado === p.valor"
+                            [class]="segmento(b.periodoProgramado === p.valor)">{{ p.texto }}</button>
+                  }
+                </div>
+                <span [class]="ui.ayuda">Es lo que saca sin tocar nada. Para otras fechas está Pedido extra en la pantalla de reportes.</span>
+              </div>
+            </div>
+
+            <!-- Cómo se nombra -->
+            <div [class]="ui.bloque + ' flex-[1_1_300px]'">
+              <span [class]="ui.label">Cómo se nombra</span>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="me-archivo" [class]="ui.campo">Nombre del archivo</label>
+                <input id="me-archivo" type="text" maxlength="200" [ngModel]="b.patronArchivo" (ngModelChange)="cambiar({ patronArchivo: $event })"
+                       [class]="ui.inputMono + ' w-full'"/>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="me-asunto" [class]="ui.campo">Asunto del correo</label>
+                <input id="me-asunto" type="text" maxlength="200" [ngModel]="b.patronAsunto" (ngModelChange)="cambiar({ patronAsunto: $event })"
+                       [class]="ui.inputMono + ' w-full'"/>
+                <span [class]="ui.ayuda">Comodines: [DIA] [MES] [ANIO] · [MES_ABR] da OCT · [MES_NOMBRE] da OCTUBRE</span>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <span [class]="ui.campo">Fecha que va en el nombre</span>
+                <div [class]="ui.segmentos">
+                  @for (f of fechasNombre; track f.valor) {
+                    <button type="button" (click)="cambiar({ fechaNombre: f.valor })" [attr.aria-pressed]="b.fechaNombre === f.valor"
+                            [class]="segmento(b.fechaNombre === f.valor)">{{ f.texto }}</button>
+                  }
+                </div>
+              </div>
+
+              <div class="mt-auto flex flex-col gap-1.5 rounded-lg border border-dashed border-[#c5ccd6] bg-white px-3 py-2.5 dark:border-slate-600 dark:bg-slate-900">
+                <span class="text-[12px] font-bold text-[#5f6c80] dark:text-slate-400">Hoy saldría como</span>
+                <code [class]="ui.mono + ' text-[12px] font-semibold text-[#0f172a] [overflow-wrap:anywhere] dark:text-slate-100'">{{ vistaPrevia().archivo || '—' }}</code>
+                @if (vistaPrevia().asunto) {
+                  <code [class]="ui.mono + ' text-[12px] font-semibold text-[#334155] [overflow-wrap:anywhere] dark:text-slate-300'">{{ vistaPrevia().asunto }}</code>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button type="button" (click)="guardar()" [class]="ui.primario" [disabled]="!!error() || guardando() || !sucio()">
+              @if (guardando()) {
+                <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                Guardando
+              } @else {
+                <lucide-angular name="save" [size]="15"></lucide-angular>
+                Guardar
+              }
+            </button>
+            <button type="button" (click)="cancelar()" [class]="ui.secundario" [disabled]="guardando()">Cancelar</button>
+            @if (error()) {
+              <span class="text-[12.5px] font-semibold text-[#b42318] dark:text-red-400" role="alert">{{ error() }}</span>
+            }
+          </div>
+        </div>
+      } @else {
+        <p class="!m-0 rounded-xl border border-dashed border-[#c5ccd6] px-4 py-3.5 text-[12.5px] text-[#5f6c80] dark:border-slate-700 dark:text-slate-400">
+          Elige Editar en una fila, o crea un entregable nuevo.
+        </p>
+      }
+    }
+  }
+</div>

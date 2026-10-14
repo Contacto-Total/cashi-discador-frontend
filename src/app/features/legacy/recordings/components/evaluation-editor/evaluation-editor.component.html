@@ -96,17 +96,62 @@
               </div>
             </div>
 
-            <button
-              *ngIf="ficha.tieneTranscripcion"
-              (click)="verTranscripcion()"
-              [class]="'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium '
-                       + 'transition-colors cursor-pointer ring-1 '
-                       + (mostrarTranscripcion
-                          ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-400/35 dark:ring-sky-400/25'
-                          : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10')">
-              <lucide-angular [img]="FileText" [size]="13"></lucide-angular>
-              {{ mostrarTranscripcion ? 'Ocultar texto' : 'Transcripción' }}
-            </button>
+            <!--
+              Las acciones de la ficha, en una sola fila.
+
+              Bajarse el Excel o el audio es parte de mirar la nota, igual que el
+              reproductor, así que van acá y no en una barra aparte ni junto a Guardar,
+              que es la única acción que escribe.
+            -->
+            <div class="flex items-center justify-end gap-2 flex-wrap">
+              <button
+                *ngIf="ficha.tieneTranscripcion"
+                (click)="verTranscripcion()"
+                [class]="'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium '
+                         + 'transition-colors cursor-pointer ring-1 '
+                         + (mostrarTranscripcion
+                            ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-400/35 dark:ring-sky-400/25'
+                            : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10')">
+                <lucide-angular [img]="FileText" [size]="13"></lucide-angular>
+                {{ mostrarTranscripcion ? 'Ocultar texto' : 'Transcripción' }}
+              </button>
+
+              <!-- Excel: verde, la convención de planilla. Apagado con cambios sin guardar. -->
+              <button
+                (click)="descargarExcel()"
+                [disabled]="!puedeDescargarExcel"
+                [title]="motivoExcel"
+                class="h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium
+                       transition-colors ring-1 cursor-pointer
+                       bg-emerald-500/15 text-emerald-700 dark:text-emerald-300
+                       ring-emerald-400/35 dark:ring-emerald-400/25
+                       hover:bg-emerald-500/25
+                       disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-emerald-500/15">
+                <lucide-angular
+                  [img]="descargandoExcel ? LoaderCircle : FileSpreadsheet"
+                  [size]="13"
+                  [class]="descargandoExcel ? 'animate-spin' : ''"></lucide-angular>
+                {{ descargandoExcel ? 'Generando…' : 'Excel' }}
+              </button>
+
+              <!-- Audio: gris, para que el verde del Excel no compita con nada. -->
+              <button
+                *ngIf="player.partes.length"
+                (click)="descargarAudio()"
+                [disabled]="!puedeDescargarAudio"
+                [title]="motivoAudio"
+                class="h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium
+                       transition-colors ring-1 cursor-pointer
+                       bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300
+                       ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10
+                       disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-slate-100">
+                <lucide-angular
+                  [img]="descargandoAudio ? LoaderCircle : Download"
+                  [size]="13"
+                  [class]="descargandoAudio ? 'animate-spin' : ''"></lucide-angular>
+                {{ descargandoAudio ? 'Bajando…' : 'Audio' }}
+              </button>
+            </div>
           </div>
 
           <!--
@@ -260,6 +305,46 @@
         </div>
       </div>
 
+      <!--
+        Quién revisó este audio y cuándo. Va arriba de todo porque cambia cómo se lee el
+        resto: no es lo mismo mirar una nota que salió del speech que una que ya pasó por
+        un supervisor.
+      -->
+      <div *ngIf="ultimaRevision as rev"
+           class="rounded-xl bg-amber-500/10 ring-1 ring-amber-400/30 dark:ring-amber-400/20
+                  px-4 py-3 mb-4 flex items-center gap-3 flex-wrap
+                  text-[12.5px] text-amber-800 dark:text-amber-300">
+        <span><b class="font-semibold">Revisado por {{ rev.usuario }}</b> · {{ rev.fecha }}</span>
+        <span class="text-amber-700/80 dark:text-amber-300/70">
+          {{ rev.ajustes
+             ? rev.ajustes + (rev.ajustes === 1 ? ' criterio ajustado' : ' criterios ajustados')
+             : 'conforme con todo' }}
+        </span>
+        <button
+          *ngIf="ficha.revisiones.length > 1"
+          type="button"
+          (click)="mostrarHistorial = !mostrarHistorial"
+          [attr.aria-expanded]="mostrarHistorial"
+          class="ml-auto text-[12px] font-medium underline underline-offset-2
+                 hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer">
+          {{ mostrarHistorial ? 'Ocultar historial' : 'Ver historial' }}
+        </button>
+      </div>
+
+      <!-- Las revisiones anteriores. Un audio puede revisarse varias veces. -->
+      <div *ngIf="mostrarHistorial && ficha.revisiones.length > 1"
+           class="rounded-xl bg-slate-50 dark:bg-white/[0.03] px-4 py-3 mb-4
+                  divide-y divide-slate-200 dark:divide-white/[0.06]">
+        <div *ngFor="let r of ficha.revisiones"
+             class="flex items-center gap-3 py-1.5 text-[12.5px] flex-wrap">
+          <span class="text-slate-500 tabular-nums">{{ r.fecha }}</span>
+          <span class="text-slate-700 dark:text-slate-300 font-medium">{{ r.usuario }}</span>
+          <span class="ml-auto text-slate-500">
+            {{ r.ajustes ? r.ajustes + ' de ' + r.criteriosEvaluados : 'conforme con todo' }}
+          </span>
+        </div>
+      </div>
+
       <!-- El resumen del modelo: la justificación de las notas de abajo -->
       <div *ngIf="ficha.summary" class="rounded-xl bg-slate-50 dark:bg-white/[0.03] px-5 py-4 mb-4">
         <div class="text-[10.5px] uppercase tracking-[0.14em] text-slate-500 mb-2">
@@ -308,14 +393,16 @@
         <!-- Grupo: un solo bloque redondeado, filas separadas por un divisor tenue -->
         <div class="rounded-xl bg-slate-50 dark:bg-white/[0.03] overflow-hidden divide-y divide-slate-200 dark:divide-white/[0.06]">
           <div *ngFor="let c of bloque.criterios; trackBy: porCampo"
-               [class]="'flex items-center gap-3 px-4 py-2.5 transition-colors duration-200 '
+               [class]="'px-4 py-2.5 transition-colors duration-200 '
                         + (cambio(c.campo) ? 'bg-amber-400/[0.07]' : '')">
+           <div class="flex items-center gap-3">
 
             <div class="flex-1 min-w-0">
               <span class="text-[13px] leading-snug text-slate-800 dark:text-slate-200">{{ c.etiqueta }}</span>
               <div class="flex items-center gap-1.5 mt-0.5">
                 <!-- Declara que una persona revisó este criterio. No dice quién. -->
                 <span *ngIf="c.ajustado"
+                      [title]="'Ajustado por ' + c.ajustadoPor + ' el ' + c.ajustadoEn"
                       class="px-1.5 py-0.5 rounded-full text-[9.5px] font-medium
                              bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-400/30 dark:ring-indigo-400/20">
                   Modificado
@@ -366,22 +453,86 @@
                 <lucide-angular [img]="Check" [size]="14"></lucide-angular>
               </button>
             </div>
+           </div>
+
+            <!--
+              El motivo de la corrección ANTERIOR, citado. Va visible y no en un tooltip:
+              es el material con el que se hace el coaching del asesor, y a un hover de
+              distancia no lo lee nadie.
+            -->
+            <div *ngIf="c.ajustado && c.comentario && !cambio(c.campo)"
+                 class="mt-2 ml-1 pl-3 border-l-2 border-indigo-400/40
+                        text-[12px] leading-[1.5] text-slate-600 dark:text-slate-400">
+              {{ c.comentario }}
+              <span class="block mt-0.5 text-[11px] text-slate-500 tabular-nums">
+                — {{ c.ajustadoPor }} · {{ c.ajustadoEn }}
+              </span>
+            </div>
+
+            <!--
+              El motivo del cambio que se está haciendo ahora. Obligatorio: un ajuste sin
+              explicación no sirve ni para el coaching ni para saber qué arreglar del
+              criterio, y es lo que bloquea el botón Guardar.
+            -->
+            <div *ngIf="cambio(c.campo)" class="mt-2.5">
+              <textarea
+                [id]="'motivo-' + c.campo"
+                [(ngModel)]="motivos[c.campo]"
+                rows="2"
+                maxlength="500"
+                placeholder="¿Por qué cambiaste este criterio? Qué dijo el asesor, o qué le faltó."
+                class="w-full px-3 py-2 rounded-lg resize-y text-[12.5px] leading-[1.5]
+                       bg-white dark:bg-slate-950/60 text-slate-800 dark:text-slate-200
+                       ring-1 ring-amber-400/40 dark:ring-amber-400/25
+                       placeholder:text-slate-400 dark:placeholder:text-slate-600
+                       focus:outline-none focus:ring-2 focus:ring-amber-500/50"></textarea>
+              <span [class]="'block mt-1 text-[11px] '
+                             + (largoMotivo(c.campo) >= MINIMO_MOTIVO
+                                ? 'text-slate-500'
+                                : 'text-amber-700 dark:text-amber-400')">
+                {{ largoMotivo(c.campo) >= MINIMO_MOTIVO
+                   ? largoMotivo(c.campo) + ' de 500 caracteres'
+                   : 'Escribe el motivo para poder guardar (mínimo ' + MINIMO_MOTIVO + ' caracteres)' }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Guardar. Sin caja de comentario: la corrección es un cambio de valor, no un informe. -->
+    <!--
+      Dos botones, nunca los dos activos a la vez: con cambios se habilita Guardar, sin
+      cambios se habilita Revisado. Así no hay que decidir cuál pulsar —siempre hay uno
+      solo, y es el que cierra el audio—.
+    -->
     <footer *ngIf="ficha && ficha.editable && !isLoading"
             class="flex items-center justify-between gap-3 px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200 dark:border-white/[0.06]">
       <span [class]="'text-[12.5px] transition-colors duration-200 '
                      + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500')">
         {{ cantidadCambios
            ? cantidadCambios + (cantidadCambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
+             + (sinMotivo.length ? ' · falta escribir el motivo' : '')
            : 'Sin cambios' }}
       </span>
 
+      <div class="flex items-center gap-2">
       <button
+        *ngIf="!cantidadCambios"
+        (click)="revisar()"
+        [disabled]="!puedeRevisar"
+        title="Escuché el audio y estoy conforme con la evaluación"
+        class="h-9 inline-flex items-center gap-2 px-5 rounded-full text-[13px] font-medium
+               text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/5
+               ring-1 ring-slate-200 dark:ring-white/10
+               hover:bg-slate-200 dark:hover:bg-white/10 active:scale-[0.98]
+               transition-all duration-200
+               disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer">
+        <lucide-angular [img]="Check" [size]="14"></lucide-angular>
+        {{ isSaving ? 'Guardando…' : 'Revisado' }}
+      </button>
+
+      <button
+        *ngIf="cantidadCambios"
         (click)="guardar()"
         [disabled]="!puedeGuardar"
         class="h-9 inline-flex items-center gap-2 px-5 rounded-full text-[13px] font-medium
@@ -392,6 +543,7 @@
         <lucide-angular [img]="Save" [size]="14"></lucide-angular>
         {{ isSaving ? 'Guardando…' : 'Guardar' }}
       </button>
+      </div>
     </footer>
 
     <footer *ngIf="ficha && !ficha.editable && !isLoading"

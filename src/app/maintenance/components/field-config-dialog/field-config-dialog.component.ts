@@ -81,11 +81,24 @@ import { TUI, TUI_ANIM } from '../typification-ui';
                     <input [id]="'fc-ay-' + idx" type="text" [(ngModel)]="field.helpText" placeholder="Instrucciones para el asesor"
                            [class]="ui.input + ' w-full'"/>
                   </div>
-                  <label class="flex h-[38px] cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
-                    <input type="checkbox" [(ngModel)]="field.required" class="h-[15px] w-[15px] accent-[#2563eb]"/>
-                    Obligatorio
-                  </label>
+                  <div class="flex h-[38px] flex-wrap items-center gap-x-4 gap-y-1">
+                    <label class="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
+                      <input type="checkbox" [(ngModel)]="field.required" class="h-[15px] w-[15px] accent-[#2563eb]"/>
+                      Obligatorio
+                    </label>
+                    <label class="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[#334155] dark:text-slate-300"
+                           title="El campo aparece también en todas las tipificaciones que cuelgan de esta">
+                      <input type="checkbox" [(ngModel)]="field.aplicaADescendientes" class="h-[15px] w-[15px] accent-[#2563eb]"/>
+                      Aplica a las opciones de abajo
+                    </label>
+                  </div>
                 </div>
+
+                @if (field.type === 'select') {
+                  <p [class]="ui.ayuda">
+                    Las opciones de la lista se configuran por subcartera, desde «Opciones de lista» en el menú de la tipificación.
+                  </p>
+                }
 
                 <!-- Columnas: solo para campos de tipo tabla -->
                 @if (field.type === 'table') {

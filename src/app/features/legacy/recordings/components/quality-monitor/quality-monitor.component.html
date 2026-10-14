@@ -604,6 +604,12 @@
                                     [size]="11"></lucide-angular>
                   </button>
                 </th>
+                <!--
+                  Columna propia y no una segunda línea del puntaje: todo lo demás de esta
+                  tabla describe la LLAMADA, y esto describe la revisión de esa llamada.
+                -->
+                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium whitespace-nowrap">Revisión</th>
                 <th class="px-3 py-2 text-center text-[10px] uppercase tracking-[0.1em]
                            text-slate-500 dark:text-slate-500 font-medium whitespace-nowrap">Revisar</th>
               </tr>
@@ -633,6 +639,32 @@
                   <div>{{ a.puntos }}/{{ a.posibles }}</div>
                   <div class="text-[10.5px] text-slate-400 dark:text-slate-600">{{ pct(a.cumplimiento) }}</div>
                 </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <!--
+                    Sin revisar va vacío, con un guion tenue. Un chip que diga "sin revisar"
+                    en cada fila serían cientos repitiendo lo mismo y taparían a los pocos
+                    que sí lo están, que es lo que se viene a buscar acá.
+                  -->
+                  <span *ngIf="!a.revisadoPor" class="text-slate-300 dark:text-slate-700">—</span>
+
+                  <span *ngIf="a.revisadoPor"
+                        [title]="'Revisado por ' + a.revisadoPor + ' el ' + a.revisadoEn
+                                 + (a.revisionAjustes
+                                    ? ' · ' + a.revisionAjustes + (a.revisionAjustes === 1
+                                        ? ' criterio ajustado' : ' criterios ajustados')
+                                    : ' · conforme con todo')"
+                        [class]="'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full '
+                                 + 'text-[11px] font-medium ring-1 '
+                                 + (a.revisionAjustes
+                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-400/30 dark:ring-amber-400/20'
+                                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-400/30 dark:ring-emerald-400/20')">
+                    <span [class]="'w-1.5 h-1.5 rounded-full '
+                                   + (a.revisionAjustes ? 'bg-amber-500' : 'bg-emerald-500')"></span>
+                    {{ a.revisadoPor }}
+                    <span *ngIf="a.revisionAjustes" class="tabular-nums opacity-80">{{ a.revisionAjustes }}</span>
+                  </span>
+                </td>
+
                 <td class="px-3 py-2">
                   <!-- Una sola acción por fila: abrir la evaluación. -->
                   <div class="flex items-center justify-center">
