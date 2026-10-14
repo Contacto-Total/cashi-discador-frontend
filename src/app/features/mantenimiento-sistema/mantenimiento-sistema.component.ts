@@ -11,6 +11,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { TituloTarjetaComponent } from '../../shared/ui/titulo-tarjeta.component';
 import { TarjetaDirective } from '../../shared/ui/tarjeta.directive';
 import { BotonDirective } from '../../shared/ui/boton.directive';
+import { NombrePropioPipe } from '../../shared/ui/nombre-propio.pipe';
 
 type Vista = 'OPERATIVO' | 'PROGRAMADO' | 'EN_DETENCION' | 'BLOQUEADO';
 type Confirmacion = 'ahora' | 'bloquear' | null;
@@ -91,7 +92,7 @@ const PAGINADOR_GESTION = 2.625;
 @Component({
   selector: 'app-mantenimiento-sistema',
   standalone: true,
-  imports: [NgClass, NgTemplateOutlet, MascotaCascoComponent, PageHeaderComponent, TituloTarjetaComponent, TarjetaDirective, BotonDirective],
+  imports: [NgClass, NgTemplateOutlet, MascotaCascoComponent, PageHeaderComponent, TituloTarjetaComponent, TarjetaDirective, BotonDirective, NombrePropioPipe],
   templateUrl: './mantenimiento-sistema.component.html',
   host: { class: 'cashi-pantalla flex flex-1 flex-col' }
 })

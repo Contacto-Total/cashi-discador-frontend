@@ -292,8 +292,8 @@
           <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
           @for (a of gestionVisible(); track a.idUsuario) {
             <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 border-t border-(--line2) py-[.5625rem] first:border-t-0">
-              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ a.nombre }}</span>
-              <span class="col-start-1 text-[.75rem] text-muted-foreground tabular-nums">{{ a.subcartera ? a.subcartera + ' · ' : '' }}{{ lleva(a) }}</span>
+              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ a.nombre | nombrePropio }}</span>
+              <span class="col-start-1 text-[.75rem] text-muted-foreground tabular-nums">{{ a.subcartera ? (a.subcartera | nombrePropio) + ' · ' : '' }}{{ lleva(a) }}</span>
               <span class="col-start-2 row-span-2 row-start-1 rounded-full px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap"
                     [ngClass]="a.estado === 'EN_LLAMADA' ? 'bg-(--info-bg) text-(--info)' : 'bg-(--am-bg) text-(--am)'">
                 {{ a.estado === 'EN_LLAMADA' ? 'En llamada' : 'Tipificando' }}
