@@ -1009,7 +1009,7 @@ type EvaluacionConvenio =
             }
 
             <!-- BLOQUEO PROMESA DE PAGO ACTIVA - Mensaje cuando cliente tiene promesa activa -->
-            @if (showPromesaActivaBlocking()) {
+            @if (showPromesaActivaBlocking() || (isCancellationTypification() && hasEvaluacionPromise())) {
               @if (hasEvaluacionPromise()) {
               <!-- Versión EN_EVALUACION -->
               <div class="bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 dark:from-purple-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
@@ -1236,7 +1236,7 @@ type EvaluacionConvenio =
             }
 
             <!-- Selector de Cuota para Cancelación -->
-            @if (isCancellationTypification() && hasInstallmentsForCancellation()) {
+            @if (isCancellationTypification() && !isCancellationBlockedByEvaluacion() && hasInstallmentsForCancellation()) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
@@ -1418,7 +1418,7 @@ type EvaluacionConvenio =
               </div>
             }
 
-            @if (isCancellationTypification() && !hasInstallmentsForCancellation()) {
+            @if (isCancellationTypification() && !isCancellationBlockedByEvaluacion() && !hasInstallmentsForCancellation()) {
               <div class="mt-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
                 <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
                 <span>Cliente no cuenta con promesa.</span>
@@ -1426,7 +1426,7 @@ type EvaluacionConvenio =
             }
 
             <!-- Botón para subir comprobante (opcional) - Sin OCR -->
-            @if (isCancellationTypification() && selectedInstallmentForCancellation()) {
+            @if (isCancellationTypification() && !isCancellationBlockedByEvaluacion() && selectedInstallmentForCancellation()) {
               <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
@@ -1536,7 +1536,7 @@ type EvaluacionConvenio =
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || isCancellationBlockedByEvaluacion() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid() + ' | Fecha pago válida: ' + isCancellationPaymentDateValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -2440,6 +2440,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return false;
     }
 
+    if (this.isCancellationBlockedByEvaluacion()) {
+      return false;
+    }
+
     // 0.1 Verificar bloqueo por período de gracia de promesa vencida de otro asesor
     if (this.showPromesaVencidaGraciaBlocking()) {
       console.log('[isFormValid] ❌ Bloqueado: cliente en período de gracia de otro asesor');
@@ -3092,6 +3096,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       s.installments?.some((c: any) => c.status === 'EN_EVALUACION')
     );
   });
+
+  isCancellationBlockedByEvaluacion = computed(() =>
+    this.isCancellationTypification() && this.hasEvaluacionPromise()
+  );
 
   // ==================== BLOQUEO PROMESA DE PAGO ACTIVA ====================
   // Flag para mostrar alerta de bloqueo cuando cliente tiene promesa activa
@@ -6296,6 +6304,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   saveManagement() {
+    if (this.isCancellationBlockedByEvaluacion()) {
+      return;
+    }
+
     if (!this.validateForm()) {
       return;
     }
@@ -7893,6 +7905,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Selecciona una cuota para cancelación e inicializa los campos editables
    */
   onSelectCuotaForCancellation(cuota: any): void {
+    if (this.isCancellationBlockedByEvaluacion()) {
+      return;
+    }
+
     this.selectedInstallmentForCancellation.set(cuota);
     // Inicializar monto con saldo pendiente (si tiene pago parcial), sino monto total
     const montoInicial = this.tienePagoParcial(cuota)
