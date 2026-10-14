@@ -233,6 +233,12 @@ export class TypificationV2Service {
     );
   }
 
+  /** Campos adicionales de varias tipificaciones en una sola llamada, por id de tipificación. */
+  getAdditionalFieldsByTypifications(typificationIds: number[]): Observable<Record<number, AdditionalFieldV2[]>> {
+    const params = new HttpParams().set('ids', typificationIds.join(','));
+    return this.http.get<Record<number, AdditionalFieldV2[]>>(`${this.catalogUrl}/additional-fields`, { params });
+  }
+
   saveAdditionalFields(typificationId: number, fields: AdditionalFieldV2[]): Observable<AdditionalFieldV2[]> {
     return this.http.put<AdditionalFieldV2[]>(
       `${this.catalogUrl}/${typificationId}/additional-fields`,
@@ -363,6 +369,21 @@ export class TypificationV2Service {
     return this.http.get<CampoOpcionDTO[]>(
       `${this.catalogUrl}/campo/${campoId}/opciones/habilitadas`,
       { params }
+    );
+  }
+
+  /**
+   * Guarda la lista completa de opciones de un campo de tipo lista para una subcartera.
+   * Lo que no viene en la lista se borra.
+   */
+  guardarOpcionesLista(
+    campoId: number,
+    idSubcartera: number,
+    opciones: { codigoOpcion: string; labelOpcion: string; estaHabilitada: boolean }[]
+  ): Observable<CampoOpcionDTO[]> {
+    return this.http.put<CampoOpcionDTO[]>(
+      `${this.catalogUrl}/campo/${campoId}/lista`,
+      { idSubcartera, opciones }
     );
   }
 

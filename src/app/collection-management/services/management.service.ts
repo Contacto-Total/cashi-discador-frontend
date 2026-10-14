@@ -27,6 +27,8 @@ export interface RegistroGestionV2 {
   rutaNivel3?: string;
   rutaNivel4?: string;
   observaciones?: string;
+  /** JSON con los valores de los campos adicionales sin columna propia */
+  camposAdicionales?: string | null;
   metodoContacto?: string;
   canalContacto?: string;
   estadoGestion?: string;
@@ -180,6 +182,8 @@ export interface CreateManagementRequest {
   level3Name?: string | null;
 
   observations?: string;
+  /** JSON con los valores de los campos adicionales sin columna propia */
+  camposAdicionales?: string | null;
 
   // Campos adicionales para registro completo
   // metodoContacto: QUIÉN/QUÉ originó la gestión
@@ -227,6 +231,7 @@ export interface PaymentScheduleRequest {
   idCampana?: number;
   idTipificacion: number;
   observaciones?: string;
+  camposAdicionales?: string | null;  // JSON con los valores de los campos adicionales
   metodoContacto?: string;  // GESTION_MANUAL, GESTION_PROGRESIVO, etc.
   canalContacto?: string;   // LLAMADA_SALIENTE, LLAMADA_ENTRANTE, SMS, etc.
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
@@ -656,6 +661,7 @@ export class ManagementService {
       idAgente: this.extractAgentId(request.advisorId),
       tipificacion: { id: finalTypificationId },
       observaciones: request.observations || '',
+      camposAdicionales: request.camposAdicionales ?? null,
       // Campos de contacto
       telefonoContacto: request.phone || undefined,
       canalContacto: request.canalContacto || undefined,

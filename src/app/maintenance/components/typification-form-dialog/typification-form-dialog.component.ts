@@ -446,7 +446,8 @@ export class TypificationFormDialogComponent implements OnInit {
         displayOrder: field.ordenVisualizacion,
         min: field.valorMinimo,
         max: field.valorMaximo,
-        maxLength: field.longitudMaxima
+        maxLength: field.longitudMaxima,
+        aplicaADescendientes: field.aplicaADescendientes ?? false
       }))
     };
   }
@@ -627,7 +628,8 @@ export class TypificationFormDialogComponent implements OnInit {
         valorMaximo: field.max,
         longitudMaxima: field.maxLength,
         fuenteValor: original?.fuenteValor,
-        campoTablaDinamica: original?.campoTablaDinamica
+        campoTablaDinamica: original?.campoTablaDinamica,
+        aplicaADescendientes: field.aplicaADescendientes ?? false
       };
     });
   }
