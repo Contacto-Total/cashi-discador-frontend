@@ -152,8 +152,8 @@ export interface MonitoringWeek {
  * Un criterio de la evaluación, tal como se ve y se corrige en la ficha del audio.
  *
  * `valor` es 0, 1 o `null` cuando el speech no lo calificó. `ajustado` marca que un
- * supervisor lo corrigió a mano y la pantalla lo muestra como **Modificado**. No dice
- * quién ni cuándo: lo que la etiqueta declara es que una persona revisó ese criterio.
+ * supervisor lo corrigió a mano, y los tres campos que siguen dicen quién, cuándo y por
+ * qué: salen de la última corrección registrada de ese criterio.
  */
 export interface EvaluationCriterion {
   campo: string;
@@ -161,6 +161,25 @@ export interface EvaluationCriterion {
   seccion: string;
   valor: number | null;
   ajustado: boolean;
+  /** El motivo que escribió el supervisor. Solo viene si `ajustado`. */
+  comentario: string | null;
+  ajustadoPor: string | null;
+  ajustadoEn: string | null;
+}
+
+/**
+ * Una revisión del audio.
+ *
+ * Un audio puede revisarse varias veces, y dos supervisores pueden revisarlo por
+ * separado. La ficha muestra la primera de la lista —la más reciente— y ofrece el resto
+ * en el historial.
+ */
+export interface EvaluationReview {
+  id: number;
+  usuario: string;
+  fecha: string;
+  ajustes: number;
+  criteriosEvaluados: number;
 }
 
 /**
@@ -273,6 +292,8 @@ export interface EvaluationDetail {
   tieneTranscripcion: boolean;
   editable: boolean;
   criterios: EvaluationCriterion[];
+  /** Las revisiones de este audio, de la más nueva a la más vieja. Vacío si nadie la revisó. */
+  revisiones: EvaluationReview[];
   /**
    * Las grabaciones de esta gestión, en orden.
    *
@@ -283,8 +304,21 @@ export interface EvaluationDetail {
 }
 
 /** La corrección de un supervisor: solo los criterios que cambian. */
+/**
+ * Lo que se manda al cerrar un audio.
+ *
+ * **`criterios` puede ir vacío**, y ese es el botón Revisado: el supervisor escuchó y
+ * estuvo conforme con todo. Sin ese caso solo se registrarían los errores del speech y
+ * nunca sus aciertos, que son el denominador de la precisión.
+ */
 export interface AdjustRequest {
-  criterios: Record<string, number>;
+  criterios: Record<string, AdjustField>;
+}
+
+/** La corrección de un criterio. El comentario es obligatorio. */
+export interface AdjustField {
+  valor: number;
+  comentario: string;
 }
 
 /** Un audio evaluado dentro de una celda. */
@@ -306,6 +340,13 @@ export interface MonitoringAudio {
   /** Uno o varios WAV separados por coma. */
   nombre: string;
   tieneTranscripcion: boolean;
+  /**
+   * La última revisión de este audio. Los tres van en `null` cuando nadie lo revisó,
+   * que es el caso de la mayoría: la grilla deja esa celda vacía.
+   */
+  revisadoPor: string | null;
+  revisadoEn: string | null;
+  revisionAjustes: number | null;
 }
 
 /** Qué significa cada sigla de rúbrica. */
