@@ -234,6 +234,11 @@ export class TypificationV2Service {
     );
   }
 
+  /** Subcarteras en uso (con asesores o con tipificaciones), con su cliente y su cartera. */
+  getSubcarterasEnUso(): Observable<{ idCliente: number; cliente: string; idCartera: number; cartera: string; idSubcartera: number; subcartera: string; asesores: number; tipificaciones: number }[]> {
+    return this.http.get<any[]>(`${this.configUrl}/subcarteras`);
+  }
+
   /** Opciones de la tipificación base de Cashi. */
   getTipificacionesBase(): Observable<TipificacionBase[]> {
     return this.http.get<TipificacionBase[]>(`${this.catalogUrl}/base`);
