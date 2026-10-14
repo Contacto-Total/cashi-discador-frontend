@@ -57,6 +57,29 @@ export class BcpPagosService {
     return this.http.get<PagoBancoPendiente[]>(`${this.baseUrl}/pendientes`, { params: this.contextoParams(request) });
   }
 
+  /** Pagos de la subcartera marcados como «no corresponde». */
+  listarNoCorresponden(request: ResumenConciliacionClienteRequest): Observable<PagoBancoPendiente[]> {
+    return this.http.get<PagoBancoPendiente[]>(`${this.baseUrl}/no-corresponde`, { params: this.contextoParams(request) });
+  }
+
+  /** Saca de pendientes un pago que no corresponde a la gestión de la empresa. */
+  marcarNoCorresponde(pagoId: number, motivo: string, request: ResumenConciliacionClienteRequest): Observable<{ exitoso: boolean; mensaje: string }> {
+    return this.http.post<{ exitoso: boolean; mensaje: string }>(
+      `${this.baseUrl}/pendientes/${pagoId}/no-corresponde`,
+      { motivo },
+      { params: this.contextoParams(request) }
+    );
+  }
+
+  /** Devuelve a pendientes un pago marcado como «no corresponde». */
+  restaurarPendiente(pagoId: number, request: ResumenConciliacionClienteRequest): Observable<{ exitoso: boolean; mensaje: string }> {
+    return this.http.post<{ exitoso: boolean; mensaje: string }>(
+      `${this.baseUrl}/no-corresponde/${pagoId}/restaurar`,
+      null,
+      { params: this.contextoParams(request) }
+    );
+  }
+
   /** Vuelve a evaluar todos los pendientes de la subcartera. */
   reevaluarPendientes(request: ResumenConciliacionClienteRequest): Observable<ReevaluacionPendientesResponse> {
     return this.http.post<ReevaluacionPendientesResponse>(`${this.baseUrl}/pendientes/reevaluar`, null, {
