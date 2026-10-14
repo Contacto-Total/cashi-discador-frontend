@@ -71,12 +71,26 @@
       }
 
       @if (pestana() === 'arbol' || !lista()) {
-        @for (f of filas(); track f.node.typification.id; let primera = $first) {
+        @for (f of filas(); track clave(f); let primera = $first) {
+          @if (f.lista) {
+            <!-- La lista que esta rama pide antes del detalle: no se habilita ni se personaliza; el lápiz lleva a sus motivos. -->
+            <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'">
+              <div class="flex min-w-0 items-baseline gap-2 pl-7">
+                <span class="min-w-0 overflow-hidden text-[.875rem] font-medium text-ellipsis whitespace-nowrap" [ngClass]="apagada(f) ? 'text-muted-foreground/75' : 'text-foreground'">{{ lista()?.etiqueta }}</span>
+                <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">{{ motivosActivos() }} {{ motivosActivos() === 1 ? 'motivo' : 'motivos' }}</span>
+              </div>
+              <span></span>
+              <span></span>
+              <button type="button" [class]="ICONO" [attr.aria-label]="'Editar ' + (lista()?.etiqueta || 'la lista')" title="Editar motivos" (click)="pestana.set('lista'); abierta.set(null)">
+                <lucide-angular name="pencil" [size]="16"></lucide-angular>
+              </button>
+            </div>
+          } @else {
           <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'"
                [ngClass]="f.nivel === 1 ? (primera ? 'mt-1.5' : 'mt-[.875rem]') : ''">
             <!-- El título de cada tipo de contacto lleva la flecha de plegar; sus filas se alinean con su texto. -->
             <div class="flex min-w-0 items-baseline gap-2"
-                 [ngClass]="f.nivel === 1 ? 'cursor-pointer' : f.nivel === 2 ? 'pl-7' : 'pl-12'" (click)="alternarGrupo(f)">
+                 [ngClass]="f.nivel === 1 ? 'cursor-pointer' : f.nivel === 2 ? 'pl-7' : f.nivel === 3 ? 'pl-12' : 'pl-[4.25rem]'" (click)="alternarGrupo(f)">
               @if (f.nivel === 1) {
                 <button type="button" class="-mx-1 grid size-6 flex-none cursor-pointer place-items-center self-center rounded-md border-0! bg-transparent p-0! text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
                         [attr.aria-expanded]="desplegado(f)" [attr.aria-label]="(desplegado(f) ? 'Plegar ' : 'Desplegar ') + nombre(f)">
@@ -175,6 +189,7 @@
                 </div>
               </div>
             }
+          }
           }
         }
       } @else {

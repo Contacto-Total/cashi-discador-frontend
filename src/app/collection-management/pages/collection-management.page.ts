@@ -895,6 +895,25 @@ type EvaluacionConvenio =
                         </select>
                       </div>
                     }
+                    <!-- Lo que el nivel 1 pide antes del detalle (motivo de no pago) -->
+                    @if ($index === 0) {
+                      @for (campo of camposDeRama(); track campo.id) {
+                        <div class="flex-1 min-w-[140px]">
+                          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">{{ campo.label }}{{ campo.required ? ' *' : '' }}</label>
+                          <select
+                            [ngModel]="valoresDeRama()[campo.id] || ''"
+                            (ngModelChange)="elegirValorDeRama(campo.id, $event)"
+                            [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white ' +
+                              (valoresDeRama()[campo.id] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
+                          >
+                            <option value="">Seleccionar...</option>
+                            @for (op of campo.options || []; track op.value) {
+                              <option [value]="op.value">{{ op.label }}</option>
+                            }
+                          </select>
+                        </div>
+                      }
+                    }
                   }
                 </div>
                 @if (errors().tipoGestion) {
@@ -2401,6 +2420,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   };
 
   selectedClassifications = signal<string[]>([]);
+  // Campos que el tipo de contacto (nivel 1) pasa a todas sus opciones, como el motivo de no pago:
+  // se piden junto al nivel 1, antes del detalle, y su valor se conserva al cambiar el detalle.
+  camposDeRama = signal<FieldConfig[]>([]);
+  valoresDeRama = signal<Record<string, string>>({});
   dynamicFields = signal<any[]>([]);
   dynamicFieldValues = signal<any>({});
   isLoadingDynamicFields = signal(false);
@@ -2494,6 +2517,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // la gestión se enviaba sin un campo obligatorio: el error saltaba recién al guardar.
     if (this.dynamicFieldsError()) {
       console.log('[isFormValid] ❌ Bloqueado: los campos adicionales no cargaron');
+      return false;
+    }
+
+    // 1.6 Campos del nivel 1 que se piden antes del detalle (motivo de no pago)
+    const valoresRama = this.valoresDeRama();
+    if (this.camposDeRama().some(c => c.required && !valoresRama[c.id])) {
       return false;
     }
 
@@ -5299,6 +5328,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.showPromesaVencidaGraciaBlocking.set(false);
 
     if (levelIndex === 0) {
+      this.camposDeRama.set([]);
+      this.valoresDeRama.set({});
       this.managementForm.clasificacionNivel1 = value;
       this.managementForm.clasificacionNivel2 = '';
       this.managementForm.clasificacionNivel3 = '';
@@ -5332,6 +5363,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.dynamicFieldValues.set({});
       this.isLeafClassification.set(false);
     }
+  }
+
+  elegirValorDeRama(campoId: string, valor: string) {
+    this.valoresDeRama.update(v => ({ ...v, [campoId]: valor }));
   }
 
   /**
@@ -5506,11 +5541,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // no pise el schema del nivel actual.
         if (reqId !== this.dynamicFieldsReqId) { return; }
         this.isLeafClassification.set(response.isLeaf);
-        this.dynamicFields.set(response.fields || []);
+
+        // Las listas que una tipificación pasa a sus opciones (motivo de no pago) se piden junto al
+        // nivel 1 y no en el formulario del detalle. Llegan con el nivel 1 (propias) o con el detalle
+        // (heredadas); se toman de la que responda, por si el asesor cambió de nivel antes.
+        const todos: any[] = response.fields || [];
+        const esDeRama = (f: any) => f.aplicaADescendientes === true && String(f.fieldType).toLowerCase() === 'select';
+        const actuales = this.camposDeRama();
+        const nuevos = todos.filter(f => esDeRama(f) && !actuales.some(c => c.id === f.fieldCode))
+          .map(f => ({
+            id: f.fieldCode, label: f.fieldName, type: 'select', required: !!f.isRequired, displayOrder: f.displayOrder || 0,
+            options: (f.options || []).map((opt: any) => typeof opt === 'string' ? { value: opt, label: opt } : { value: opt.value || opt, label: opt.label || opt })
+          } as FieldConfig));
+        if (nuevos.length) {
+          this.camposDeRama.set([...actuales, ...nuevos]);
+        }
+        const propios = todos.filter(f => !esDeRama(f));
+        this.dynamicFields.set(propios);
 
         // Convertir campos del backend al formato MetadataSchema
         // Los tipos ya vienen en lowercase desde el backend, no necesitan conversión
-        const fieldConfigs: FieldConfig[] = (response.fields || []).map((field: any, index: number) => {
+        const fieldConfigs: FieldConfig[] = propios.map((field: any, index: number) => {
           return {
           id: field.fieldCode,
           label: field.fieldName,
@@ -7019,10 +7070,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private getCamposAdicionalesParaGuardar(): string | null {
     const schema = this.dynamicFieldsSchema();
     const values = this.dynamicFieldValues();
-    if (!schema?.fields || !values) return null;
+    const campos: Record<string, { valor: string; texto: string }> = {};
+
+    // Los del nivel 1 (motivo de no pago) van primero: se eligieron antes del detalle
+    const valoresRama = this.valoresDeRama();
+    for (const campo of this.camposDeRama()) {
+      const valor = valoresRama[campo.id];
+      if (!valor) continue;
+      const opcion = campo.options?.find(o => String(o.value) === valor);
+      campos[campo.id] = { valor, texto: opcion ? String(opcion.label) : valor };
+    }
+    if (!schema?.fields || !values) {
+      return Object.keys(campos).length > 0 ? JSON.stringify(campos) : null;
+    }
 
     const tiposConDestinoPropio = ['textarea', 'payment_schedule', 'table'];
-    const campos: Record<string, { valor: string; texto: string }> = {};
     for (const field of schema.fields) {
       if (tiposConDestinoPropio.includes(field.type)) continue;
       const valor = values[field.id];
