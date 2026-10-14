@@ -57,6 +57,15 @@ export class BcpPagosService {
     return this.http.get<PagoBancoPendiente[]>(`${this.baseUrl}/pendientes`, { params: this.contextoParams(request) });
   }
 
+  /** Recalcula si el cliente tiene carta de no adeudo disponible (PAGO_CUMPLIDO). */
+  recalcularPagoCumplido(documento: string, request: ResumenConciliacionClienteRequest): Observable<{ exitoso: boolean; pagoCumplido: boolean; cambio: boolean }> {
+    return this.http.post<{ exitoso: boolean; pagoCumplido: boolean; cambio: boolean }>(
+      `${this.baseUrl}/clientes/${encodeURIComponent(documento)}/recalcular-pago-cumplido`,
+      null,
+      { params: this.contextoParams(request) }
+    );
+  }
+
   /** Pagos de la subcartera marcados como «no corresponde». */
   listarNoCorresponden(request: ResumenConciliacionClienteRequest): Observable<PagoBancoPendiente[]> {
     return this.http.get<PagoBancoPendiente[]>(`${this.baseUrl}/no-corresponde`, { params: this.contextoParams(request) });

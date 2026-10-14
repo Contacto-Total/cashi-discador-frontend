@@ -11,6 +11,9 @@ import {
   infoCategoria,
   montoSoles
 } from '../models/categoria-pago';
+import { coincideDocumento, cortarPagina } from '../models/paginacion';
+import { BuscadorDocumentoWidget } from './buscador-documento.widget';
+import { TablaPaginacionWidget } from './tabla-paginacion.widget';
 
 /**
  * Pagos bancarios guardados que siguen pendientes de conciliar en la subcartera.
@@ -18,7 +21,7 @@ import {
 @Component({
   selector: 'app-bcp-pagos-pendientes',
   standalone: true,
-  imports: [CommonModule, A11yModule],
+  imports: [CommonModule, A11yModule, BuscadorDocumentoWidget, TablaPaginacionWidget],
   template: `
     <!-- relative: contiene el caption sr-only; sin esto se sale del scroll de .main-content y estira la página -->
     <section class="relative bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" [attr.aria-labelledby]="idPrefix + '-titulo'">
@@ -28,6 +31,7 @@ import {
           <p class="text-xs text-slate-600 dark:text-slate-400">Pagos ya guardados de esta subcartera que esperan una corrección o el resto del monto</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+          <app-buscador-documento [inputId]="idPrefix + '-buscar'" [valor]="busqueda()" (valorChange)="buscar($event)"></app-buscador-documento>
           <button
             type="button"
             (click)="alternarNoCorresponden()"
@@ -70,6 +74,8 @@ import {
           <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Cargando pagos que no corresponden...</p>
         } @else if (noCorresponden().length === 0) {
           <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos marcados como no corresponde en esta subcartera.</p>
+        } @else if (noCorrespondenFiltrados().length === 0) {
+          <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos con ese documento.</p>
         } @else {
           <p class="border-b border-slate-200 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
             Pagos guardados que un supervisor sacó de pendientes porque no corresponden a la gestión de la empresa. El motivo queda en el histórico de correcciones.
@@ -87,7 +93,7 @@ import {
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                @for (pago of noCorresponden(); track pago.id) {
+                @for (pago of paginaNoCorresponden(); track pago.id) {
                   <tr>
                     <th scope="row" class="px-3 py-2 text-left font-semibold whitespace-nowrap text-slate-900 dark:text-white">{{ pago.documento }}</th>
                     <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(pago.fechaBanco) }}</td>
@@ -109,11 +115,19 @@ import {
               </tbody>
             </table>
           </div>
+          <app-tabla-paginacion
+            [total]="noCorrespondenFiltrados().length"
+            [pagina]="pagina()"
+            etiqueta="pagos que no corresponden"
+            (paginaChange)="pagina.set($event)"
+          ></app-tabla-paginacion>
         }
       } @else if (cargando()) {
         <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Cargando pagos pendientes...</p>
       } @else if (pagos().length === 0) {
         <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes en esta subcartera.</p>
+      } @else if (pendientesFiltrados().length === 0) {
+        <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes con ese documento.</p>
       } @else {
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
@@ -130,7 +144,7 @@ import {
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-              @for (pago of pagos(); track pago.id) {
+              @for (pago of paginaPendientes(); track pago.id) {
                 <tr class="align-top">
                   <th scope="row" class="px-3 py-2 text-left font-semibold whitespace-nowrap">
                     <button
@@ -186,6 +200,12 @@ import {
             </tbody>
           </table>
         </div>
+        <app-tabla-paginacion
+          [total]="pendientesFiltrados().length"
+          [pagina]="pagina()"
+          etiqueta="pagos pendientes de conciliar"
+          (paginaChange)="pagina.set($event)"
+        ></app-tabla-paginacion>
       }
     </section>
 
@@ -273,6 +293,9 @@ export class BcpPagosPendientesWidget implements OnChanges {
   motivoNoCorresponde = signal('');
   errorNoCorresponde = signal<string | null>(null);
   guardando = signal(false);
+  busqueda = signal('');
+  /** Página de la lista visible; se comparte entre pendientes y no corresponden. */
+  pagina = signal(1);
   /** Botón que abrió el diálogo: recibe el foco al cerrarlo. */
   private origenDialogo: HTMLElement | null = null;
 
@@ -282,6 +305,8 @@ export class BcpPagosPendientesWidget implements OnChanges {
     if (changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
       this.mensaje.set(null);
       this.verNoCorresponden.set(false);
+      this.busqueda.set('');
+      this.pagina.set(1);
     }
     this.cargar();
   }
@@ -331,7 +356,29 @@ export class BcpPagosPendientesWidget implements OnChanges {
   alternarNoCorresponden(): void {
     this.verNoCorresponden.update(valor => !valor);
     this.mensaje.set(null);
+    this.pagina.set(1);
     this.cargar();
+  }
+
+  buscar(texto: string): void {
+    this.busqueda.set(texto);
+    this.pagina.set(1);
+  }
+
+  pendientesFiltrados(): PagoBancoPendiente[] {
+    return this.pagos().filter(pago => coincideDocumento(pago.documento, this.busqueda()));
+  }
+
+  paginaPendientes(): PagoBancoPendiente[] {
+    return cortarPagina(this.pendientesFiltrados(), this.pagina());
+  }
+
+  noCorrespondenFiltrados(): PagoBancoPendiente[] {
+    return this.noCorresponden().filter(pago => coincideDocumento(pago.documento, this.busqueda()));
+  }
+
+  paginaNoCorresponden(): PagoBancoPendiente[] {
+    return cortarPagina(this.noCorrespondenFiltrados(), this.pagina());
   }
 
   private cargarNoCorresponden(): void {

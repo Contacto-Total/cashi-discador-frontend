@@ -14,6 +14,9 @@ import {
   infoCategoria,
   montoSoles
 } from '../models/categoria-pago';
+import { coincideDocumento, cortarPagina } from '../models/paginacion';
+import { BuscadorDocumentoWidget } from './buscador-documento.widget';
+import { TablaPaginacionWidget } from './tabla-paginacion.widget';
 
 interface ResumenCategoria {
   categoria: string;
@@ -24,7 +27,7 @@ interface ResumenCategoria {
 @Component({
   selector: 'app-bcp-prevalidacion-archivo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, BuscadorDocumentoWidget, TablaPaginacionWidget],
   template: `
     <!-- relative: contiene el caption sr-only; sin esto se sale del scroll de .main-content y estira la página -->
     <section class="relative bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6" aria-labelledby="prevalidacion-titulo">
@@ -33,11 +36,14 @@ interface ResumenCategoria {
           <h2 id="prevalidacion-titulo" class="text-lg font-semibold text-slate-800 dark:text-white">Resultado de la carga</h2>
           <p class="text-xs text-slate-600 dark:text-slate-400">Cada pago del banco comparado con los pagos registrados por el asesor</p>
         </div>
-        <div class="text-right">
+        <div class="flex flex-wrap items-center gap-3">
+          <app-buscador-documento inputId="prevalidacion-buscar" [valor]="busqueda" (valorChange)="buscar($event)"></app-buscador-documento>
+          <div class="text-right">
           <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="completed ? pill('ok') : pill('neutro')">
             {{ completed ? 'Guardado' : 'Vista previa' }}
           </span>
           <p class="mt-1 text-[11px] text-slate-600 dark:text-slate-400">{{ data.length }} pago(s)</p>
+          </div>
         </div>
       </div>
 
@@ -45,7 +51,7 @@ interface ResumenCategoria {
         <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700" role="group" aria-label="Filtrar por categoría">
           <button
             type="button"
-            (click)="filtro = null"
+            (click)="filtrar(null)"
             [attr.aria-pressed]="filtro === null"
             class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
             [class]="filtro === null ? 'border-blue-600 bg-blue-600 !text-white' : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700'"
@@ -55,7 +61,7 @@ interface ResumenCategoria {
           @for (item of resumen(); track item.categoria) {
             <button
               type="button"
-              (click)="filtro = item.categoria"
+              (click)="filtrar(item.categoria)"
               [attr.aria-pressed]="filtro === item.categoria"
               class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
               [class]="filtro === item.categoria ? 'border-slate-800 ' + pill(item.info.tono) : 'border-transparent ' + pill(item.info.tono) + ' opacity-80 hover:opacity-100'"
@@ -82,7 +88,7 @@ interface ResumenCategoria {
             </tr>
           </thead>
 
-          @for (row of filasVisibles(); track trackRow(row, $index)) {
+          @for (row of paginaActual(); track trackRow(row, $index)) {
             <tbody [class]="filaClass(row)">
               <tr class="border-t-2" [class]="bordeClass(row)">
                 <th scope="row" class="px-2 py-2 text-left font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</th>
@@ -135,13 +141,20 @@ interface ResumenCategoria {
             <tbody>
               <tr>
                 <td colspan="8" class="px-4 py-10 text-center text-sm text-slate-600 dark:text-slate-400">
-                  {{ data.length === 0 ? 'No hay pagos para mostrar.' : 'No hay pagos en esta categoría.' }}
+                  {{ data.length === 0 ? 'No hay pagos para mostrar.' : (busqueda ? 'No hay pagos con ese documento en esta categoría.' : 'No hay pagos en esta categoría.') }}
                 </td>
               </tr>
             </tbody>
           }
         </table>
       </div>
+
+      <app-tabla-paginacion
+        [total]="filasVisibles().length"
+        [pagina]="pagina"
+        etiqueta="Resultado de la carga"
+        (paginaChange)="pagina = $event"
+      ></app-tabla-paginacion>
 
       <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-3">
         <p class="text-xs text-slate-600 dark:text-slate-400">
@@ -176,6 +189,23 @@ export class BcpPrevalidacionArchivoWidget {
   @Output() resolver = new EventEmitter<PrevalidacionArchivoBcp>();
 
   filtro: string | null = null;
+  busqueda = '';
+  pagina = 1;
+
+  /** Cambiar de categoría o de búsqueda vuelve a la primera página. */
+  filtrar(categoria: string | null): void {
+    this.filtro = categoria;
+    this.pagina = 1;
+  }
+
+  buscar(texto: string): void {
+    this.busqueda = texto;
+    this.pagina = 1;
+  }
+
+  paginaActual(): PrevalidacionArchivoBcp[] {
+    return cortarPagina(this.filasVisibles(), this.pagina);
+  }
 
   value(row: any, camelKey: string, snakeKey?: string): any {
     return row?.[camelKey] ?? (snakeKey ? row?.[snakeKey] : undefined);
@@ -211,12 +241,13 @@ export class BcpPrevalidacionArchivoWidget {
     }));
   }
 
+  /** Filas de la categoría elegida que coinciden con el documento buscado. */
   filasVisibles(): PrevalidacionArchivoBcp[] {
     // Si el filtro quedó en una categoría que ya no existe tras recargar, se muestran todas.
-    if (this.filtro === null || !this.data.some(row => this.categoria(row) === this.filtro)) {
-      return this.data;
-    }
-    return this.data.filter(row => this.categoria(row) === this.filtro);
+    const porCategoria = this.filtro === null || !this.data.some(row => this.categoria(row) === this.filtro)
+      ? this.data
+      : this.data.filter(row => this.categoria(row) === this.filtro);
+    return porCategoria.filter(row => coincideDocumento(this.value(row, 'documentoBanco', 'documento_banco'), this.busqueda));
   }
 
   detalle(row: PrevalidacionArchivoBcp): string {
