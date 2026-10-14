@@ -1,17 +1,21 @@
 import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule, X, FileText, Save, Check, RotateCcw,
-  Play, Pause, RotateCw, Download, AudioLines, TriangleAlert
+  Play, Pause, RotateCw, Download, AudioLines, TriangleAlert,
+  FileSpreadsheet, LoaderCircle
 } from 'lucide-angular';
 
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
 import { HistoricalRecordingsService } from '../../services/historical-recordings.service';
 import { RecordingDownloadService } from '../../services/recording-download.service';
+import { RecordingEvaluationReportService } from '../../services/recording-evaluation-report.service';
 import { AudioPlaybackService } from '../../services/audio-playback.service';
 import {
-  AudioPart, EvaluationCriterion, EvaluationDetail, MonitoringMode, NOMBRE_RUBRICA, etiquetaTipificacion
+  AdjustField, AudioPart, EvaluationCriterion, EvaluationDetail, MonitoringMode,
+  NOMBRE_RUBRICA, etiquetaTipificacion
 } from '../../models/quality-monitoring.model';
 import { Transcription } from '../../models/transcription.model';
 
@@ -72,7 +76,7 @@ interface Bloque {
 @Component({
   selector: 'app-evaluation-editor',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './evaluation-editor.component.html',
   styleUrls: ['./evaluation-editor.component.scss']
 })
@@ -88,6 +92,8 @@ export class EvaluationEditorComponent implements OnDestroy {
   readonly Download = Download;
   readonly AudioLines = AudioLines;
   readonly TriangleAlert = TriangleAlert;
+  readonly FileSpreadsheet = FileSpreadsheet;
+  readonly LoaderCircle = LoaderCircle;
 
   readonly ETIQUETA_SECCION: Record<string, string> = {
     PRESENTACION: 'Presentación',
@@ -149,14 +155,33 @@ export class EvaluationEditorComponent implements OnDestroy {
   /** campo -> valor elegido en pantalla. Arranca como copia de lo que trajo el backend. */
   valores: Record<string, number | null> = {};
 
+  /**
+   * campo -> motivo escrito para ESTE cambio, mientras no se guarde.
+   *
+   * No se mezcla con `EvaluationCriterion.comentario`, que es el motivo de la corrección
+   * ANTERIOR y ya está guardado: una cosa es lo que alguien explicó en su momento y otra
+   * lo que se está por explicar ahora.
+   */
+  motivos: Record<string, string> = {};
+
+  /** Un motivo de tres letras no es un motivo. Frena el "ok" y el "asd", no al que escribe. */
+  readonly MINIMO_MOTIVO = 15;
+
+  /** El historial se despliega bajo pedido: lo normal es que interese la última. */
+  mostrarHistorial = false;
+
   transcripcion: Transcription[] | null = null;
   isLoadingTranscripcion = false;
   mostrarTranscripcion = false;
+
+  descargandoExcel = false;
+  descargandoAudio = false;
 
   constructor(
     private monitoreo: QualityMonitoringService,
     private historicas: HistoricalRecordingsService,
     private descargas: RecordingDownloadService,
+    private reportes: RecordingEvaluationReportService,
     private toast: ToastService,
     /**
      * Público porque la plantilla lee su estado directamente.
@@ -224,6 +249,10 @@ export class EvaluationEditorComponent implements OnDestroy {
       return;
     }
     this.valores[campo] = valor;
+    if (!this.cambio(campo)) {
+      // Volvió solo a su valor original: ya no hay nada que explicar.
+      delete this.motivos[campo];
+    }
     this.recalcularBloques();
   }
 
@@ -232,6 +261,7 @@ export class EvaluationEditorComponent implements OnDestroy {
     const original = this.ficha?.criterios.find(c => c.campo === campo);
     if (original) {
       this.valores[campo] = original.valor;
+      delete this.motivos[campo];
       this.recalcularBloques();
     }
   }
@@ -242,12 +272,12 @@ export class EvaluationEditorComponent implements OnDestroy {
   }
 
   /** Solo los criterios que de verdad cambiaron: es lo único que viaja en el PUT. */
-  private get cambios(): Record<string, number> {
-    const salida: Record<string, number> = {};
+  private get cambios(): Record<string, AdjustField> {
+    const salida: Record<string, AdjustField> = {};
     for (const c of this.ficha?.criterios ?? []) {
       const valor = this.valores[c.campo];
       if (valor !== null && valor !== undefined && valor !== c.valor) {
-        salida[c.campo] = valor;
+        salida[c.campo] = { valor, comentario: (this.motivos[c.campo] || '').trim() };
       }
     }
     return salida;
@@ -257,31 +287,76 @@ export class EvaluationEditorComponent implements OnDestroy {
     return Object.keys(this.cambios).length;
   }
 
+  /** Los criterios cambiados a los que todavía les falta el motivo. */
+  get sinMotivo(): string[] {
+    return Object.keys(this.cambios)
+      .filter(campo => (this.motivos[campo] || '').trim().length < this.MINIMO_MOTIVO);
+  }
+
+  /** Lo que ya escribió para este criterio, para el contador de la caja. */
+  largoMotivo(campo: string): number {
+    return (this.motivos[campo] || '').trim().length;
+  }
+
   get puedeGuardar(): boolean {
-    return !!this.ficha?.editable && this.cantidadCambios > 0 && !this.isSaving;
+    return !!this.ficha?.editable && this.cantidadCambios > 0
+      && this.sinMotivo.length === 0 && !this.isSaving;
+  }
+
+  /**
+   * Revisado: escuchó el audio y estuvo conforme con todo.
+   *
+   * Es el botón que hoy no existía, y sin él solo se registrarían los errores del speech
+   * y nunca sus aciertos —que son el denominador de la precisión—. Por eso se habilita
+   * justo cuando no hay nada que corregir, que es el caso en que antes no había nada que
+   * pulsar.
+   */
+  get puedeRevisar(): boolean {
+    return !!this.ficha?.editable && this.cantidadCambios === 0 && !this.isSaving;
+  }
+
+  /** La última revisión, que es la que se muestra en la cinta. */
+  get ultimaRevision() {
+    return this.ficha?.revisiones?.[0] ?? null;
+  }
+
+  revisar(): void {
+    if (this.puedeRevisar) {
+      this.enviar({});
+    }
   }
 
   guardar(): void {
-    if (!this.puedeGuardar || this._idx === null) {
+    if (this.puedeGuardar) {
+      this.enviar(this.cambios);
+    }
+  }
+
+  private enviar(criterios: Record<string, AdjustField>): void {
+    if (this._idx === null) {
       return;
     }
+    const huboCambios = Object.keys(criterios).length > 0;
     this.isSaving = true;
 
-    this.monitoreo.ajustarEvaluacion(this._idx, { criterios: this.cambios }).subscribe({
+    this.monitoreo.ajustarEvaluacion(this._idx, { criterios }).subscribe({
       next: (data) => {
         this.ficha = data;
         this.valores = {};
+        this.motivos = {};
         for (const c of data.criterios) {
           this.valores[c.campo] = c.valor;
         }
         this.recalcularBloques();
         this.isSaving = false;
-        this.toast.success('Evaluación corregida');
+        this.toast.success(huboCambios ? 'Evaluación corregida' : 'Audio marcado como revisado');
         this.guardado.emit();
       },
       error: (e) => {
         this.isSaving = false;
-        this.toast.error(e?.message || 'No se pudo guardar la corrección');
+        // El backend devuelve el motivo real en los 400 —falta el motivo del cambio, el
+        // criterio no es de esta rúbrica—: es lo único accionable que tiene el usuario.
+        this.toast.error(e?.message || 'No se pudo guardar la revisión');
       }
     });
   }
@@ -468,6 +543,141 @@ export class EvaluationEditorComponent implements OnDestroy {
       },
       error: () => this.toast.error('No se encontró el audio.')
     });
+  }
+
+  // ------------------------------------------------------------------ descargas
+
+  /**
+   * El Excel se baja de la nota GUARDADA, asi que no se ofrece con cambios pendientes.
+   *
+   * El backend arma el xlsx leyendo audios_evaluaciones. Con correcciones sin guardar,
+   * el archivo saldria con la nota vieja mientras la pantalla muestra la nueva, y eso
+   * se lee como un error del sistema y no como lo que es. Guardar primero y bajar
+   * despues deja una sola version de la verdad.
+   */
+  get puedeDescargarExcel(): boolean {
+    return !!this.ficha && !this.descargandoExcel && this.cantidadCambios === 0;
+  }
+
+  get motivoExcel(): string {
+    if (this.cantidadCambios > 0) {
+      return 'Guarda los cambios antes de bajar el reporte: el Excel sale con la nota guardada';
+    }
+    return 'Descargar el reporte de evaluación en Excel';
+  }
+
+  /**
+   * Hay audio que bajar si hay una parte y una via para traerla.
+   *
+   * En el discador la via es el mismo endpoint del reproductor; si la conversion
+   * fallo, no hay archivo que ofrecer y el boton queda apagado. En legacy siempre se
+   * puede, porque ahi se baja el crudo por nombre sin pasar por ffmpeg.
+   */
+  get puedeDescargarAudio(): boolean {
+    if (!this.ficha || !this.player.parteActual || this.descargandoAudio) {
+      return false;
+    }
+    if (this.player.urlParteActual) {
+      return true;
+    }
+    return this.modo === 'legacy' ? this.puedeDescargar : this.player.estado !== 'error';
+  }
+
+  get motivoAudio(): string {
+    if (!this.player.parteActual) {
+      return 'Esta gestión no tiene grabación';
+    }
+    if (!this.puedeDescargarAudio && !this.descargandoAudio) {
+      return 'El audio no se pudo preparar';
+    }
+    return this.player.hayVarias
+      ? 'Descargar la parte que estás escuchando'
+      : 'Descargar la grabación';
+  }
+
+  descargarExcel(): void {
+    if (!this.ficha || !this.puedeDescargarExcel) {
+      return;
+    }
+
+    this.descargandoExcel = true;
+    this.reportes.downloadGestionHistoricaReporteFile({
+      dni: this.ficha.documento,
+      cliente: this.ficha.cliente,
+      telefono: this.ficha.telefono,
+      fecha: this.ficha.fecha,
+      asesor: this.ficha.asesor,
+      resultado: this.ficha.resultado,
+      gestionHistoricaAudioIdx: this.ficha.idx
+    }).subscribe({
+      next: (blob: any) => {
+        this.descargandoExcel = false;
+        this.guardarArchivo(blob, `evaluacion_${this.ficha!.documento}_${this.ficha!.fecha}.xlsx`);
+      },
+      error: (e: { status?: number }) => {
+        this.descargandoExcel = false;
+        // 404 no es una falla: es una gestion con audio que todavia no se evaluo, y
+        // en un rango cualquiera eso es lo normal. Merece su propio texto.
+        this.toast.error(e?.status === 404
+          ? 'Este audio todavía no tiene evaluación.'
+          : 'No se pudo generar el reporte.');
+      }
+    });
+  }
+
+  /**
+   * Baja el audio de la parte que esta sonando.
+   *
+   * Tres caminos, en orden de preferencia: el blob que el reproductor ya tiene (gratis),
+   * el endpoint del discador por idx, o el de legacy por nombre.
+   */
+  descargarAudio(): void {
+    const parte = this.player.parteActual;
+    if (!this.ficha || !parte || !this.puedeDescargarAudio) {
+      return;
+    }
+
+    const yaEstá = this.player.urlParteActual;
+    if (yaEstá) {
+      this.bajarDesdeUrl(yaEstá, parte.nombre);
+      return;
+    }
+
+    if (this.modo === 'legacy') {
+      this.descargarParteActual();
+      return;
+    }
+
+    const peticion = this.monitoreo.descargarAudio(this.ficha.idx, parte.orden);
+    if (!peticion) {
+      return;
+    }
+
+    this.descargandoAudio = true;
+    peticion.subscribe({
+      next: (blob: Blob) => {
+        this.descargandoAudio = false;
+        this.guardarArchivo(blob, parte.nombre);
+      },
+      error: () => {
+        this.descargandoAudio = false;
+        this.toast.error('No se pudo descargar el audio.');
+      }
+    });
+  }
+
+  private guardarArchivo(blob: Blob, nombre: string): void {
+    const url = window.URL.createObjectURL(blob);
+    this.bajarDesdeUrl(url, nombre);
+    window.URL.revokeObjectURL(url);
+  }
+
+  /** El object URL del reproductor NO se revoca: sigue siendo el src del audio. */
+  private bajarDesdeUrl(url: string, nombre: string): void {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.click();
   }
 
   // ------------------------------------------------------------------ formato
