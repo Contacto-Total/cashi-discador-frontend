@@ -8,6 +8,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 import { BotonDirective } from '../../../shared/ui/boton.directive';
 import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
 import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
+import { NombrePropioPipe } from '../../../shared/ui/nombre-propio.pipe';
 import {
   AdditionalFieldV2,
   TenantTypificationConfigV2,
@@ -103,7 +104,7 @@ const PERSONALES: (keyof Borrador)[] = ['nombre', 'descripcion', 'color'];
   selector: 'app-typification-maintenance',
   standalone: true,
   imports: [
-    NgClass, A11yModule, LucideAngularModule, PageHeaderComponent, TarjetaDirective, BotonDirective,
+    NgClass, A11yModule, LucideAngularModule, PageHeaderComponent, TarjetaDirective, BotonDirective, NombrePropioPipe,
     TypificationFormDialogComponent, CategoryFormDialogComponent, TypificationAdditionalFieldsDialogComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -123,7 +124,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   readonly REJILLA = 'grid grid-cols-[minmax(0,1fr)_auto_12rem_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2 '
     + '@max-[44rem]/tabla:grid-cols-[minmax(0,1fr)_auto_9.5rem_3.5rem_1.75rem]';
   /** Lista de la tipificación base; sin asignar va en ámbar. */
-  readonly LISTA_BASE = 'font-cashi m-0! h-auto! w-full min-w-0 rounded-lg! border! px-2! py-[.3125rem]! text-[.8125rem]! leading-[1.5]! text-ellipsis outline-none '
+  readonly LISTA_BASE = 'font-cashi m-0! h-auto! w-full min-w-0 rounded-lg! border! px-2! py-[.3125rem]! text-[.875rem]! leading-[1.5]! text-ellipsis outline-none '
     + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
   readonly REJILLA_LISTA = 'grid grid-cols-[6rem_minmax(0,1fr)_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2';
   readonly LISTA = 'font-cashi m-0! h-auto! w-full rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-2.5! py-2! text-[.875rem]! leading-[1.5]! text-ellipsis text-foreground! outline-none '
@@ -262,28 +263,15 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   // ---------------------------------------------------------------- Carga
 
-  /** Todas las subcarteras de todos los clientes, para los filtros y la lista del costado. */
+  /** Subcarteras en uso (con asesores o con tipificaciones), para los filtros y la lista del costado. */
   cargarAmbito(): void {
     this.cargando.set(true);
     this.error.set(null);
-    this.api.getAllTenants().pipe(
-      switchMap(tenants => tenants.length
-        ? forkJoin(tenants.map(t => this.api.getPortfoliosByTenant(t.id).pipe(
-            map(ps => ps.map(p => ({ t, p }))),
-            catchError(() => of([]))
-          ))).pipe(map(l => l.flat()))
-        : of([])),
-      switchMap(pares => pares.length
-        ? forkJoin(pares.map(({ t, p }) => this.api.getSubPortfoliosByPortfolio(p.id).pipe(
-            map(subs => subs.map((s: any): Ambito => ({
-              tenantId: t.id, cliente: (t.tenantName || '').trim(), portfolioId: p.id, cartera: p.portfolioName,
-              subId: s.id, subcartera: s.subPortfolioName || s.nombre || ''
-            }))),
-            catchError(() => of([] as Ambito[]))
-          ))).pipe(map(l => l.flat()))
-        : of([] as Ambito[]))
-    ).subscribe({
-      next: ambito => {
+    this.api.getSubcarterasEnUso().subscribe({
+      next: lista => {
+        const ambito: Ambito[] = lista.map(x => ({
+          tenantId: x.idCliente, cliente: x.cliente, portfolioId: x.idCartera, cartera: x.cartera, subId: x.idSubcartera, subcartera: x.subcartera
+        }));
         this.ambito.set(ambito);
         if (ambito.length) {
           this.elegirSub(ambito[0].subId);

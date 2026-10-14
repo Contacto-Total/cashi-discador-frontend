@@ -879,7 +879,7 @@ type EvaluacionConvenio =
                           {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
                         </label>
                         <select
-                          [ngModel]="selectedClassifications()[$index]"
+                          [ngModel]="selectedClassifications()[$index] || ''"
                           (ngModelChange)="onClassificationLevelChange($index, $event)"
                           [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
                             (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white') + ' ' +
@@ -2371,6 +2371,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // se piden junto al nivel 1, antes del detalle, y su valor se conserva al cambiar el detalle.
   camposDeRama = signal<FieldConfig[]>([]);
   valoresDeRama = signal<Record<string, string>>({});
+  // Esas listas se piden para cada nivel 1 al cargar el árbol, para que el motivo salga junto con el
+  // nivel 1 y no un instante después (cuando llegan los campos), corriendo el detalle de sitio.
+  private camposDeRamaPorNivel1 = new Map<string, FieldConfig[]>();
+  private readonly precargarCamposDeRama = effect(() => {
+    const nivel1 = (this.managementClassifications() as any[]).filter(c => !c.parentId);
+    this.camposDeRamaPorNivel1 = new Map();
+    for (const c of nivel1) {
+      this.apiSystemConfigService.getClassificationFields(Number(c.id)).subscribe({
+        next: r => {
+          const deRama = (r.fields || []).filter((f: any) => this.esCampoDeRama(f)).map((f: any) => this.aCampoDeRama(f));
+          this.camposDeRamaPorNivel1.set(String(c.id), deRama);
+          if (deRama.length && this.selectedClassifications()[0] === String(c.id) && !this.camposDeRama().length) {
+            this.camposDeRama.set(deRama);
+          }
+        },
+        error: () => {}
+      });
+    }
+  });
   dynamicFields = signal<any[]>([]);
   dynamicFieldValues = signal<any>({});
   isLoadingDynamicFields = signal(false);
@@ -3879,6 +3898,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const currentUser = this.authService.getCurrentUser();
     console.log('[V2] Usuario actual:', currentUser);
 
+    // Desde gestión manual el contexto es el del cliente y lo fija loadCustomerByDocumentoFromManual.
+    // Fijar también el del usuario pediría a la vez dos árboles de tipificaciones (y dos topes de
+    // primera cuota) y quedaría el que respondiera último.
+    const params = this.route.snapshot.queryParams;
+    if (params['source'] === 'manual' && params['documento']) {
+      return;
+    }
+
     if (currentUser?.tenantId && currentUser?.portfolioId && currentUser?.subPortfolioId) {
       this.selectedTenantId = currentUser.tenantId;
       this.selectedPortfolioId = currentUser.portfolioId;
@@ -3890,9 +3917,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.loadCustomerOutputConfig();
       this.loadFirstInstallmentConfig(); // Cargar config de primera cuota
 
-      // Solo cargar cliente por defecto si NO viene desde gestión manual
-      // (gestión manual carga el cliente por documento en route.queryParams)
-      const params = this.route.snapshot.queryParams;
       if (params['source'] !== 'manual') {
         this.loadFirstCustomer();
       }
@@ -5213,7 +5237,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.showPromesaVencidaGraciaBlocking.set(false);
 
     if (levelIndex === 0) {
-      this.camposDeRama.set([]);
+      this.camposDeRama.set(this.camposDeRamaPorNivel1.get(value) ?? []);
       this.valoresDeRama.set({});
       this.managementForm.clasificacionNivel1 = value;
       this.managementForm.clasificacionNivel2 = '';
@@ -5248,6 +5272,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.dynamicFieldValues.set({});
       this.isLeafClassification.set(false);
     }
+  }
+
+  /** Lista que una tipificación pasa a todas sus opciones (motivo de no pago). */
+  private esCampoDeRama(f: any): boolean {
+    return f.aplicaADescendientes === true && String(f.fieldType).toLowerCase() === 'select';
+  }
+
+  private aCampoDeRama(f: any): FieldConfig {
+    return {
+      id: f.fieldCode, label: f.fieldName, type: 'select', required: !!f.isRequired, displayOrder: f.displayOrder || 0,
+      options: (f.options || []).map((opt: any) => typeof opt === 'string' ? { value: opt, label: opt } : { value: opt.value || opt, label: opt.label || opt })
+    } as FieldConfig;
   }
 
   elegirValorDeRama(campoId: string, valor: string) {
@@ -5433,17 +5469,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // nivel 1 y no en el formulario del detalle. Llegan con el nivel 1 (propias) o con el detalle
         // (heredadas); se toman de la que responda, por si el asesor cambió de nivel antes.
         const todos: any[] = response.fields || [];
-        const esDeRama = (f: any) => f.aplicaADescendientes === true && String(f.fieldType).toLowerCase() === 'select';
         const actuales = this.camposDeRama();
-        const nuevos = todos.filter(f => esDeRama(f) && !actuales.some(c => c.id === f.fieldCode))
-          .map(f => ({
-            id: f.fieldCode, label: f.fieldName, type: 'select', required: !!f.isRequired, displayOrder: f.displayOrder || 0,
-            options: (f.options || []).map((opt: any) => typeof opt === 'string' ? { value: opt, label: opt } : { value: opt.value || opt, label: opt.label || opt })
-          } as FieldConfig));
+        const nuevos = todos.filter(f => this.esCampoDeRama(f) && !actuales.some(c => c.id === f.fieldCode))
+          .map(f => this.aCampoDeRama(f));
         if (nuevos.length) {
           this.camposDeRama.set([...actuales, ...nuevos]);
         }
-        const propios = todos.filter(f => !esDeRama(f));
+        const propios = todos.filter(f => !this.esCampoDeRama(f));
         this.dynamicFields.set(propios);
 
         // Convertir campos del backend al formato MetadataSchema
