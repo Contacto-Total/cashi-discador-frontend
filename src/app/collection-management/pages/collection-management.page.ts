@@ -2709,10 +2709,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   isCancellationTypification = computed(() => {
     const selected = this.selectedClassification();
     if (!selected) return false;
-    // Detectar por código "CA" o por label que contenga "CANCELACION"
+    // Por código "CA", por nombre, o porque su tipificación base es un pago (p. ej. «Titular ya pagó»)
     return selected.codigo === 'CA' ||
            selected.label?.toUpperCase().includes('CANCELACION') ||
-           selected.label?.toUpperCase().includes('CANCELACIÓN');
+           selected.label?.toUpperCase().includes('CANCELACIÓN') ||
+           this.apiSystemConfigService.accionBase((selected as any).idTipificacionBase) === 'PAGO';
   });
 
   // Computed para obtener las cuotas pendientes de la ÚLTIMA promesa activa
@@ -5278,7 +5279,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Verificar si el código es CON o el label contiene CONTINUIDAD (case insensitive)
     const isContinuidad = selected.codigo?.toUpperCase() === 'CON' ||
-                          selected.label?.toUpperCase()?.includes('CONTINUIDAD');
+                          selected.label?.toUpperCase()?.includes('CONTINUIDAD') ||
+                          this.apiSystemConfigService.accionBase((selected as any).idTipificacionBase) === 'CONTINUIDAD';
 
     console.log('[CONTINUIDAD] Verificando tipificación:', selected.codigo, selected.label, '- Es continuidad:', isContinuidad);
 
@@ -5306,7 +5308,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // También verificar allowsInstallmentSelection que indica que genera cronograma
     const isPromesaPago = selected.codigo?.toUpperCase() === 'PP' ||
                           selected.label?.toUpperCase()?.includes('PROMESA DE PAGO') ||
-                          selected.allowsInstallmentSelection === true;
+                          selected.allowsInstallmentSelection === true ||
+                          this.apiSystemConfigService.accionBase((selected as any).idTipificacionBase) === 'PROMESA';
 
     console.log('[PROMESA-CHECK] Verificando tipificación:', selected.codigo, selected.label,
                 '- Es promesa de pago:', isPromesaPago,

@@ -24,6 +24,18 @@ export interface ManagementClassificationResource {
   suggestsFullAmount?: boolean | null;
   allowsInstallmentSelection?: boolean | null;
   requiresManualAmount?: boolean | null;
+  // Opción de la tipificación base de Cashi a la que va (decide promesa, cancelación o continuidad)
+  idTipificacionBase?: number | null;
+}
+
+/** Opción de la tipificación base de Cashi, con lo que hace el sistema al elegirla. */
+export interface TipificacionBaseResource {
+  id: number;
+  codigo: string;
+  nivel1: string;
+  nivel2: string;
+  accion?: string | null;
+  origen: string;
 }
 
 export interface CampaignResource {
@@ -38,6 +50,7 @@ export interface TypificationCatalogResource {
   id: number;
   codigo: string;
   nombre: string;
+  idTipificacionBase?: number | null;
   tipoClasificacion: string;
   parentTypificationId?: number;
   nivelJerarquia: number;
@@ -142,6 +155,7 @@ export class ApiSystemConfigService {
     // Recargar tipificaciones del catálogo (CUSTOM) después de cambiar contexto
     this.loadTenantClassifications();
     this.loadTypificationsFromCatalog();
+    this.cargarTipificacionesBase();
   }
 
   /**
@@ -198,7 +212,8 @@ export class ApiSystemConfigService {
               hierarchyLevel: t.nivelJerarquia,
               suggestsFullAmount: t.suggestsFullAmount ?? null,
               allowsInstallmentSelection: t.allowsInstallmentSelection ?? null,
-              requiresManualAmount: t.requiresManualAmount ?? null
+              requiresManualAmount: t.requiresManualAmount ?? null,
+              idTipificacionBase: t.idTipificacionBase ?? null
             }));
 
             this.managementClassifications.set(managementClasses);
@@ -388,8 +403,31 @@ export class ApiSystemConfigService {
       // Campos del tipo de clasificación
       suggestsFullAmount: item.suggestsFullAmount,
       allowsInstallmentSelection: item.allowsInstallmentSelection,
-      requiresManualAmount: item.requiresManualAmount
+      requiresManualAmount: item.requiresManualAmount,
+      idTipificacionBase: item.idTipificacionBase ?? null
     }));
+  }
+
+  /** Opciones de la tipificación base; se piden una vez. Si fallan, la ficha decide solo por código y nombre. */
+  readonly tipificacionesBase = signal<TipificacionBaseResource[]>([]);
+  private basesPedidas = false;
+
+  cargarTipificacionesBase(): void {
+    if (this.basesPedidas) return;
+    this.basesPedidas = true;
+    this.http.get<TipificacionBaseResource[]>(`${environment.gatewayUrl}/v2/typifications/catalog/base`)
+      .pipe(catchError(() => { this.basesPedidas = false; return of([] as TipificacionBaseResource[]); }))
+      .subscribe(b => this.tipificacionesBase.set(b));
+  }
+
+  /**
+   * Acción de la tipificación base de una opción (PROMESA, PAGO, CONTINUIDAD), solo si la marca el
+   * asesor: las de sistema (pago voluntario, promesa sistema) no cambian la ficha.
+   */
+  accionBase(idTipificacionBase?: number | null): string | null {
+    if (idTipificacionBase == null) return null;
+    const base = this.tipificacionesBase().find(b => b.id === idTipificacionBase);
+    return base && base.origen === 'ASESOR' ? base.accion ?? null : null;
   }
 
   /**
