@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   TypificationCatalogV2,
+  TipificacionBase,
   TenantTypificationConfigV2,
   CreateTypificationCommandV2,
   UpdateTypificationCommandV2,
@@ -231,6 +232,16 @@ export class TypificationV2Service {
     return this.http.get<AdditionalFieldV2[]>(
       `${this.catalogUrl}/${typificationId}/additional-fields`
     );
+  }
+
+  /** Opciones de la tipificación base de Cashi. */
+  getTipificacionesBase(): Observable<TipificacionBase[]> {
+    return this.http.get<TipificacionBase[]>(`${this.catalogUrl}/base`);
+  }
+
+  /** Asigna (o quita, con null) la opción base de una tipificación del catálogo. */
+  asignarTipificacionBase(typificationId: number, idTipificacionBase: number | null): Observable<TypificationCatalogV2> {
+    return this.http.put<TypificationCatalogV2>(`${this.catalogUrl}/${typificationId}/tipificacion-base`, { idTipificacionBase });
   }
 
   /** Campos adicionales de varias tipificaciones en una sola llamada, por id de tipificación. */

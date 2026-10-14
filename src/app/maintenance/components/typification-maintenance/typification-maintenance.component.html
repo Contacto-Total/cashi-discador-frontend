@@ -46,6 +46,7 @@
       <div [class]="REJILLA + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
         <span>Tipificación</span>
         <span class="text-right">Campos</span>
+        <span title="En el catálogo: vale para todas las carteras">Tipificación base</span>
         <span class="text-center">Habilitada</span>
         <span></span>
       </div>
@@ -79,6 +80,7 @@
                 <span class="min-w-0 overflow-hidden text-[.875rem] font-medium text-ellipsis whitespace-nowrap" [ngClass]="apagada(f) ? 'text-muted-foreground/75' : 'text-foreground'">{{ lista()?.etiqueta }}</span>
                 <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">{{ motivosActivos() }} {{ motivosActivos() === 1 ? 'motivo' : 'motivos' }}</span>
               </div>
+              <span></span>
               <span></span>
               <span></span>
               <button type="button" [class]="ICONO" [attr.aria-label]="'Editar ' + (lista()?.etiqueta || 'la lista')" title="Editar motivos" (click)="pestana.set('lista'); abierta.set(null)">
@@ -123,6 +125,44 @@
                 <span [class]="PILL + ' @max-[44rem]/tabla:hidden'">{{ p }}</span>
               }
             </div>
+
+            <!-- Tipificación base. El tipo de contacto elige su grupo; cada opción final, solo entre las de ese grupo. -->
+            @if (f.nivel === 1) {
+              @let grupo = grupoDe(f.node);
+              <select [class]="LISTA_BASE + ' font-semibold!'" [ngClass]="grupo ? 'border-(--campo-ln)! bg-(--campo)! text-foreground!' : 'border-(--am-ln)! bg-(--am-bg)! text-(--am)!'"
+                      [attr.aria-label]="'Grupo base de ' + nombre(f)" [title]="grupo ? 'Sus opciones cuentan como ' + grupo : 'Sin grupo base'"
+                      (change)="elegirGrupo(f, $any($event.target).value)">
+                @if (!grupo) {
+                  <option value="" selected>Elegir grupo</option>
+                }
+                @for (g of basesPorGrupo(); track g.nombre) {
+                  <option [value]="g.nombre" [selected]="g.nombre === grupo">{{ g.nombre }}</option>
+                }
+              </select>
+            } @else if (f.node.children.length) {
+              <span></span>
+            } @else {
+              @let opciones = opcionesBase(f);
+              <select [class]="LISTA_BASE" [ngClass]="baseDe(f) === null ? 'border-(--am-ln)! bg-(--am-bg)! text-(--am)!' : 'border-(--campo-ln)! bg-(--campo)! text-foreground!'"
+                      [attr.aria-label]="'Tipificación base de ' + nombre(f)" [title]="rotuloBase(f)" (change)="elegirBase(f, $any($event.target).value)">
+                <option value="" [selected]="baseDe(f) === null">Sin asignar</option>
+                @if (f.ancestros[0] && grupoDe(f.ancestros[0])) {
+                  @for (b of opciones; track b.id) {
+                    <option [value]="b.id" [selected]="b.id === baseDe(f)">{{ b.nivel2 }}</option>
+                  }
+                } @else {
+                  @for (g of basesPorGrupo(); track g.nombre) {
+                    <optgroup [label]="g.nombre">
+                      @for (b of g.opciones; track b.id) {
+                        @if (b.origen !== 'DISCADOR' || b.id === baseDe(f)) {
+                          <option [value]="b.id" [selected]="b.id === baseDe(f)">{{ b.nivel2 }}</option>
+                        }
+                      }
+                    </optgroup>
+                  }
+                }
+              </select>
+            }
 
             <button type="button" role="switch" [class]="INTERRUPTOR" [ngClass]="habilitada(f) ? 'bg-brand after:translate-x-3.5' : 'bg-(--campo-ln)'"
                     [attr.aria-checked]="habilitada(f)" [attr.aria-label]="'Habilitada en esta subcartera: ' + nombre(f)" (click)="alternarHabilitada(f)"></button>
