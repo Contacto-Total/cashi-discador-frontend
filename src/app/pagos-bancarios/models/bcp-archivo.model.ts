@@ -156,13 +156,15 @@ export interface PrevalidacionArchivoBcp {
 export type CategoriaPagoBanco =
   | 'CONCILIADO'
   | 'CONCILIADO_POR_SUMA'
+  | 'CONCILIADO_POR_SUMA_CON_DESFASE'
   | 'CONCILIADO_CON_DESFASE'
   | 'PARCIAL_EN_ESPERA'
   | 'CONCILIADO_POR_PARTES'
   | 'PAGO_VOLUNTARIO'
   | 'REQUIERE_REVISION'
   | 'OMITIDO_POR_FECHA'
-  | 'CLIENTE_NO_ENCONTRADO';
+  | 'CLIENTE_NO_ENCONTRADO'
+  | 'NO_CORRESPONDE';
 
 /** Pago bancario guardado que aún no termina de conciliarse. */
 export interface PagoBancoPendiente {
