@@ -414,9 +414,17 @@ export class ApiSystemConfigService {
     }
 
     // Llamar al endpoint V2 del backend discador a través del gateway
-    let url = `${environment.gatewayUrl}/v2/typifications/config/tenant/${this.currentTenantId}/typifications/${typificationId}/fields`;
+    // La subcartera decide qué opciones trae una lista y qué campos hereda la opción
+    const params: string[] = [];
     if (this.currentPortfolioId) {
-      url += `?portfolioId=${this.currentPortfolioId}`;
+      params.push(`portfolioId=${this.currentPortfolioId}`);
+    }
+    if (this.currentSubPortfolioId) {
+      params.push(`subPortfolioId=${this.currentSubPortfolioId}`);
+    }
+    let url = `${environment.gatewayUrl}/v2/typifications/config/tenant/${this.currentTenantId}/typifications/${typificationId}/fields`;
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
     }
 
     console.log('[V2] Cargando campos dinámicos desde:', url);

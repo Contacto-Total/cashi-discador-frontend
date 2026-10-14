@@ -6470,6 +6470,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         idSubcartera: this.selectedSubPortfolioId,
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
+        camposAdicionales: this.getCamposAdicionalesParaGuardar(),
         metodoContacto: this.metodoContactoDeLaGestion(isActiveCallSchedule),
         canalContacto: hasActiveCallOrTimerSched ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
@@ -6589,6 +6590,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         level3Name: level3?.label || null,
 
         observations: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
+        camposAdicionales: this.getCamposAdicionalesParaGuardar(),
 
         // Campos de contexto de gestión
         metodoContacto: this.metodoContactoDeLaGestion(isActiveCall),
@@ -7007,6 +7009,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
     return '';
+  }
+
+  /**
+   * Valores de los campos adicionales que no van a observaciones ni al cronograma,
+   * como JSON {campo: {valor, texto}}. En una lista, valor es el código de la opción
+   * y texto su nombre. null si ninguno tiene valor.
+   */
+  private getCamposAdicionalesParaGuardar(): string | null {
+    const schema = this.dynamicFieldsSchema();
+    const values = this.dynamicFieldValues();
+    if (!schema?.fields || !values) return null;
+
+    const tiposConDestinoPropio = ['textarea', 'payment_schedule', 'table'];
+    const campos: Record<string, { valor: string; texto: string }> = {};
+    for (const field of schema.fields) {
+      if (tiposConDestinoPropio.includes(field.type)) continue;
+      const valor = values[field.id];
+      if (valor === undefined || valor === null || valor === '') continue;
+      const valorTexto = String(valor);
+      const opcion = field.type === 'select'
+        ? field.options?.find(o => String(o.value) === valorTexto)
+        : undefined;
+      campos[field.id] = { valor: valorTexto, texto: opcion ? String(opcion.label) : valorTexto };
+    }
+    return Object.keys(campos).length > 0 ? JSON.stringify(campos) : null;
   }
 
   calculateRemaining(): string {
