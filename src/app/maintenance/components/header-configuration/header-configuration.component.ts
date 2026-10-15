@@ -339,25 +339,29 @@ export class HeaderConfigurationComponent implements OnInit {
 
   // ---------------------------------------------------------------- Carga
 
-  /** Clientes, carteras y subcarteras activas, el catálogo de datos y las cabeceras de cada subcartera. */
+  /**
+   * Clientes y subcarteras activos, el catálogo de datos y las cabeceras de cada subcartera. El servicio manda
+   * `isActive` como 0/1. La marca de la cartera no se mira: hay carteras en uso marcadas como inactivas.
+   */
   cargarAmbito(): void {
     this.cargando.set(true);
     this.error.set(null);
+    const activo = (v: unknown) => Number(v) !== 0;
     forkJoin({
       clientes: this.clientesApi.getAllTenants(),
       subs: this.carterasApi.getAllSubPortfolios(),
       definiciones: this.definicionesApi.getAllActive().pipe(catchError(() => of([] as FieldDefinition[])))
     }).pipe(
       switchMap(({ clientes, subs, definiciones }) => {
-        const activos = clientes.filter(c => c.isActive !== false);
+        const activos = clientes.filter(c => activo(c.isActive));
         const carteras$ = activos.map(c => this.carterasApi.getPortfoliosByTenant(c.id).pipe(catchError(() => of([]))));
         return (carteras$.length ? forkJoin(carteras$) : of([])).pipe(map(porCliente => ({ activos, porCliente, subs, definiciones })));
       })
     ).subscribe({
       next: ({ activos, porCliente, subs, definiciones }) => {
         const ambito: Ambito[] = [];
-        activos.forEach((c, i) => (porCliente[i] ?? []).filter(p => p.isActive !== false).forEach(p => subs
-          .filter(s => s.portfolioId === p.id && s.isActive !== false)
+        activos.forEach((c, i) => (porCliente[i] ?? []).forEach(p => subs
+          .filter(s => s.portfolioId === p.id && activo(s.isActive))
           .forEach(s => ambito.push({ cliente: c.tenantName, cartera: p.portfolioName, subId: s.id, subcartera: s.subPortfolioName }))));
         this.ambito.set(ambito);
         this.definiciones.set(definiciones);
