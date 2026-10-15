@@ -300,15 +300,21 @@
           <lucide-angular name="trash-2" [size]="17"></lucide-angular>
         </span>
         <div class="flex min-w-0 flex-col gap-1.5">
-          <h2 id="cb-del-titulo" class="m-0! text-[1rem] leading-[1.3] font-bold">¿Eliminar {{ borrar.length === 1 ? 'una cabecera' : borrar.length + ' cabeceras' }}?</h2>
+          @let total = cuantas(borrar);
+          <h2 id="cb-del-titulo" class="m-0! text-[1rem] leading-[1.3] font-bold">¿Eliminar {{ total === 1 ? 'una cabecera' : total + ' cabeceras' }}?</h2>
           <p id="cb-del-texto" class="m-0 text-[.875rem] leading-[1.5] text-muted-foreground">
             Si la columna ya tiene datos en la tabla, el servidor no la elimina y te lo avisa. El resto de los cambios se guarda igual.
           </p>
-          <div class="mt-1 flex flex-wrap gap-1.5">
-            @for (c of borrar; track c.clave) {
-              <span [class]="FICHA + ' pr-2'">{{ c.headerName }}</span>
-            }
-          </div>
+          @for (g of borrar; track g.donde) {
+            <div class="mt-1 flex flex-col gap-1">
+              <span class="text-[.75rem] font-semibold text-foreground">{{ g.donde }}</span>
+              <div class="flex flex-wrap gap-1.5">
+                @for (n of g.nombres; track n) {
+                  <span [class]="FICHA + ' pr-2'">{{ n }}</span>
+                }
+              </div>
+            </div>
+          }
         </div>
       </div>
       <div [class]="ui.pie">
@@ -407,13 +413,11 @@
             </div>
             <div class="grid grid-cols-2 items-start gap-x-4 gap-y-3 max-[36rem]:grid-cols-1">
               <div class="flex min-w-0 flex-col gap-1.5">
-                <label for="cb-form-origen" [class]="ETIQUETA">Columnas de origen</label>
-                <select id="cb-form-origen" [class]="LISTA_ED + ' w-full'" [disabled]="!columnasParaOrigen(f).length" (change)="agregarOrigen(f, $any($event.target).value); $any($event.target).value = ''">
-                  <option value="" selected>{{ columnasParaOrigen(f).length ? (origenes(f).length ? 'Agregar otra columna…' : 'Elegir columna…') : 'No hay más columnas' }}</option>
-                  @for (x of columnasParaOrigen(f); track x) {
-                    <option [value]="x">{{ x }}</option>
-                  }
-                </select>
+                <span [class]="ETIQUETA">Columnas de origen</span>
+                <app-combobox alto="campo" [opciones]="opcionesOrigenForm()" [valor]="null" etiquetaAria="Agregar columna de origen"
+                              [marcador]="!opcionesOrigenForm().length ? 'No hay más columnas' : origenes(f).length ? 'Agregar otra columna…' : 'Elegir columna…'"
+                              marcadorBusqueda="Buscar columna…" vacio="Ninguna columna coincide." [deshabilitado]="!opcionesOrigenForm().length"
+                              (cambio)="agregarOrigen(f, $event)" />
                 @if (origenes(f).length) {
                   <div class="flex flex-wrap items-center gap-1.5">
                     @for (o of origenes(f); track o; let i = $index) {
