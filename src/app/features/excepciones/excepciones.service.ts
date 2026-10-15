@@ -55,7 +55,7 @@ export class ExcepcionesService {
   constructor(private http: HttpClient) {}
 
   private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('callcenter_token');
+    const token = sessionStorage.getItem('callcenter_token');
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : ''

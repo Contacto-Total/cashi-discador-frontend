@@ -47,7 +47,7 @@ export function esDispositivoPermitido(): boolean {
 function registrarRechazo(): void {
   let usuario: string | null = null;
   try {
-    usuario = JSON.parse(localStorage.getItem('callcenter_user') ?? 'null')?.username ?? null;
+    usuario = JSON.parse(sessionStorage.getItem('callcenter_user') ?? 'null')?.username ?? null;
   } catch {
     usuario = null;
   }
