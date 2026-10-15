@@ -104,9 +104,9 @@
                       f.nivel === 1 ? 'text-[.875rem] font-semibold' : f.node.children.length ? 'text-[.875rem] font-medium' : 'text-[.875rem] font-normal',
                       apagada(f) ? 'text-muted-foreground/75' : f.nivel === 1 || f.node.children.length ? 'text-foreground' : 'text-foreground/80'
                     ]">{{ nombre(f) | nombrePropio:'oracion' }}</span>
-              <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">
-                {{ f.node.typification.codigo }}@if (f.nivel === 1) { · {{ finales(f.node) }} {{ finales(f.node) === 1 ? 'opción' : 'opciones' }}}
-              </span>
+              @if (f.nivel === 1) {
+                <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">{{ finales(f.node) }} {{ finales(f.node) === 1 ? 'opción' : 'opciones' }}</span>
+              }
               @if (personalizada(f)) {
                 <span class="flex-none self-center rounded-full bg-(--ok-bg) px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]">Personalizada</span>
               }
@@ -274,27 +274,7 @@
   </section>
 
   <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
-  <section appTarjeta aria-label="Subcarteras" class="flex min-h-0 flex-col self-stretch overflow-hidden px-5 pt-[clamp(1rem,2.6vh,2rem)] pb-5 @max-[70.5rem]/tipif:hidden">
-    <p role="heading" aria-level="2" class="m-0 mb-[.75rem] flex-none text-[1rem] font-bold">Subcarteras</p>
-    <div class="-mx-1.5 -mb-5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-5">
-      @for (c of porCliente(); track c.nombre; let primero = $first) {
-        <p class="mr-2.5 mb-1.5 ml-[.1875rem] flex flex-none items-center gap-2 text-[.8125rem] font-bold text-foreground" [ngClass]="primero ? 'mt-0' : 'mt-[.875rem]'">
-          <lucide-angular name="building-2" [size]="15" [ngClass]="'flex flex-none text-muted-foreground'"></lucide-angular>
-          <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ c.nombre | nombrePropio }}</span>
-          <span class="text-[.75rem] font-medium text-muted-foreground">{{ c.subs.length }} {{ c.subs.length === 1 ? 'subcartera' : 'subcarteras' }}</span>
-        </p>
-        <div class="ml-4 flex flex-none flex-col gap-0.5">
-          @for (s of c.subs; track s.subId) {
-            <button type="button" class="font-cashi grid w-full flex-none cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-lg border-0! py-2! pr-2.5! pl-[.6875rem]! text-left text-foreground! transition-colors duration-150"
-                    [ngClass]="s.subId === sub() ? 'bg-sidebar-accent' : 'bg-transparent hover:bg-muted'" [attr.aria-current]="s.subId === sub()" (click)="elegirSub(s.subId)">
-              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ s.subcartera | nombrePropio }}</span>
-              <span class="col-[1/-1] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">Cartera {{ s.cartera | nombrePropio }}</span>
-            </button>
-          }
-        </div>
-      }
-    </div>
-  </section>
+  <app-panel-subcarteras class="@max-[70.5rem]/tipif:hidden" [subcarteras]="panelSubs()" [seleccion]="sub()" (elegir)="elegirSub($event)" />
 </div>
 
 <!-- Barra de cambios: una tarjeta aparte, siempre abajo. -->

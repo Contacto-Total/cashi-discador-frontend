@@ -19,6 +19,11 @@ export class FieldDefinitionService {
     return this.http.get<FieldDefinition[]>(this.baseUrl);
   }
 
+  /** Crea un dato del catálogo para enlazarlo a una cabecera; el código se arma con el nombre. */
+  create(fieldName: string, dataType: string): Observable<FieldDefinition> {
+    return this.http.post<FieldDefinition>(this.baseUrl, { fieldName, dataType });
+  }
+
   /**
    * Obtiene definiciones de campos por categoría
    */

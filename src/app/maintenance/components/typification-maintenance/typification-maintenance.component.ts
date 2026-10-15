@@ -7,6 +7,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BotonDirective } from '../../../shared/ui/boton.directive';
 import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
+import { PanelSubcarterasComponent, SubcarteraPanel } from '../../../shared/ui/panel-subcarteras.component';
 import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
 import { NombrePropioPipe } from '../../../shared/ui/nombre-propio.pipe';
 import {
@@ -104,7 +105,7 @@ const PERSONALES: (keyof Borrador)[] = ['nombre', 'descripcion', 'color'];
   selector: 'app-typification-maintenance',
   standalone: true,
   imports: [
-    NgClass, A11yModule, LucideAngularModule, PageHeaderComponent, TarjetaDirective, BotonDirective, NombrePropioPipe,
+    NgClass, A11yModule, LucideAngularModule, PageHeaderComponent, PanelSubcarterasComponent, TarjetaDirective, BotonDirective, NombrePropioPipe,
     TypificationFormDialogComponent, CategoryFormDialogComponent, TypificationAdditionalFieldsDialogComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -194,7 +195,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   readonly clientes = computed(() => [...new Set(this.ambito().map(a => a.cliente))]);
   readonly carteras = computed(() => [...new Set(this.ambito().filter(a => a.cliente === this.actual()?.cliente).map(a => a.cartera))]);
   readonly deLaCartera = computed(() => this.ambito().filter(a => a.cliente === this.actual()?.cliente && a.cartera === this.actual()?.cartera));
-  readonly porCliente = computed(() => this.clientes().map(nombre => ({ nombre, subs: this.ambito().filter(a => a.cliente === nombre) })));
+  readonly panelSubs = computed<SubcarteraPanel[]>(() => this.ambito().map(a => ({ id: a.subId, cliente: a.cliente, cartera: a.cartera, subcartera: a.subcartera })));
   readonly datosActual = computed(() => {
     const id = this.sub();
     return id ? this.datos()[id] ?? null : null;

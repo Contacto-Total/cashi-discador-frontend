@@ -118,6 +118,8 @@ export interface UpdateHeaderConfigurationRequest {
   required?: boolean;
   loadType?: LoadType;
   regexPattern?:string;
+  /** Dato del catálogo enlazado: sin enviar no cambia; 0 quita el enlace. */
+  fieldDefinitionId?: number;
 }
 
 export interface BulkCreateHeaderConfigurationRequest {
