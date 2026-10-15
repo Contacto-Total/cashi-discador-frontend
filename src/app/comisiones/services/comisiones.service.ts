@@ -8,6 +8,7 @@ import {
   BonoPeriodo,
   CandidatoAsesor,
   Cartera,
+  ClienteContenido,
   ConfiguracionPeriodo,
   DetalleComision,
   GrupoComision,
@@ -20,6 +21,23 @@ import {
   SupervisorCashi,
   VistaPeriodo
 } from '../models/comision.model';
+
+/** Los endpoints de contenidos devuelven el record de la fuente de datos del backend */
+interface ClienteContenidoRespuesta {
+  documento: string;
+  nombre: string | null;
+  capitalAsignado: number | null;
+  fechaContencion: string | null;
+}
+
+function aClienteContenido(c: ClienteContenidoRespuesta): ClienteContenido {
+  return {
+    documentoCliente: c.documento,
+    nombreCliente: c.nombre,
+    capitalAsignado: c.capitalAsignado,
+    fechaContencion: c.fechaContencion
+  };
+}
 
 function conGrupo(params: HttpParams, grupo: GrupoComision | null): HttpParams {
   return grupo && grupo !== 'GENERAL' ? params.set('grupo', grupo) : params;
@@ -135,6 +153,12 @@ export class ComisionesService {
   /** Todos los pagos conciliados del período, sumen o no */
   obtenerPagos(id: number): Observable<PagoSustento[]> {
     return this.http.get<{ pagos: PagoSustento[] }>(`${this.baseUrl}/periodos/${id}/sustento`).pipe(map(s => s.pagos));
+  }
+
+  /** Clientes contenidos de la tabla del mes, consultados al abrir el sustento */
+  obtenerContenidos(id: number): Observable<ClienteContenido[]> {
+    return this.http.get<ClienteContenidoRespuesta[]>(`${this.baseUrl}/periodos/${id}/contenidos`)
+      .pipe(map(contenidos => contenidos.map(aClienteContenido)));
   }
 
   // ==================== MIS COMISIONES (solo lo del usuario de la sesión) ====================
