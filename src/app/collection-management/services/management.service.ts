@@ -283,6 +283,8 @@ export interface ConfiguracionCabecera {
   esVisibleMonto?: number;  // 1 = visible, 0 = oculto
   ordenMonto?: number;      // Orden de visualización
   formatoVisualizacion?: string; // MONEDA, PORCENTAJE, NUMERO, TEXTO
+  esVisibleCliente?: number; // 1 = se muestra en el panel del cliente de la ficha
+  ordenCliente?: number;
 }
 
 /**
@@ -632,7 +634,7 @@ export class ManagementService {
    */
   updateAmountVisibility(
     idSubcartera: number,
-    updates: { id: number; esVisibleMonto: number; ordenMonto: number; nombre?: string; formatoVisualizacion?: string }[]
+    updates: { id: number; esVisibleMonto: number; ordenMonto: number; nombre?: string; formatoVisualizacion?: string; esVisibleCliente?: number; ordenCliente?: number }[]
   ): Observable<ConfiguracionCabecera[]> {
     console.log('[CABECERAS] Updating visibility for subcartera:', idSubcartera, updates);
     return this.http.put<ConfiguracionCabecera[]>(

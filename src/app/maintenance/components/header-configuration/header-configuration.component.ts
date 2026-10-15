@@ -162,7 +162,7 @@ export class HeaderConfigurationComponent implements OnInit {
     + 'aria-expanded:bg-muted aria-expanded:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring';
   readonly PILL = 'rounded-full px-2.5 py-0.5 text-[.75rem] font-medium whitespace-nowrap text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]';
   readonly CHIP = 'flex-none self-center rounded-full px-[.5625rem] py-[.1875rem] text-[.75rem] font-medium whitespace-nowrap text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]';
-  readonly FICHA = 'inline-flex items-center gap-1 rounded-md bg-muted py-[.1875rem] pr-1 pl-2 font-mono text-[.75rem] text-foreground';
+  readonly FICHA = 'inline-flex items-center gap-1 rounded-md bg-muted py-[.1875rem] pr-1 pl-2 text-[.75rem] text-foreground';
   readonly FICHA_X = 'grid size-4 cursor-pointer place-items-center rounded border-0! bg-transparent p-0! text-muted-foreground hover:text-(--ro)';
   readonly PESTANA = 'font-cashi cursor-pointer rounded-md border-0 px-1.5 py-[.4375rem] text-[.875rem] font-medium transition-colors duration-150';
   readonly PESTANA_ACTIVA = 'bg-(--seg-activo) text-foreground shadow-[0_1px_2px_rgb(0_0_0/.08)]';

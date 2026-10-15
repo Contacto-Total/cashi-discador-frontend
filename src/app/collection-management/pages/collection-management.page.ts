@@ -260,17 +260,6 @@ type EvaluacionConvenio =
                     </div>
                   }
 
-                  <!-- Ocupación del cliente (desde tabla dinámica) -->
-                  @if (clientOcupacion()) {
-                    <div class="flex items-center gap-2 p-1.5 bg-cyan-50 dark:bg-cyan-950/30 rounded border border-cyan-200 dark:border-cyan-800">
-                      <lucide-angular name="briefcase" [size]="14" class="text-cyan-500 dark:text-cyan-400"></lucide-angular>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-xs text-cyan-500 dark:text-cyan-400">Ocupación</div>
-                        <div class="text-xs font-bold text-cyan-700 dark:text-cyan-300 break-words">{{ clientOcupacion() }}</div>
-                      </div>
-                    </div>
-                  }
-
                   <!-- Información de Contacto -->
                   @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
@@ -483,6 +472,18 @@ type EvaluacionConvenio =
                       </div>
                     }
                   </div>
+                  }
+
+                  <!-- Columnas que la subcartera eligió en Ficha del cliente, debajo de los datos de contacto -->
+                  @if (camposCliente().length) {
+                    <div class="mt-2 space-y-2">
+                      @for (campo of camposCliente(); track campo.codigo) {
+                        <div class="pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                          <div class="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium">{{ campo.etiqueta }}</div>
+                          <div class="text-xs font-semibold text-slate-800 dark:text-white break-words">{{ campo.valor }}</div>
+                        </div>
+                      }
+                    </div>
                   }
                 </div>
                 }
@@ -3085,19 +3086,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   // Ocupación del cliente desde la tabla dinámica (ini_*).
   // Busca la columna exacta y, si no, cualquier columna que contenga "ocupacion".
-  clientOcupacion = computed(() => {
-    const rawData = this.rawClientData();
-    const direct = rawData['ocupacion'] ?? rawData['ocupación'] ?? rawData['occupation'];
-    if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
-      return String(direct).trim();
-    }
-    const key = Object.keys(rawData).find(k => k.toLowerCase().includes('ocupacion') || k.toLowerCase().includes('ocupación'));
-    const val = key ? rawData[key] : null;
-    return val === undefined || val === null ? '' : String(val).trim();
+  // Cabeceras de configuración para mostrar nombres visuales
+  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisibleMonto?: number; ordenMonto?: number; formatoVisualizacion?: string; esVisibleCliente?: number; ordenCliente?: number }[]>([]);
+
+  /** Columnas de la carga que la subcartera eligió para el panel del cliente, con su valor, en su orden. */
+  camposCliente = computed(() => {
+    const datos = this.rawClientData();
+    return this.montoCabeceras()
+      .filter(c => c.esVisibleCliente === 1)
+      .sort((a, b) => (a.ordenCliente ?? 0) - (b.ordenCliente ?? 0))
+      .map(c => ({ codigo: c.codigo, etiqueta: c.nombre, valor: this.valorCampoCliente(datos[c.codigo.toLowerCase()] ?? datos[c.codigo], c.tipoDato) }));
   });
 
-  // Cabeceras de configuración para mostrar nombres visuales
-  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisibleMonto?: number; ordenMonto?: number; formatoVisualizacion?: string }[]>([]);
+  /** Una fecha guardada como AAAA-MM-DD se muestra DD/MM/AAAA sin pasar por Date, que la correría un día. */
+  private valorCampoCliente(valor: unknown, tipo: string): string {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    const texto = String(valor);
+    const fecha = tipo === 'FECHA' ? /^(\d{4})-(\d{2})-(\d{2})/.exec(texto) : null;
+    return fecha ? `${fecha[3]}/${fecha[2]}/${fecha[1]}` : texto;
+  }
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
@@ -3958,7 +3965,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         tipoSql: c.tipoSql,
         esVisibleMonto: c.esVisibleMonto,
         ordenMonto: c.ordenMonto,
-        formatoVisualizacion: c.formatoVisualizacion
+        formatoVisualizacion: c.formatoVisualizacion,
+        esVisibleCliente: c.esVisibleCliente,
+        ordenCliente: c.ordenCliente
       })));
     });
   }

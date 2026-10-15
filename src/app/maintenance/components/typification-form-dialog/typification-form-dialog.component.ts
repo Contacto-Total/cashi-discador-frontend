@@ -57,7 +57,7 @@ interface ClassificationFormV2 {
               <lucide-angular name="git-branch" [size]="15" class="shrink-0 text-[#5f6c80]"></lucide-angular>
               <span>
                 Hija de <b class="font-bold text-[#0f172a] dark:text-slate-100">{{ parentClassification.nombre }}</b>
-                <span class="font-mono text-[11px] text-[#5f6c80] dark:text-slate-400">{{ parentClassification.codigo }}</span>
+                <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ parentClassification.codigo }}</span>
                 · quedará en el nivel {{ parentClassification.nivelJerarquia + 1 }}
               </span>
             </div>
@@ -70,7 +70,7 @@ interface ClassificationFormV2 {
               <input id="tf-codigo" type="text" maxlength="20" placeholder="Ej.: PP, CPC"
                      [(ngModel)]="form.codigo" [disabled]="isEditMode"
                      [attr.aria-invalid]="!!errors()['codigo']"
-                     [class]="ui.input + ' w-full font-mono ' + (errors()['codigo'] ? claseInvalido : '')"/>
+                     [class]="ui.input + ' w-full ' + (errors()['codigo'] ? claseInvalido : '')"/>
               @if (errors()['codigo']) {
                 <span [class]="ui.error">{{ errors()['codigo'] }}</span>
               } @else {
@@ -142,7 +142,7 @@ interface ClassificationFormV2 {
                 <input type="color" [(ngModel)]="form.colorSugerido" aria-label="Otro color"
                        class="h-[26px] w-[34px] cursor-pointer rounded-[6px] border border-[#d5dbe3] bg-white p-px dark:border-slate-700 dark:bg-slate-900"/>
                 Otro color
-                <span class="font-mono text-[11px] font-medium text-[#5f6c80] dark:text-slate-400">{{ form.colorSugerido }}</span>
+                <span class="text-[12px] font-medium text-[#5f6c80] dark:text-slate-400">{{ form.colorSugerido }}</span>
               </label>
             </div>
 
@@ -179,7 +179,7 @@ interface ClassificationFormV2 {
               }
             </span>
             <span class="min-w-0 truncate text-[12.5px] font-bold tracking-[-0.01em]">{{ form.nombre || 'Nombre de la tipificación' }}</span>
-            <span class="shrink-0 font-mono text-[11px] text-[#5f6c80] dark:text-slate-400">{{ form.codigo }}</span>
+            <span class="shrink-0 text-[12px] text-[#5f6c80] dark:text-slate-400">{{ form.codigo }}</span>
           </div>
 
           @if (isEditMode) {
