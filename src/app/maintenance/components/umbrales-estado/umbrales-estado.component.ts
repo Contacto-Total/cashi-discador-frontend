@@ -76,9 +76,9 @@ export class UmbralesEstadoComponent implements OnInit {
   /** Columnas de la cabecera y de cada fila. El ancho que sobra separa primero las columnas (hasta 2rem),
       después alarga la escala y al final se reparte entre ellas; en una tarjeta angosta la escala se
       retira y queda solo el sitio del botón. */
-  readonly REJILLA = 'grid grid-cols-[7rem_minmax(7.25rem,clamp(18rem,42cqw,34rem))_9.5rem_11.75rem] items-center justify-between gap-x-[clamp(.75rem,calc(22.2cqw_-_8.24rem),2rem)] gap-y-[.25rem] px-2 '
-    + '@max-[40.4rem]/tabla:grid-cols-[7rem_4.25rem_9.5rem_11.75rem] '
-    + '@max-[37.5rem]/tabla:grid-cols-[minmax(4.5rem,7rem)_4.25rem_8.75rem_10.25rem] @max-[37.5rem]/tabla:gap-x-1 @max-[37.5rem]/tabla:px-1';
+  readonly REJILLA = 'grid grid-cols-[8.75rem_minmax(7.25rem,clamp(18rem,42cqw,34rem))_9.5rem_11.75rem] items-center justify-between gap-x-[clamp(.75rem,calc(22.2cqw_-_8.24rem),2rem)] gap-y-[.25rem] px-2 '
+    + '@max-[40.4rem]/tabla:grid-cols-[8.75rem_4.25rem_9.5rem_11.75rem] '
+    + '@max-[37.5rem]/tabla:grid-cols-[minmax(6.25rem,8.75rem)_4.25rem_8.75rem_10.25rem] @max-[37.5rem]/tabla:gap-x-1 @max-[37.5rem]/tabla:px-1';
   readonly TIEMPOS = 'grid-cols-[repeat(3,3rem)] gap-1 @max-[37.5rem]/tabla:grid-cols-[repeat(3,2.75rem)]';
   readonly AVISOS = 'grid grid-cols-[repeat(3,3.75rem)] items-center justify-items-center gap-1 @max-[37.5rem]/tabla:grid-cols-[repeat(3,3.25rem)]';
   /** El tema antiguo fija con !important el aspecto de campos y listas: de ahí los `!`. */
@@ -123,6 +123,9 @@ export class UmbralesEstadoComponent implements OnInit {
   readonly panelSubs = computed<SubcarteraPanel[]>(() => this.subcarteras().map(s => ({ id: s.idSubcartera, cliente: s.cliente, cartera: s.cartera, subcartera: s.subcartera, asesores: s.asesores })));
   readonly etiquetasSubs = computed(() => Object.fromEntries(this.subcarteras().map(s => [s.idSubcartera,
     this.personalizada(s.idSubcartera) ? { texto: 'Personalizado', tono: 'ok' } : { texto: 'General', tono: 'neutra' }])) as Record<number, EtiquetaSubcartera>);
+
+  /** Grupos plegados, como los tipos de contacto de Tipificaciones; al entrar, todos desplegados. */
+  readonly plegados = signal<ReadonlySet<string>>(new Set());
 
   /** Estados de cada grupo que tienen configuración general; los que no, no se listan. */
   readonly grupos = computed(() => GRUPOS
@@ -205,6 +208,16 @@ export class UmbralesEstadoComponent implements OnInit {
   rotuloSub(s: SubcarteraUmbral): string {
     const n = this.nombre.transform(s.subcartera);
     return this.deLaCartera().filter(x => x.subcartera === s.subcartera).length > 1 ? `${n} · ${this.nombre.transform(s.cliente)}` : n;
+  }
+
+  alternarGrupo(nombre: string): void {
+    this.plegados.update(p => {
+      const s = new Set(p);
+      if (!s.delete(nombre)) {
+        s.add(nombre);
+      }
+      return s;
+    });
   }
 
   personalizada(id: number): boolean {
