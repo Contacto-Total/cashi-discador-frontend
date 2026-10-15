@@ -11,6 +11,7 @@ import {
   LineaDesglose,
   MetaCantidad,
   MotivoExclusion,
+  PagoSustento,
   ParticipanteComision,
   RolComision,
   TipoBono,
@@ -70,7 +71,7 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
   RECAUDO: {
     etiqueta: 'Recaudo',
     logrado: 'Recaudo',
-    descripcion: 'Todo lo que pagan los clientes: cada pago conciliado suma su monto.'
+    descripcion: 'Todo lo que pagan los clientes: cada pago conciliado suma su monto. Supervisor: suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa.'
   },
   CONTENCION: {
     etiqueta: 'Contención',
@@ -338,6 +339,8 @@ export interface DiaDetalle {
   fecha: string;
   pagos: DetalleComision[];
   clientes?: ClienteContenido[];
+  /** Supervisor en RECAUDO: todos los pagos conciliados del día, sumen o no a un asesor */
+  pagosSustento?: PagoSustento[];
   etiqueta?: string;
   /** Lo que suma cada pago (por conciliacionId) */
   sumas: Map<number, number>;
@@ -377,6 +380,36 @@ export function agruparPorDia(filas: DetalleComision[], base: number | null, tra
     acumulado += monto;
     dia.pagos.push(d);
     dia.sumas.set(d.conciliacionId, monto);
+    dia.monto += monto;
+    dia.acumulado = acumulado;
+  }
+  for (const dia of dias) {
+    dia.porcentaje = base ? dia.acumulado / base * 100 : null;
+    dia.nivel = base ? tramoAlcanzado(tramos, dia.acumulado, base) : null;
+    dia.sube = !!dia.nivel && dia.nivel.montoComision > 0
+      && (nivelAnterior == null || nivelAnterior.porcentajeDesde !== dia.nivel.porcentajeDesde);
+    nivelAnterior = dia.nivel;
+  }
+  return dias;
+}
+
+/** Supervisor en RECAUDO: suma todos los pagos conciliados del mes, sumen o no a un asesor */
+export function agruparPagosPorDia(pagos: PagoSustento[], base: number | null, tramos: EscalaComision[]): DiaDetalle[] {
+  const ordenados = [...pagos].sort((a, b) =>
+    a.fechaBanco.localeCompare(b.fechaBanco) || a.conciliacionId - b.conciliacionId);
+  const dias: DiaDetalle[] = [];
+  let acumulado = 0;
+  let nivelAnterior: EscalaComision | null = null;
+  for (const pg of ordenados) {
+    let dia = dias[dias.length - 1];
+    if (!dia || dia.fecha !== pg.fechaBanco) {
+      dia = { fecha: pg.fechaBanco, pagos: [], pagosSustento: [], sumas: new Map(), monto: 0, acumulado: 0, porcentaje: null, nivel: null, sube: false };
+      dias.push(dia);
+    }
+    const monto = pg.montoAplicado ?? 0;
+    acumulado += monto;
+    dia.pagosSustento!.push(pg);
+    dia.sumas.set(pg.conciliacionId, monto);
     dia.monto += monto;
     dia.acumulado = acumulado;
   }

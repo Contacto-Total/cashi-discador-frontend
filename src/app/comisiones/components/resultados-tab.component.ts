@@ -9,7 +9,8 @@ import { CmxIconComponent } from './cmx-icon.component';
 
 /**
  * Resultados del período: los asesores (vista principal), cada uno contra su meta individual,
- * y abajo el supervisor, que comisiona sobre el total de los asesores contra la meta del mes.
+ * y abajo el supervisor, que comisiona contra la meta del mes sobre todos los pagos conciliados (RECAUDO)
+ * o el capital de todos los clientes contenidos (CONTENCION).
  */
 @Component({
   selector: 'cmx-resultados-tab',
@@ -130,7 +131,7 @@ import { CmxIconComponent } from './cmx-icon.component';
     <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-res-sup">
       <div class="cmx-block-head">
         <h3 id="cmx-res-sup" class="cmx-block-title">Supervisor</h3>
-        <span class="cmx-block-desc">Comisiona sobre el {{ metrica().etiqueta.toLowerCase() }} total de los asesores contra la meta del mes</span>
+        <span class="cmx-block-desc">{{ reporte().periodo.tipoMetrica === 'CONTENCION' ? 'Comisiona sobre el capital de todos los clientes contenidos del mes' : 'Comisiona sobre todos los pagos conciliados del mes, sumen o no a un asesor' }}, contra la meta del mes</span>
         @if (supervisor(); as s) { <span class="cmx-block-extra">S/ {{ s.montoComision | appNumber:'1.2-2' }}</span> }
       </div>
       @if (supervisor(); as s) {
