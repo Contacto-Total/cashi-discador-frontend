@@ -83,7 +83,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.userId) {
-      const token = localStorage.getItem('callcenter_token');
+      const token = sessionStorage.getItem('callcenter_token');
       if (token) {
         fetch(`${environment.apiUrl}/agent-status/${this.userId}/beacon-disconnect`, {
           method: 'POST',

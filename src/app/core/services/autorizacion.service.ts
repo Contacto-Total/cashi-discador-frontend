@@ -148,7 +148,7 @@ export class AutorizacionService {
   }
 
   private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('callcenter_token');
+    const token = sessionStorage.getItem('callcenter_token');
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : ''
@@ -156,11 +156,11 @@ export class AutorizacionService {
   }
 
   /**
-   * Obtiene el ID del usuario actual desde localStorage
+   * Obtiene el ID del usuario actual desde sessionStorage
    */
   private getCurrentUserId(): number | null {
     try {
-      const userStr = localStorage.getItem('callcenter_user');
+      const userStr = sessionStorage.getItem('callcenter_user');
       if (userStr) {
         const user = JSON.parse(userStr);
         return user.id || null;

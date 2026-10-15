@@ -20,7 +20,11 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router
-  ) {}
+  ) {
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem('refresh_token');
+  }
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.API_BASE}/auth/login`, credentials)
@@ -41,14 +45,16 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem(this.TOKEN_KEY);
+    sessionStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('cashi_login_pestana');
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return sessionStorage.getItem(this.TOKEN_KEY);
   }
 
   isAuthenticated(): boolean {
@@ -63,7 +69,7 @@ export class AuthService {
   private storeAuthData(response: any): void {
     // El backend devuelve accessToken, nombreUsuario y nombreCompleto
     const token = response.accessToken || response.token || '';
-    localStorage.setItem(this.TOKEN_KEY, token);
+    sessionStorage.setItem(this.TOKEN_KEY, token);
 
     // Dividir nombreCompleto en firstName y lastName
     const nameParts = response.nombreCompleto?.split(' ') || ['', ''];
@@ -80,14 +86,14 @@ export class AuthService {
       sipExtension: response.extensionSip || '',
       active: true
     };
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    sessionStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this.currentUserSubject.next(user);
 
     console.log('✅ Usuario autenticado:', `${firstName} ${lastName}`.trim() || user.username);
   }
 
   private getUserFromStorage(): User | null {
-    const userJson = localStorage.getItem(this.USER_KEY);
+    const userJson = sessionStorage.getItem(this.USER_KEY);
     if (userJson) {
       try {
         return JSON.parse(userJson);

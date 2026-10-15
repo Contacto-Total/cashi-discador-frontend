@@ -18,11 +18,7 @@ export interface RolResponse {
 export class AuthService {
   private readonly TOKEN_KEY = 'callcenter_token';
   private readonly USER_KEY = 'callcenter_user';
-  /**
-   * Marca de que el login se hizo en esta pestaña. Va en sessionStorage: sobrevive
-   * a un F5 pero no a cerrar la pestaña o el navegador, así que una sesión sin la
-   * marca es una que se recuperó del localStorage al volver a abrir la app.
-   */
+  /** Marca del login en esta ventana; se conserva al recargar. */
   private readonly LOGIN_PESTANA_KEY = 'cashi_login_pestana';
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
@@ -36,15 +32,21 @@ export class AuthService {
     private router: Router,
     private ngZone: NgZone
   ) {
+    // Borrar credenciales compartidas antiguas sin heredarlas a esta ventana.
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('token');
+
     let user: User | null = null;
     try {
-      const storedUser = localStorage.getItem(this.USER_KEY);
+      const storedUser = sessionStorage.getItem(this.USER_KEY);
       if (storedUser && storedUser !== 'undefined') {
         user = JSON.parse(storedUser);
       }
     } catch (e) {
       console.error('Error parsing stored user', e);
-      localStorage.removeItem(this.USER_KEY);
+      sessionStorage.removeItem(this.USER_KEY);
     }
     this.currentUserSubject = new BehaviorSubject<User | null>(user);
     this.currentUser$ = this.currentUserSubject.asObservable();
@@ -54,29 +56,23 @@ export class AuthService {
     // el bucle /login <-> /agent-dashboard, porque isAuthenticated() mira solo el token
     // (true) mientras los componentes miran getCurrentUser() (null) y rebotan a /login.
     // Limpiamos todo para caer en un login usable en vez de rebotar infinitamente.
-    if (!user && localStorage.getItem(this.TOKEN_KEY)) {
-      localStorage.removeItem(this.TOKEN_KEY);
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem(this.USER_KEY);
+    if (!user || !sessionStorage.getItem(this.TOKEN_KEY)) {
+      user = null;
+      this.currentUserSubject.next(null);
+      sessionStorage.removeItem(this.LOGIN_PESTANA_KEY);
+      sessionStorage.removeItem(this.TOKEN_KEY);
+      sessionStorage.removeItem('refresh_token');
+      sessionStorage.removeItem(this.USER_KEY);
     }
 
-    // Escuchar cambios en localStorage (desde otras pestañas)
-    window.addEventListener('storage', (event) => {
-      if (event.key === this.TOKEN_KEY && !event.newValue) {
-        this.ngZone.run(() => {
-          this.handleTokenRemoved();
-        });
-      }
-    });
-
-    // Verificar periódicamente el estado del token (cada 5 segundos)
+    // Verificar el token de esta ventana cada 5 segundos.
     this.startTokenCheck();
 
     // Programar renovación proactiva si ya hay token
     this.scheduleProactiveRefresh();
 
     // Diferido: los interceptores piden este servicio y aún se está construyendo.
-    if (user && localStorage.getItem(this.TOKEN_KEY)) {
+    if (user && sessionStorage.getItem(this.TOKEN_KEY)) {
       setTimeout(() => this.sincronizarRoles());
     }
   }
@@ -98,7 +94,7 @@ export class AuthService {
         if (iguales) return;
 
         user.roles = roles;
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        sessionStorage.setItem(this.USER_KEY, JSON.stringify(user));
       },
       error: () => { /* se conservan los roles del login */ }
     });
@@ -107,7 +103,7 @@ export class AuthService {
   private startTokenCheck(): void {
     this.ngZone.runOutsideAngular(() => {
       this.tokenCheckInterval = setInterval(() => {
-        const token = localStorage.getItem(this.TOKEN_KEY);
+        const token = sessionStorage.getItem(this.TOKEN_KEY);
         const currentUser = this.currentUserSubject.value;
 
         // Si hay usuario en memoria pero no hay token, redirigir
@@ -131,11 +127,11 @@ export class AuthService {
     if (this.isLoggingOut) return;
     this.isLoggingOut = true;
 
-    console.log('[AUTH] Token eliminado del localStorage');
+    console.log('[AUTH] Token eliminado del sessionStorage');
     sessionStorage.removeItem(this.LOGIN_PESTANA_KEY);
     this.currentUserSubject.next(null);
-    localStorage.removeItem(this.USER_KEY);
-    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem('refresh_token');
 
     if (this.router.url !== '/login') {
       alert('Tu sesión ha finalizado');
@@ -291,8 +287,8 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, request).pipe(
       tap(response => {
         // Guardar access token y refresh token
-        localStorage.setItem(this.TOKEN_KEY, response.accessToken);
-        localStorage.setItem('refresh_token', response.refreshToken);
+        sessionStorage.setItem(this.TOKEN_KEY, response.accessToken);
+        sessionStorage.setItem('refresh_token', response.refreshToken);
 
         // Dividir nombreCompleto en firstName y lastName
         const nameParts = response.nombreCompleto?.split(' ') || ['', ''];
@@ -316,7 +312,7 @@ export class AuthService {
           subPortfolioId: response.subPortfolioId
         };
 
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        sessionStorage.setItem(this.USER_KEY, JSON.stringify(user));
         // Antes de emitir el usuario: quien escucha currentUser$ ya debe ver la marca.
         sessionStorage.setItem(this.LOGIN_PESTANA_KEY, '1');
         this.currentUserSubject.next(user);
@@ -350,9 +346,9 @@ export class AuthService {
       this.proactiveRefreshTimer = null;
     }
 
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem(this.TOKEN_KEY);
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem(this.USER_KEY);
     sessionStorage.removeItem(this.LOGIN_PESTANA_KEY);
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
@@ -397,7 +393,7 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return sessionStorage.getItem(this.TOKEN_KEY);
   }
 
   getCurrentUser(): User | null {
@@ -439,7 +435,7 @@ export class AuthService {
   }
 
   getRefreshToken(): string | null {
-    return localStorage.getItem('refresh_token');
+    return sessionStorage.getItem('refresh_token');
   }
 
   refreshToken(): Observable<LoginResponse> {
@@ -453,10 +449,10 @@ export class AuthService {
     }).pipe(
       tap(response => {
         // Actualizar access token
-        localStorage.setItem(this.TOKEN_KEY, response.accessToken);
+        sessionStorage.setItem(this.TOKEN_KEY, response.accessToken);
         // El refresh token no cambia, pero si viene uno nuevo, actualizarlo
         if (response.refreshToken) {
-          localStorage.setItem('refresh_token', response.refreshToken);
+          sessionStorage.setItem('refresh_token', response.refreshToken);
         }
       })
     );
