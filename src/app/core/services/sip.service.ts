@@ -41,6 +41,9 @@ export class SipService {
   // Guardar número de destino actual para llamadas salientes
   // Permite que collection-management lo lea al inicializarse
   private currentOutgoingNumber: string | null = null;
+  // Cuando el asesor pidio la llamada saliente. Acota cuanto tiempo vale la excepcion
+  // del candado de entrantes; ver esperandoLlamadaPropia().
+  private outgoingRequestedAt: number | null = null;
   private currentCallIncoming: boolean = false; // Dirección de la llamada actual
   private currentPredictiveCallUuid: string | null = null;
 
@@ -79,6 +82,32 @@ export class SipService {
   }
 
   /**
+   * True si el asesor acaba de pedir una llamada y todavia esta esperando su pata.
+   *
+   * La manual y la rellamada no se marcan desde el navegador: el backend hace
+   * `originate user/<anexo> &bridge(<cliente>)`, asi que la propia llamada del asesor
+   * le entra como un INVITE igual que una predictiva. Sin esta excepcion el candado de
+   * abajo la rechazaba con 486 y la llamada no podia existir, porque la pantalla de
+   * Gestion Manual deja al asesor en TIPIFICANDO desde que abre la ficha y el dashboard
+   * bloquea las entrantes con cualquier estado distinto de DISPONIBLE. El resultado era
+   * un ciclo cerrado: falla la llamada, vuelve a TIPIFICANDO, falla la siguiente.
+   *
+   * Acotado en el tiempo a proposito. Si el originate nunca llega a sonar, nadie llama a
+   * clearCurrentOutgoingNumber() y la bandera se queda puesta; sin el plazo, eso dejaria
+   * al asesor aceptando predictivas durante toda su tipificacion, que es justo lo que el
+   * candado existe para evitar.
+   */
+  private esperandoLlamadaPropia(): boolean {
+    if (!this.currentOutgoingNumber || this.outgoingRequestedAt === null) {
+      return false;
+    }
+    return Date.now() - this.outgoingRequestedAt < SipService.ESPERA_LLAMADA_PROPIA_MS;
+  }
+
+  /** Lo que tarda como mucho el originate del backend en hacer sonar al asesor. */
+  private static readonly ESPERA_LLAMADA_PROPIA_MS = 60_000;
+
+  /**
    * Block incoming calls (for ACW/tipification period)
    */
   blockIncomingCallsMode(block: boolean): void {
@@ -107,6 +136,7 @@ export class SipService {
    */
   clearCurrentOutgoingNumber(): void {
     this.currentOutgoingNumber = null;
+    this.outgoingRequestedAt = null;
   }
 
   /**
@@ -115,6 +145,7 @@ export class SipService {
    */
   setCurrentOutgoingNumber(phoneNumber: string): void {
     this.currentOutgoingNumber = phoneNumber;
+    this.outgoingRequestedAt = Date.now();
     console.log('📤 [SipService] Número de llamada saliente establecido:', phoneNumber);
     this.onOutgoingCall.emit({ to: phoneNumber });
   }
@@ -274,8 +305,14 @@ export class SipService {
               : null;
             console.log('📲 Incoming call from:', session.remote_identity.uri.user);
 
-            // CHECK: If calls are blocked (agent is tipifying), reject the call immediately
-            if (this.blockIncomingCalls) {
+            // CHECK: If calls are blocked (agent is tipifying), reject the call immediately.
+            // Salvo que sea la pata de una llamada que el propio asesor acaba de pedir:
+            // esa no viene del discador y rechazarla es rechazar su propia marcacion.
+            const esLlamadaPropia = this.esperandoLlamadaPropia();
+
+            if (this.blockIncomingCalls && esLlamadaPropia) {
+              console.log('\u260e\ufe0f Entrantes bloqueadas, pero esta es la llamada que pidio el asesor a', this.currentOutgoingNumber, '- se acepta');
+            } else if (this.blockIncomingCalls) {
               console.warn('🚫 REJECTING incoming call - agent is tipifying (ACW period)');
               this.currentPredictiveCallUuid = null;
               session.terminate({
@@ -296,7 +333,10 @@ export class SipService {
             );
 
             // If auto-answer is enabled (admin supervision OR auto-dialer), answer immediately without ringtone
-            if (this.autoAnswerEnabled || hasAutoAnswer) {
+            // esLlamadaPropia tambien contesta sola: el originate manual no manda las
+            // cabeceras de auto-answer que si trae el discador, y seria absurdo hacer que
+            // el asesor conteste la llamada que acaba de pedir el mismo.
+            if (this.autoAnswerEnabled || hasAutoAnswer || esLlamadaPropia) {
               console.log('🤖 Auto-answering call (auto-dialer mode)');
               this.currentCallState = CallState.CONNECTING;
               this.onCallStatus.emit(this.currentCallState);
@@ -434,6 +474,7 @@ export class SipService {
       this.currentCallIncoming = false;
       this.currentPredictiveCallUuid = null;
       this.currentOutgoingNumber = destination;
+      this.outgoingRequestedAt = Date.now();
       console.log('📤 Emitiendo onOutgoingCall con destino:', destination);
       this.onOutgoingCall.emit({ to: destination });
 
