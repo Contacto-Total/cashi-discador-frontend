@@ -879,7 +879,7 @@ type EvaluacionConvenio =
                           {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
                         </label>
                         <select
-                          [ngModel]="selectedClassifications()[$index]"
+                          [ngModel]="selectedClassifications()[$index] || ''"
                           (ngModelChange)="onClassificationLevelChange($index, $event)"
                           [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
                             (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white') + ' ' +
@@ -891,6 +891,25 @@ type EvaluacionConvenio =
                           }
                         </select>
                       </div>
+                    }
+                    <!-- Lo que el nivel 1 pide antes del detalle (motivo de no pago) -->
+                    @if ($index === 0) {
+                      @for (campo of camposDeRama(); track campo.id) {
+                        <div class="flex-1 min-w-[140px]">
+                          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">{{ campo.label }}{{ campo.required ? ' *' : '' }}</label>
+                          <select
+                            [ngModel]="valoresDeRama()[campo.id] || ''"
+                            (ngModelChange)="elegirValorDeRama(campo.id, $event)"
+                            [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white ' +
+                              (valoresDeRama()[campo.id] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
+                          >
+                            <option value="">Seleccionar...</option>
+                            @for (op of campo.options || []; track op.value) {
+                              <option [value]="op.value">{{ op.label }}</option>
+                            }
+                          </select>
+                        </div>
+                      }
                     }
                   }
                 </div>
@@ -990,7 +1009,7 @@ type EvaluacionConvenio =
             }
 
             <!-- BLOQUEO PROMESA DE PAGO ACTIVA - Mensaje cuando cliente tiene promesa activa -->
-            @if (showPromesaActivaBlocking()) {
+            @if (showPromesaActivaBlocking() || (isCancellationTypification() && hasEvaluacionPromise())) {
               @if (hasEvaluacionPromise()) {
               <!-- Versión EN_EVALUACION -->
               <div class="bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 dark:from-purple-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
@@ -1217,7 +1236,7 @@ type EvaluacionConvenio =
             }
 
             <!-- Selector de Cuota para Cancelación -->
-            @if (isCancellationTypification() && hasInstallmentsForCancellation()) {
+            @if (isCancellationTypification() && !isCancellationBlockedByEvaluacion() && hasInstallmentsForCancellation()) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
@@ -1399,7 +1418,7 @@ type EvaluacionConvenio =
               </div>
             }
 
-            @if (isCancellationTypification() && !hasInstallmentsForCancellation()) {
+            @if (isCancellationTypification() && !isCancellationBlockedByEvaluacion() && !hasInstallmentsForCancellation()) {
               <div class="mt-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
                 <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
                 <span>Cliente no cuenta con promesa.</span>
@@ -1407,7 +1426,7 @@ type EvaluacionConvenio =
             }
 
             <!-- Botón para subir comprobante (opcional) - Sin OCR -->
-            @if (isCancellationTypification() && selectedInstallmentForCancellation()) {
+            @if (isCancellationTypification() && !isCancellationBlockedByEvaluacion() && selectedInstallmentForCancellation()) {
               <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
@@ -1517,7 +1536,7 @@ type EvaluacionConvenio =
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || isCancellationBlockedByEvaluacion() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid() + ' | Fecha pago válida: ' + isCancellationPaymentDateValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -2348,6 +2367,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   };
 
   selectedClassifications = signal<string[]>([]);
+  // Campos que el tipo de contacto (nivel 1) pasa a todas sus opciones, como el motivo de no pago:
+  // se piden junto al nivel 1, antes del detalle, y su valor se conserva al cambiar el detalle.
+  camposDeRama = signal<FieldConfig[]>([]);
+  valoresDeRama = signal<Record<string, string>>({});
+  // Esas listas se piden para cada nivel 1 al cargar el árbol, para que el motivo salga junto con el
+  // nivel 1 y no un instante después (cuando llegan los campos), corriendo el detalle de sitio.
+  private camposDeRamaPorNivel1 = new Map<string, FieldConfig[]>();
+  private readonly precargarCamposDeRama = effect(() => {
+    const nivel1 = (this.managementClassifications() as any[]).filter(c => !c.parentId);
+    this.camposDeRamaPorNivel1 = new Map();
+    for (const c of nivel1) {
+      this.apiSystemConfigService.getClassificationFields(Number(c.id)).subscribe({
+        next: r => {
+          const deRama = (r.fields || []).filter((f: any) => this.esCampoDeRama(f)).map((f: any) => this.aCampoDeRama(f));
+          this.camposDeRamaPorNivel1.set(String(c.id), deRama);
+          if (deRama.length && this.selectedClassifications()[0] === String(c.id) && !this.camposDeRama().length) {
+            this.camposDeRama.set(deRama);
+          }
+        },
+        error: () => {}
+      });
+    }
+  });
   dynamicFields = signal<any[]>([]);
   dynamicFieldValues = signal<any>({});
   isLoadingDynamicFields = signal(false);
@@ -2398,6 +2440,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return false;
     }
 
+    if (this.isCancellationBlockedByEvaluacion()) {
+      return false;
+    }
+
     // 0.1 Verificar bloqueo por período de gracia de promesa vencida de otro asesor
     if (this.showPromesaVencidaGraciaBlocking()) {
       console.log('[isFormValid] ❌ Bloqueado: cliente en período de gracia de otro asesor');
@@ -2437,6 +2483,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // la gestión se enviaba sin un campo obligatorio: el error saltaba recién al guardar.
     if (this.dynamicFieldsError()) {
       console.log('[isFormValid] ❌ Bloqueado: los campos adicionales no cargaron');
+      return false;
+    }
+
+    // 1.6 Campos del nivel 1 que se piden antes del detalle (motivo de no pago)
+    const valoresRama = this.valoresDeRama();
+    if (this.camposDeRama().some(c => c.required && !valoresRama[c.id])) {
       return false;
     }
 
@@ -2680,10 +2732,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   isCancellationTypification = computed(() => {
     const selected = this.selectedClassification();
     if (!selected) return false;
-    // Detectar por código "CA" o por label que contenga "CANCELACION"
+    // Por código "CA", por nombre, o porque su tipificación base es un pago (p. ej. «Titular ya pagó»)
     return selected.codigo === 'CA' ||
            selected.label?.toUpperCase().includes('CANCELACION') ||
-           selected.label?.toUpperCase().includes('CANCELACIÓN');
+           selected.label?.toUpperCase().includes('CANCELACIÓN') ||
+           this.apiSystemConfigService.accionBase((selected as any).idTipificacionBase) === 'PAGO';
   });
 
   // Computed para obtener las cuotas pendientes de la ÚLTIMA promesa activa
@@ -3043,6 +3096,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       s.installments?.some((c: any) => c.status === 'EN_EVALUACION')
     );
   });
+
+  isCancellationBlockedByEvaluacion = computed(() =>
+    this.isCancellationTypification() && this.hasEvaluacionPromise()
+  );
 
   // ==================== BLOQUEO PROMESA DE PAGO ACTIVA ====================
   // Flag para mostrar alerta de bloqueo cuando cliente tiene promesa activa
@@ -3849,6 +3906,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const currentUser = this.authService.getCurrentUser();
     console.log('[V2] Usuario actual:', currentUser);
 
+    // Desde gestión manual el contexto es el del cliente y lo fija loadCustomerByDocumentoFromManual.
+    // Fijar también el del usuario pediría a la vez dos árboles de tipificaciones (y dos topes de
+    // primera cuota) y quedaría el que respondiera último.
+    const params = this.route.snapshot.queryParams;
+    if (params['source'] === 'manual' && params['documento']) {
+      return;
+    }
+
     if (currentUser?.tenantId && currentUser?.portfolioId && currentUser?.subPortfolioId) {
       this.selectedTenantId = currentUser.tenantId;
       this.selectedPortfolioId = currentUser.portfolioId;
@@ -3860,9 +3925,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.loadCustomerOutputConfig();
       this.loadFirstInstallmentConfig(); // Cargar config de primera cuota
 
-      // Solo cargar cliente por defecto si NO viene desde gestión manual
-      // (gestión manual carga el cliente por documento en route.queryParams)
-      const params = this.route.snapshot.queryParams;
       if (params['source'] !== 'manual') {
         this.loadFirstCustomer();
       }
@@ -4841,7 +4903,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
-    // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
+    // Registrar en BD y marcar: /calls/make origina via FreeSWITCH (llama primero al
+    // anexo del asesor y de ahi hace bridge al cliente) y deja la llamada en
+    // marcador_llamadas, que es lo que mueve al asesor a EN_LLAMADA y, al colgar, a
+    // TIPIFICANDO. El `origen` distingue esta fila de las del discador.
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
       await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
@@ -4855,7 +4920,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         contactId,
         tenantId: this.selectedTenantId,
         carteraId: this.selectedPortfolioId,
-        subcarteraId: this.selectedSubPortfolioId
+        subcarteraId: this.selectedSubPortfolioId,
+        origen: 'RELLAMADA'
       }).subscribe({
         next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
         error: (err: any) => {
@@ -5183,6 +5249,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.showPromesaVencidaGraciaBlocking.set(false);
 
     if (levelIndex === 0) {
+      this.camposDeRama.set(this.camposDeRamaPorNivel1.get(value) ?? []);
+      this.valoresDeRama.set({});
       this.managementForm.clasificacionNivel1 = value;
       this.managementForm.clasificacionNivel2 = '';
       this.managementForm.clasificacionNivel3 = '';
@@ -5218,6 +5286,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
   }
 
+  /** Lista que una tipificación pasa a todas sus opciones (motivo de no pago). */
+  private esCampoDeRama(f: any): boolean {
+    return f.aplicaADescendientes === true && String(f.fieldType).toLowerCase() === 'select';
+  }
+
+  private aCampoDeRama(f: any): FieldConfig {
+    return {
+      id: f.fieldCode, label: f.fieldName, type: 'select', required: !!f.isRequired, displayOrder: f.displayOrder || 0,
+      options: (f.options || []).map((opt: any) => typeof opt === 'string' ? { value: opt, label: opt } : { value: opt.value || opt, label: opt.label || opt })
+    } as FieldConfig;
+  }
+
+  elegirValorDeRama(campoId: string, valor: string) {
+    this.valoresDeRama.update(v => ({ ...v, [campoId]: valor }));
+  }
+
   /**
    * Resetea el estado de continuidad
    */
@@ -5243,7 +5327,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Verificar si el código es CON o el label contiene CONTINUIDAD (case insensitive)
     const isContinuidad = selected.codigo?.toUpperCase() === 'CON' ||
-                          selected.label?.toUpperCase()?.includes('CONTINUIDAD');
+                          selected.label?.toUpperCase()?.includes('CONTINUIDAD') ||
+                          this.apiSystemConfigService.accionBase((selected as any).idTipificacionBase) === 'CONTINUIDAD';
 
     console.log('[CONTINUIDAD] Verificando tipificación:', selected.codigo, selected.label, '- Es continuidad:', isContinuidad);
 
@@ -5271,7 +5356,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // También verificar allowsInstallmentSelection que indica que genera cronograma
     const isPromesaPago = selected.codigo?.toUpperCase() === 'PP' ||
                           selected.label?.toUpperCase()?.includes('PROMESA DE PAGO') ||
-                          selected.allowsInstallmentSelection === true;
+                          selected.allowsInstallmentSelection === true ||
+                          this.apiSystemConfigService.accionBase((selected as any).idTipificacionBase) === 'PROMESA';
 
     console.log('[PROMESA-CHECK] Verificando tipificación:', selected.codigo, selected.label,
                 '- Es promesa de pago:', isPromesaPago,
@@ -5390,11 +5476,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // no pise el schema del nivel actual.
         if (reqId !== this.dynamicFieldsReqId) { return; }
         this.isLeafClassification.set(response.isLeaf);
-        this.dynamicFields.set(response.fields || []);
+
+        // Las listas que una tipificación pasa a sus opciones (motivo de no pago) se piden junto al
+        // nivel 1 y no en el formulario del detalle. Llegan con el nivel 1 (propias) o con el detalle
+        // (heredadas); se toman de la que responda, por si el asesor cambió de nivel antes.
+        const todos: any[] = response.fields || [];
+        const actuales = this.camposDeRama();
+        const nuevos = todos.filter(f => this.esCampoDeRama(f) && !actuales.some(c => c.id === f.fieldCode))
+          .map(f => this.aCampoDeRama(f));
+        if (nuevos.length) {
+          this.camposDeRama.set([...actuales, ...nuevos]);
+        }
+        const propios = todos.filter(f => !this.esCampoDeRama(f));
+        this.dynamicFields.set(propios);
 
         // Convertir campos del backend al formato MetadataSchema
         // Los tipos ya vienen en lowercase desde el backend, no necesitan conversión
-        const fieldConfigs: FieldConfig[] = (response.fields || []).map((field: any, index: number) => {
+        const fieldConfigs: FieldConfig[] = propios.map((field: any, index: number) => {
           return {
           id: field.fieldCode,
           label: field.fieldName,
@@ -6210,6 +6308,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   saveManagement() {
+    if (this.isCancellationBlockedByEvaluacion()) {
+      return;
+    }
+
     if (!this.validateForm()) {
       return;
     }
@@ -6907,10 +7009,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private getCamposAdicionalesParaGuardar(): string | null {
     const schema = this.dynamicFieldsSchema();
     const values = this.dynamicFieldValues();
-    if (!schema?.fields || !values) return null;
+    const campos: Record<string, { valor: string; texto: string }> = {};
+
+    // Los del nivel 1 (motivo de no pago) van primero: se eligieron antes del detalle
+    const valoresRama = this.valoresDeRama();
+    for (const campo of this.camposDeRama()) {
+      const valor = valoresRama[campo.id];
+      if (!valor) continue;
+      const opcion = campo.options?.find(o => String(o.value) === valor);
+      campos[campo.id] = { valor, texto: opcion ? String(opcion.label) : valor };
+    }
+    if (!schema?.fields || !values) {
+      return Object.keys(campos).length > 0 ? JSON.stringify(campos) : null;
+    }
 
     const tiposConDestinoPropio = ['textarea', 'payment_schedule', 'table'];
-    const campos: Record<string, { valor: string; texto: string }> = {};
     for (const field of schema.fields) {
       if (tiposConDestinoPropio.includes(field.type)) continue;
       const valor = values[field.id];
@@ -7796,6 +7909,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Selecciona una cuota para cancelación e inicializa los campos editables
    */
   onSelectCuotaForCancellation(cuota: any): void {
+    if (this.isCancellationBlockedByEvaluacion()) {
+      return;
+    }
+
     this.selectedInstallmentForCancellation.set(cuota);
     // Inicializar monto con saldo pendiente (si tiene pago parcial), sino monto total
     const montoInicial = this.tienePagoParcial(cuota)

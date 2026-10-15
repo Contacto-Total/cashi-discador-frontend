@@ -226,8 +226,8 @@
       </div>
     </div>
 
-    <!-- SECCIÓN: Filtro por Antigüedad de Mora -->
-    <div class="form-section full-width !rounded-lg !p-3">
+    <!-- SECCIÓN: Filtro por Antigüedad de Mora (solo si la subcartera tiene días de mora) -->
+    <div class="form-section full-width !rounded-lg !p-3" *ngIf="tieneDiasMora">
       <h2>
         <lucide-angular name="calendar-range" [size]="20"></lucide-angular>
         Filtro por Antigüedad de Mora
@@ -362,7 +362,7 @@
                 class="form-select form-select-lg">
                 <option [ngValue]="0">Sin filtro de campo</option>
                 <option *ngFor="let field of filterableFields" [ngValue]="field.id">
-                  {{ field.fieldName }} ({{ field.dataType }})
+                  {{ field.fieldName | nombrePropio }} ({{ field.dataType }})
                 </option>
               </select>
             </div>
@@ -510,7 +510,7 @@
               <tbody>
                 <tr *ngFor="let filter of campaignFilters">
                   <td><span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">{{ getTipoContactoNombre(filter.tipoContacto) }}</span></td>
-                  <td class="active-filter-field">{{ filter.fieldCode ? filter.fieldName : 'Solo por Estado' }}</td>
+                  <td class="active-filter-field">{{ filter.fieldCode ? (filter.fieldName | nombrePropio) : 'Solo por Estado' }}</td>
                   <td class="active-filter-range">
                     <ng-container *ngIf="filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN'; else dateOrNumeric">{{ filter.selectedValues }}</ng-container>
                     <ng-template #dateOrNumeric>
@@ -533,14 +533,14 @@
           <div class="order-fields-list" *ngIf="campaignOrderFields().length > 0" cdkDropList [cdkDropListDisabled]="isEditMode" (cdkDropListDropped)="reorderOrderFields($event)">
             <div class="order-field-item" *ngFor="let field of campaignOrderFields(); let i = index" cdkDrag [cdkDragDisabled]="isEditMode">
               <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
-              <span class="order-field-name">{{ field.fieldName }}</span>
+              <span class="order-field-name">{{ field.fieldName | nombrePropio }}</span>
               <button type="button" class="btn-filter-sort active" (click)="onOrderDirectionClick($event, field.fieldCode)">{{ field.orderDirection }}</button>
             </div>
           </div>
           <div class="order-fields-list order-fields-list--inactive" *ngIf="inactiveOrderFields().length > 0">
             <div class="order-field-item order-field-item--inactive" *ngFor="let field of inactiveOrderFields()">
               <span class="order-field-priority order-field-priority--na">NA</span>
-              <span class="order-field-name">{{ field.fieldName }}</span>
+              <span class="order-field-name">{{ field.fieldName | nombrePropio }}</span>
               <button type="button" class="btn-filter-sort" (click)="onOrderDirectionClick($event, field.fieldCode)">NA</button>
             </div>
           </div>

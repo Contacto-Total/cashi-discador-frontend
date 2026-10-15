@@ -70,6 +70,15 @@
   --tooltip-foreground: #0b0b0c;
 }
 
+/* Texto de ejemplo de los campos del diseño nuevo en el gris de los textos secundarios. El tema oscuro
+   antiguo lo pinta en un gris azulado (`body.dark-theme input::placeholder`); `:root` sube la
+   especificidad para ganarle sin `!important`. */
+:root :is(.cashi-pantalla, .font-cashi) :is(input, textarea)::placeholder,
+:root :is(input, textarea).font-cashi::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
 /* Colores de estado (correcto, aviso, peligro, información) y superficies menores. Van solo dentro
    de las pantallas con el diseño nuevo (.cashi-pantalla): fuera, estos nombres cortos podrían cruzarse
    con variables de pantallas antiguas. Cada color trae su texto, su fondo, su borde y su punto. */

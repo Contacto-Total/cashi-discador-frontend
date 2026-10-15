@@ -13,7 +13,7 @@
           <select id="um-cli" [class]="LISTA" (change)="elegirCliente($any($event.target).value)">
             <option value="" [selected]="!cliente()">Todos</option>
             @for (c of clientes(); track c) {
-              <option [value]="c" [selected]="c === cliente()">{{ c }}</option>
+              <option [value]="c" [selected]="c === cliente()">{{ c | nombrePropio }}</option>
             }
           </select>
         </div>
@@ -22,7 +22,7 @@
           <select id="um-car" [class]="LISTA" (change)="elegirCartera($any($event.target).value)">
             <option value="" [selected]="!cartera()">Todas</option>
             @for (c of carteras(); track c) {
-              <option [value]="c" [selected]="c === cartera()">{{ c }}</option>
+              <option [value]="c" [selected]="c === cartera()">{{ c | nombrePropio }}</option>
             }
           </select>
         </div>
@@ -120,36 +120,8 @@
   </section>
 
   <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
-  <section appTarjeta aria-label="Subcarteras" class="flex min-h-0 flex-col self-stretch overflow-hidden px-5 pt-[clamp(1rem,2.6vh,2rem)] pb-5 @max-[70.5rem]/umbrales:hidden">
-    <p role="heading" aria-level="2" class="m-0 mb-[.75rem] flex-none text-[1rem] font-bold">Subcarteras</p>
-    <div class="-mx-1.5 -mb-5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-5">
-      <button type="button" class="font-cashi grid w-full flex-none cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-lg border-0! px-2.5! py-2! text-left text-foreground! transition-colors duration-150"
-              [ngClass]="!sub() ? 'bg-sidebar-accent' : 'bg-transparent hover:bg-muted'" [attr.aria-current]="!sub()" (click)="elegirSub(0, true)">
-        <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">General</span>
-        <span class="col-[1/-1] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">Todas las subcarteras</span>
-      </button>
-      @for (c of porCliente(); track c.nombre) {
-        <p class="mt-[.875rem] mr-2.5 mb-1.5 ml-[.1875rem] flex flex-none items-center gap-2 text-[.8125rem] font-bold text-foreground">
-          <lucide-angular name="building-2" [size]="15" [ngClass]="'flex flex-none text-muted-foreground'"></lucide-angular>
-          <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ c.nombre }}</span>
-          <span class="text-[.75rem] font-medium text-muted-foreground">{{ c.subs.length }} {{ c.subs.length === 1 ? 'subcartera' : 'subcarteras' }}</span>
-        </p>
-        <div class="ml-4 flex flex-none flex-col gap-0.5">
-          @for (s of c.subs; track s.idSubcartera) {
-            <button type="button" class="font-cashi grid w-full flex-none cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-lg border-0! py-2! pr-2.5! pl-[.6875rem]! text-left text-foreground! transition-colors duration-150"
-                    [ngClass]="s.idSubcartera === sub() ? 'bg-sidebar-accent' : 'bg-transparent hover:bg-muted'" [attr.aria-current]="s.idSubcartera === sub()" (click)="elegirSub(s.idSubcartera, true)">
-              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ s.subcartera }}</span>
-              <span class="col-[2] row-[1] justify-self-end rounded-full px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap"
-                    [ngClass]="personalizada(s.idSubcartera) ? 'bg-(--ok-bg) text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]'
-                      : s.idSubcartera === sub() ? 'bg-card text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]'
-                      : 'bg-transparent text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]'">{{ personalizada(s.idSubcartera) ? 'Personalizado' : 'General' }}</span>
-              <span class="col-[1/-1] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">Cartera {{ s.cartera }} · {{ s.asesores }} {{ s.asesores === 1 ? 'asesor' : 'asesores' }}</span>
-            </button>
-          }
-        </div>
-      }
-    </div>
-  </section>
+  <app-panel-subcarteras class="@max-[70.5rem]/umbrales:hidden" [subcarteras]="panelSubs()" [seleccion]="sub()" [conGeneral]="true"
+                         [etiquetas]="etiquetasSubs()" (elegir)="elegirSub($event, true)" />
 </div>
 
 <!-- Barra de cambios: una tarjeta aparte, siempre abajo. -->

@@ -14,12 +14,14 @@ export interface CategoriaPagoInfo {
 export const CATEGORIAS_PAGO: Record<string, CategoriaPagoInfo> = {
   CONCILIADO: { label: 'Conciliado', tono: 'ok', resultado: 'Se concilia al guardar.' },
   CONCILIADO_POR_SUMA: { label: 'Conciliado por suma', tono: 'ok', resultado: 'El banco sumó varios pagos del asesor del mismo día. Se concilia al guardar.' },
+  CONCILIADO_POR_SUMA_CON_DESFASE: { label: 'Conciliado por suma con desfase', tono: 'ok', resultado: 'El banco sumó varios pagos del asesor del mismo día y lo reportó con otra fecha dentro de la ventana. Se concilia al guardar.' },
   CONCILIADO_CON_DESFASE: { label: 'Conciliado con desfase', tono: 'ok', resultado: 'El banco reportó el pago con otra fecha dentro de la ventana. Se concilia al guardar.' },
   CONCILIADO_POR_PARTES: { label: 'Conciliado por partes', tono: 'ok', resultado: 'Los pagos del banco completan el monto registrado. Se concilia al guardar.' },
   PARCIAL_EN_ESPERA: { label: 'Parcial en espera', tono: 'espera', resultado: 'Se aplica lo recibido y la cuota queda parcial hasta que llegue el resto.' },
   PAGO_VOLUNTARIO: { label: 'Pago voluntario', tono: 'neutro', resultado: 'El cliente no tiene promesa. Se registra como pago voluntario al guardar.' },
   REQUIERE_REVISION: { label: 'Requiere revisión', tono: 'revision', resultado: 'Se guarda como pendiente hasta que se resuelva.' },
-  OMITIDO_POR_FECHA: { label: 'Omitido por fecha', tono: 'neutro', resultado: 'El pago es anterior a la creación del cliente. No se guarda.' },
+  OMITIDO_POR_FECHA: { label: 'Omitido por fecha', tono: 'neutro', resultado: 'El pago es anterior al mes en que el cliente entró a la subcartera. No se guarda.' },
+  NO_CORRESPONDE: { label: 'No corresponde', tono: 'neutro', resultado: 'Un supervisor indicó que el pago no corresponde a la gestión de la empresa. Se conserva, pero ya no está pendiente.' },
   CLIENTE_NO_ENCONTRADO: { label: 'Cliente no encontrado', tono: 'neutro', resultado: 'El documento no pertenece a esta subcartera.' },
   PAGO_YA_CONCILIADO_PREVIAMENTE: { label: 'Ya conciliado', tono: 'neutro', resultado: 'Este pago ya fue conciliado antes.' }
 };

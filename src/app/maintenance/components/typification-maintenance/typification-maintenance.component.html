@@ -9,7 +9,7 @@
           <label for="tm-cli" [class]="ETIQUETA">Cliente</label>
           <select id="tm-cli" [class]="LISTA" (change)="elegirCliente($any($event.target).value)">
             @for (c of clientes(); track c) {
-              <option [value]="c" [selected]="c === actual()?.cliente">{{ c }}</option>
+              <option [value]="c" [selected]="c === actual()?.cliente">{{ c | nombrePropio }}</option>
             }
           </select>
         </div>
@@ -17,7 +17,7 @@
           <label for="tm-car" [class]="ETIQUETA">Cartera</label>
           <select id="tm-car" [class]="LISTA" (change)="elegirCartera($any($event.target).value)">
             @for (c of carteras(); track c) {
-              <option [value]="c" [selected]="c === actual()?.cartera">{{ c }}</option>
+              <option [value]="c" [selected]="c === actual()?.cartera">{{ c | nombrePropio }}</option>
             }
           </select>
         </div>
@@ -25,7 +25,7 @@
           <label for="tm-sub" [class]="ETIQUETA">Subcartera</label>
           <select id="tm-sub" [class]="LISTA" (change)="elegirSub($any($event.target).value)">
             @for (s of deLaCartera(); track s.subId) {
-              <option [value]="s.subId" [selected]="s.subId === sub()">{{ s.subcartera }}</option>
+              <option [value]="s.subId" [selected]="s.subId === sub()">{{ s.subcartera | nombrePropio }}</option>
             }
           </select>
         </div>
@@ -46,6 +46,7 @@
       <div [class]="REJILLA + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
         <span>Tipificación</span>
         <span class="text-right">Campos</span>
+        <span title="En el catálogo: vale para todas las carteras">Tipificación base</span>
         <span class="text-center">Habilitada</span>
         <span></span>
       </div>
@@ -71,12 +72,27 @@
       }
 
       @if (pestana() === 'arbol' || !lista()) {
-        @for (f of filas(); track f.node.typification.id; let primera = $first) {
+        @for (f of filas(); track clave(f); let primera = $first) {
+          @if (f.lista) {
+            <!-- La lista que esta rama pide antes del detalle: no se habilita ni se personaliza; el lápiz lleva a sus motivos. -->
+            <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'">
+              <div class="flex min-w-0 items-baseline gap-2 pl-7">
+                <span class="min-w-0 overflow-hidden text-[.875rem] font-medium text-ellipsis whitespace-nowrap" [ngClass]="apagada(f) ? 'text-muted-foreground/75' : 'text-foreground'">{{ lista()?.etiqueta }}</span>
+                <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">{{ motivosActivos() }} {{ motivosActivos() === 1 ? 'motivo' : 'motivos' }}</span>
+              </div>
+              <span></span>
+              <span></span>
+              <span></span>
+              <button type="button" [class]="ICONO" [attr.aria-label]="'Editar ' + (lista()?.etiqueta || 'la lista')" title="Editar motivos" (click)="pestana.set('lista'); abierta.set(null)">
+                <lucide-angular name="pencil" [size]="16"></lucide-angular>
+              </button>
+            </div>
+          } @else {
           <div [class]="REJILLA + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'"
                [ngClass]="f.nivel === 1 ? (primera ? 'mt-1.5' : 'mt-[.875rem]') : ''">
             <!-- El título de cada tipo de contacto lleva la flecha de plegar; sus filas se alinean con su texto. -->
             <div class="flex min-w-0 items-baseline gap-2"
-                 [ngClass]="f.nivel === 1 ? 'cursor-pointer' : f.nivel === 2 ? 'pl-7' : 'pl-12'" (click)="alternarGrupo(f)">
+                 [ngClass]="f.nivel === 1 ? 'cursor-pointer' : f.nivel === 2 ? 'pl-7' : f.nivel === 3 ? 'pl-12' : 'pl-[4.25rem]'" (click)="alternarGrupo(f)">
               @if (f.nivel === 1) {
                 <button type="button" class="-mx-1 grid size-6 flex-none cursor-pointer place-items-center self-center rounded-md border-0! bg-transparent p-0! text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
                         [attr.aria-expanded]="desplegado(f)" [attr.aria-label]="(desplegado(f) ? 'Plegar ' : 'Desplegar ') + nombre(f)">
@@ -85,12 +101,12 @@
               }
               <span class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
                     [ngClass]="[
-                      f.nivel === 1 ? 'text-[.8125rem] font-bold' : f.node.children.length ? 'text-[.875rem] font-medium' : 'text-[.875rem] font-normal',
+                      f.nivel === 1 ? 'text-[.875rem] font-semibold' : f.node.children.length ? 'text-[.875rem] font-medium' : 'text-[.875rem] font-normal',
                       apagada(f) ? 'text-muted-foreground/75' : f.nivel === 1 || f.node.children.length ? 'text-foreground' : 'text-foreground/80'
-                    ]">{{ nombre(f) }}</span>
-              <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">
-                {{ f.node.typification.codigo }}@if (f.nivel === 1) { · {{ finales(f.node) }} {{ finales(f.node) === 1 ? 'opción' : 'opciones' }}}
-              </span>
+                    ]">{{ nombre(f) | nombrePropio:'oracion' }}</span>
+              @if (f.nivel === 1) {
+                <span class="flex-none text-[.75rem] text-muted-foreground tabular-nums">{{ finales(f.node) }} {{ finales(f.node) === 1 ? 'opción' : 'opciones' }}</span>
+              }
               @if (personalizada(f)) {
                 <span class="flex-none self-center rounded-full bg-(--ok-bg) px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold whitespace-nowrap text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]">Personalizada</span>
               }
@@ -110,6 +126,44 @@
               }
             </div>
 
+            <!-- Tipificación base. El tipo de contacto elige su grupo; cada opción final, solo entre las de ese grupo. -->
+            @if (f.nivel === 1) {
+              @let grupo = grupoDe(f.node);
+              <select [class]="LISTA_BASE" [ngClass]="grupo ? 'border-(--campo-ln)! bg-(--campo)! text-foreground!' : 'border-(--am-ln)! bg-(--am-bg)! text-(--am)!'"
+                      [attr.aria-label]="'Grupo base de ' + nombre(f)" [title]="grupo ? 'Sus opciones cuentan como ' + (grupo | nombrePropio:'oracion') : 'Sin grupo base'"
+                      (change)="elegirGrupo(f, $any($event.target).value)">
+                @if (!grupo) {
+                  <option value="" selected>Elegir grupo</option>
+                }
+                @for (g of basesPorGrupo(); track g.nombre) {
+                  <option [value]="g.nombre" [selected]="g.nombre === grupo">{{ g.nombre | nombrePropio:'oracion' }}</option>
+                }
+              </select>
+            } @else if (f.node.children.length) {
+              <span></span>
+            } @else {
+              @let opciones = opcionesBase(f);
+              <select [class]="LISTA_BASE" [ngClass]="baseDe(f) === null ? 'border-(--am-ln)! bg-(--am-bg)! text-(--am)!' : 'border-(--campo-ln)! bg-(--campo)! text-foreground!'"
+                      [attr.aria-label]="'Tipificación base de ' + nombre(f)" [title]="rotuloBase(f) | nombrePropio:'oracion'" (change)="elegirBase(f, $any($event.target).value)">
+                <option value="" [selected]="baseDe(f) === null">Sin asignar</option>
+                @if (f.ancestros[0] && grupoDe(f.ancestros[0])) {
+                  @for (b of opciones; track b.id) {
+                    <option [value]="b.id" [selected]="b.id === baseDe(f)">{{ b.nivel2 | nombrePropio:'oracion' }}</option>
+                  }
+                } @else {
+                  @for (g of basesPorGrupo(); track g.nombre) {
+                    <optgroup [label]="g.nombre | nombrePropio:'oracion'">
+                      @for (b of g.opciones; track b.id) {
+                        @if (b.origen !== 'DISCADOR' || b.id === baseDe(f)) {
+                          <option [value]="b.id" [selected]="b.id === baseDe(f)">{{ b.nivel2 | nombrePropio:'oracion' }}</option>
+                        }
+                      }
+                    </optgroup>
+                  }
+                }
+              </select>
+            }
+
             <button type="button" role="switch" [class]="INTERRUPTOR" [ngClass]="habilitada(f) ? 'bg-brand after:translate-x-3.5' : 'bg-(--campo-ln)'"
                     [attr.aria-checked]="habilitada(f)" [attr.aria-label]="'Habilitada en esta subcartera: ' + nombre(f)" (click)="alternarHabilitada(f)"></button>
 
@@ -127,8 +181,8 @@
                   <div class="flex min-w-0 flex-col gap-1.5">
                     <label [attr.for]="'tm-ed-n-' + f.node.typification.id" [class]="ETIQUETA">Nombre en esta subcartera</label>
                     <input [id]="'tm-ed-n-' + f.node.typification.id" type="text" maxlength="255" autocomplete="off" [class]="CAMPO"
-                           [attr.value]="personal(f, 'nombre')" [placeholder]="f.node.typification.nombre" (input)="escribir(f, 'nombre', $any($event.target).value)">
-                    <span class="text-[.75rem] text-muted-foreground">En el catálogo: {{ f.node.typification.nombre }}</span>
+                           [attr.value]="personal(f, 'nombre')" [placeholder]="f.node.typification.nombre | nombrePropio:'oracion'" (input)="escribir(f, 'nombre', $any($event.target).value)">
+                    <span class="text-[.75rem] text-muted-foreground">En el catálogo: {{ f.node.typification.nombre | nombrePropio:'oracion' }}</span>
                   </div>
                   <div class="flex min-w-0 flex-col gap-1.5">
                     <label [attr.for]="'tm-ed-d-' + f.node.typification.id" [class]="ETIQUETA">Descripción</label>
@@ -176,6 +230,7 @@
               </div>
             }
           }
+          }
         }
       } @else {
         <!-- Lista de la subcartera (por ejemplo, los motivos de no pago). Se guarda con la barra de abajo. -->
@@ -219,27 +274,7 @@
   </section>
 
   <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
-  <section appTarjeta aria-label="Subcarteras" class="flex min-h-0 flex-col self-stretch overflow-hidden px-5 pt-[clamp(1rem,2.6vh,2rem)] pb-5 @max-[70.5rem]/tipif:hidden">
-    <p role="heading" aria-level="2" class="m-0 mb-[.75rem] flex-none text-[1rem] font-bold">Subcarteras</p>
-    <div class="-mx-1.5 -mb-5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-5">
-      @for (c of porCliente(); track c.nombre; let primero = $first) {
-        <p class="mr-2.5 mb-1.5 ml-[.1875rem] flex flex-none items-center gap-2 text-[.8125rem] font-bold text-foreground" [ngClass]="primero ? 'mt-0' : 'mt-[.875rem]'">
-          <lucide-angular name="building-2" [size]="15" [ngClass]="'flex flex-none text-muted-foreground'"></lucide-angular>
-          <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ c.nombre }}</span>
-          <span class="text-[.75rem] font-medium text-muted-foreground">{{ c.subs.length }} {{ c.subs.length === 1 ? 'subcartera' : 'subcarteras' }}</span>
-        </p>
-        <div class="ml-4 flex flex-none flex-col gap-0.5">
-          @for (s of c.subs; track s.subId) {
-            <button type="button" class="font-cashi grid w-full flex-none cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-lg border-0! py-2! pr-2.5! pl-[.6875rem]! text-left text-foreground! transition-colors duration-150"
-                    [ngClass]="s.subId === sub() ? 'bg-sidebar-accent' : 'bg-transparent hover:bg-muted'" [attr.aria-current]="s.subId === sub()" (click)="elegirSub(s.subId)">
-              <span class="overflow-hidden text-[.875rem] font-semibold text-ellipsis whitespace-nowrap">{{ s.subcartera }}</span>
-              <span class="col-[1/-1] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">Cartera {{ s.cartera }}</span>
-            </button>
-          }
-        </div>
-      }
-    </div>
-  </section>
+  <app-panel-subcarteras class="@max-[70.5rem]/tipif:hidden" [subcarteras]="panelSubs()" [seleccion]="sub()" (elegir)="elegirSub($event)" />
 </div>
 
 <!-- Barra de cambios: una tarjeta aparte, siempre abajo. -->
@@ -264,15 +299,15 @@
             <lucide-angular name="trash-2" [size]="17"></lucide-angular>
           </span>
           <div class="flex min-w-0 flex-col gap-1.5">
-            <h2 id="tm-del-titulo" [class]="ui.titulo">¿Eliminar {{ e.tip.nombre }} del catálogo?</h2>
-            <p id="tm-del-texto" class="text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
-              Se elimina para <b class="font-bold text-[#0f172a] dark:text-slate-100">todas las carteras</b>, no solo para esta subcartera. No se puede deshacer.
+            <h2 id="tm-del-titulo" class="m-0! text-[1rem] leading-[1.3] font-bold">¿Eliminar {{ e.tip.nombre | nombrePropio:'oracion' }} del catálogo?</h2>
+            <p id="tm-del-texto" class="m-0 text-[.875rem] leading-[1.5] text-muted-foreground">
+              Se elimina para <b class="font-semibold text-foreground">todas las carteras</b>, no solo para esta subcartera. No se puede deshacer.
             </p>
           </div>
         </div>
         <div [class]="ui.pie">
-          <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" [class]="ui.secundario">Cancelar</button>
-          <button type="button" (click)="confirmarEliminar()" [disabled]="eliminando()" [class]="ui.peligro">
+          <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" appBoton="secundario">Cancelar</button>
+          <button type="button" (click)="confirmarEliminar()" [disabled]="eliminando()" appBoton="peligro">
             @if (eliminando()) {
               <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
               Eliminando
@@ -287,23 +322,23 @@
             <lucide-angular name="alert-triangle" [size]="17"></lucide-angular>
           </span>
           <div class="flex min-w-0 flex-col gap-1.5">
-            <h2 id="tm-del-titulo" [class]="ui.titulo">No se puede eliminar {{ e.tip.nombre }}</h2>
-            <p id="tm-del-texto" class="text-[12.5px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">{{ e.mensaje }}</p>
+            <h2 id="tm-del-titulo" class="m-0! text-[1rem] leading-[1.3] font-bold">No se puede eliminar {{ e.tip.nombre | nombrePropio:'oracion' }}</h2>
+            <p id="tm-del-texto" class="m-0 text-[.875rem] leading-[1.5] text-muted-foreground">{{ e.mensaje }}</p>
           </div>
         </div>
         <div [class]="ui.caja + ' mx-[18px] mb-4 flex flex-col gap-1 px-[13px] py-[11px]'">
           @if (eliminarYaDeshabilitada) {
-            <span class="text-[12.5px] font-bold">Ya está deshabilitada en esta subcartera</span>
-            <span class="text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">Los asesores no la ven y el historial se conserva. No hace falta nada más.</span>
+            <span class="text-[.875rem] font-semibold">Ya está deshabilitada en esta subcartera</span>
+            <span class="text-[.8125rem] leading-[1.5] text-muted-foreground">Los asesores no la ven y el historial se conserva. No hace falta nada más.</span>
           } @else {
-            <span class="text-[12.5px] font-bold">Puedes deshabilitarla en {{ actual()?.subcartera || 'esta subcartera' }}</span>
-            <span class="text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">Deja de aparecer para los asesores de la subcartera, el historial no cambia y se vuelve a habilitar con el interruptor.</span>
+            <span class="text-[.875rem] font-semibold">Puedes deshabilitarla en {{ (actual()?.subcartera | nombrePropio) || 'esta subcartera' }}</span>
+            <span class="text-[.8125rem] leading-[1.5] text-muted-foreground">Deja de aparecer para los asesores de la subcartera, el historial no cambia y se vuelve a habilitar con el interruptor.</span>
           }
         </div>
         <div [class]="ui.pie">
-          <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" [class]="ui.secundario">Cerrar</button>
+          <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" appBoton="secundario">Cerrar</button>
           @if (!eliminarYaDeshabilitada) {
-            <button type="button" (click)="deshabilitarEnSubcartera()" [disabled]="eliminando()" [class]="ui.primario">
+            <button type="button" (click)="deshabilitarEnSubcartera()" [disabled]="eliminando()" appBoton="primario">
               @if (eliminando()) {
                 <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
                 Deshabilitando

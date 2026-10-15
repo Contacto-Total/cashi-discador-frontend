@@ -1,16 +1,24 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
+import { coincideDocumento, cortarPagina } from '../models/paginacion';
+import { BuscadorDocumentoWidget } from './buscador-documento.widget';
+import { TablaPaginacionWidget } from './tabla-paginacion.widget';
+
+let siguienteId = 0;
 
 @Component({
   selector: 'app-bcp-no-procesados',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, BuscadorDocumentoWidget, TablaPaginacionWidget],
   template: `
     <div class="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
-        <h2 class="text-lg font-semibold text-slate-800 dark:text-white">{{ title }}</h2>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ description }}</p>
+      <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-800 dark:text-white">{{ title }}</h2>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ description }}</p>
+        </div>
+        <app-buscador-documento [inputId]="idBuscador" [valor]="busqueda" (valorChange)="buscar($event)"></app-buscador-documento>
       </div>
 
       <div class="overflow-x-auto">
@@ -35,80 +43,45 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                 <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '-' }}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ value(row, 'carteraId', 'cartera_id') || '-' }}/{{ value(row, 'subcarteraId', 'subcartera_id') || '-' }}</td>
               </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos con ese documento.</td>
+              </tr>
             }
           </tbody>
         </table>
       </div>
 
-      <nav
-        class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700"
-        [attr.aria-label]="'Paginación de ' + title"
-      >
-        <p class="text-xs text-slate-600 dark:text-slate-300" aria-live="polite">
-          Mostrando {{ desde() }}–{{ hasta() }} de {{ total() }} · Página {{ pagina() }} de {{ totalPaginas() }}
-        </p>
-        @if (totalPaginas() > 1) {
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-              [disabled]="pagina() <= 1"
-              (click)="irAPagina(pagina() - 1)"
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-              [disabled]="pagina() >= totalPaginas()"
-              (click)="irAPagina(pagina() + 1)"
-            >
-              Siguiente
-            </button>
-          </div>
-        }
-      </nav>
+      <app-tabla-paginacion
+        [total]="filtradas().length"
+        [pagina]="pagina"
+        [etiqueta]="title"
+        (paginaChange)="pagina = $event"
+      ></app-tabla-paginacion>
     </div>
   `
 })
 export class BcpNoProcesadosWidget {
-  private static readonly TAMANO_PAGINA = 10;
-
   @Input() data: PrevalidacionArchivoBcp[] = [];
-  private paginaSolicitada = 1;
+  @Input() title = 'Pagos pertenecientes a otra subcartera';
+  @Input() description = 'Estos registros se muestran como referencia. No se aprueban ni se envían a conciliación.';
 
-  total(): number {
-    return this.data?.length ?? 0;
+  readonly idBuscador = `no-procesados-buscar-${++siguienteId}`;
+  busqueda = '';
+  pagina = 1;
+
+  buscar(texto: string): void {
+    this.busqueda = texto;
+    this.pagina = 1;
   }
 
-  totalPaginas(): number {
-    return Math.max(1, Math.ceil(this.total() / BcpNoProcesadosWidget.TAMANO_PAGINA));
-  }
-
-  /** Se acota al rango vigente: si llega un archivo con menos filas, no queda en una página vacía. */
-  pagina(): number {
-    return Math.min(Math.max(1, this.paginaSolicitada), this.totalPaginas());
-  }
-
-  desde(): number {
-    return this.total() === 0 ? 0 : (this.pagina() - 1) * BcpNoProcesadosWidget.TAMANO_PAGINA + 1;
-  }
-
-  hasta(): number {
-    return Math.min(this.pagina() * BcpNoProcesadosWidget.TAMANO_PAGINA, this.total());
+  filtradas(): PrevalidacionArchivoBcp[] {
+    return (this.data ?? []).filter(row => coincideDocumento(this.value(row, 'documentoBanco', 'documento_banco'), this.busqueda));
   }
 
   paginaActual(): PrevalidacionArchivoBcp[] {
-    const inicio = (this.pagina() - 1) * BcpNoProcesadosWidget.TAMANO_PAGINA;
-    return (this.data ?? []).slice(inicio, inicio + BcpNoProcesadosWidget.TAMANO_PAGINA);
+    return cortarPagina(this.filtradas(), this.pagina);
   }
-
-  irAPagina(pagina: number): void {
-    this.paginaSolicitada = Math.min(Math.max(1, pagina), this.totalPaginas());
-  }
-
-  @Input() title = 'Pagos pertenecientes a otra subcartera';
-  @Input() description = 'Estos registros se muestran como referencia. No se aprueban ni se envían a conciliación.';
 
   value(row: any, camelKey: string, snakeKey?: string): any {
     return row?.[camelKey] ?? (snakeKey ? row?.[snakeKey] : undefined);

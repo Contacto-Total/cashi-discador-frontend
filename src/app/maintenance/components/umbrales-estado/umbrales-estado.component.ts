@@ -6,7 +6,9 @@ import { AgentState } from '../../../core/models/agent-status.model';
 import { ESTADOS_PANEL } from '../../../features/agent-dashboard/estados-panel';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BotonDirective } from '../../../shared/ui/boton.directive';
+import { NombrePropioPipe } from '../../../shared/ui/nombre-propio.pipe';
 import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
+import { EtiquetaSubcartera, PanelSubcarterasComponent, SubcarteraPanel } from '../../../shared/ui/panel-subcarteras.component';
 import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
 import { CambiosUmbrales, ConfigUmbralEstado, SubcarteraUmbral, UmbralesEstadoService } from '../../services/umbrales-estado.service';
 
@@ -59,7 +61,7 @@ const igual = (a: Valor | undefined, b: Valor | undefined): boolean => JSON.stri
 @Component({
   selector: 'app-umbrales-estado',
   standalone: true,
-  imports: [NgClass, LucideAngularModule, PageHeaderComponent, TarjetaDirective, BotonDirective],
+  imports: [NgClass, LucideAngularModule, PageHeaderComponent, PanelSubcarterasComponent, TarjetaDirective, BotonDirective, NombrePropioPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './umbrales-estado.component.html',
   host: { class: 'cashi-pantalla @container/umbrales flex min-h-0 flex-1 flex-col gap-3' }
@@ -67,6 +69,7 @@ const igual = (a: Valor | undefined, b: Valor | undefined): boolean => JSON.stri
 export class UmbralesEstadoComponent implements OnInit {
   private readonly api = inject(UmbralesEstadoService);
   private readonly avisos = inject(ToastService);
+  private readonly nombre = new NombrePropioPipe();
 
   readonly GRUPOS = GRUPOS;
 
@@ -117,7 +120,9 @@ export class UmbralesEstadoComponent implements OnInit {
   private readonly delCliente = computed(() => this.subcarteras().filter(s => !this.cliente() || s.cliente === this.cliente()));
   readonly carteras = computed(() => [...new Set(this.delCliente().map(s => s.cartera))]);
   readonly deLaCartera = computed(() => this.delCliente().filter(s => !this.cartera() || s.cartera === this.cartera()));
-  readonly porCliente = computed(() => this.clientes().map(nombre => ({ nombre, subs: this.subcarteras().filter(s => s.cliente === nombre) })));
+  readonly panelSubs = computed<SubcarteraPanel[]>(() => this.subcarteras().map(s => ({ id: s.idSubcartera, cliente: s.cliente, cartera: s.cartera, subcartera: s.subcartera, asesores: s.asesores })));
+  readonly etiquetasSubs = computed(() => Object.fromEntries(this.subcarteras().map(s => [s.idSubcartera,
+    this.personalizada(s.idSubcartera) ? { texto: 'Personalizado', tono: 'ok' } : { texto: 'General', tono: 'neutra' }])) as Record<number, EtiquetaSubcartera>);
 
   /** Estados de cada grupo que tienen configuración general; los que no, no se listan. */
   readonly grupos = computed(() => GRUPOS
@@ -198,7 +203,8 @@ export class UmbralesEstadoComponent implements OnInit {
 
   /** Nombre en la lista del filtro: con el cliente cuando dos subcarteras se llaman igual. */
   rotuloSub(s: SubcarteraUmbral): string {
-    return this.deLaCartera().filter(x => x.subcartera === s.subcartera).length > 1 ? `${s.subcartera} · ${s.cliente}` : s.subcartera;
+    const n = this.nombre.transform(s.subcartera);
+    return this.deLaCartera().filter(x => x.subcartera === s.subcartera).length > 1 ? `${n} · ${this.nombre.transform(s.cliente)}` : n;
   }
 
   personalizada(id: number): boolean {
