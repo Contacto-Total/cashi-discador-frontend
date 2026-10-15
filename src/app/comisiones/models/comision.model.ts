@@ -296,6 +296,15 @@ export interface AgregarParticipanteRequest {
   fechaIngreso: string;
 }
 
+/** Cliente CONTENIDO de la tabla del mes: sustento del logrado del supervisor en contención */
+export interface ClienteContenido {
+  documentoCliente: string;
+  nombreCliente: string | null;
+  capitalAsignado: number | null;
+  /** null = ya venía contenido */
+  fechaContencion: string | null;
+}
+
 /**
  * Fila de comision_detalle: un pago que suma a un asesor y cómo va el asesor hasta ese pago.
  * RECAUDO llena recaudo y recaudoAcumulado. CONTENCION: recaudo = lo pagado (no suma); recaudoContenido =

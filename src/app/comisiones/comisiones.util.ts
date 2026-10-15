@@ -3,6 +3,7 @@ import { saveAs } from 'file-saver';
 import {
   AccionAuditoria,
   BonoPeriodo,
+  ClienteContenido,
   DetalleComision,
   EscalaComision,
   EstadoPeriodo,
@@ -74,7 +75,7 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
   CONTENCION: {
     etiqueta: 'Contención',
     logrado: 'Contención',
-    descripcion: 'Cada cliente que el asesor contiene suma su saldo capital asignado, una sola vez: la PDP es del día de la contención o antes y cubre la baja 30.'
+    descripcion: 'Asesor: cada cliente que contiene suma su saldo capital asignado, una sola vez; la PDP es del día de la contención o antes y cubre la baja 30. Supervisor: suma el saldo capital asignado de todos los clientes CONTENIDO del mes, gestionados o no por su equipo.'
   }
 };
 
@@ -336,6 +337,8 @@ export function montoDetalle(d: DetalleComision): number {
 export interface DiaDetalle {
   fecha: string;
   pagos: DetalleComision[];
+  clientes?: ClienteContenido[];
+  etiqueta?: string;
   /** Lo que suma cada pago (por conciliacionId) */
   sumas: Map<number, number>;
   monto: number;
@@ -349,7 +352,7 @@ export interface DiaDetalle {
 /**
  * Agrupa los pagos por fecha de banco y acumula. base = meta contra la que se mide
  * (la del asesor o la del mes para el supervisor); tramos = su escala.
- * unaVezPorCliente (contención del supervisor): el capital de un cliente que pagó a dos asesores suma una sola vez.
+ * unaVezPorCliente: el capital de un cliente que pagó a dos asesores suma una sola vez.
  */
 export function agruparPorDia(filas: DetalleComision[], base: number | null, tramos: EscalaComision[],
                               unaVezPorCliente = false): DiaDetalle[] {
@@ -380,6 +383,40 @@ export function agruparPorDia(filas: DetalleComision[], base: number | null, tra
   for (const dia of dias) {
     dia.porcentaje = base ? dia.acumulado / base * 100 : null;
     dia.nivel = base ? tramoAlcanzado(tramos, dia.acumulado, base) : null;
+    dia.sube = !!dia.nivel && dia.nivel.montoComision > 0
+      && (nivelAnterior == null || nivelAnterior.porcentajeDesde !== dia.nivel.porcentajeDesde);
+    nivelAnterior = dia.nivel;
+  }
+  return dias;
+}
+
+/** Los contenidos sin fecha ya venían contenidos: se agrupan en el primer día del mes */
+export function agruparContenidosPorDia(
+  contenidos: ClienteContenido[], primerDiaMes: string, base: number | null, tramos: EscalaComision[]
+): DiaDetalle[] {
+  const porFecha = new Map<string, DiaDetalle>();
+  for (const cliente of contenidos) {
+    const fecha = cliente.fechaContencion ?? primerDiaMes;
+    let dia = porFecha.get(fecha);
+    if (!dia) {
+      dia = { fecha, pagos: [], clientes: [], sumas: new Map(), monto: 0, acumulado: 0, porcentaje: null, nivel: null, sube: false };
+      porFecha.set(fecha, dia);
+    }
+    dia.clientes!.push(cliente);
+    dia.monto += cliente.capitalAsignado ?? 0;
+    if (cliente.fechaContencion == null) {
+      dia.etiqueta = 'Ya venían contenidos';
+    }
+  }
+  const dias = [...porFecha.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  let acumulado = 0;
+  let nivelAnterior: EscalaComision | null = null;
+  for (const dia of dias) {
+    dia.clientes!.sort((a, b) => a.documentoCliente.localeCompare(b.documentoCliente));
+    acumulado += dia.monto;
+    dia.acumulado = acumulado;
+    dia.porcentaje = base ? acumulado / base * 100 : null;
+    dia.nivel = base ? tramoAlcanzado(tramos, acumulado, base) : null;
     dia.sube = !!dia.nivel && dia.nivel.montoComision > 0
       && (nivelAnterior == null || nivelAnterior.porcentajeDesde !== dia.nivel.porcentajeDesde);
     nivelAnterior = dia.nivel;
