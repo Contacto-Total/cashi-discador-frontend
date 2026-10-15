@@ -29,7 +29,7 @@ import { CustomerService } from '../../customers/services/customer.service';
 import { SipService, CallState } from '../../core/services/sip.service';
 import { WebsocketService } from '../../core/services/websocket.service';
 import { AgentService } from '../../core/services/agent.service';
-import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
+import { AgentState, AgentStatus, AGENT_STATE_LABELS, AGENT_STATE_UI, AGENT_STATE_UI_FALLBACK } from '../../core/models/agent-status.model';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StatusAlarmClockComponent } from '../../shared/components/status-alarm-clock/status-alarm-clock.component';
@@ -167,8 +167,11 @@ type EvaluacionConvenio =
                   <span class="block text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ h.inquilino }} / {{ h.cartera }} / {{ h.subcartera }}</span>
                 </div>
               }
-              <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (rellamadaCallActive() ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 animate-pulse' : callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
-                {{ rellamadaCallActive() ? 'RELLAMADA' : callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
+              <!-- Estado del asesor: lo que diga agente_estado.estado_actual, nada armado aca -->
+              <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (estadoAsesorLatiendo() ? 'animate-pulse' : '')"
+                   [style.color]="estadoAsesorColor()"
+                   [style.backgroundColor]="estadoAsesorColor() + '26'">
+                {{ estadoAsesorTexto() }}
               </div>
               @if (showDialerDataRefreshButton()) {
                 <button
@@ -2066,6 +2069,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected isRellamada = signal(false);          // Flag: rellamada en progreso
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
+  // Ultimo estado que publico el backend para este asesor (WS y, de respaldo, el polling).
+  // Es el unico que sabe si el cliente contesto: el ACTIVE del SIP es el 200 OK de la pata
+  // del ASESOR, que su softphone descuelga solo apenas FreeSWITCH origina, con el cliente
+  // todavia timbrando. El backend recien marca EN_LLAMADA en el CHANNEL_ANSWER del cliente.
+  protected estadoBackend = signal<string | null>(null);
+  /**
+   * El cartel de estado, tal cual esta en agente_estado.estado_actual.
+   *
+   * No se arma con los flags del front (callActive, rellamadaCallActive, isTipifying):
+   * esos cuelgan del SIP, y el ACTIVE del SIP es el 200 OK de la pata del ASESOR, que su
+   * softphone descuelga solo apenas FreeSWITCH origina, con el cliente todavia timbrando.
+   * Por eso el cartel saltaba a "en llamada" mientras el telefono aun sonaba. El unico que
+   * sabe si contestaron es el backend, que marca EN_LLAMADA en el CHANNEL_ANSWER del
+   * cliente y TIPIFICANDO en el CHANNEL_HANGUP.
+   *
+   * Los textos y colores salen de AGENT_STATE_LABELS / AGENT_STATE_UI, el mismo mapa que
+   * usan las pantallas de supervisor, para que el asesor y su supervisor nunca vean dos
+   * cosas distintas del mismo estado.
+   */
+  protected estadoAsesor = computed<AgentState | null>(() => {
+    const estado = this.estadoBackend();
+    return estado && estado in AGENT_STATE_LABELS ? (estado as AgentState) : null;
+  });
+
+  protected estadoAsesorTexto = computed(() => {
+    const estado = this.estadoAsesor();
+    // Sin respuesta del backend todavia (primera carga o WS caido) no se inventa un
+    // estado: se muestra vacio hasta que llegue el real.
+    return estado ? AGENT_STATE_LABELS[estado].toUpperCase() : '···';
+  });
+
+  protected estadoAsesorColor = computed(() => {
+    const estado = this.estadoAsesor();
+    return estado ? AGENT_STATE_UI[estado].color : AGENT_STATE_UI_FALLBACK.color;
+  });
+
+  /** Late mientras el asesor esta hablando, para que se note de reojo. */
+  protected estadoAsesorLatiendo = computed(() => this.estadoAsesor() === AgentState.EN_LLAMADA);
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   // De donde salio ESTA ficha. Se fija al cargarla (el discador la empuja, o el asesor la
   // abre buscando) y no se vuelve a tocar: al momento de marcar ya no se puede deducir,
@@ -2090,6 +2131,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
   protected excedeTiempoMaximo = signal(false);
   private agentStatusSubscription?: Subscription;
+  private estadoBackendSubscription?: Subscription;
 
   // [DESACTIVADO] Signals para autorización de montos personalizados en tiempo real
   // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después
@@ -3587,9 +3629,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             this.colorIndicador.set(response.colorIndicador);
           }
           this.excedeTiempoMaximo.set(response.excedeTiempoMaximo || false);
+          this.estadoBackend.set(response.estadoActual ?? null);
         },
         error: (err) => console.error('❌ Error polling estado del agente:', err)
       });
+
+      // El polling corre cada 30s, demasiado para un cartel que el asesor mira mientras
+      // suena el telefono. El push llega en cuanto el backend mueve el estado.
+      this.estadoBackendSubscription = this.agentStatusService
+        .subscribeToStatusUpdates(currentUser.id)
+        .subscribe({
+          next: (data: any) => this.estadoBackend.set(data?.estadoActual ?? null),
+          error: (err: any) => console.error('❌ Error en push de estado del agente:', err)
+        });
     }
   }
 
@@ -4892,6 +4944,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
     if (this.agentStatusSubscription) {
       this.agentStatusSubscription.unsubscribe();
+    }
+    if (this.estadoBackendSubscription) {
+      this.estadoBackendSubscription.unsubscribe();
     }
   }
 
