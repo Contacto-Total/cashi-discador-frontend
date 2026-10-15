@@ -52,6 +52,16 @@ export interface MakeCallRequest {
   carteraId?: number;
   subcarteraId?: number;
   campaignId?: number;
+  // Queda en marcador_llamadas.origen y es lo que le dice al backend que esta llamada
+  // la marco el asesor, no el discador: con eso no la barre el limpiador de huerfanas
+  // ni le reenvia la ficha que ya tiene abierta. Si no se manda, el backend asume
+  // MANUAL.
+  //
+  // Las tres salen del mismo boton "Rellamar", y se distinguen por cuando se presiono:
+  //   MANUAL              primera llamada sobre una ficha que el asesor abrio buscando
+  //   RELLAMADA_MANUAL    segunda o siguiente sobre esa misma ficha manual
+  //   RELLAMADA_DISCADOR  sobre una ficha que entro por el discador (tipificando)
+  origen?: 'MANUAL' | 'RELLAMADA_MANUAL' | 'RELLAMADA_DISCADOR';
 }
 
 export interface CompleteCallRequest {
