@@ -3,7 +3,7 @@ import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
 import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { DiaDetalle, METRICA_INFO, MOTIVO_INFO, agruparContenidosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
+import { DiaDetalle, METRICA_INFO, MOTIVO_INFO, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -80,7 +80,7 @@ const B = 28;
                   Suma el saldo capital asignado de todos los clientes CONTENIDO del mes, gestionados o no por su equipo.
                   Meta del mes: S/ {{ p.meta | appNumber:'1.2-2' }}.
                 } @else {
-                  {{ metrica().logrado }} total de los {{ totalAsesores() }} asesores contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
+                  Suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
                 }
               } @else {
                 {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
@@ -204,7 +204,7 @@ const B = 28;
                     </td>
                     <td style="text-align:right">
                       <button type="button" class="cmx-dbtn" [attr.aria-expanded]="abiertos().has(d.fecha)" (click)="alternarDia(d.fecha)">
-                        {{ abiertos().has(d.fecha) ? 'Ocultar' : d.clientes ? 'Ver clientes (' + d.clientes.length + ')' : 'Ver pagos (' + d.pagos.length + ')' }}
+                        {{ abiertos().has(d.fecha) ? 'Ocultar' : d.clientes ? 'Ver clientes (' + d.clientes.length + ')' : 'Ver pagos (' + (d.pagosSustento ?? d.pagos).length + ')' }}
                         <span class="cmx-chev" [class.is-open]="abiertos().has(d.fecha)"><cmx-icon name="chevron-down" [size]="13" /></span>
                       </button>
                     </td>
@@ -223,6 +223,35 @@ const B = 28;
                                       <td>{{ cliente.documentoCliente }}</td>
                                       <td>{{ cliente.nombreCliente || '—' }}</td>
                                       <td class="n">{{ cliente.capitalAsignado ?? 0 | appNumber:'1.2-2' }}</td>
+                                    </tr>
+                                  }
+                                </tbody>
+                              </table>
+                            </div>
+                          } @else if (d.pagosSustento; as pagosDia) {
+                            <div class="cmx-tw">
+                              <table class="cmx-table">
+                                <thead>
+                                  <tr>
+                                    <th scope="col">Origen</th>
+                                    <th scope="col">Asesor</th>
+                                    <th scope="col">Cliente</th>
+                                    <th scope="col">DNI</th>
+                                    <th scope="col" class="n">Gestión</th>
+                                    <th scope="col" class="n">Monto</th>
+                                    <th scope="col">Al asesor</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  @for (pg of pagosDia; track pg.conciliacionId) {
+                                    <tr>
+                                      <td><span class="cmx-src">{{ origen(pg) }}</span></td>
+                                      <td>{{ pg.nombreAgenteGestion || '—' }}</td>
+                                      <td>{{ pg.nombreCliente || '—' }}</td>
+                                      <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
+                                      <td class="n">{{ pg.idGestion }}</td>
+                                      <td class="n">{{ pg.montoAplicado | appNumber:'1.2-2' }}</td>
+                                      <td [class.na]="pg.motivoExclusion">{{ pg.motivoExclusion ? 'No suma: ' + motivo(pg) : 'Suma' }}</td>
                                     </tr>
                                   }
                                 </tbody>
@@ -291,7 +320,7 @@ const B = 28;
                     </tr>
                   }
                 } @empty {
-                  <tr><td colspan="6" class="empty">{{ p.esSupervisor && porCapital() ? 'No hay clientes contenidos en la tabla de este periodo.' : 'Todavía no hay pagos que sumen en este periodo.' }}</td></tr>
+                  <tr><td colspan="6" class="empty">{{ p.esSupervisor && porCapital() ? 'No hay clientes contenidos en la tabla de este periodo.' : p.esSupervisor ? 'Todavía no hay pagos conciliados en este periodo.' : 'Todavía no hay pagos que sumen en este periodo.' }}</td></tr>
                 }
               </tbody>
             </table>
@@ -334,10 +363,12 @@ const B = 28;
         @if (noSuman().length) {
           <section class="cmx-block cmx-enter" style="--i:3" aria-labelledby="cmx-sus-nosuman">
             <div class="cmx-block-head">
-              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman ({{ noSuman().length }})</h3>
+              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman{{ p.esSupervisor && !porCapital() ? ' a los asesores' : '' }} ({{ noSuman().length }})</h3>
               <span class="cmx-block-desc">
                 @if (p.esSupervisor && porCapital()) {
                   Conciliados en el mes, pero no suman capital a los asesores. Los motivos de contención siguen contando para su meta de pagos.
+                } @else if (p.esSupervisor) {
+                  Conciliados en el mes, pero no suman al recaudo de los asesores. Estos pagos sí suman a tu logrado como supervisor.
                 } @else {
                   Conciliados en el mes, pero no suman {{ porCapital() ? 'capital' : 'al recaudo' }}@if (porCapital()) {. Los de clientes que no contuvo siguen contando para la meta de pagos }
                 }
@@ -512,6 +543,10 @@ export class SustentoTabComponent {
       const primerDiaMes = `${periodo.anio}-${String(periodo.mes).padStart(2, '0')}-01`;
       return agruparContenidosPorDia(this.contenidos(), primerDiaMes, p.meta, p.tramos);
     }
+    if (p.esSupervisor) {
+      // RECAUDO: al supervisor le suman todos los pagos conciliados, no solo los que suman a un asesor
+      return agruparPagosPorDia(this.pagos(), p.meta, p.tramos);
+    }
     return agruparPorDia(p.filas, p.meta, p.tramos);
   });
 
@@ -644,7 +679,7 @@ export class SustentoTabComponent {
   }
 
   /** bcp_pago_detalle.banco: FINANCIERA_OH para los archivos de FOH; el banco (BCP…) para los CREP */
-  origen(d: DetalleComision): string {
+  origen(d: { banco: string | null }): string {
     const banco = (d.banco || '').toUpperCase();
     return banco === 'FINANCIERA_OH' ? 'FOH' : banco || '—';
   }
