@@ -200,7 +200,7 @@ export class HeaderConfigurationComponent implements OnInit {
   readonly form = signal<Cabecera | null>(null);
   readonly formEsNueva = signal(true);
   readonly menuPlantilla = signal(false);
-  readonly confirmarBorrado = signal<Cabecera[] | null>(null);
+  readonly confirmarBorrado = signal<{ donde: string; nombres: string[] }[] | null>(null);
   /** Dato nuevo del catálogo que se está creando desde el buscador de una fila. */
   readonly datoNuevo = signal<{ fila: number; nombre: string; tipo: DataType } | null>(null);
   readonly creandoDato = signal(false);
@@ -281,6 +281,11 @@ export class HeaderConfigurationComponent implements OnInit {
     for (const c of filas) resultado.set(c.clave, this.opcionesPara(c, filas));
     return resultado;
   });
+  /** Columnas de origen del modal, para el buscador: nombre de la columna y su etiqueta. */
+  readonly opcionesOrigenForm = computed<OpcionCombobox[]>(() => {
+    const f = this.form();
+    return f ? this.columnasParaOrigen(f).map(x => ({ valor: x.headerName, etiqueta: x.headerName, ayuda: x.displayLabel })) : [];
+  });
   readonly opcionesForm = computed(() => {
     const f = this.form();
     return f ? this.opcionesPara(f, this.filas().filter(c => !c.borrada)) : [];
@@ -311,9 +316,9 @@ export class HeaderConfigurationComponent implements OnInit {
     return n;
   });
   readonly problemas = computed(() => {
-    const mal: string[] = [];
-    for (const filas of Object.values(this.trabajo())) {
-      const vivas = filas.filter(c => !c.borrada);
+    const mal: string[] = [], aqui = this.sub() ? this.llave(this.sub()!, this.carga()) : '';
+    for (const [k, filas] of Object.entries(this.trabajo())) {
+      const vivas = filas.filter(c => !c.borrada), inicio = mal.length;
       for (const c of vivas) {
         const nombre = c.headerName || 'una cabecera nueva';
         if (c.nueva && !c.headerName.trim()) mal.push('Falta el nombre de una cabecera nueva');
@@ -325,12 +330,26 @@ export class HeaderConfigurationComponent implements OnInit {
         if (columnasOrigen(c.sourceField).length === 1 && !c.regexPattern.trim()) mal.push(`Falta el regex de ${nombre}`);
         if (c.nueva && c.sourceField.length > LARGO_MAX_ORIGEN) mal.push(`Las columnas de origen de ${nombre} pasan de ${LARGO_MAX_ORIGEN} caracteres`);
       }
+      if (k !== aqui) for (let i = inicio; i < mal.length; i++) mal[i] += ` (${this.donde(k)})`;
     }
     return [...new Set(mal)];
   });
+  /** Cambios sin guardar de otras subcarteras o de la otra carga: se guardan junto con los de la vista. */
+  readonly cambiosFuera = computed(() => {
+    const aqui = this.sub() ? this.llave(this.sub()!, this.carga()) : '';
+    return Object.entries(this.trabajo()).filter(([k]) => k !== aqui).flatMap(([k, filas]) => {
+      const originales = this.originalesPorClave(k), n = filas.filter(c => this.distinta(c, originales.get(c.clave))).length;
+      return n ? [{ donde: this.donde(k), n }] : [];
+    });
+  });
   readonly resumen = computed(() => {
-    const n = this.cambios(), mal = this.problemas();
-    return mal.length ? mal[0] : n === 0 ? 'Sin cambios' : n === 1 ? '1 cambio sin guardar' : `${n} cambios sin guardar`;
+    const n = this.cambios(), mal = this.problemas(), fuera = this.cambiosFuera();
+    if (mal.length) return mal[0];
+    if (n === 0) return 'Sin cambios';
+    const total = n === 1 ? '1 cambio sin guardar' : `${n} cambios sin guardar`;
+    if (!fuera.length) return total;
+    const otros = fuera.reduce((a, f) => a + f.n, 0);
+    return `${total} · ${otros} en ${fuera.length === 1 ? fuera[0].donde : `${fuera.length} subcarteras o cargas más`}`;
   });
 
   ngOnInit(): void {
@@ -448,6 +467,13 @@ export class HeaderConfigurationComponent implements OnInit {
     return `${sub}:${carga}`;
   }
 
+  /** «Financiera Oh · Castigo · carga inicial», para decir de dónde es un cambio. */
+  private donde(k: string): string {
+    const [sub, carga] = k.split(':'), a = this.ambito().find(x => x.subId === Number(sub));
+    const nombre = a ? `${this.nombrePropio.transform(a.cliente)} · ${this.nombrePropio.transform(a.subcartera)}` : `Subcartera ${sub}`;
+    return `${nombre} · ${carga === 'INICIAL' ? 'carga inicial' : 'carga diaria'}`;
+  }
+
   private originales(sub: number, carga: LoadType): Cabecera[] {
     return (this.base()[sub] ?? []).filter(h => h.loadType === carga).map(h => ({
       clave: h.id,
@@ -519,11 +545,13 @@ export class HeaderConfigurationComponent implements OnInit {
     return c.fieldDefinitionId ? String(c.fieldDefinitionId) : null;
   }
 
-  /** Columnas del archivo que pueden armar una cabecera nueva: las que vienen tal cual. */
-  columnasParaOrigen(c: Cabecera): string[] {
-    const elegidas = columnasOrigen(c.sourceField);
-    return this.filas().filter(x => x !== c && !x.borrada && !x.nueva && !columnasOrigen(x.sourceField).length && x.headerName
-      && !elegidas.includes(x.headerName)).map(x => x.headerName);
+  /** Columnas del archivo que pueden armar una cabecera nueva: las que vienen tal cual, sin la que se está creando. */
+  columnasParaOrigen(c: Cabecera): Cabecera[] {
+    const elegidas = columnasOrigen(c.sourceField), propia = columnaEnTabla(c.headerName);
+    return this.filas()
+      .filter(x => x.clave !== c.clave && !x.borrada && !x.nueva && !columnasOrigen(x.sourceField).length && x.headerName
+        && !elegidas.includes(x.headerName) && columnaEnTabla(x.headerName) !== propia)
+      .sort((a, b) => a.headerName.localeCompare(b.headerName, 'es'));
   }
 
   origenes(c: Cabecera): string[] {
@@ -707,9 +735,16 @@ export class HeaderConfigurationComponent implements OnInit {
 
   // ---------------------------------------------------------------- Guardar
 
-  /** Eliminaciones pendientes, para confirmarlas antes de guardar. */
-  private porBorrar(): Cabecera[] {
-    return Object.values(this.trabajo()).flat().filter(c => c.borrada && !c.nueva);
+  /** Eliminaciones pendientes por subcartera y carga, para confirmarlas antes de guardar. */
+  private porBorrar(): { donde: string; nombres: string[] }[] {
+    return Object.entries(this.trabajo()).flatMap(([k, filas]) => {
+      const nombres = filas.filter(c => c.borrada && !c.nueva).map(c => c.headerName);
+      return nombres.length ? [{ donde: this.donde(k), nombres }] : [];
+    });
+  }
+
+  cuantas(grupos: { nombres: string[] }[]): number {
+    return grupos.reduce((n, g) => n + g.nombres.length, 0);
   }
 
   async guardar(confirmado = false): Promise<void> {
@@ -730,9 +765,10 @@ export class HeaderConfigurationComponent implements OnInit {
         const cambiadas = filas.filter(c => this.distinta(c, originales.get(c.clave)));
         if (!cambiadas.length) continue;
         tocadas.add(sub);
+        const en = ` (${this.donde(k)})`;
 
         for (const c of cambiadas.filter(x => x.borrada && !x.nueva)) {
-          await this.intentar(errores, c.headerName, this.cabeceras.delete(c.clave), true);
+          await this.intentar(errores, c.headerName + en, this.cabeceras.delete(c.clave), true);
         }
 
         // Un dato que pasa de una cabecera a otra se suelta antes: el servidor no deja enlazarlo a dos.
@@ -741,7 +777,7 @@ export class HeaderConfigurationComponent implements OnInit {
           const o = originales.get(c.clave)!;
           const loTomaOtra = o.fieldDefinitionId && c.fieldDefinitionId !== o.fieldDefinitionId
             && filas.some(x => x !== c && !x.borrada && x.fieldDefinitionId === o.fieldDefinitionId);
-          if (loTomaOtra) await this.intentar(errores, c.headerName, this.cabeceras.update(c.clave, { fieldDefinitionId: 0 }));
+          if (loTomaOtra) await this.intentar(errores, c.headerName + en, this.cabeceras.update(c.clave, { fieldDefinitionId: 0 }));
         }
         for (const c of actualizar) {
           const o = originales.get(c.clave)!, pedido: UpdateHeaderConfigurationRequest = {};
@@ -750,8 +786,8 @@ export class HeaderConfigurationComponent implements OnInit {
           if (c.required !== o.required) pedido.required = c.required;
           if (c.fieldDefinitionId !== o.fieldDefinitionId) pedido.fieldDefinitionId = c.fieldDefinitionId;
           if (c.regexPattern.trim() !== o.regexPattern.trim()) pedido.regexPattern = c.regexPattern.trim();
-          if (Object.keys(pedido).length) await this.intentar(errores, c.headerName, this.cabeceras.update(c.clave, pedido));
-          if (c.alias) await this.aplicarAlias(c.clave, c.headerName, c.alias, this.aliasBase()[c.clave] ?? [], usuario, errores);
+          if (Object.keys(pedido).length) await this.intentar(errores, c.headerName + en, this.cabeceras.update(c.clave, pedido));
+          if (c.alias) await this.aplicarAlias(c.clave, c.headerName + en, c.alias, this.aliasBase()[c.clave] ?? [], usuario, errores);
         }
 
         const nuevas = cambiadas.filter(x => x.nueva && !x.borrada);
@@ -773,10 +809,10 @@ export class HeaderConfigurationComponent implements OnInit {
             }));
             for (const c of nuevas.filter(x => x.alias?.length)) {
               const h = creadas.find(x => clave(x.headerName) === clave(c.headerName));
-              if (h) await this.aplicarAlias(h.id, c.headerName, c.alias!, [], usuario, errores);
+              if (h) await this.aplicarAlias(h.id, c.headerName + en, c.alias!, [], usuario, errores);
             }
           } catch (e) {
-            errores.push(`Cabeceras nuevas: ${this.mensajeError(e)}`);
+            errores.push(`Cabeceras nuevas${en}: ${this.mensajeError(e)}`);
           }
         }
       }
