@@ -2067,6 +2067,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
+  // De donde salio ESTA ficha. Se fija al cargarla (el discador la empuja, o el asesor la
+  // abre buscando) y no se vuelve a tocar: al momento de marcar ya no se puede deducir,
+  // porque iniciarRellamada resetea el contexto de la llamada antes de marcar. Tampoco
+  // sirve dialerContactId: ese sobrevive hasta que se guarda la gestion, asi que una
+  // llamada del discador sin guardar se le pegaba a todas las fichas que el asesor
+  // abriera despues y las hacia pasar por rellamadas del discador.
+  protected fichaDelDiscador = signal(false);
   // "Ya marco una manual en esta ficha". No sirve llamadaRealizada: startCall tambien lo
   // prende con las del discador, y entonces la primera manual de una ficha buscada
   // quedaria como rellamada. Se resetea al guardar, con el resto del contexto.
@@ -3341,6 +3348,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   private setPredictiveCallContext(data: any): void {
+    this.fichaDelDiscador.set(true);
     this.setActiveCallContext({
       llamadaId: data.llamadaId ?? null,
       uuid: data.callUuid ?? null,
@@ -3739,6 +3747,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   ) {
     console.log('🔍 [MANUAL] Buscando cliente por documento:', documento);
     this.isLoadingCustomer.set(true);
+    // La abrio el asesor: lo que marque aca es manual, aunque haya quedado contexto de
+    // una llamada del discador anterior sin guardar.
+    this.fichaDelDiscador.set(false);
+    this.dialerContactId.set(null);
 
     // Establecer el contexto de tenant/portfolio/subportfolio para las tipificaciones
     this.selectedTenantId = tenantId;
@@ -4892,22 +4904,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   private origenDeLaLlamada(): 'MANUAL' | 'RELLAMADA_MANUAL' | 'RELLAMADA_DISCADOR' {
     // La ficha entro por el discador: lo que marque el asesor encima es rellamada de esa.
-    if (this.fichaVinoDelDiscador()) {
+    if (this.fichaDelDiscador()) {
       return 'RELLAMADA_DISCADOR';
     }
     return this.manualYaMarcada() ? 'RELLAMADA_MANUAL' : 'MANUAL';
-  }
-
-  /**
-   * Si esta ficha se la entrego el discador o la abrio el asesor buscando.
-   *
-   * Dos señales porque ninguna sola cubre todo el ciclo: el llamadaId del contexto se
-   * borra en cuanto el asesor rellama (setNonPredictiveCallContext lo resetea), y
-   * dialerContactId depende de que el discador haya mandado contactId en el full-data.
-   * Las dos se limpian recien al guardar la gestion.
-   */
-  private fichaVinoDelDiscador(): boolean {
-    return this.dialerContactId() !== null || this.activeCallContext().llamadaId != null;
   }
 
   /**
@@ -4926,7 +4926,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!hayLlamada) {
       return 'GESTION_MANUAL';
     }
-    return this.fichaVinoDelDiscador() ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL';
+    return this.fichaDelDiscador() ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL';
   }
 
   async iniciarRellamada(phoneNumber: string) {
@@ -6879,6 +6879,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     sessionStorage.removeItem('predictive_call_data');
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
+    this.fichaDelDiscador.set(false);
     this.manualYaMarcada.set(false);
 
     this.activeTab.set('cliente');
