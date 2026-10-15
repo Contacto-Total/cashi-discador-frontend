@@ -125,7 +125,7 @@ interface ConfiguracionCabecera {
                         <span [class]="'truncate text-[12.5px] font-bold leading-[1.35] tracking-[-0.01em] '
                                        + (opcion.estaHabilitada ? 'text-[#0f172a] dark:text-slate-100' : 'text-[#5f6c80] dark:text-slate-400')">{{ opcion.visualName }}</span>
                         @if (opcion.codigoOpcion !== 'personalizado' && opcion.campoTablaDinamica) {
-                          <span class="truncate font-mono text-[11px] leading-[1.35] text-[#5f6c80] dark:text-slate-400">{{ opcion.campoTablaDinamica }}</span>
+                          <span class="truncate text-[12px] leading-[1.35] text-[#5f6c80] dark:text-slate-400">{{ opcion.campoTablaDinamica }}</span>
                         }
                       </div>
                       @if (opcion.codigoOpcion === 'personalizado') {

@@ -109,7 +109,7 @@
                 <div class="flex min-w-0 items-baseline gap-2 pl-7">
                   <span class="min-w-0 overflow-hidden text-[.875rem] text-ellipsis whitespace-nowrap text-foreground/80" [ngClass]="c.borrada ? 'line-through' : ''">{{ c.displayLabel || c.headerName || 'Cabecera nueva' }}</span>
                   @if (c.headerName) {
-                    <span class="max-w-[45%] flex-none overflow-hidden font-mono text-[.6875rem] text-ellipsis whitespace-nowrap text-muted-foreground">{{ c.headerName }}</span>
+                    <span class="max-w-[45%] flex-none overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">{{ c.headerName }}</span>
                   }
                   @if (c.nueva) {
                     <span [class]="CHIP + ' bg-(--ok-bg) font-semibold text-(--ok)! shadow-[inset_0_0_0_1px_var(--ok-ln)]!'">Nueva</span>
@@ -133,7 +133,7 @@
                   }
                 </div>
                 <span [class]="PILL + ' hidden justify-self-start @min-[44rem]/tabla:block'">{{ tipoTexto(c.dataType) }}</span>
-                <span class="hidden min-w-0 overflow-hidden font-mono text-[.6875rem] text-ellipsis whitespace-nowrap text-muted-foreground @min-[50rem]/tabla:block" [title]="c.format">{{ c.format || '—' }}</span>
+                <span class="hidden min-w-0 overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground @min-[50rem]/tabla:block" [title]="c.format">{{ c.format || '—' }}</span>
 
                 <app-combobox [opciones]="opcionesPorFila().get(c.clave) ?? []" [valor]="valorDato(c)" marcador="Sin dato del sistema"
                               marcadorBusqueda="Buscar dato…" vacio="Ningún dato coincide." [permiteCrear]="true" [deshabilitado]="!!c.borrada"
@@ -227,7 +227,7 @@
                       <button type="button" appBoton="secundario" appBotonAlto="chico" [ngClass]="c.borrada ? '' : 'text-(--ro)!'" (click)="alternarBorrada(c)">
                         <lucide-angular [name]="c.borrada ? 'undo-2' : 'trash-2'" [size]="16"></lucide-angular>{{ c.borrada ? 'No eliminar' : 'Eliminar cabecera' }}
                       </button>
-                      <span class="ml-auto text-[.75rem] text-muted-foreground">En la tabla: <span class="font-mono text-foreground">{{ columnaEnTabla(c.headerName) }}</span></span>
+                      <span class="ml-auto text-[.75rem] text-muted-foreground">En la tabla: <span class="text-foreground">{{ columnaEnTabla(c.headerName) }}</span></span>
                     </div>
                   </div>
                 }
@@ -342,11 +342,11 @@
           <div class="flex min-w-0 flex-col gap-1.5">
             <label for="cb-form-nombre" [class]="ETIQUETA">Nombre de la columna</label>
             <input id="cb-form-nombre" type="text" maxlength="100" autocomplete="off" spellcheck="false" placeholder="FECHA_CASTIGO"
-                   [class]="CAMPO_ED + ' font-mono! uppercase'" [attr.value]="f.headerName" (input)="escribirNombre(f, $any($event.target).value)"
+                   [class]="CAMPO_ED + ' uppercase'" [attr.value]="f.headerName" (input)="escribirNombre(f, $any($event.target).value)"
                    (blur)="$any($event.target).value = form()?.headerName ?? ''">
             <span [class]="AYUDA">
               @if (columnaEnTabla(f.headerName)) {
-                Como viene en el archivo. En la tabla: <span class="font-mono text-foreground">{{ columnaEnTabla(f.headerName) }}</span>
+                Como viene en el archivo. En la tabla: <span class="text-foreground">{{ columnaEnTabla(f.headerName) }}</span>
               } @else {
                 Como viene en el archivo del cliente.
               }

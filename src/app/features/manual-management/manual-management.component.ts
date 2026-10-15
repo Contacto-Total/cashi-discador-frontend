@@ -201,7 +201,9 @@ export class ManualManagementComponent implements OnInit {
 
   // ========== HELPERS ==========
 
+  /** Nombre del cliente desde la fila de su tabla: el nombre completo si la subcartera lo tiene. */
   getClientName(client: DynamicClient): string {
+    if (client['nombre_completo']) return client['nombre_completo'];
     if (client.nombre) return client.nombre;
     const nombres = client.nombres || '';
     const apellidos = client.apellidos || '';

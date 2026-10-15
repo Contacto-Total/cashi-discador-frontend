@@ -52,7 +52,7 @@ interface CategoriaExistente {
             <label for="cf-codigo" [class]="ui.label">Código <span class="text-[#b91c1c]">*</span></label>
             <input id="cf-codigo" type="text" maxlength="50" placeholder="Ej.: METODO_PAGO"
                    [(ngModel)]="form.code" [attr.aria-invalid]="!!errors()['code']"
-                   [class]="ui.input + ' w-full font-mono uppercase ' + (errors()['code'] ? claseInvalido : '')"/>
+                   [class]="ui.input + ' w-full uppercase ' + (errors()['code'] ? claseInvalido : '')"/>
             @if (errors()['code']) {
               <span [class]="ui.error">{{ errors()['code'] }}</span>
             } @else {
@@ -85,7 +85,7 @@ interface CategoriaExistente {
               @for (cat of categorias(); track cat.code) {
                 <div class="flex min-h-[38px] items-center gap-2.5 border-b border-[#eef1f5] px-3 last:border-b-0 dark:border-slate-800">
                   <span class="min-w-0 flex-1 truncate text-[12.5px] font-bold">{{ cat.name }}</span>
-                  <span class="hidden truncate font-mono text-[11px] text-[#5f6c80] dark:text-slate-400 sm:inline">{{ cat.code }}</span>
+                  <span class="hidden truncate text-[12px] text-[#5f6c80] dark:text-slate-400 sm:inline">{{ cat.code }}</span>
                   @if (hayTipificaciones) {
                     <span [class]="'w-[104px] shrink-0 text-right text-[11.5px] font-semibold tabular-nums '
                                    + (cat.count > 0 ? 'text-[#334155] dark:text-slate-300' : 'text-[#5f6c80] dark:text-slate-400')">

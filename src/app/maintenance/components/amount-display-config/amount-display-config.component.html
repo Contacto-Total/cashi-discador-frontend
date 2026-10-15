@@ -1,0 +1,164 @@
+<!-- Mismo molde que Config. Cabeceras: la tarjeta ocupa el alto disponible y la tabla se desplaza por dentro;
+     a su lado, las subcarteras, que entran solo si hay ancho. -->
+<div class="font-cashi grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_min(28cqw,26rem)] grid-rows-[minmax(0,1fr)] items-start gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased @max-[70.5rem]/fic:grid-cols-[minmax(0,1fr)]">
+  <section appTarjeta class="@container/tabla flex min-h-0 flex-col self-stretch overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5">
+    <app-page-header class="flex-none" titulo="Ficha del cliente" subtitulo="Datos de la gestión por subcartera" [sinRaya]="true"
+                     fila="items-start gap-y-6 [&>div:first-child]:flex-none @max-[42.5rem]/tabla:flex-wrap">
+      <div class="grid min-w-0 flex-[0_1_29.5rem] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 @max-[42.5rem]/tabla:basis-full">
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="fc-cli" [class]="ETIQUETA">Cliente</label>
+          <select id="fc-cli" [class]="LISTA" (change)="elegirCliente($any($event.target).value)">
+            @for (c of clientes(); track c) {
+              <option [value]="c" [selected]="c === actual()?.cliente">{{ c | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="fc-car" [class]="ETIQUETA">Cartera</label>
+          <select id="fc-car" [class]="LISTA" (change)="elegirCartera($any($event.target).value)">
+            @for (c of carteras(); track c) {
+              <option [value]="c" [selected]="c === actual()?.cartera">{{ c | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="fc-sub" [class]="ETIQUETA">Subcartera</label>
+          <select id="fc-sub" [class]="LISTA" (change)="elegirSub($any($event.target).value)">
+            @for (s of deLaCartera(); track s.subId) {
+              <option [value]="s.subId" [selected]="s.subId === sub()">{{ s.subcartera | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </app-page-header>
+
+    @let hayLista = !!actual() && !sinDatos() && !error() && lista().length > 0;
+    @if (hayLista) {
+      <div class="mb-3 flex flex-none flex-wrap items-center gap-3">
+        <div class="grid w-[min(100%,24rem)] grid-cols-2 gap-[.1875rem] rounded-lg bg-muted p-[.1875rem]" role="group" aria-label="Panel de la ficha">
+          <button type="button" [class]="PESTANA" [ngClass]="panel() === 'cli' ? PESTANA_ACTIVA : PESTANA_REPOSO" [attr.aria-pressed]="panel() === 'cli'" (click)="panel.set('cli')">
+            Panel del cliente<span class="ml-1.5 text-[.75rem] font-medium text-muted-foreground tabular-nums">{{ config()?.cli?.length }}</span>
+          </button>
+          <button type="button" [class]="PESTANA" [ngClass]="panel() === 'mon' ? PESTANA_ACTIVA : PESTANA_REPOSO" [attr.aria-pressed]="panel() === 'mon'" (click)="panel.set('mon')">
+            Panel de montos<span class="ml-1.5 text-[.75rem] font-medium text-muted-foreground tabular-nums">{{ config()?.mon?.length }}</span>
+          </button>
+        </div>
+        @if (panel() === 'mon') {
+          <label class="m-0! ml-auto! flex items-center gap-2">
+            <span [class]="ETIQUETA">Primera cuota</span>
+            <select [class]="LISTA_FILA + ' w-auto! pr-7!'" aria-label="Máximo de días para la primera cuota" (change)="elegirDias($any($event.target).value)">
+              <option value="" [selected]="config()?.diasPrimeraCuota == null">Sin límite</option>
+              @for (d of DIAS_PRIMERA_CUOTA; track d) {
+                <option [value]="d" [selected]="d === config()?.diasPrimeraCuota">{{ d }} {{ d === 1 ? 'día' : 'días' }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+
+      <div [class]="(panel() === 'mon' ? REJILLA_MON : REJILLA) + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
+        <span>Orden</span>
+        <span>Columna</span>
+        <span class="hidden @min-[44rem]/tabla:block">Etiqueta</span>
+        @if (panel() === 'mon') {
+          <span>Formato</span>
+        }
+        <span></span>
+      </div>
+    }
+
+    <div class="-mx-8 min-h-0 flex-1 overflow-y-auto px-8 pb-3">
+      @if (error() || sinDatos()) {
+        <div role="alert" class="mt-[.875rem] flex flex-wrap items-center justify-between gap-3 rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--ro)">
+          <span>{{ error() || 'No se pudo leer la configuración de esta subcartera' }}</span>
+          <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="reintentar()">Reintentar</button>
+        </div>
+      } @else if (cargando() && !lista().length) {
+        <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">Cargando…</p>
+      } @else if (!ambito().length) {
+        <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">No hay subcarteras activas</p>
+      } @else if (!lista().length) {
+        <div class="flex flex-col items-center gap-1 px-4 py-10 text-center text-[.875rem] text-muted-foreground">
+          <span class="font-semibold text-foreground">{{ actual()?.cliente | nombrePropio }} · {{ actual()?.subcartera | nombrePropio }} sin carga inicial</span>
+          <span>Configura primero sus cabeceras.</span>
+        </div>
+      }
+
+      @if (hayLista) {
+        @if (panel() === 'cli') {
+          @for (b of FIJOS; track b; let primero = $first) {
+            <div [class]="REJILLA + ' min-h-[2.5rem] py-1 text-muted-foreground'" [ngClass]="primero ? 'mt-1.5' : ''">
+              <span class="flex justify-end pr-1"><lucide-angular name="lock" [size]="14" class="flex"></lucide-angular></span>
+              <span class="text-[.875rem]">{{ b }}</span>
+            </div>
+          }
+        }
+        @for (f of filas(); track f.cabecera.id; let n = $index; let ultimo = $last) {
+          <div [class]="(panel() === 'mon' ? REJILLA_MON : REJILLA) + ' min-h-[2.75rem] rounded-[.625rem] py-[.375rem]'"
+               [ngClass]="[f.cambiada ? 'bg-[color-mix(in_srgb,var(--ok-bg)_45%,transparent)]' : 'hover:bg-muted/55', n === 0 && panel() === 'mon' ? 'mt-1.5' : '']">
+            <div class="flex items-center gap-0.5">
+              <span class="min-w-5 text-right text-[.75rem] font-semibold text-muted-foreground tabular-nums">{{ n + 1 }}</span>
+              <button type="button" [class]="ICONO" [disabled]="n === 0" [attr.aria-label]="'Subir ' + f.cabecera.codigo" (click)="mover(f.cabecera.id, -1)">
+                <lucide-angular name="chevron-up" [size]="14" class="flex"></lucide-angular>
+              </button>
+              <button type="button" [class]="ICONO" [disabled]="ultimo" [attr.aria-label]="'Bajar ' + f.cabecera.codigo" (click)="mover(f.cabecera.id, 1)">
+                <lucide-angular name="chevron-down" [size]="14" class="flex"></lucide-angular>
+              </button>
+            </div>
+            <div class="flex min-w-0 flex-col">
+              <span class="flex min-w-0 items-center gap-2">
+                <span class="min-w-0 overflow-hidden text-[.875rem] text-ellipsis whitespace-nowrap text-foreground/80" [title]="f.cabecera.codigo">{{ f.cabecera.codigo }}</span>
+                @if (f.principal) {
+                  <span class="flex-none rounded-full bg-(--ok-bg) px-[.4375rem] py-[.0625rem] text-[.6875rem] font-semibold text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]">Principal</span>
+                }
+              </span>
+              <span class="text-[.75rem] text-muted-foreground">{{ f.tipo }}</span>
+            </div>
+            <div class="hidden min-w-0 @min-[44rem]/tabla:block">
+              @for (v of [version()]; track v) {
+                <input type="text" maxlength="255" autocomplete="off" [class]="CAMPO_FILA" [attr.value]="f.etiqueta"
+                       [attr.aria-label]="'Etiqueta de ' + f.cabecera.codigo" (input)="escribirEtiqueta(f.cabecera, $any($event.target).value)">
+              }
+            </div>
+            @if (panel() === 'mon') {
+              <select [class]="LISTA_FILA" [attr.aria-label]="'Formato de ' + f.cabecera.codigo" (change)="elegirFormato(f.cabecera.id, $any($event.target).value)">
+                @for (t of FORMATOS; track t.valor) {
+                  <option [value]="t.valor" [selected]="t.valor === f.formato">{{ t.texto }}</option>
+                }
+              </select>
+            }
+            <button type="button" [class]="QUITAR" [attr.aria-label]="'Quitar ' + f.cabecera.codigo" title="Quitar" (click)="quitar(f.cabecera.id)">
+              <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>
+            </button>
+          </div>
+        }
+        @if (panel() === 'mon' && !filas().length) {
+          <p class="m-0 mt-1.5 px-2 py-3 text-[.875rem] text-muted-foreground">Sin montos</p>
+        }
+      }
+    </div>
+
+    @if (hayLista) {
+      <div class="flex flex-none flex-wrap gap-2 border-t border-border pt-4">
+        <app-combobox boton="Agregar columna" [opciones]="opcionesAgregar()" marcadorBusqueda="Buscar columna…" vacio="Ninguna columna coincide."
+                      [anchoMinimo]="352" (cambio)="agregar($event)" />
+      </div>
+    }
+  </section>
+
+  <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
+  <app-panel-subcarteras class="@max-[70.5rem]/fic:hidden" [subcarteras]="panelSubs()" [seleccion]="sub()" [etiquetas]="etiquetasPanel()" (elegir)="elegirSub($event)" />
+</div>
+
+<!-- Barra de cambios: una tarjeta aparte, siempre abajo. -->
+<div appTarjeta class="font-cashi flex flex-none items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+  <span class="mr-auto text-[.875rem] font-medium" [ngClass]="cambios() ? 'text-foreground' : 'text-muted-foreground'">{{ resumen() }}</span>
+  <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="!cambios() || guardando()" (click)="descartar()">Descartar</button>
+  <button type="button" appBoton class="flex-none px-4!" [disabled]="!cambios() || guardando()" (click)="guardar()">
+    @if (guardando()) {
+      <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>Guardando
+    } @else {
+      <lucide-angular name="check" [size]="16"></lucide-angular>Guardar cambios
+    }
+  </button>
+</div>
