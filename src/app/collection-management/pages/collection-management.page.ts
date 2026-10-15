@@ -2067,6 +2067,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
+  // "Ya marco una manual en esta ficha". No sirve llamadaRealizada: startCall tambien lo
+  // prende con las del discador, y entonces la primera manual de una ficha buscada
+  // quedaria como rellamada. Se resetea al guardar, con el resto del contexto.
+  protected manualYaMarcada = signal(false);
   // Evita hacer muchos clicks en rellamada y saturar el SIP
   protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
 
@@ -4879,6 +4883,52 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
   }
 
+  /**
+   * Que es esta llamada para el reporte, segun de donde venga la ficha y cuantas lleva.
+   *
+   * El boton "Rellamar" es uno solo pero no siempre hace lo mismo: sobre una ficha que
+   * el asesor abrio buscando, la primera vez esta marcando a mano y no rellamando nada.
+   * Antes todas salian como RELLAMADA y la produccion manual del asesor quedaba en cero.
+   */
+  private origenDeLaLlamada(): 'MANUAL' | 'RELLAMADA_MANUAL' | 'RELLAMADA_DISCADOR' {
+    // La ficha entro por el discador: lo que marque el asesor encima es rellamada de esa.
+    if (this.fichaVinoDelDiscador()) {
+      return 'RELLAMADA_DISCADOR';
+    }
+    return this.manualYaMarcada() ? 'RELLAMADA_MANUAL' : 'MANUAL';
+  }
+
+  /**
+   * Si esta ficha se la entrego el discador o la abrio el asesor buscando.
+   *
+   * Dos señales porque ninguna sola cubre todo el ciclo: el llamadaId del contexto se
+   * borra en cuanto el asesor rellama (setNonPredictiveCallContext lo resetea), y
+   * dialerContactId depende de que el discador haya mandado contactId en el full-data.
+   * Las dos se limpian recien al guardar la gestion.
+   */
+  private fichaVinoDelDiscador(): boolean {
+    return this.dialerContactId() !== null || this.activeCallContext().llamadaId != null;
+  }
+
+  /**
+   * Que metodo de contacto lleva la gestion que se esta guardando.
+   *
+   * Antes salia 'GESTION_RELLAMADA' cuando habia una rellamada activa, y ese valor NO
+   * existe en el enum MetodoContacto del backend: el valueOf reventaba, el catch solo
+   * logueaba un warning y la gestion se guardaba con metodo_contacto en NULL. O sea que
+   * toda gestion hecha desde el boton "Rellamar" quedaba sin metodo de contacto.
+   *
+   * La rellamada no es un metodo aparte: es otra llamada dentro del mismo origen. Lo que
+   * manda es de donde vino la ficha, y eso ya lo dice dialerContactId. El detalle de si
+   * fue manual, rellamada manual o rellamada del discador vive en marcador_llamadas.origen.
+   */
+  private metodoContactoDeLaGestion(hayLlamada: boolean): 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' {
+    if (!hayLlamada) {
+      return 'GESTION_MANUAL';
+    }
+    return this.fichaVinoDelDiscador() ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL';
+  }
+
   async iniciarRellamada(phoneNumber: string) {
     // Validamos que es una rellamada
     if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
@@ -4912,6 +4962,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
+      const origen = this.origenDeLaLlamada();
       this.callService.makeCall({
         agentId,
         phoneNumber,
@@ -4921,9 +4972,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         tenantId: this.selectedTenantId,
         carteraId: this.selectedPortfolioId,
         subcarteraId: this.selectedSubPortfolioId,
-        origen: 'RELLAMADA'
+        origen
       }).subscribe({
-        next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
+        next: (call) => {
+          // Solo cuenta si quedo registrada: si el registro falla no hubo llamada que
+          // rellamar, y el proximo intento sobre esta ficha sigue siendo la primera.
+          this.manualYaMarcada.set(true);
+          console.log(`📞 [${origen}] Registrada en BD`, call?.callId);
+        },
         error: (err: any) => {
           console.error('❌ [Rellamada] Error registrando llamada en BD:', err?.message || err);
            this.resetRellamadaState();
@@ -6453,7 +6509,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
         camposAdicionales: this.getCamposAdicionalesParaGuardar(),
-        metodoContacto: isActiveCallSchedule ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
+        metodoContacto: this.metodoContactoDeLaGestion(isActiveCallSchedule),
         canalContacto: hasActiveCallOrTimerSched ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
@@ -6575,7 +6631,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         camposAdicionales: this.getCamposAdicionalesParaGuardar(),
 
         // Campos de contexto de gestión
-        metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
+        metodoContacto: this.metodoContactoDeLaGestion(isActiveCall),
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
         idLlamada: isActiveCall ? callContext.llamadaId : null,
@@ -6823,6 +6879,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     sessionStorage.removeItem('predictive_call_data');
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
+    this.manualYaMarcada.set(false);
 
     this.activeTab.set('cliente');
 

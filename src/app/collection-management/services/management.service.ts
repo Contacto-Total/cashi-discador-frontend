@@ -187,7 +187,11 @@ export interface CreateManagementRequest {
 
   // Campos adicionales para registro completo
   // metodoContacto: QUIÉN/QUÉ originó la gestión
-  metodoContacto?: 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | 'GESTION_AUTOMATICA' | 'GESTION_RELLAMADA';
+  // Los cuatro del enum MetodoContacto del backend, ni uno mas: cualquier otro valor lo
+  // descarta el valueOf de ManagementRecordV2Service y la gestion queda con
+  // metodo_contacto en NULL. Si la llamada fue rellamada o no se ve en
+  // marcador_llamadas.origen, no aca.
+  metodoContacto?: 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | 'GESTION_AUTOMATICA';
   // canalContacto: POR QUÉ MEDIO se contactó
   canalContacto?: 'LLAMADA_SALIENTE' | 'LLAMADA_ENTRANTE' | 'SMS' | 'WHATSAPP' | 'EMAIL';
   idCampana?: number | null;
