@@ -10,7 +10,7 @@ export interface FieldDefinition {
   updatedAt?: string;
 }
 
-export type DataType = 'TEXTO' | 'NUMERICO' | 'FECHA';
+export type DataType = 'TEXTO' | 'NUMERICO' | 'FECHA' | 'BOOLEANO';
 
 /**
  * Tablas asociadas disponibles para campos

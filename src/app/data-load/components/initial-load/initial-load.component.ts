@@ -9,6 +9,7 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { HeaderConfiguration } from '../../../maintenance/models/header-configuration.model';
 import { SubPortfolio, Portfolio } from '../../../maintenance/models/portfolio.model';
 import { Tenant } from '../../../maintenance/models/tenant.model';
+import { esDerivada, origenLegible, valorDerivado } from '../../../shared/utils/cabecera-derivada';
 
 @Component({
   selector: 'app-initial-load',
@@ -191,12 +192,12 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                             style="min-width: 150px;"
                             [title]="header.dataType + (header.format ? ' (' + header.format + ')' : '')">
                           <div class="flex items-center gap-1.5">
-                            @if (header.sourceField && header.regexPattern) {
+                            @if (esDerivada(header)) {
                               <lucide-angular
                                 name="sparkles"
                                 [size]="12"
                                 class="text-amber-400 flex-shrink-0"
-                                [title]="'Campo transformado desde: ' + header.sourceField">
+                                [title]="'Campo derivado de: ' + origenLegible(header.sourceField)">
                               </lucide-angular>
                             }
                             <div class="flex flex-col gap-0.5">
@@ -359,6 +360,9 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
   `]
 })
 export class InitialLoadComponent implements OnInit {
+  readonly esDerivada = esDerivada;
+  readonly origenLegible = origenLegible;
+
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
@@ -522,8 +526,8 @@ export class InitialLoadComponent implements OnInit {
             columnMapping[excelIndex] = configIndex;
           } else {
             // Solo considerar como faltante si NO es un campo transformado
-            // Los campos transformados (con sourceField y regexPattern) se generan automáticamente
-            if (!(header.sourceField && header.regexPattern)) {
+            // Las cabeceras derivadas no vienen en el archivo: las arma la carga
+            if (!esDerivada(header)) {
               missingHeaders.push(header);
             }
           }
@@ -587,31 +591,11 @@ export class InitialLoadComponent implements OnInit {
             }
           });
 
-          // Aplicar transformaciones regex (segunda pasada)
+          // Cabeceras derivadas (segunda pasada): se arman con sus columnas de origen ya leídas.
           configuredHeaders.forEach((header) => {
-            // Si este campo tiene transformación regex configurada
-            if (header.sourceField && header.regexPattern) {
+            if (esDerivada(header)) {
               try {
-                // Obtener el valor del campo origen
-                const sourceValue = transformedRow[header.sourceField];
-
-                if (sourceValue) {
-                  // Aplicar el regex
-                  const regex = new RegExp(header.regexPattern);
-                  const match = String(sourceValue).match(regex);
-
-                  if (match) {
-                    // Si hay grupos de captura, usar el primer grupo
-                    // Si no hay grupos, usar el match completo
-                    transformedRow[header.headerName] = match[1] || match[0];
-                  } else {
-                    // Si no coincide el regex, dejar null
-                    transformedRow[header.headerName] = null;
-                  }
-                } else {
-                  // Si el campo origen está vacío/null, el transformado también
-                  transformedRow[header.headerName] = null;
-                }
+                transformedRow[header.headerName] = valorDerivado(transformedRow, header.sourceField!, header.regexPattern);
               } catch (error) {
                 console.error(`Error aplicando regex en ${header.headerName}:`, error);
                 transformedRow[header.headerName] = null;

@@ -1,3004 +1,1117 @@
-import { Component, OnInit, signal, computed, ViewChild, ElementRef, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
+import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { LucideAngularModule } from 'lucide-angular';
-import { firstValueFrom } from 'rxjs';
+import { Observable, catchError, firstValueFrom, forkJoin, map, of, switchMap } from 'rxjs';
 import { HeaderConfigurationService } from '../../services/header-configuration.service';
 import { FieldDefinitionService } from '../../services/field-definition.service';
 import { TypificationService } from '../../services/typification.service';
 import { PortfolioService } from '../../services/portfolio.service';
-import { NotificationService } from '../../../shared/services/notification.service';
-import { NotificationsComponent } from '../../../shared/components/notifications/notifications.component';
+import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../shared/services/toast.service';
+import { BotonDirective } from '../../../shared/ui/boton.directive';
+import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
+import { EtiquetaSubcartera, PanelSubcarterasComponent, SubcarteraPanel } from '../../../shared/ui/panel-subcarteras.component';
+import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
+import { NombrePropioPipe } from '../../../shared/ui/nombre-propio.pipe';
+import { ComboboxComponent, OpcionCombobox } from '../../../shared/ui/combobox.component';
 import {
+  DataType,
+  HeaderAlias,
   HeaderConfiguration,
   HeaderConfigurationItem,
-  CreateHeaderConfigurationRequest,
-  DataType,
-  LoadType,
-  HeaderAlias,
-  HeaderResolutionResult,
   ImportPreviewResult,
-  ImportResult,
-  ConflictResolution,
-  ConflictItem
+  LoadType,
+  UpdateHeaderConfigurationRequest
 } from '../../models/header-configuration.model';
 import { FieldDefinition } from '../../models/field-definition.model';
-import { Tenant } from '../../models/tenant.model';
-import { Portfolio } from '../../models/portfolio.model';
-import { SubPortfolio } from '../../models/portfolio.model';
-import { DATE_DETECTION_PATTERNS, detectDateFormat } from '../../../shared/constants/date-formats';
+import { SEPARADOR_ORIGEN, columnasOrigen, origenLegible } from '../../../shared/utils/cabecera-derivada';
+import { TUI } from '../typification-ui';
 
-// Interface para columnas detectadas en el archivo
-interface DetectedColumn {
-  name: string;
-  dataType: DataType;
-  format?: string;
-  displayLabel: string;
-  sampleValues: string[];
-  selected: boolean;
-  // Auto-matching properties
-  matchedFieldDefinition?: FieldDefinition;
-  matchStatus: 'matched' | 'review' | 'no-match';
-  matchScore?: number; // Similarity score (0-100)
-  importedHeader?: HeaderConfigurationItem;
+/** Largo de la columna campo_origen de configuracion_cabeceras. */
+const LARGO_MAX_ORIGEN = 100;
+
+type Carga = Extract<LoadType, 'INICIAL' | 'ACTUALIZACION'>;
+
+/** Una subcartera con su cliente y su cartera. */
+interface Ambito {
+  cliente: string;
+  cartera: string;
+  subId: number;
+  subcartera: string;
 }
 
+/** Una cabecera tal como se edita. `clave` es su id en la base, o un número negativo si es nueva. */
+interface Cabecera {
+  clave: number;
+  headerName: string;
+  displayLabel: string;
+  dataType: DataType;
+  format: string;
+  required: boolean;
+  /** Dato del catálogo enlazado; 0 = ninguno. */
+  fieldDefinitionId: number;
+  sourceField: string;
+  regexPattern: string;
+  /** Otros nombres con que llega la columna, sin el principal. Sin leer ni tocar: undefined. */
+  alias?: string[];
+  nueva?: boolean;
+  borrada?: boolean;
+}
+
+/** Una fila del archivo de configuración (una cabecera por fila). */
+interface ColumnaArchivo {
+  cabecera: HeaderConfigurationItem;
+  codigoCampo: string;
+  elegida: boolean;
+}
+
+const TIPOS: { valor: DataType; texto: string; grupo: string }[] = [
+  { valor: 'TEXTO', texto: 'Texto', grupo: 'Textos' },
+  { valor: 'NUMERICO', texto: 'Número', grupo: 'Números' },
+  { valor: 'FECHA', texto: 'Fecha', grupo: 'Fechas' },
+  { valor: 'BOOLEANO', texto: 'Sí / no', grupo: 'Sí / no' }
+];
+const FORMATO_EJEMPLO: Record<DataType, string> = { TEXTO: 'VARCHAR(100)', NUMERICO: 'DECIMAL(18,2)', FECHA: 'yyyyMMdd', BOOLEANO: '' };
+const GRUPOS_DATO: { tabla: string; titulo: string }[] = [
+  { tabla: 'clientes', titulo: 'Datos del cliente' },
+  { tabla: 'metodos_contacto', titulo: 'Teléfonos y correos' },
+  { tabla: '', titulo: 'Otros datos' }
+];
+const COLUMNAS_PLANTILLA = ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx'];
+const EJEMPLO_PLANTILLA = [
+  ['documento', 'DNI', 'Número de Documento', '', 'TEXTO', '1', '', ''],
+  ['nombre_completo', 'NOMBRE', 'Nombre del Cliente', '', 'TEXTO', '1', '', ''],
+  ['telefono_principal', 'TELEFONO', 'Teléfono Principal', '', 'TEXTO', '0', '', ''],
+  ['email', 'CORREO', 'Correo Electrónico', '', 'TEXTO', '0', '', ''],
+  ['monto_capital', 'MONTO_CAPITAL', 'Monto Capital (S/.)', 'decimal(18,2)', 'NUMERICO', '1', '', ''],
+  ['fecha_vencimiento', 'FEC_VENC', 'Fecha de Vencimiento', 'dd/MM/yyyy', 'FECHA', '1', '', ''],
+  ['', 'DOCUMENTO_EXTRAIDO', 'Documento Extraído', '', 'TEXTO', '0', 'DNI', '^D.*?(\\d{7})$|^C.*?(\\d{8})$']
+];
+const SEPARADORES = [
+  { valor: ';', nombre: 'Punto y coma', muestra: ';', archivo: 'punto-coma' },
+  { valor: ',', nombre: 'Coma', muestra: ',', archivo: 'coma' },
+  { valor: '|', nombre: 'Pipe', muestra: '|', archivo: 'pipe' },
+  { valor: '\t', nombre: 'Tabulación', muestra: 'Tab', archivo: 'tab' }
+];
+
+/** Sin tildes ni mayúsculas ni signos, para comparar nombres de columna. */
+const clave = (s: string | null | undefined) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+/** Nombre de la columna en la tabla de la subcartera; misma regla que SqlSanitizer.headerToColumnName. */
+const columnaEnTabla = (s: string) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  .replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+const mismosAlias = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * Configuración de cabeceras por subcartera: las columnas que trae cada carga, cómo se ven y a qué dato
+ * del sistema corresponden (lo que usan los filtros de campañas, la ficha y las reglas).
+ *
+ * Misma forma que Umbrales de estado y Tipificaciones: se edita en la lista y nada se envía hasta
+ * «Guardar cambios». Crear un dato del catálogo se aplica al momento, porque vale para todas las carteras.
+ */
 @Component({
   selector: 'app-header-configuration',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, NotificationsComponent],
-  template: `
-    <!-- Notifications Toast -->
-    <app-notifications></app-notifications>
-
-    <!-- Dialog de Selección de Columnas -->
-    @if (showColumnSelectionDialog()) {
-      <div class="fixed inset-0 z-[60] flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-          <!-- Header -->
-          <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                <lucide-angular name="columns" [size]="24" class="text-white"></lucide-angular>
-              </div>
-              <div>
-                <h2 class="text-xl font-bold !text-white">Seleccionar columnas a importar</h2>
-                <p class="text-emerald-100 text-sm">
-                  {{ detectedColumns().length }} columna(s) detectada(s) en
-                  <span class="font-semibold">{{ importFileName() }}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Body -->
-          <div class="p-5 overflow-y-auto max-h-[55vh]">
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">
-              Seleccione las columnas que desea agregar como cabeceras. Las columnas no seleccionadas serán ignoradas.
-            </p>
-
-            <!-- Lista de columnas con checkboxes -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              @for (col of detectedColumns(); track col.name; let i = $index) {
-                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg border transition-all cursor-pointer"
-                     [class.border-emerald-500]="col.selected"
-                     [class.border-gray-200]="!col.selected"
-                     [class.dark:border-slate-600]="!col.selected"
-                     [class.bg-emerald-50]="col.selected"
-                     [class.dark:bg-emerald-900/20]="col.selected"
-                     (click)="toggleColumnDetected(i)">
-                  <div class="p-3">
-                    <div class="flex items-start gap-3">
-                      <!-- Checkbox -->
-                      <div class="mt-0.5">
-                        <input type="checkbox"
-                               [checked]="col.selected"
-                               (click)="$event.stopPropagation()"
-                               (change)="toggleColumnDetected(i)"
-                               class="w-4 h-4 rounded border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer">
-                      </div>
-
-                      <!-- Info de la columna -->
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <span class="font-mono text-sm font-semibold truncate"
-                                [class.text-emerald-600]="col.selected"
-                                [class.dark:text-emerald-400]="col.selected"
-                                [class.text-gray-700]="!col.selected"
-                                [class.dark:text-gray-300]="!col.selected">
-                            {{ col.name }}
-                          </span>
-                          <span class="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                                [class.bg-purple-100]="col.dataType === 'FECHA'"
-                                [class.dark:bg-purple-900/50]="col.dataType === 'FECHA'"
-                                [class.text-purple-600]="col.dataType === 'FECHA'"
-                                [class.dark:text-purple-400]="col.dataType === 'FECHA'"
-                                [class.bg-blue-100]="col.dataType === 'NUMERICO'"
-                                [class.dark:bg-blue-900/50]="col.dataType === 'NUMERICO'"
-                                [class.text-blue-600]="col.dataType === 'NUMERICO'"
-                                [class.dark:text-blue-400]="col.dataType === 'NUMERICO'"
-                                [class.bg-gray-200]="col.dataType === 'TEXTO'"
-                                [class.dark:bg-slate-600]="col.dataType === 'TEXTO'"
-                                [class.text-gray-600]="col.dataType === 'TEXTO'"
-                                [class.dark:text-gray-300]="col.dataType === 'TEXTO'">
-                            {{ col.dataType }}
-                          </span>
-                        </div>
-                        @if (col.sampleValues.length > 0) {
-                          <div class="text-[11px] text-gray-500 truncate">
-                            Ej: {{ col.sampleValues.slice(0, 2).join(' | ') }}
-                          </div>
-                        }
-                        <!-- Match Status Indicator -->
-                        <div class="mt-1.5 flex items-center gap-1.5">
-                          @if (col.matchStatus === 'matched') {
-                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full">
-                              <lucide-angular name="check-circle" [size]="10"></lucide-angular>
-                              {{ col.matchedFieldDefinition?.fieldName }}
-                            </span>
-                          } @else if (col.matchStatus === 'review') {
-                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 rounded-full">
-                              <lucide-angular name="alert-circle" [size]="10"></lucide-angular>
-                              Revisar: {{ col.matchedFieldDefinition?.fieldName }}
-                            </span>
-                          } @else {
-                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full">
-                              <lucide-angular name="x-circle" [size]="10"></lucide-angular>
-                              Sin coincidencia
-                            </span>
-                          }
-                          @if (col.matchScore) {
-                            <span class="text-[9px] text-gray-400">({{ col.matchScore }}%)</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400">
-                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold">{{ getSelectedColumnsCount() }}</span>
-                  de {{ detectedColumns().length }} columna(s) seleccionada(s)
-                </span>
-              </div>
-              <div class="flex gap-2">
-                <button (click)="selectAllDetectedColumns()"
-                        class="text-xs px-3 py-1.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 cursor-pointer">
-                  Seleccionar todas
-                </button>
-                <button (click)="deselectAllDetectedColumns()"
-                        class="text-xs px-3 py-1.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 cursor-pointer">
-                  Deseleccionar todas
-                </button>
-              </div>
-            </div>
-
-            <div class="flex gap-3 justify-end">
-              <button
-                (click)="cancelColumnSelection()"
-                class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium cursor-pointer">
-                Cancelar
-              </button>
-              <button
-                (click)="confirmColumnSelection()"
-                [disabled]="getSelectedColumnsCount() === 0"
-                class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                <lucide-angular name="check" [size]="16"></lucide-angular>
-                Agregar {{ getSelectedColumnsCount() }} cabecera(s)
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    }
-
-    <div class="h-[calc(100dvh-56px)] bg-gray-100 dark:bg-slate-950 overflow-hidden flex flex-col">
-      <div class="flex-1 overflow-y-auto">
-        <div class="p-3 max-w-7xl mx-auto">
-      <!-- Header -->
-      <div class="mb-2">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center">
-            <lucide-angular name="table-2" [size]="16" class="text-white"></lucide-angular>
-          </div>
-          <div>
-            <h1 class="text-lg font-bold text-gray-900 dark:text-white">Configuración de Cabeceras</h1>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Define las cabeceras personalizadas por subcartera</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Filtros en Cascada -->
-      <div class="mb-2">
-        <div class="bg-white dark:bg-slate-900 rounded-lg p-2 shadow-sm border border-gray-200 dark:border-slate-800">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <!-- Proveedor -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                <lucide-angular name="building-2" [size]="16" class="inline mr-1"></lucide-angular>
-                Proveedor
-              </label>
-              <select [(ngModel)]="selectedTenantId"
-                      (ngModelChange)="onTenantChange()"
-                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option [value]="0">Seleccione un proveedor...</option>
-                @for (tenant of tenants(); track tenant.id) {
-                  <option [value]="tenant.id">{{ tenant.tenantName }}</option>
-                }
-              </select>
-            </div>
-
-            <!-- Cartera -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                <lucide-angular name="folder" [size]="16" class="inline mr-1"></lucide-angular>
-                Cartera
-              </label>
-              <select [(ngModel)]="selectedPortfolioId"
-                      (ngModelChange)="onPortfolioChange()"
-                      [disabled]="selectedTenantId === 0"
-                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option [value]="0">Seleccione una cartera...</option>
-                @for (portfolio of portfolios(); track portfolio.id) {
-                  <option [value]="portfolio.id">{{ portfolio.portfolioName }}</option>
-                }
-              </select>
-            </div>
-
-            <!-- Subcartera -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                <lucide-angular name="folder-tree" [size]="16" class="inline mr-1"></lucide-angular>
-                Subcartera
-              </label>
-              <select [(ngModel)]="selectedSubPortfolioId"
-                      (ngModelChange)="onSubPortfolioChange()"
-                      [disabled]="selectedPortfolioId === 0"
-                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option [value]="0">Seleccione una subcartera...</option>
-                @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
-                  <option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }}</option>
-                }
-              </select>
-            </div>
-
-            <!-- Tipo de Carga -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                <lucide-angular name="database" [size]="16" class="inline mr-1"></lucide-angular>
-                Tipo de Carga
-              </label>
-              <select [(ngModel)]="selectedLoadType"
-                      (ngModelChange)="onLoadTypeChange()"
-                      [disabled]="selectedSubPortfolioId === 0"
-                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="ACTUALIZACION">Carga Diaria</option>
-                <option value="INICIAL">Carga Inicial del Mes</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      @if (selectedSubPortfolioId > 0) {
-        <!-- Panel de Acciones -->
-        <div class="mb-2">
-          <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
-            <!-- Contenido del Panel -->
-            <div class="p-3">
-              <!-- Primera fila: Botones principales y contador -->
-              <div class="flex flex-wrap items-center gap-2 mb-2">
-                <!-- Dropdown para descargar plantillas -->
-                <div class="relative">
-                  <button (click)="toggleDownloadMenu()"
-                          #downloadButton
-                          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all cursor-pointer">
-                    <lucide-angular name="file-text" [size]="16"></lucide-angular>
-                    <span class="hidden sm:inline">Descargar Plantilla</span>
-                    <span class="sm:hidden">Plantilla</span>
-                    <lucide-angular [name]="downloadMenuOpen() ? 'chevron-up' : 'chevron-down'" [size]="14"></lucide-angular>
-                  </button>
-                </div>
-
-                <!-- Botón Importar Configuración -->
-                <label class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-all cursor-pointer">
-                  <lucide-angular name="folder-open" [size]="16"></lucide-angular>
-                  <span class="hidden sm:inline">Importar CSV/Excel</span>
-                  <span class="sm:hidden">Importar</span>
-                  <input type="file"
-                         accept=".csv,.xlsx,.xls"
-                         (change)="onFileSelected($event)"
-                         class="hidden">
-                </label>
-
-                <!-- Botón Agregar Cabecera Manual -->
-                <button (click)="openManualDialog()"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer">
-                  <lucide-angular name="plus" [size]="16"></lucide-angular>
-                  <span class="hidden sm:inline">Agregar Cabecera</span>
-                  <span class="sm:hidden">Agregar</span>
-                </button>
-
-                <!-- Botón Importar desde otra Subcartera -->
-                <button (click)="openImportFromSubPortfolioDialog()"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-all cursor-pointer">
-                  <lucide-angular name="copy" [size]="16"></lucide-angular>
-                  <span class="hidden sm:inline">Copiar de otra Subcartera</span>
-                  <span class="sm:hidden">Copiar</span>
-                </button>
-
-                <!-- Contador de cabeceras -->
-                @if (previewHeaders().length > 0) {
-                  <div class="ml-auto flex items-center gap-2 px-3 py-1.5">
-                    <lucide-angular name="table-2" [size]="14" class="text-indigo-500 dark:text-indigo-400"></lucide-angular>
-                    <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ previewHeaders().length }}</span>
-                    <span class="text-xs text-indigo-600 dark:text-indigo-400">cabecera(s)</span>
-                  </div>
-                }
-              </div>
-
-              <!-- Menú dropdown con posición fixed para evitar overflow hidden del contenedor -->
-              @if (downloadMenuOpen()) {
-                <div class="fixed inset-0 z-[9998]" (click)="downloadMenuOpen.set(false)"></div>
-                <div class="fixed w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 py-1 z-[9999]"
-                     [style.top.px]="dropdownPosition().top"
-                     [style.left.px]="dropdownPosition().left">
-                  <button (click)="downloadCSVTemplate()"
-                          class="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-left text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <lucide-angular name="file-text" [size]="16" class="text-gray-500 dark:text-gray-400"></lucide-angular>
-                    <span class="text-sm font-medium">Descargar CSV</span>
-                  </button>
-                  <button (click)="downloadExcelTemplate()"
-                          class="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-left text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <lucide-angular name="table-2" [size]="16" class="text-green-500 dark:text-green-400"></lucide-angular>
-                    <span class="text-sm font-medium">Descargar Excel (.xlsx)</span>
-                  </button>
-                </div>
-              }
-
-              <!-- Segunda fila: Botones de acción cuando hay cabeceras -->
-              @if (previewHeaders().length > 0) {
-                <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-slate-700">
-                  <button (click)="clearAll()"
-                          class="flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-all cursor-pointer">
-                    <lucide-angular name="trash-2" [size]="14"></lucide-angular>
-                    <span>Limpiar</span>
-                  </button>
-
-                  <button (click)="confirmConfiguration()"
-                          [disabled]="isSaving()"
-                          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                    @if (isSaving()) {
-                      <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
-                      <span>Guardando...</span>
-                    } @else {
-                      <lucide-angular name="save" [size]="16"></lucide-angular>
-                      <span>Guardar</span>
-                    }
-                  </button>
-                </div>
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Tabla de Previsualización -->
-        <div>
-          <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
-            @if (previewHeaders().length === 0) {
-              <div class="p-6 text-center">
-                <div class="w-12 h-12 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <lucide-angular name="table-2" [size]="24" class="text-gray-400 dark:text-gray-600"></lucide-angular>
-                </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">No hay cabeceras configuradas</p>
-              </div>
-            } @else {
-              <div class="overflow-x-auto max-h-[calc(100dvh-340px)] overflow-y-auto">
-                <table class="w-full">
-                  <thead class="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0">
-                    <tr>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Nombre</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Tipo</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Etiqueta</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Campo Catálogo</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Formato</th>
-                      <th class="px-2 py-1.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">Req.</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
-                    @for (header of previewHeaders(); track $index) {
-                      <tr class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                        <td class="px-2 py-1.5">
-                          <div class="flex items-center gap-1">
-                            @if (header.id) {
-                              <lucide-angular
-                                name="database"
-                                [size]="12"
-                                class="text-green-500 dark:text-green-400 flex-shrink-0"
-                                title="Cabecera guardada en BD">
-                              </lucide-angular>
-                            } @else {
-                              <span class="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 text-[9px] rounded font-medium">NUEVO</span>
-                            }
-                            <span class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{{ header.headerName }}</span>
-                            @if (header.sourceField && header.regexPattern) {
-                              <lucide-angular
-                                name="sparkles"
-                                [size]="12"
-                                class="text-amber-500 dark:text-amber-400 flex-shrink-0"
-                                title="Campo transformado mediante expresión regular desde: {{ header.sourceField }}">
-                              </lucide-angular>
-                            }
-                          </div>
-                        </td>
-                        <td class="px-2 py-1.5">
-                          <span [class]="getDataTypeBadgeClass(header.dataType)"
-                                class="inline-flex px-1.5 py-0.5 rounded text-xs font-medium">
-                            {{ header.dataType }}
-                          </span>
-                        </td>
-                        <td class="px-2 py-1.5">
-                          <span class="text-xs text-gray-900 dark:text-white">{{ header.displayLabel }}</span>
-                        </td>
-                        <td class="px-2 py-1.5">
-                          @if (!header.fieldDefinitionId) {
-                            <span class="text-xs text-amber-600 dark:text-amber-400 italic">Sin asociar</span>
-                          } @else {
-                            <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ getFieldCodeById(header.fieldDefinitionId) }}</span>
-                          }
-                        </td>
-                        <td class="px-2 py-1.5">
-                          <span class="text-xs text-gray-500 dark:text-gray-400">{{ header.format || '-' }}</span>
-                        </td>
-                        <td class="px-2 py-1.5 text-center">
-                          @if (header.required) {
-                            <lucide-angular name="check-circle" [size]="14" class="text-green-500 dark:text-green-400 inline"></lucide-angular>
-                          } @else {
-                            <lucide-angular name="circle" [size]="14" class="text-gray-400 dark:text-gray-600 inline"></lucide-angular>
-                          }
-                        </td>
-                        <td class="px-2 py-1.5">
-                          <div class="flex items-center gap-1">
-                            <button (click)="editPreviewHeader($index)"
-                                    class="p-1 text-blue-500 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded transition-colors"
-                                    title="Editar">
-                              <lucide-angular name="edit" [size]="14"></lucide-angular>
-                            </button>
-                            @if (canManageAlias($index)) {
-                              <button (click)="openAliasDialog($index)"
-                                      class="p-1 text-amber-500 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded transition-colors relative"
-                                      title="Gestionar alias">
-                                <lucide-angular name="tags" [size]="14"></lucide-angular>
-                                @if (getAliasCount($index) > 0) {
-                                  <span class="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                                    {{ getAliasCount($index) }}
-                                  </span>
-                                }
-                              </button>
-                            }
-                            <button (click)="removePreviewHeader($index)"
-                                    class="p-1 text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded transition-colors"
-                                    title="Eliminar">
-                              <lucide-angular name="trash-2" [size]="14"></lucide-angular>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Dialog Agregar/Editar Manual -->
-      @if (showManualDialog()) {
-        <div class="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
-            <!-- Dialog Header -->
-            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 p-5 text-white">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <lucide-angular name="plus-circle" [size]="20"></lucide-angular>
-                  </div>
-                  <div>
-                    <h2 class="text-xl font-bold !text-white">{{ editingIndex() !== null ? 'Editar' : 'Agregar' }} Cabecera</h2>
-                    <p class="text-indigo-100 text-sm">Complete la información de la cabecera</p>
-                  </div>
-                </div>
-                <button (click)="closeManualDialog()" class="text-white/80 hover:text-white">
-                  <lucide-angular name="x" [size]="20"></lucide-angular>
-                </button>
-              </div>
-            </div>
-
-            <!-- Dialog Body -->
-            <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-              <div class="space-y-4">
-                <!-- Campo Base de Datos (Dropdown del Catálogo) -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    <lucide-angular name="book-open" [size]="16" class="inline mr-1"></lucide-angular>
-                    Campo Base de Datos (Opcional)
-                    @if (formData.id) {
-                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-500 dark:text-amber-400" title="No editable"></lucide-angular>
-                    }
-                  </label>
-                  <select [(ngModel)]="formData.fieldDefinitionId"
-                          (ngModelChange)="onFieldDefinitionSelect()"
-                          [disabled]="!!formData.id"
-                          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <option [ngValue]="0">Sin asociar - Campo personalizado</option>
-                    @for (group of groupedFieldDefinitions(); track group.table) {
-                      <optgroup [label]="group.label">
-                        @for (field of group.fields; track field.id) {
-                          <option [ngValue]="field.id">
-                            {{ field.fieldName }} ({{ field.fieldCode }})
-                          </option>
-                        }
-                      </optgroup>
-                    }
-                  </select>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    @if (formData.id) {
-                      La asociación al catálogo no puede cambiarse en cabeceras existentes.
-                    } @else {
-                      Seleccione un campo del catálogo o deje "Sin asociar" para crear un campo personalizado.
-                    }
-                  </p>
-                </div>
-
-                <!-- Información del Catálogo (Solo Lectura) -->
-                @if (getSelectedFieldDefinition(); as selectedField) {
-                  <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-2 border border-gray-200 dark:border-slate-700/50">
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📋 Información del Catálogo</p>
-
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs text-gray-500 dark:text-gray-400">Tipo de Dato:</span>
-                      <span [class]="getDataTypeBadgeClass(selectedField.dataType)"
-                            class="inline-flex px-2 py-0.5 rounded text-xs font-medium">
-                        {{ selectedField.dataType }}
-                      </span>
-                      @if (selectedField.associatedTable) {
-                        <span class="text-xs text-gray-400 dark:text-gray-500">|</span>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Tabla:</span>
-                        <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                          {{ selectedField.associatedTable === 'clientes' ? '👤 Clientes' : selectedField.associatedTable === 'metodos_contacto' ? '📞 Contactos' : selectedField.associatedTable }}
-                        </span>
-                      }
-                    </div>
-
-                    @if (selectedField.description) {
-                      <div class="text-xs text-gray-500 dark:text-gray-400">
-                        <span class="font-semibold">Descripción:</span> {{ selectedField.description }}
-                      </div>
-                    }
-
-                    @if (selectedField.format) {
-                      <div class="text-xs text-gray-500 dark:text-gray-400">
-                        <span class="font-semibold">Formato del Sistema:</span>
-                        <code class="text-cyan-600 dark:text-cyan-400">{{ selectedField.format }}</code>
-                      </div>
-                    }
-                  </div>
-                }
-
-                <!-- Advertencia para cabeceras existentes -->
-                @if (formData.id) {
-                  <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3 mb-2">
-                    <div class="flex items-start gap-2">
-                      <lucide-angular name="alert-triangle" [size]="16" class="text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
-                      <div>
-                        <p class="text-sm text-amber-700 dark:text-amber-300 font-medium">Cabecera existente en base de datos</p>
-                        <p class="text-xs text-amber-600 dark:text-amber-400/80 mt-1">
-                          El nombre del campo y tipo de dato no pueden modificarse porque la columna ya existe en la tabla.
-                          Solo puede editar: etiqueta visual, formato y obligatoriedad.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                }
-
-                <!-- Selector de Tipo de Dato (para campos personalizados) -->
-                @if (formData.fieldDefinitionId === 0) {
-                  <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      <lucide-angular name="type" [size]="16" class="inline mr-1"></lucide-angular>
-                      Tipo de Dato *
-                      @if (formData.id) {
-                        <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-500 dark:text-amber-400" title="No editable"></lucide-angular>
-                      }
-                    </label>
-                    <select [(ngModel)]="formData.dataType"
-                            [disabled]="!!formData.id"
-                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                      <option value="TEXTO">TEXTO</option>
-                      <option value="NUMERICO">NUMERICO</option>
-                      <option value="FECHA">FECHA</option>
-                      <option value="BOOLEANO">BOOLEANO</option>
-                    </select>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      @if (formData.id) {
-                        El tipo de dato no puede cambiarse en cabeceras existentes.
-                      } @else {
-                        Seleccione el tipo de dato para este campo personalizado.
-                      }
-                    </p>
-                  </div>
-                }
-
-                <!-- Campo Sistema (Input Texto Libre) -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    <lucide-angular name="settings" [size]="16" class="inline mr-1"></lucide-angular>
-                    Campo Sistema *
-                    @if (formData.id) {
-                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-500 dark:text-amber-400" title="No editable"></lucide-angular>
-                    }
-                  </label>
-                  <input type="text"
-                         [(ngModel)]="formData.headerName"
-                         [disabled]="!!formData.id"
-                         placeholder="Ej: DNI, Saldo Vencido, Teléfono Principal"
-                         class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    @if (formData.id) {
-                      El nombre del campo no puede cambiarse en cabeceras existentes.
-                    } @else {
-                      Nombre de la cabecera tal como viene del proveedor.
-                    }
-                  </p>
-                </div>
-
-                <!-- Etiqueta Visual (Input Texto) -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    <lucide-angular name="eye" [size]="16" class="inline mr-1"></lucide-angular>
-                    Etiqueta Visual *
-                  </label>
-                  <input type="text"
-                         [(ngModel)]="formData.displayLabel"
-                         placeholder="Ej: Número de Documento, Saldo Pendiente"
-                         class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Texto que se mostrará en la interfaz de usuario.
-                  </p>
-                </div>
-
-                <!-- Formato (Input Texto Opcional) -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    <lucide-angular name="file-text" [size]="16" class="inline mr-1"></lucide-angular>
-                    Formato
-                  </label>
-                  <input type="text"
-                         [(ngModel)]="formData.format"
-                         placeholder="Ej: dd/MM/yyyy, decimal(18,2)"
-                         class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Formato específico para esta subcartera (opcional, puede diferir del formato del sistema).
-                  </p>
-                </div>
-
-                <!-- Obligatorio -->
-                <div class="flex items-center gap-3">
-                  <input type="checkbox"
-                         [(ngModel)]="formData.required"
-                         id="required"
-                         class="w-4 h-4 text-indigo-600 bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-700 rounded focus:ring-indigo-500">
-                  <label for="required" class="text-sm text-gray-700 dark:text-gray-300">
-                    Campo obligatorio
-                  </label>
-                </div>
-
-                <!-- Sección de Transformación -->
-                <div class="col-span-2 border-t border-gray-200 dark:border-slate-700 pt-4 mt-2">
-                  <!-- Toggle Header -->
-                  <button type="button"
-                          (click)="showTransformSection.set(!showTransformSection())"
-                          class="w-full flex items-center justify-between text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-3 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors">
-                    <div class="flex items-center gap-2">
-                      <lucide-angular name="git-branch" [size]="16"></lucide-angular>
-                      Transformación de Campo (Opcional)
-                    </div>
-                    <lucide-angular
-                      [name]="showTransformSection() ? 'chevron-up' : 'chevron-down'"
-                      [size]="16">
-                    </lucide-angular>
-                  </button>
-
-                  @if (showTransformSection()) {
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                      Si este campo se deriva de otro campo mediante regex, configúralo aquí.<br>
-                      Ejemplo: extraer documento desde IDENTITY_CODE.
-                    </p>
-
-                    <div class="grid grid-cols-1 gap-4">
-                      <!-- Campo Origen -->
-                      <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          <lucide-angular name="arrow-right" [size]="16" class="inline mr-1"></lucide-angular>
-                          Campo Origen
-                        </label>
-                        <select [(ngModel)]="formData.sourceField"
-                                [disabled]="!!formData.id"
-                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                          <option value="">Seleccione un campo origen...</option>
-                          @for (header of availableSourceHeaders(); track header.headerName) {
-                            <option [value]="header.headerName">
-                              {{ header.headerName }} - {{ header.displayLabel }}
-                            </option>
-                          }
-                        </select>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Campo desde donde se extraerá el valor mediante regex.
-                        </p>
-                      </div>
-
-                      <!-- Patrón Regex -->
-                      <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          <lucide-angular name="code" [size]="16" class="inline mr-1"></lucide-angular>
-                          Patrón Regex
-                          @if (formData.sourceField && formData.sourceField.trim() !== '') {
-                            <span class="text-red-500 dark:text-red-400 ml-1">*</span>
-                          }
-                        </label>
-                        <input type="text"
-                               [(ngModel)]="formData.regexPattern"
-                               placeholder="Ej: .{{8}}$ (últimos 8 caracteres)"
-                               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Ejemplos: <code class="text-emerald-600 dark:text-emerald-400">.{{8}}$</code> últimos 8 • <code class="text-emerald-600 dark:text-emerald-400">\\d{{8}}</code> 8 dígitos
-                        </p>
-                      </div>
-                    </div>
-                  }
-                </div>
-              </div>
-            </div>
-
-            <!-- Dialog Footer -->
-            <div class="border-t border-gray-200 dark:border-slate-800 p-4 flex justify-end gap-3 bg-gray-50 dark:bg-slate-950">
-              <button (click)="closeManualDialog()"
-                      class="px-5 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium transition-colors">
-                Cancelar
-              </button>
-              <button (click)="saveManualHeader()"
-                      [disabled]="!canSaveManualHeader()"
-                      class="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                {{ editingIndex() !== null ? 'Actualizar' : 'Agregar' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Dialog Gestión de Alias -->
-      @if (showAliasDialog()) {
-        <div class="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
-            <!-- Dialog Header -->
-            <div class="bg-gradient-to-r from-amber-600 to-amber-700 p-5 text-white">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <lucide-angular name="tags" [size]="20"></lucide-angular>
-                  </div>
-                  <div>
-                    <h2 class="text-xl font-bold !text-white">Gestionar Alias</h2>
-                    <p class="text-amber-100 text-sm">{{ selectedHeaderForAlias()?.headerName }}</p>
-                  </div>
-                </div>
-                <button (click)="closeAliasDialog()" class="text-white/80 hover:text-white">
-                  <lucide-angular name="x" [size]="20"></lucide-angular>
-                </button>
-              </div>
-            </div>
-
-            <!-- Dialog Body -->
-            <div class="p-6">
-              <!-- Info del campo -->
-              <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-slate-700/50">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Nombre principal de la cabecera</p>
-                <p class="text-gray-900 dark:text-white font-mono font-semibold">{{ selectedHeaderForAlias()?.headerName }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Los alias permiten que el sistema reconozca columnas del Excel aunque tengan nombres diferentes.</p>
-              </div>
-
-              <!-- Agregar nuevo alias -->
-              <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  <lucide-angular name="plus" [size]="14" class="inline mr-1"></lucide-angular>
-                  Agregar nuevo alias
-                </label>
-                <div class="flex gap-2">
-                  <input type="text"
-                         [ngModel]="newAliasName()"
-                         (ngModelChange)="newAliasName.set($event)"
-                         (keyup.enter)="addAlias()"
-                         placeholder="Nombre alternativo de la columna"
-                         class="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
-                  <button (click)="addAlias()"
-                          [disabled]="!newAliasName().trim()"
-                          class="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    Agregar
-                  </button>
-                </div>
-              </div>
-
-              <!-- Lista de alias -->
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  <lucide-angular name="list" [size]="14" class="inline mr-1"></lucide-angular>
-                  Alias configurados
-                </label>
-
-                @if (loadingAliases()) {
-                  <div class="text-center py-4">
-                    <lucide-angular name="loader-2" [size]="24" class="text-amber-500 dark:text-amber-400 animate-spin mx-auto"></lucide-angular>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Cargando alias...</p>
-                  </div>
-                } @else if (aliases().length === 0) {
-                  <div class="text-center py-4 bg-gray-50 dark:bg-slate-800/30 rounded-lg border border-gray-200 dark:border-slate-700/50">
-                    <lucide-angular name="tags" [size]="24" class="text-gray-400 dark:text-gray-600 mx-auto"></lucide-angular>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">No hay alias configurados</p>
-                  </div>
-                } @else {
-                  <div class="space-y-2 max-h-48 overflow-y-auto">
-                    @for (alias of aliases(); track alias.id) {
-                      <div class="flex items-center justify-between bg-gray-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700/50">
-                        <div class="flex items-center gap-2">
-                          <lucide-angular name="tag" [size]="14" class="text-amber-500 dark:text-amber-400"></lucide-angular>
-                          <span class="text-gray-900 dark:text-white font-mono text-sm">{{ alias.alias }}</span>
-                          @if (alias.isPrincipal) {
-                            <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 rounded text-[10px] font-medium">Principal</span>
-                          }
-                        </div>
-                        @if (!alias.isPrincipal) {
-                          <button (click)="removeAlias(alias)"
-                                  class="p-1 text-red-500 dark:text-red-400 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-                                  title="Eliminar alias">
-                            <lucide-angular name="trash-2" [size]="14"></lucide-angular>
-                          </button>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
-
-            <!-- Dialog Footer -->
-            <div class="border-t border-gray-200 dark:border-slate-800 p-4 flex justify-end bg-gray-50 dark:bg-slate-950">
-              <button (click)="closeAliasDialog()"
-                      class="px-5 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Dialog Importar desde otra Subcartera -->
-      @if (showImportFromSubPortfolioDialog()) {
-        <div class="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
-            <!-- Dialog Header -->
-            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-5">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <lucide-angular name="copy" [size]="24" class="text-white"></lucide-angular>
-                </div>
-                <div>
-                  <h2 class="text-xl font-bold !text-white">Importar Cabeceras desde otra Subcartera</h2>
-                  <p class="text-purple-100 text-sm">Copie la configuración de cabeceras de una subcartera existente</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Dialog Body -->
-            <div class="p-5 overflow-y-auto max-h-[60vh]">
-              <!-- Selector de Subcartera Origen -->
-              <div class="mb-5">
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Seleccione la subcartera origen
-                </label>
-                <select [ngModel]="importSourceSubPortfolioId()"
-                        (ngModelChange)="onImportSourceChange($event)"
-                        class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                  <option [value]="0" disabled>-- Seleccione una subcartera --</option>
-                  @for (sp of getAvailableSourceSubPortfolios(); track sp.id) {
-                    <option [value]="sp.id">{{ sp.subPortfolioName }} ({{ sp.subPortfolioCode }})</option>
-                  }
-                </select>
-              </div>
-
-              <!-- Loading Preview -->
-              @if (isLoadingImportPreview()) {
-                <div class="flex flex-col items-center justify-center py-10">
-                  <lucide-angular name="loader-2" [size]="40" class="text-purple-500 animate-spin mb-3"></lucide-angular>
-                  <p class="text-gray-500 dark:text-gray-400">Cargando preview...</p>
-                </div>
-              }
-
-              <!-- Preview Result -->
-              @if (importPreviewResult() && !isLoadingImportPreview()) {
-                <div class="space-y-4">
-                  <!-- Resumen -->
-                  <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                      <div class="flex items-center gap-2">
-                        <lucide-angular name="plus-circle" [size]="20" class="text-green-600 dark:text-green-400"></lucide-angular>
-                        <span class="text-green-700 dark:text-green-300 font-semibold">{{ importPreviewResult()!.totalNew }} nuevas</span>
-                      </div>
-                      <p class="text-xs text-green-600 dark:text-green-400 mt-1">Cabeceras que se agregarán</p>
-                    </div>
-                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                      <div class="flex items-center gap-2">
-                        <lucide-angular name="alert-triangle" [size]="20" class="text-amber-600 dark:text-amber-400"></lucide-angular>
-                        <span class="text-amber-700 dark:text-amber-300 font-semibold">{{ importPreviewResult()!.totalConflicts }} conflictos</span>
-                      </div>
-                      <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">Ya existen en destino</p>
-                    </div>
-                  </div>
-
-                  <!-- Lista de cabeceras a importar -->
-                  @if (importPreviewResult()!.headersToImport.length > 0) {
-                    <div>
-                      <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                        <lucide-angular name="check-circle" [size]="16" class="text-green-500"></lucide-angular>
-                        Cabeceras nuevas a importar
-                      </h4>
-                      <div class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 max-h-40 overflow-y-auto">
-                        @for (header of importPreviewResult()!.headersToImport; track header.headerName) {
-                          <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-slate-700 last:border-0">
-                            <div class="flex items-center gap-2">
-                              <span class="font-mono text-sm text-gray-700 dark:text-gray-300">{{ header.headerName }}</span>
-                              <span class="text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-gray-300">{{ header.dataType }}</span>
-                            </div>
-                            @if (header.hasAliases) {
-                              <span class="text-xs text-purple-600 dark:text-purple-400">{{ header.aliasCount }} alias</span>
-                            }
-                          </div>
-                        }
-                      </div>
-                    </div>
-                  }
-
-                  <!-- Lista de conflictos -->
-                  @if (importPreviewResult()!.conflicts.length > 0) {
-                    <div>
-                      <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                        <lucide-angular name="alert-triangle" [size]="16" class="text-amber-500"></lucide-angular>
-                        Cabeceras en conflicto
-                      </h4>
-
-                      <!-- Selector de resolución de conflictos -->
-                      <div class="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <label class="block text-sm font-medium text-amber-700 dark:text-amber-300 mb-2">¿Qué hacer con los conflictos?</label>
-                        <div class="space-y-2">
-                          <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="conflictResolution" value="SKIP"
-                                   [checked]="importConflictResolution() === 'SKIP'"
-                                   (change)="importConflictResolution.set('SKIP')"
-                                   class="text-purple-600 focus:ring-purple-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Omitir (mantener las existentes)</span>
-                          </label>
-                          <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="conflictResolution" value="REPLACE"
-                                   [checked]="importConflictResolution() === 'REPLACE'"
-                                   (change)="importConflictResolution.set('REPLACE')"
-                                   class="text-purple-600 focus:ring-purple-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Reemplazar todas</span>
-                          </label>
-                          <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="conflictResolution" value="SELECTIVE"
-                                   [checked]="importConflictResolution() === 'SELECTIVE'"
-                                   (change)="importConflictResolution.set('SELECTIVE')"
-                                   class="text-purple-600 focus:ring-purple-500">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Seleccionar individualmente</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <!-- Lista de conflictos con checkboxes si es SELECTIVE -->
-                      <div class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 max-h-40 overflow-y-auto">
-                        @for (conflict of importPreviewResult()!.conflicts; track conflict.headerName) {
-                          <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-slate-700 last:border-0">
-                            <div class="flex items-center gap-2">
-                              @if (importConflictResolution() === 'SELECTIVE') {
-                                <input type="checkbox"
-                                       [checked]="selectedConflictsToReplace().has(conflict.headerName)"
-                                       (change)="toggleConflictSelection(conflict.headerName)"
-                                       class="w-4 h-4 text-purple-600 focus:ring-purple-500 rounded">
-                              }
-                              <span class="font-mono text-sm text-gray-700 dark:text-gray-300">{{ conflict.headerName }}</span>
-                            </div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                              <span class="text-purple-600 dark:text-purple-400">{{ conflict.sourceDisplayLabel }}</span>
-                              <lucide-angular name="arrow-right" [size]="12" class="inline mx-1"></lucide-angular>
-                              <span class="text-amber-600 dark:text-amber-400">{{ conflict.targetDisplayLabel }}</span>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-
-              <!-- Empty state cuando no hay preview -->
-              @if (!importPreviewResult() && !isLoadingImportPreview() && importSourceSubPortfolioId() === 0) {
-                <div class="text-center py-10">
-                  <lucide-angular name="folder-search" [size]="48" class="text-gray-300 dark:text-gray-600 mx-auto mb-3"></lucide-angular>
-                  <p class="text-gray-500 dark:text-gray-400">Seleccione una subcartera para ver las cabeceras disponibles</p>
-                </div>
-              }
-            </div>
-
-            <!-- Dialog Footer -->
-            <div class="border-t border-gray-200 dark:border-slate-800 p-4 flex justify-end gap-3 bg-gray-50 dark:bg-slate-950">
-              <button (click)="closeImportFromSubPortfolioDialog()"
-                      class="px-5 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
-                Cancelar
-              </button>
-              <button (click)="executeImportFromSubPortfolio()"
-                      [disabled]="!importPreviewResult() || isExecutingImport() || (importPreviewResult()!.totalNew === 0 && importPreviewResult()!.totalConflicts === 0)"
-                      class="px-5 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                @if (isExecutingImport()) {
-                  <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
-                  <span>Importando...</span>
-                } @else {
-                  <lucide-angular name="download" [size]="16"></lucide-angular>
-                  <span>Importar Cabeceras</span>
-                }
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Dialog Seleccionar Separador CSV -->
-      @if (showCsvSeparatorDialog()) {
-        <div class="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-200 dark:border-slate-800">
-            <!-- Dialog Header -->
-            <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-4">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <lucide-angular name="file-text" [size]="20" class="text-white"></lucide-angular>
-                </div>
-                <div>
-                  <h2 class="text-lg font-bold !text-white">Seleccionar Separador</h2>
-                  <p class="text-emerald-100 text-xs">{{ importFileName() }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Dialog Body -->
-            <div class="p-5">
-              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Seleccione el carácter separador usado en su archivo CSV:
-              </p>
-
-              <div class="space-y-2">
-                <label class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all"
-                       [class.border-emerald-500]="csvSeparator === ';'"
-                       [class.bg-emerald-50]="csvSeparator === ';'"
-                       [class.dark:bg-emerald-900/20]="csvSeparator === ';'"
-                       [class.border-gray-200]="csvSeparator !== ';'"
-                       [class.dark:border-slate-700]="csvSeparator !== ';'">
-                  <input type="radio" name="csvSep" value=";" [(ngModel)]="csvSeparator"
-                         class="text-emerald-600 focus:ring-emerald-500">
-                  <div>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Punto y coma</span>
-                    <span class="text-gray-500 dark:text-gray-400 ml-2 font-mono">(;)</span>
-                  </div>
-                </label>
-
-                <label class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all"
-                       [class.border-emerald-500]="csvSeparator === ','"
-                       [class.bg-emerald-50]="csvSeparator === ','"
-                       [class.dark:bg-emerald-900/20]="csvSeparator === ','"
-                       [class.border-gray-200]="csvSeparator !== ','"
-                       [class.dark:border-slate-700]="csvSeparator !== ','">
-                  <input type="radio" name="csvSep" value="," [(ngModel)]="csvSeparator"
-                         class="text-emerald-600 focus:ring-emerald-500">
-                  <div>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Coma</span>
-                    <span class="text-gray-500 dark:text-gray-400 ml-2 font-mono">(,)</span>
-                  </div>
-                </label>
-
-                <label class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all"
-                       [class.border-emerald-500]="csvSeparator === '|'"
-                       [class.bg-emerald-50]="csvSeparator === '|'"
-                       [class.dark:bg-emerald-900/20]="csvSeparator === '|'"
-                       [class.border-gray-200]="csvSeparator !== '|'"
-                       [class.dark:border-slate-700]="csvSeparator !== '|'">
-                  <input type="radio" name="csvSep" value="|" [(ngModel)]="csvSeparator"
-                         class="text-emerald-600 focus:ring-emerald-500">
-                  <div>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Pipe</span>
-                    <span class="text-gray-500 dark:text-gray-400 ml-2 font-mono">(|)</span>
-                  </div>
-                </label>
-
-                <label class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all"
-                       [class.border-emerald-500]="csvSeparator === '\t'"
-                       [class.bg-emerald-50]="csvSeparator === '\t'"
-                       [class.dark:bg-emerald-900/20]="csvSeparator === '\t'"
-                       [class.border-gray-200]="csvSeparator !== '\t'"
-                       [class.dark:border-slate-700]="csvSeparator !== '\t'">
-                  <input type="radio" name="csvSep" [value]="'\t'" [(ngModel)]="csvSeparator"
-                         class="text-emerald-600 focus:ring-emerald-500">
-                  <div>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Tabulación</span>
-                    <span class="text-gray-500 dark:text-gray-400 ml-2 font-mono">(Tab)</span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <!-- Dialog Footer -->
-            <div class="border-t border-gray-200 dark:border-slate-800 p-4 flex justify-end gap-3 bg-gray-50 dark:bg-slate-950">
-              <button (click)="cancelCsvImport()"
-                      class="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
-                Cancelar
-              </button>
-              <button (click)="confirmCsvSeparator()"
-                      class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2">
-                <lucide-angular name="check" [size]="16"></lucide-angular>
-                Continuar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  imports: [
+    NgClass, A11yModule, CdkOverlayOrigin, CdkConnectedOverlay, LucideAngularModule,
+    PageHeaderComponent, PanelSubcarterasComponent, TarjetaDirective, BotonDirective, NombrePropioPipe, ComboboxComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './header-configuration.component.html',
+  host: { class: 'cashi-pantalla @container/cab flex min-h-0 flex-1 flex-col gap-3' }
 })
 export class HeaderConfigurationComponent implements OnInit {
-  @ViewChild('downloadButton', { read: ElementRef }) downloadButton?: ElementRef;
+  private readonly cabeceras = inject(HeaderConfigurationService);
+  private readonly definicionesApi = inject(FieldDefinitionService);
+  private readonly clientesApi = inject(TypificationService);
+  private readonly carterasApi = inject(PortfolioService);
+  private readonly auth = inject(AuthService);
+  private readonly avisos = inject(ToastService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly nombrePropio = new NombrePropioPipe();
 
-  // Inyección del servicio de notificaciones
-  private notificationService = inject(NotificationService);
+  readonly ui = TUI;
+  readonly TIPOS = TIPOS;
+  readonly SEPARADORES = SEPARADORES;
+  readonly FORMATO_EJEMPLO = FORMATO_EJEMPLO;
+  readonly origenLegible = origenLegible;
+  readonly columnaEnTabla = columnaEnTabla;
 
-  tenants = signal<Tenant[]>([]);
-  portfolios = signal<Portfolio[]>([]);
-  subPortfolios = signal<SubPortfolio[]>([]);
-  fieldDefinitions = signal<FieldDefinition[]>([]);
-  previewHeaders = signal<HeaderConfigurationItem[]>([]);
-  showManualDialog = signal(false);
-  editingIndex = signal<number | null>(null);
-  downloadMenuOpen = signal(false);
-  showTransformSection = signal(false);
-  dropdownPosition = signal<{ top: number; left: number }>({ top: 120, left: 100 });
-  headersAreSaved = signal(false); // Indica si hay cabeceras guardadas en BD
-  isLoading = signal(false); // Estado de carga global
-  isSaving = signal(false); // Estado de guardado
+  /**
+   * Columnas de la cabecera y de cada fila: cabecera, revertir, tipo, formato, dato del sistema, obligatoria y
+   * editar. Con menos ancho se van el formato y luego el tipo y revertir.
+   */
+  readonly REJILLA = 'grid grid-cols-[minmax(0,1fr)_10rem_3.5rem_1.75rem] items-center gap-x-[clamp(.5rem,2cqw,1.25rem)] px-2 '
+    + '@min-[44rem]/tabla:grid-cols-[minmax(0,1fr)_auto_5.25rem_12rem_4.5rem_1.75rem] '
+    + '@min-[50rem]/tabla:grid-cols-[minmax(0,1fr)_auto_5.25rem_6.5rem_13.5rem_4.5rem_1.75rem]';
+  readonly LISTA = 'font-cashi m-0! h-auto! w-full rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-2.5! py-2! text-[.875rem]! leading-[1.5]! text-ellipsis text-foreground! outline-none '
+    + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)] disabled:opacity-60';
+  /** El tema antiguo fija con !important el aspecto de los campos: de ahí los `!`. */
+  readonly CAMPO = 'font-cashi m-0! w-full min-w-0 rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-3! py-2! text-[.875rem]! leading-[1.5]! text-foreground! outline-none '
+    + 'placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)] disabled:opacity-60';
+  /** Campos del editor y del modal: todos de 2.5rem, igual que el buscador del dato del sistema. */
+  readonly CAMPO_ED = 'font-cashi m-0! h-10! w-full min-w-0 rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-3! py-0! text-[.875rem]! leading-[1.5]! text-foreground! outline-none '
+    + 'placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)] disabled:opacity-60';
+  readonly LISTA_ED = 'font-cashi m-0! h-10! min-w-0 rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-2.5! py-0! text-[.875rem]! leading-[1.5]! text-ellipsis text-foreground! outline-none '
+    + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)] disabled:opacity-60';
+  readonly ETIQUETA = 'm-0! text-[.75rem]! leading-[1.5]! font-medium! text-foreground/80!';
+  readonly AYUDA = 'text-[.75rem] text-muted-foreground';
+  readonly INTERRUPTOR = "relative block h-[1.125rem] w-8 flex-none cursor-pointer justify-self-center rounded-full border-0! p-0! transition-colors duration-150 after:absolute after:top-0.5 after:left-0.5 after:size-3.5 after:rounded-full after:bg-white after:shadow-[0_1px_2px_rgb(0_0_0/.25)] after:transition-transform after:duration-150 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50";
+  readonly ICONO = 'grid size-7 flex-none cursor-pointer place-items-center rounded-lg border-0! bg-transparent p-0! text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground '
+    + 'aria-expanded:bg-muted aria-expanded:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring';
+  readonly PILL = 'rounded-full px-2.5 py-0.5 text-[.75rem] font-medium whitespace-nowrap text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]';
+  readonly CHIP = 'flex-none self-center rounded-full px-[.5625rem] py-[.1875rem] text-[.75rem] font-medium whitespace-nowrap text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]';
+  readonly FICHA = 'inline-flex items-center gap-1 rounded-md bg-muted py-[.1875rem] pr-1 pl-2 font-mono text-[.75rem] text-foreground';
+  readonly FICHA_X = 'grid size-4 cursor-pointer place-items-center rounded border-0! bg-transparent p-0! text-muted-foreground hover:text-(--ro)';
+  readonly PESTANA = 'font-cashi cursor-pointer rounded-md border-0 px-1.5 py-[.4375rem] text-[.875rem] font-medium transition-colors duration-150';
+  readonly PESTANA_ACTIVA = 'bg-(--seg-activo) text-foreground shadow-[0_1px_2px_rgb(0_0_0/.08)]';
+  readonly PESTANA_REPOSO = 'bg-transparent text-foreground/60';
+  readonly OPCION_MENU = 'font-cashi m-0! flex w-full cursor-pointer items-center gap-2 rounded-[.25rem] border-0! bg-transparent! px-2! py-1.5! text-left text-[.875rem] text-foreground! hover:bg-muted!';
+  readonly POSICIONES_MENU: ConnectedPosition[] = [
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 }
+  ];
 
-  // Signals para gestión de alias
-  showAliasDialog = signal(false);
-  selectedHeaderForAlias = signal<HeaderConfiguration | null>(null);
-  aliases = signal<HeaderAlias[]>([]);
-  newAliasName = signal('');
-  loadingAliases = signal(false);
-  savedHeaders = signal<HeaderConfiguration[]>([]); // Cabeceras guardadas en BD con sus IDs
+  readonly cargando = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly guardando = signal(false);
 
-  // Signals para selección de columnas al importar archivo
-  showColumnSelectionDialog = signal(false);
-  detectedColumns = signal<DetectedColumn[]>([]);
-  importFileName = signal('');
+  readonly ambito = signal<Ambito[]>([]);
+  readonly sub = signal<number | null>(null);
+  readonly carga = signal<Carga>('INICIAL');
+  readonly buscar = signal('');
+  readonly definiciones = signal<FieldDefinition[]>([]);
+  /** Cabeceras guardadas por subcartera (las dos cargas); null si no se pudieron leer. */
+  private readonly base = signal<Record<number, HeaderConfiguration[] | null>>({});
+  /** Lo editado sin guardar, por subcartera y carga. Lo que no está, no cambió. */
+  private readonly trabajo = signal<Record<string, Cabecera[]>>({});
+  private readonly aliasBase = signal<Record<number, HeaderAlias[]>>({});
+  /** Grupos desplegados (por tipo de dato) en la lista a la vista; al entrar, todos cerrados salvo las nuevas. */
+  private readonly desplegados = signal<string[]>([]);
+  /** Cabecera con la edición abierta debajo de su fila. */
+  readonly abierta = signal<number | null>(null);
+  /** Cambia cuando hay que volver a crear los campos de texto: solo toman el valor al nacer. */
+  readonly version = signal(0);
+  private siguienteClave = -1;
 
-  // Signals para importar desde otra subcartera
-  showImportFromSubPortfolioDialog = signal(false);
-  importPreviewResult = signal<ImportPreviewResult | null>(null);
-  importSourceSubPortfolioId = signal<number>(0);
-  importConflictResolution = signal<ConflictResolution>('SKIP');
-  selectedConflictsToReplace = signal<Set<string>>(new Set());
-  isLoadingImportPreview = signal(false);
-  isExecutingImport = signal(false);
-  allSubPortfolios = signal<SubPortfolio[]>([]); // Todas las subcarteras disponibles
+  // ---------------------------------------------------------------- Diálogos
+  /** Cabecera nueva en el modal: una que se está agregando o una nueva aún sin guardar que se edita. */
+  readonly form = signal<Cabecera | null>(null);
+  readonly formEsNueva = signal(true);
+  readonly menuPlantilla = signal(false);
+  readonly confirmarBorrado = signal<Cabecera[] | null>(null);
+  /** Dato nuevo del catálogo que se está creando desde el buscador de una fila. */
+  readonly datoNuevo = signal<{ fila: number; nombre: string; tipo: DataType } | null>(null);
+  readonly creandoDato = signal(false);
+  readonly separador = signal(';');
+  readonly archivoCsv = signal<File | null>(null);
+  readonly nombreArchivo = signal('');
+  readonly columnasArchivo = signal<ColumnaArchivo[] | null>(null);
+  readonly copiar = signal(false);
+  readonly copiarOrigen = signal(0);
+  readonly copiarVista = signal<ImportPreviewResult | null>(null);
+  readonly copiarCargando = signal(false);
 
-  // Signals para diálogo de separador CSV
-  showCsvSeparatorDialog = signal(false);
-  pendingCsvFile = signal<File | null>(null);
-
-  // Computed signal para mostrar solo campos disponibles (no usados)
-  availableFieldDefinitions = computed(() => {
-    const usedIds = this.previewHeaders().map(h => h.fieldDefinitionId);
-    const currentId = this.formData.fieldDefinitionId;
-    const editIdx = this.editingIndex();
-
-    return this.fieldDefinitions().filter(f => {
-      // Si estamos editando, permitir el campo actual
-      if (editIdx !== null && f.id === currentId) {
-        return true;
-      }
-      // Si no está en uso, mostrar
-      return !usedIds.includes(f.id);
-    });
+  // ---------------------------------------------------------------- Derivados
+  readonly actual = computed(() => this.ambito().find(a => a.subId === this.sub()) ?? null);
+  readonly clientes = computed(() => [...new Set(this.ambito().map(a => a.cliente))]);
+  readonly carteras = computed(() => [...new Set(this.ambito().filter(a => a.cliente === this.actual()?.cliente).map(a => a.cartera))]);
+  readonly deLaCartera = computed(() => this.ambito().filter(a => a.cliente === this.actual()?.cliente && a.cartera === this.actual()?.cartera));
+  readonly panelSubs = computed<SubcarteraPanel[]>(() => this.ambito().map(a => ({ id: a.subId, cliente: a.cliente, cartera: a.cartera, subcartera: a.subcartera })));
+  readonly etiquetasPanel = computed(() => {
+    const etiquetas: Record<number, EtiquetaSubcartera> = {};
+    for (const a of this.ambito()) {
+      if (!this.base()[a.subId]) continue;
+      const n = this.filasDe(a.subId, this.carga()).filter(c => !c.borrada).length;
+      etiquetas[a.subId] = { texto: `${n} ${n === 1 ? 'cabecera' : 'cabeceras'}`, tono: 'neutra' };
+    }
+    return etiquetas;
+  });
+  /** La subcartera elegida no se pudo leer. */
+  readonly sinDatos = computed(() => {
+    const id = this.sub();
+    return !!id && !this.cargando() && this.base()[id] === null;
   });
 
-  // Computed signal para campos agrupados por tabla asociada
-  groupedFieldDefinitions = computed(() => {
-    const fields = this.availableFieldDefinitions();
-    const groups: { table: string; label: string; fields: typeof fields }[] = [];
-
-    // Agrupar por tabla asociada
-    const clientesFields = fields.filter(f => f.associatedTable === 'clientes');
-    const contactosFields = fields.filter(f => f.associatedTable === 'metodos_contacto');
-    const otrosFields = fields.filter(f => !f.associatedTable || f.associatedTable === 'otros');
-
-    if (clientesFields.length > 0) {
-      groups.push({ table: 'clientes', label: '👤 Datos del Cliente', fields: clientesFields });
-    }
-    if (contactosFields.length > 0) {
-      groups.push({ table: 'metodos_contacto', label: '📞 Métodos de Contacto', fields: contactosFields });
-    }
-    if (otrosFields.length > 0) {
-      groups.push({ table: 'otros', label: '📋 Otros Campos', fields: otrosFields });
-    }
-
-    return groups;
+  /** Cabeceras de la subcartera y carga a la vista, con lo editado. */
+  readonly filas = computed(() => {
+    const id = this.sub();
+    return id ? this.filasDe(id, this.carga()) : [];
+  });
+  readonly cuenta = computed(() => {
+    const id = this.sub();
+    const n = (k: Carga) => (id ? this.filasDe(id, k).filter(c => !c.borrada).length : 0);
+    return { INICIAL: n('INICIAL'), ACTUALIZACION: n('ACTUALIZACION') };
+  });
+  readonly visibles = computed(() => {
+    const q = clave(this.buscar());
+    if (!q) return this.filas();
+    return this.filas().filter(c => clave(c.headerName).includes(q) || clave(c.displayLabel).includes(q)
+      || clave(this.definicion(c.fieldDefinitionId)?.fieldName).includes(q));
+  });
+  /** Las nuevas arriba; las demás, por tipo de dato. */
+  readonly grupos = computed(() => {
+    const filas = this.visibles(), desplegados = this.desplegados(), buscando = !!this.buscar().trim();
+    const grupos = [
+      { clave: 'NUEVA', titulo: 'Nuevas', filas: filas.filter(c => c.nueva) },
+      ...TIPOS.map(t => ({ clave: t.valor as string, titulo: t.grupo, filas: filas.filter(c => !c.nueva && c.dataType === t.valor) }))
+    ];
+    // Un tipo que no esté en la lista (por ejemplo, uno escrito a mano en la base) no se pierde.
+    const otras = filas.filter(c => !c.nueva && !TIPOS.some(t => t.valor === c.dataType));
+    if (otras.length) grupos.push({ clave: 'OTRO', titulo: 'Otros tipos', filas: otras });
+    return grupos.filter(g => g.filas.length).map(g => ({
+      ...g,
+      abierto: buscando || g.clave === 'NUEVA' || desplegados.includes(g.clave),
+      enlazadas: g.filas.filter(c => c.fieldDefinitionId).length
+    }));
   });
 
-  // Computed signal para cabeceras disponibles como campo origen (no transformadas)
-  availableSourceHeaders = computed(() => {
-    const currentHeaderName = this.formData.headerName;
-
-    return this.previewHeaders().filter(h => {
-      // No permitir usar campos transformados como origen (evitar cadena de transformaciones)
-      if (h.sourceField && h.regexPattern) {
-        return false;
-      }
-      // No permitir usar el mismo campo como origen
-      if (h.headerName === currentHeaderName) {
-        return false;
-      }
-      return true;
-    });
+  /** Opciones del buscador del dato del sistema, sin lo que depende de la fila. */
+  private readonly opcionesBase = computed(() => {
+    const definiciones = [...this.definiciones()].sort((a, b) => this.nombreDato(a).localeCompare(this.nombreDato(b), 'es'));
+    const grupo = (d: FieldDefinition) => GRUPOS_DATO.find(g => g.tabla && g.tabla === d.associatedTable)?.tabla ?? '';
+    return GRUPOS_DATO.flatMap(g => definiciones
+      .filter(d => grupo(d) === g.tabla)
+      .map(d => ({ valor: String(d.id), etiqueta: this.nombreDato(d), ayuda: this.tipoTexto(d.dataType), grupo: g.titulo } as OpcionCombobox)));
+  });
+  /** Opciones por fila: los datos que ya usa otra cabecera de la misma carga van deshabilitados. */
+  readonly opcionesPorFila = computed(() => {
+    const filas = this.filas().filter(c => !c.borrada), resultado = new Map<number, OpcionCombobox[]>();
+    for (const c of filas) resultado.set(c.clave, this.opcionesPara(c, filas));
+    return resultado;
+  });
+  readonly opcionesForm = computed(() => {
+    const f = this.form();
+    return f ? this.opcionesPara(f, this.filas().filter(c => !c.borrada)) : [];
   });
 
-  selectedTenantId = 0;
-  selectedPortfolioId = 0;
-  selectedSubPortfolioId = 0;
-  selectedLoadType: LoadType = 'ACTUALIZACION';
-  csvSeparator = ';';
+  /** Lo que falta para agregar la cabecera del modal; la primera se muestra al pie. */
+  readonly problemasForm = computed(() => {
+    const f = this.form();
+    if (!f) return [];
+    const mal: string[] = [], origenes = columnasOrigen(f.sourceField);
+    if (!f.headerName.trim()) mal.push('Escribe el nombre de la columna');
+    else if (!columnaEnTabla(f.headerName)) mal.push('El nombre no sirve como columna');
+    else if (this.filas().some(x => x.clave !== f.clave && !x.borrada && columnaEnTabla(x.headerName) === columnaEnTabla(f.headerName))) {
+      mal.push(`La columna ${f.headerName} ya existe en esta carga`);
+    }
+    if (!f.displayLabel.trim()) mal.push('Escribe la etiqueta visual');
+    if (origenes.length === 1 && !f.regexPattern.trim()) mal.push('Con una sola columna de origen, el regex es obligatorio');
+    if (f.sourceField.length > LARGO_MAX_ORIGEN) mal.push(`Las columnas de origen pasan de ${LARGO_MAX_ORIGEN} caracteres`);
+    return mal;
+  });
 
-  formData = {
-    id: undefined as number | undefined,      // ID si es existente
-    fieldDefinitionId: 0,
-    headerName: '',
-    dataType: 'TEXTO' as DataType,
-    displayLabel: '',
-    format: '',
-    required: false,
-    sourceField: '',
-    regexPattern: '',
-    hasData: false                            // Si tiene datos en la tabla
-  };
+  readonly cambios = computed(() => {
+    let n = 0;
+    for (const [k, filas] of Object.entries(this.trabajo())) {
+      const originales = this.originalesPorClave(k);
+      n += filas.filter(c => this.distinta(c, originales.get(c.clave))).length;
+    }
+    return n;
+  });
+  readonly problemas = computed(() => {
+    const mal: string[] = [];
+    for (const filas of Object.values(this.trabajo())) {
+      const vivas = filas.filter(c => !c.borrada);
+      for (const c of vivas) {
+        const nombre = c.headerName || 'una cabecera nueva';
+        if (c.nueva && !c.headerName.trim()) mal.push('Falta el nombre de una cabecera nueva');
+        else if (c.nueva && !columnaEnTabla(c.headerName)) mal.push(`El nombre ${c.headerName} no sirve como columna`);
+        if (!c.displayLabel.trim()) mal.push(`Falta la etiqueta de ${nombre}`);
+        if (c.nueva && c.headerName.trim() && vivas.some(x => x !== c && columnaEnTabla(x.headerName) === columnaEnTabla(c.headerName))) {
+          mal.push(`La columna ${c.headerName} ya existe en esta carga`);
+        }
+        if (columnasOrigen(c.sourceField).length === 1 && !c.regexPattern.trim()) mal.push(`Falta el regex de ${nombre}`);
+        if (c.nueva && c.sourceField.length > LARGO_MAX_ORIGEN) mal.push(`Las columnas de origen de ${nombre} pasan de ${LARGO_MAX_ORIGEN} caracteres`);
+      }
+    }
+    return [...new Set(mal)];
+  });
+  readonly resumen = computed(() => {
+    const n = this.cambios(), mal = this.problemas();
+    return mal.length ? mal[0] : n === 0 ? 'Sin cambios' : n === 1 ? '1 cambio sin guardar' : `${n} cambios sin guardar`;
+  });
 
-  constructor(
-    private headerConfigService: HeaderConfigurationService,
-    private fieldDefinitionService: FieldDefinitionService,
-    private typificationService: TypificationService,
-    private portfolioService: PortfolioService
-  ) {}
-
-  ngOnInit() {
-    this.loadTenants();
-    this.loadFieldDefinitions();
+  ngOnInit(): void {
+    this.cargarAmbito();
   }
 
-  loadFieldDefinitions() {
-    // Cargar solo campos asociados a clientes y métodos de contacto
-    this.fieldDefinitionService.getFieldsForCustomerSync().subscribe({
-      next: (definitions) => {
-        this.fieldDefinitions.set(definitions);
-      },
-      error: (error) => {
-        console.error('Error al cargar definiciones de campos:', error);
-        // Fallback: si el endpoint nuevo falla, intentar con el antiguo
-        this.fieldDefinitionService.getAllActive().subscribe({
-          next: (definitions) => {
-            this.fieldDefinitions.set(definitions);
-          },
-          error: (fallbackError) => {
-            if (fallbackError?.status === 0 || fallbackError?.status >= 500) {
-              this.notificationService.warning(
-                'Definiciones no disponibles',
-                'No se pudieron cargar las definiciones de campos predefinidos'
-              );
-            }
-          }
+  // ---------------------------------------------------------------- Carga
+
+  /** Clientes, carteras y subcarteras activas, el catálogo de datos y las cabeceras de cada subcartera. */
+  cargarAmbito(): void {
+    this.cargando.set(true);
+    this.error.set(null);
+    forkJoin({
+      clientes: this.clientesApi.getAllTenants(),
+      subs: this.carterasApi.getAllSubPortfolios(),
+      definiciones: this.definicionesApi.getAllActive().pipe(catchError(() => of([] as FieldDefinition[])))
+    }).pipe(
+      switchMap(({ clientes, subs, definiciones }) => {
+        const activos = clientes.filter(c => c.isActive !== false);
+        const carteras$ = activos.map(c => this.carterasApi.getPortfoliosByTenant(c.id).pipe(catchError(() => of([]))));
+        return (carteras$.length ? forkJoin(carteras$) : of([])).pipe(map(porCliente => ({ activos, porCliente, subs, definiciones })));
+      })
+    ).subscribe({
+      next: ({ activos, porCliente, subs, definiciones }) => {
+        const ambito: Ambito[] = [];
+        activos.forEach((c, i) => (porCliente[i] ?? []).filter(p => p.isActive !== false).forEach(p => subs
+          .filter(s => s.portfolioId === p.id && s.isActive !== false)
+          .forEach(s => ambito.push({ cliente: c.tenantName, cartera: p.portfolioName, subId: s.id, subcartera: s.subPortfolioName }))));
+        this.ambito.set(ambito);
+        this.definiciones.set(definiciones);
+        if (!ambito.length) {
+          this.cargando.set(false);
+          return;
+        }
+        this.leerCabeceras(ambito.map(a => a.subId), () => {
+          const conCabeceras = ambito.find(a => this.base()[a.subId]?.length);
+          this.sub.set((conCabeceras ?? ambito[0]).subId);
         });
-      }
-    });
-  }
-
-  loadTenants() {
-    this.typificationService.getAllTenants().subscribe({
-      next: (tenants) => {
-        this.tenants.set(tenants);
       },
-      error: (error) => {
-        console.error('Error loading tenants:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error('Error al cargar proveedores', friendlyMsg);
+      error: () => {
+        this.error.set('No se pudieron cargar las subcarteras');
+        this.cargando.set(false);
       }
     });
   }
 
-  onTenantChange() {
-    this.selectedPortfolioId = 0;
-    this.selectedSubPortfolioId = 0;
-    this.portfolios.set([]);
-    this.subPortfolios.set([]);
-    this.previewHeaders.set([]);
-
-    if (this.selectedTenantId > 0) {
-      this.loadPortfolios();
-    }
-  }
-
-  onPortfolioChange() {
-    this.selectedSubPortfolioId = 0;
-    this.subPortfolios.set([]);
-    this.previewHeaders.set([]);
-
-    if (this.selectedPortfolioId > 0) {
-      this.loadSubPortfolios();
-    }
-  }
-
-  onSubPortfolioChange() {
-    this.previewHeaders.set([]);
-    this.headersAreSaved.set(false);
-    if (this.selectedSubPortfolioId > 0) {
-      this.loadExistingHeaders();
-    }
-  }
-
-  onLoadTypeChange() {
-    this.previewHeaders.set([]);
-    this.headersAreSaved.set(false);
-    if (this.selectedSubPortfolioId > 0) {
-      this.loadExistingHeaders();
-    }
-  }
-
-  loadPortfolios() {
-    this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
-      next: (portfolios) => {
-        this.portfolios.set(portfolios);
-      },
-      error: (error) => {
-        console.error('Error loading portfolios:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error('Error al cargar carteras', friendlyMsg);
-      }
-    });
-  }
-
-  loadSubPortfolios() {
-    this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
-      next: (subPortfolios) => {
-        this.subPortfolios.set(subPortfolios);
-      },
-      error: (error) => {
-        console.error('Error loading subportfolios:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error('Error al cargar subcarteras', friendlyMsg);
-      }
-    });
-  }
-
-  loadExistingHeaders() {
-    this.headerConfigService.getBySubPortfolioAndLoadType(this.selectedSubPortfolioId, this.selectedLoadType).subscribe({
-      next: (headers) => {
-        // Guardar cabeceras completas con IDs para gestión de alias
-        this.savedHeaders.set(headers);
-
-        // Preservar el ID para saber cuáles ya existen en BD
-        const items: HeaderConfigurationItem[] = headers.map(h => ({
-          id: h.id,                    // Preservar ID
-          fieldDefinitionId: h.fieldDefinitionId,
-          headerName: h.headerName,
-          dataType: h.dataType,
-          displayLabel: h.displayLabel,
-          format: h.format,
-          required: h.required,
-          sourceField: h.sourceField,
-          regexPattern: h.regexPattern,
-          hasData: true               // Asumimos que tienen datos si ya existen
-        }));
-        this.previewHeaders.set(items);
-        this.headersAreSaved.set(headers.length > 0);
-      },
-      error: (error) => {
-        console.error('Error loading headers:', error);
-        this.headersAreSaved.set(false);
-        this.savedHeaders.set([]);
-        // 404 significa que no hay cabeceras configuradas - no es un error
-        if (error?.status !== 404) {
-          const friendlyMsg = this.getFriendlyErrorMessage(error);
-          this.notificationService.error('Error al cargar cabeceras', friendlyMsg);
-        }
-      }
-    });
-  }
-
-  openManualDialog() {
-    this.editingIndex.set(null);
-    this.formData = {
-      id: undefined,
-      fieldDefinitionId: 0,
-      headerName: '',
-      dataType: 'TEXTO',
-      displayLabel: '',
-      format: '',
-      required: false,
-      sourceField: '',
-      regexPattern: '',
-      hasData: false
-    };
-    this.showTransformSection.set(false);
-    this.showManualDialog.set(true);
-  }
-
-  onFieldDefinitionSelect() {
-    const selectedId = this.formData.fieldDefinitionId;
-    if (selectedId === 0) {
-      // Si se des-selecciona, solo heredar el tipo de dato como TEXTO
-      this.formData.dataType = 'TEXTO';
-      return;
-    }
-
-    const selectedField = this.fieldDefinitions().find(f => f.id === selectedId);
-    if (selectedField) {
-      // Heredar solo el tipo de dato del catálogo
-      this.formData.dataType = selectedField.dataType;
-    }
-  }
-
-  getSelectedFieldDefinition() {
-    const selectedId = this.formData.fieldDefinitionId;
-    if (selectedId === 0) return null;
-    return this.fieldDefinitions().find(f => f.id === selectedId);
-  }
-
-  closeManualDialog() {
-    this.showManualDialog.set(false);
-    this.editingIndex.set(null);
-  }
-
-  canSaveManualHeader(): boolean {
-    // Validar campos básicos
-    if (!this.formData.headerName.trim() || !this.formData.displayLabel.trim()) {
-      return false;
-    }
-
-    // Si hay campo origen, el regex es obligatorio
-    if (this.formData.sourceField && this.formData.sourceField.trim() !== '') {
-      if (!this.formData.regexPattern || this.formData.regexPattern.trim() === '') {
-        return false;
-      }
-    }
-
-    // Si no hay campo de BD seleccionado (campo personalizado), debe tener tipo de dato
-    if (this.formData.fieldDefinitionId === 0) {
-      return !!this.formData.dataType && ['TEXTO', 'NUMERICO', 'FECHA', 'BOOLEANO'].includes(this.formData.dataType);
-    }
-
-    // Si hay campo de BD seleccionado, está válido
-    return true;
-  }
-
-  saveManualHeader() {
-    if (!this.canSaveManualHeader()) return;
-
-    const editIdx = this.editingIndex();
-
-    // Crear el objeto de cabecera preservando id y hasData si existen
-    const newHeader: HeaderConfigurationItem = {
-      id: this.formData.id,                   // Preservar ID si es cabecera existente
-      fieldDefinitionId: this.formData.fieldDefinitionId,
-      headerName: this.formData.headerName.trim(),
-      dataType: this.formData.dataType,
-      displayLabel: this.formData.displayLabel.trim(),
-      format: this.formData.format?.trim() || undefined,
-      required: this.formData.required,
-      sourceField: this.formData.sourceField?.trim() || undefined,
-      regexPattern: this.formData.regexPattern?.trim() || undefined,
-      hasData: this.formData.hasData          // Preservar indicador de datos
-    };
-
-    if (editIdx !== null) {
-      // Editando - actualizar en memoria
-      const currentHeaders = [...this.previewHeaders()];
-      currentHeaders[editIdx] = newHeader;
-      this.previewHeaders.set(currentHeaders);
-    } else {
-      // Agregando nuevo - solo agregar a memoria local (NO enviar al backend)
-      // El envío al backend se hace cuando el usuario presiona "Guardar"
-      const currentHeaders = [...this.previewHeaders()];
-      currentHeaders.push(newHeader);
-      this.previewHeaders.set(currentHeaders);
-    }
-
-    this.closeManualDialog();
-  }
-
-  editPreviewHeader(index: number) {
-    const header = this.previewHeaders()[index];
-    this.editingIndex.set(index);
-    this.formData = {
-      id: header.id,                          // Preservar ID si existe
-      fieldDefinitionId: header.fieldDefinitionId ?? 0,
-      headerName: header.headerName,
-      dataType: header.dataType,
-      displayLabel: header.displayLabel,
-      format: header.format || '',
-      required: header.required || false,
-      sourceField: header.sourceField || '',
-      regexPattern: header.regexPattern || '',
-      hasData: header.hasData || false        // Preservar indicador de datos
-    };
-    // Expandir sección de transformación si tiene datos
-    this.showTransformSection.set(!!(header.sourceField || header.regexPattern));
-    this.showManualDialog.set(true);
-  }
-
-  async removePreviewHeader(index: number) {
-    const header = this.previewHeaders()[index];
-
-    // Si la cabecera existe en BD, advertir
-    if (header.id) {
-      const confirmed = await this.notificationService.confirm({
-        title: 'Eliminar cabecera',
-        message: `La cabecera "${header.headerName}" ya existe en la base de datos.\n\nSi la tabla tiene datos, la eliminación será rechazada por el servidor.`,
-        confirmText: 'Eliminar',
-        cancelText: 'Cancelar',
-        type: 'warning'
+  private leerCabeceras(ids: number[], luego?: () => void): void {
+    this.cargando.set(true);
+    forkJoin(ids.map(id => this.cabeceras.getBySubPortfolio(id).pipe(
+      catchError(e => of(e?.status === 404 ? [] : null))
+    ))).subscribe(listas => {
+      this.base.update(b => {
+        const nueva = { ...b };
+        ids.forEach((id, i) => (nueva[id] = listas[i]));
+        return nueva;
       });
-      if (!confirmed) return;
-    }
-
-    const currentHeaders = [...this.previewHeaders()];
-    currentHeaders.splice(index, 1);
-    this.previewHeaders.set(currentHeaders);
-    this.notificationService.info('Cabecera removida', 'Recuerde guardar los cambios');
+      this.cargando.set(false);
+      luego?.();
+    });
   }
 
-  async clearAll() {
-    const hasSavedHeaders = this.headersAreSaved();
-
-    const confirmed = await this.notificationService.confirm({
-      title: hasSavedHeaders ? 'Eliminar todas las cabeceras' : 'Limpiar vista',
-      message: hasSavedHeaders
-        ? 'Esto eliminará las cabeceras guardadas en la base de datos. Esta acción no se puede deshacer.'
-        : '¿Está seguro de limpiar todas las cabeceras de la vista?',
-      confirmText: hasSavedHeaders ? 'Eliminar todo' : 'Limpiar',
-      cancelText: 'Cancelar',
-      type: hasSavedHeaders ? 'danger' : 'warning'
-    });
-
-    if (!confirmed) return;
-
-    // Si hay cabeceras guardadas en BD, eliminarlas
-    if (hasSavedHeaders) {
-      this.isLoading.set(true);
-      this.headerConfigService.deleteAllBySubPortfolioAndLoadType(
-        this.selectedSubPortfolioId,
-        this.selectedLoadType
-      ).subscribe({
-        next: () => {
-          this.previewHeaders.set([]);
-          this.savedHeaders.set([]);
-          this.headersAreSaved.set(false);
-          this.isLoading.set(false);
-          this.notificationService.success('Cabeceras eliminadas', 'Todas las cabeceras han sido eliminadas exitosamente');
-        },
-        error: (error) => {
-          this.isLoading.set(false);
-          // Manejar errores de forma más amigable
-          if (error?.status === 404) {
-            // Las cabeceras ya no existen en el servidor - limpiar la vista local
-            this.previewHeaders.set([]);
-            this.savedHeaders.set([]);
-            this.headersAreSaved.set(false);
-            this.notificationService.info(
-              'Cabeceras no encontradas',
-              'Las cabeceras ya no existen en el sistema. La vista ha sido actualizada.'
-            );
-            return;
-          }
-          // Para 409 (Conflict), mostrar el mensaje del backend
-          if (error?.status === 409) {
-            const backendMessage = error?.error?.message || 'Las cabeceras tienen datos asociados y no pueden eliminarse.';
-            this.notificationService.warning('No se pueden eliminar', backendMessage);
-            return;
-          }
-          console.error('Error al eliminar cabeceras:', error);
-          // Mostrar mensaje de error más amigable
-          const friendlyMessage = this.getFriendlyErrorMessage(error);
-          this.notificationService.error('Error al eliminar', friendlyMessage);
-        }
-      });
+  reintentar(): void {
+    const id = this.sub();
+    if (this.error() || !id) {
+      this.cargarAmbito();
     } else {
-      // Solo limpiar la vista local
-      this.previewHeaders.set([]);
-      this.notificationService.info('Vista limpiada', 'Se han removido todas las cabeceras de la vista');
+      this.leerCabeceras([id]);
     }
   }
 
-  async confirmConfiguration() {
-    if (this.previewHeaders().length === 0) {
-      this.notificationService.warning('Sin cabeceras', 'No hay cabeceras para guardar');
+  // ---------------------------------------------------------------- Filtros
+
+  elegirCliente(cliente: string): void {
+    const a = this.ambito().find(x => x.cliente === cliente);
+    if (a) this.elegirSub(a.subId);
+  }
+
+  elegirCartera(cartera: string): void {
+    const a = this.ambito().find(x => x.cliente === this.actual()?.cliente && x.cartera === cartera);
+    if (a) this.elegirSub(a.subId);
+  }
+
+  elegirSub(id: number | string): void {
+    this.sub.set(Number(id));
+    this.abierta.set(null);
+    this.buscar.set('');
+    this.desplegados.set([]);
+    this.version.update(v => v + 1);
+  }
+
+  elegirCarga(carga: Carga): void {
+    this.carga.set(carga);
+    this.desplegados.set([]);
+    this.abierta.set(null);
+    this.version.update(v => v + 1);
+  }
+
+  escribirBusqueda(texto: string): void {
+    this.buscar.set(texto);
+    this.abierta.set(null);
+  }
+
+  alternarGrupo(claveGrupo: string): void {
+    if (claveGrupo === 'NUEVA') return;
+    this.desplegados.update(d => d.includes(claveGrupo) ? d.filter(x => x !== claveGrupo) : [...d, claveGrupo]);
+  }
+
+  // ---------------------------------------------------------------- Lectura de filas
+
+  private llave(sub: number, carga: LoadType): string {
+    return `${sub}:${carga}`;
+  }
+
+  private originales(sub: number, carga: LoadType): Cabecera[] {
+    return (this.base()[sub] ?? []).filter(h => h.loadType === carga).map(h => ({
+      clave: h.id,
+      headerName: h.headerName,
+      displayLabel: h.displayLabel ?? '',
+      dataType: h.dataType,
+      format: h.format ?? '',
+      required: !!h.required,
+      fieldDefinitionId: h.fieldDefinitionId || 0,
+      sourceField: h.sourceField ?? '',
+      regexPattern: h.regexPattern ?? ''
+    }));
+  }
+
+  private originalesPorClave(k: string): Map<number, Cabecera> {
+    const [sub, carga] = k.split(':');
+    return new Map(this.originales(Number(sub), carga as LoadType).map(o => [o.clave, o]));
+  }
+
+  private filasDe(sub: number, carga: LoadType): Cabecera[] {
+    return this.trabajo()[this.llave(sub, carga)] ?? this.originales(sub, carga);
+  }
+
+  private aliasOriginales(id: number): string[] {
+    return (this.aliasBase()[id] ?? []).filter(a => !a.isPrincipal).map(a => a.alias);
+  }
+
+  private distinta(c: Cabecera, o: Cabecera | undefined): boolean {
+    if (c.nueva || c.borrada || !o) return !(c.nueva && c.borrada);
+    return c.displayLabel.trim() !== o.displayLabel.trim()
+      || c.format.trim() !== o.format.trim()
+      || c.required !== o.required
+      || c.fieldDefinitionId !== o.fieldDefinitionId
+      || c.regexPattern.trim() !== o.regexPattern.trim()
+      || (c.alias !== undefined && !mismosAlias(c.alias, this.aliasOriginales(c.clave)));
+  }
+
+  cambiada(c: Cabecera): boolean {
+    const id = this.sub();
+    if (!id || c.nueva) return false;
+    return this.distinta(c, this.originales(id, this.carga()).find(o => o.clave === c.clave));
+  }
+
+  /** Alias a la vista; null mientras no se hayan leído. */
+  aliasDe(c: Cabecera): string[] | null {
+    if (c.alias) return c.alias;
+    if (c.nueva) return [];
+    return this.aliasBase()[c.clave] ? this.aliasOriginales(c.clave) : null;
+  }
+
+  definicion(id: number): FieldDefinition | undefined {
+    return id ? this.definiciones().find(d => d.id === id) : undefined;
+  }
+
+  nombreDato(d: FieldDefinition): string {
+    return this.nombrePropio.transform(d.fieldName);
+  }
+
+  tipoTexto(tipo: string): string {
+    return TIPOS.find(t => t.valor === tipo)?.texto ?? this.nombrePropio.transform(tipo);
+  }
+
+  /** Parte del id de los campos del editor: las nuevas tienen clave negativa. */
+  idDom(c: Cabecera): string {
+    return c.clave < 0 ? `n${-c.clave}` : String(c.clave);
+  }
+
+  valorDato(c: Cabecera): string | null {
+    return c.fieldDefinitionId ? String(c.fieldDefinitionId) : null;
+  }
+
+  /** Columnas del archivo que pueden armar una cabecera nueva: las que vienen tal cual. */
+  columnasParaOrigen(c: Cabecera): string[] {
+    const elegidas = columnasOrigen(c.sourceField);
+    return this.filas().filter(x => x !== c && !x.borrada && !x.nueva && !columnasOrigen(x.sourceField).length && x.headerName
+      && !elegidas.includes(x.headerName)).map(x => x.headerName);
+  }
+
+  origenes(c: Cabecera): string[] {
+    return columnasOrigen(c.sourceField);
+  }
+
+  private opcionesPara(c: Cabecera, vivas: Cabecera[]): OpcionCombobox[] {
+    const usados = new Map(vivas.filter(x => x.clave !== c.clave && x.fieldDefinitionId).map(x => [String(x.fieldDefinitionId), x.headerName || 'una cabecera nueva']));
+    const propias = this.opcionesBase().map(o => usados.has(o.valor) ? { ...o, deshabilitada: true, ayuda: 'en ' + usados.get(o.valor) } : o);
+    const sugeridas = this.sugeridos(c).filter(d => !usados.has(String(d.id)) && d.id !== c.fieldDefinitionId)
+      .map(d => ({ valor: String(d.id), etiqueta: this.nombreDato(d), ayuda: this.tipoTexto(d.dataType), grupo: 'Sugerido por el nombre', sugerida: true }));
+    const quitar: OpcionCombobox[] = c.fieldDefinitionId ? [{ valor: '0', etiqueta: 'Sin dato del sistema' }] : [];
+    return [...quitar, ...sugeridas, ...propias];
+  }
+
+  /** Datos del catálogo que se parecen al nombre o a la etiqueta de la cabecera. */
+  private sugeridos(c: Cabecera): FieldDefinition[] {
+    const n = clave(c.headerName), e = clave(c.displayLabel);
+    if (!n && !e) return [];
+    return this.definiciones().filter(d => {
+      const cod = clave(d.fieldCode), nom = clave(d.fieldName);
+      return (n && (cod === n || nom === n || (n.length > 4 && (cod.includes(n) || (cod.length > 4 && n.includes(cod))))))
+        || (e && (nom === e || cod === e));
+    }).slice(0, 3);
+  }
+
+  // ---------------------------------------------------------------- Edición
+
+  /** Cambia la cabecera del modal si es esa; si no, la fila de la lista. */
+  private cambiar(c: Cabecera, cambios: Partial<Cabecera>): void {
+    if (this.form()?.clave === c.clave) {
+      this.form.update(f => f ? { ...f, ...cambios } : f);
       return;
     }
+    const id = this.sub();
+    if (!id) return;
+    const k = this.llave(id, this.carga());
+    const filas = this.filasDe(id, this.carga()).map(x => x.clave === c.clave ? { ...x, ...cambios } : x);
+    this.trabajo.update(t => ({ ...t, [k]: filas }));
+  }
 
-    const currentHeaders = this.previewHeaders();
-
-    // Clasificar cabeceras
-    const newHeaders = currentHeaders.filter(h => !h.id);
-    const savedById = new Map(this.savedHeaders().map(header => [header.id, header]));
-    const existingHeaders = currentHeaders.filter(header =>
-      header.id !== undefined && this.hasPersistedHeaderChanges(header, savedById.get(header.id))
-    );
-    const currentIds = new Set(currentHeaders.filter(h => h.id).map(h => h.id));
-    const headersToDelete = this.savedHeaders().filter(h => !currentIds.has(h.id));
-
-    // Si no hay cambios
-    if (newHeaders.length === 0 && existingHeaders.length === 0 && headersToDelete.length === 0) {
-      this.notificationService.info('Sin cambios', 'No hay cambios pendientes para guardar');
+  editar(c: Cabecera): void {
+    if (c.nueva) {
+      this.formEsNueva.set(false);
+      this.form.set({ ...c, alias: [...(c.alias ?? [])] });
       return;
     }
-
-    // Preparar detalles para el diálogo
-    const details: string[] = [];
-    if (newHeaders.length > 0) details.push(`${newHeaders.length} cabecera(s) nueva(s)`);
-    if (existingHeaders.length > 0) details.push(`${existingHeaders.length} cabecera(s) actualizada(s)`);
-    if (headersToDelete.length > 0) {
-      details.push(`${headersToDelete.length} cabecera(s) a eliminar:`);
-      headersToDelete.forEach(h => details.push(`  • ${h.headerName}`));
+    const abrir = this.abierta() !== c.clave;
+    this.abierta.set(abrir ? c.clave : null);
+    if (abrir && !c.nueva && !this.aliasBase()[c.clave]) {
+      this.cabeceras.getAliases(c.clave).pipe(catchError(() => of([] as HeaderAlias[])))
+        .subscribe(alias => this.aliasBase.update(a => ({ ...a, [c.clave]: alias })));
     }
+  }
 
-    const confirmed = await this.notificationService.confirm({
-      title: 'Guardar configuración',
-      message: headersToDelete.length > 0
-        ? 'Se guardarán los cambios en la configuración de cabeceras.\n\nSi alguna cabecera a eliminar tiene datos, la eliminación fallará.'
-        : 'Se guardarán los cambios en la configuración de cabeceras.',
-      confirmText: 'Guardar',
-      cancelText: 'Cancelar',
-      type: headersToDelete.length > 0 ? 'warning' : 'info',
-      details
+  escribir(c: Cabecera, campo: 'displayLabel' | 'format' | 'regexPattern', valor: string): void {
+    this.cambiar(c, { [campo]: valor });
+  }
+
+  escribirNombre(c: Cabecera, valor: string): void {
+    this.cambiar(c, { headerName: valor.trim().toUpperCase().replace(/\s+/g, '_') });
+  }
+
+  elegirTipo(c: Cabecera, tipo: DataType): void {
+    this.cambiar(c, { dataType: tipo });
+  }
+
+  alternarObligatoria(c: Cabecera): void {
+    this.cambiar(c, { required: !c.required });
+  }
+
+  elegirDato(c: Cabecera, valor: string): void {
+    this.cambiar(c, { fieldDefinitionId: Number(valor) || 0 });
+  }
+
+  agregarAlias(c: Cabecera, campo: HTMLInputElement): void {
+    const alias = campo.value.trim(), actuales = this.aliasDe(c) ?? [];
+    if (!alias) return;
+    if (clave(alias) === clave(c.headerName) || actuales.some(a => clave(a) === clave(alias))) {
+      this.avisos.warning(`«${alias}» ya es un nombre de esta cabecera`);
+      return;
+    }
+    this.cambiar(c, { alias: [...actuales, alias] });
+    campo.value = '';
+  }
+
+  quitarAlias(c: Cabecera, alias: string): void {
+    this.cambiar(c, { alias: (this.aliasDe(c) ?? []).filter(a => a !== alias) });
+  }
+
+  agregarOrigen(c: Cabecera, columna: string): void {
+    if (!columna) return;
+    this.cambiar(c, { sourceField: [...this.origenes(c), columna].join(SEPARADOR_ORIGEN) });
+  }
+
+  quitarOrigen(c: Cabecera, columna: string): void {
+    const quedan = this.origenes(c).filter(x => x !== columna);
+    this.cambiar(c, { sourceField: quedan.join(SEPARADOR_ORIGEN), regexPattern: quedan.length ? c.regexPattern : '' });
+  }
+
+  revertir(c: Cabecera): void {
+    const id = this.sub();
+    const o = id ? this.originales(id, this.carga()).find(x => x.clave === c.clave) : undefined;
+    if (!o) return;
+    this.cambiar(c, { ...o, alias: undefined, borrada: false });
+    this.version.update(v => v + 1);
+  }
+
+  /** Una nueva se quita sin más; una guardada queda marcada y se elimina al guardar. */
+  alternarBorrada(c: Cabecera): void {
+    const id = this.sub();
+    if (!id) return;
+    if (c.nueva) {
+      const k = this.llave(id, this.carga());
+      this.trabajo.update(t => ({ ...t, [k]: this.filasDe(id, this.carga()).filter(x => x.clave !== c.clave) }));
+      this.abierta.set(null);
+      return;
+    }
+    this.cambiar(c, { borrada: !c.borrada });
+    if (!c.borrada) this.abierta.set(null);
+  }
+
+  agregar(): void {
+    this.formEsNueva.set(true);
+    this.form.set({
+      clave: this.siguienteClave--, headerName: '', displayLabel: '', dataType: 'TEXTO', format: '', required: false,
+      fieldDefinitionId: 0, sourceField: '', regexPattern: '', alias: [], nueva: true
     });
-
-    if (!confirmed) return;
-
-    this.saveConfigurationWithSmartLogic(newHeaders, existingHeaders, headersToDelete);
   }
 
-  private hasPersistedHeaderChanges(
-    current: HeaderConfigurationItem,
-    saved: HeaderConfiguration | undefined
-  ): boolean {
-    if (!saved) return true;
-
-    return current.displayLabel.trim() !== saved.displayLabel.trim()
-      || this.normalizeOptionalValue(current.format) !== this.normalizeOptionalValue(saved.format)
-      || !!current.required !== !!saved.required
-      || this.normalizeOptionalValue(current.regexPattern) !== this.normalizeOptionalValue(saved.regexPattern);
+  /** Pasa la cabecera del modal a la lista, como nueva; se crea al guardar los cambios. */
+  confirmarForm(): void {
+    const f = this.form(), id = this.sub();
+    if (!f || !id || this.problemasForm().length) return;
+    const cabecera = { ...f, headerName: f.headerName.trim(), displayLabel: f.displayLabel.trim() };
+    const filas = this.filasDe(id, this.carga()), k = this.llave(id, this.carga());
+    const lista = filas.some(x => x.clave === f.clave) ? filas.map(x => x.clave === f.clave ? cabecera : x) : [cabecera, ...filas];
+    this.trabajo.update(t => ({ ...t, [k]: lista }));
+    this.form.set(null);
+    this.buscar.set('');
   }
 
-  private normalizeOptionalValue(value: string | undefined): string | undefined {
-    const normalized = value?.trim();
-    return normalized ? normalized : undefined;
+  /** Quita de la lista la cabecera nueva que se estaba editando en el modal. */
+  quitarForm(): void {
+    const f = this.form();
+    this.form.set(null);
+    const fila = f && this.filas().find(x => x.clave === f.clave);
+    if (fila) this.alternarBorrada(fila);
   }
 
-  private async saveConfigurationWithSmartLogic(
-    newHeaders: HeaderConfigurationItem[],
-    existingHeaders: HeaderConfigurationItem[],
-    headersToDelete: HeaderConfiguration[]
-  ) {
-    this.isSaving.set(true);
-    const errors: string[] = [];
-    const deletionErrors: string[] = [];
+  descartar(): void {
+    this.trabajo.set({});
+    this.abierta.set(null);
+    this.version.update(v => v + 1);
+  }
+
+  // ---------------------------------------------------------------- Dato nuevo del catálogo
+
+  abrirDatoNuevo(c: Cabecera, texto: string): void {
+    const nombre = texto.trim();
+    this.datoNuevo.set({ fila: c.clave, nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1), tipo: c.dataType });
+  }
+
+  async crearDato(nombre: string, tipo: DataType): Promise<void> {
+    const pedido = this.datoNuevo();
+    if (!pedido || !nombre.trim()) return;
+    this.creandoDato.set(true);
+    try {
+      const creado = await firstValueFrom(this.definicionesApi.create(nombre.trim(), tipo));
+      this.definiciones.update(d => [...d, creado]);
+      const fila = this.form()?.clave === pedido.fila ? this.form() : this.filas().find(c => c.clave === pedido.fila);
+      if (fila) this.cambiar(fila, { fieldDefinitionId: creado.id });
+      this.datoNuevo.set(null);
+      this.avisos.success(`Dato «${creado.fieldName}» agregado al catálogo`);
+    } catch (e) {
+      this.avisos.error(this.mensajeError(e));
+    } finally {
+      this.creandoDato.set(false);
+    }
+  }
+
+  // ---------------------------------------------------------------- Guardar
+
+  /** Eliminaciones pendientes, para confirmarlas antes de guardar. */
+  private porBorrar(): Cabecera[] {
+    return Object.values(this.trabajo()).flat().filter(c => c.borrada && !c.nueva);
+  }
+
+  async guardar(confirmado = false): Promise<void> {
+    if (!this.cambios() || this.problemas().length || this.guardando()) return;
+    const borrar = this.porBorrar();
+    if (borrar.length && !confirmado) {
+      this.confirmarBorrado.set(borrar);
+      return;
+    }
+    this.confirmarBorrado.set(null);
+    this.guardando.set(true);
+    const errores: string[] = [], tocadas = new Set<number>(), n = this.cambios();
+    const usuario = this.auth.getCurrentUser()?.username || 'system';
 
     try {
-      // 1. Intentar eliminar cabeceras removidas (una por una para capturar errores individuales)
-      for (const header of headersToDelete) {
-        try {
-          await firstValueFrom(this.headerConfigService.delete(header.id));
-        } catch (error: any) {
-          // Si es 404, la cabecera ya no existe - no es un error real
-          if (error?.status === 404) {
-            continue; // La cabecera ya fue eliminada, continuar con las demás
+      for (const [k, filas] of Object.entries(this.trabajo())) {
+        const [subTxt, carga] = k.split(':'), sub = Number(subTxt), originales = this.originalesPorClave(k);
+        const cambiadas = filas.filter(c => this.distinta(c, originales.get(c.clave)));
+        if (!cambiadas.length) continue;
+        tocadas.add(sub);
+
+        for (const c of cambiadas.filter(x => x.borrada && !x.nueva)) {
+          await this.intentar(errores, c.headerName, this.cabeceras.delete(c.clave), true);
+        }
+
+        // Un dato que pasa de una cabecera a otra se suelta antes: el servidor no deja enlazarlo a dos.
+        const actualizar = cambiadas.filter(x => !x.borrada && !x.nueva);
+        for (const c of actualizar) {
+          const o = originales.get(c.clave)!;
+          const loTomaOtra = o.fieldDefinitionId && c.fieldDefinitionId !== o.fieldDefinitionId
+            && filas.some(x => x !== c && !x.borrada && x.fieldDefinitionId === o.fieldDefinitionId);
+          if (loTomaOtra) await this.intentar(errores, c.headerName, this.cabeceras.update(c.clave, { fieldDefinitionId: 0 }));
+        }
+        for (const c of actualizar) {
+          const o = originales.get(c.clave)!, pedido: UpdateHeaderConfigurationRequest = {};
+          if (c.displayLabel.trim() !== o.displayLabel.trim()) pedido.displayLabel = c.displayLabel.trim();
+          if (c.format.trim() !== o.format.trim()) pedido.format = c.format.trim();
+          if (c.required !== o.required) pedido.required = c.required;
+          if (c.fieldDefinitionId !== o.fieldDefinitionId) pedido.fieldDefinitionId = c.fieldDefinitionId;
+          if (c.regexPattern.trim() !== o.regexPattern.trim()) pedido.regexPattern = c.regexPattern.trim();
+          if (Object.keys(pedido).length) await this.intentar(errores, c.headerName, this.cabeceras.update(c.clave, pedido));
+          if (c.alias) await this.aplicarAlias(c.clave, c.headerName, c.alias, this.aliasBase()[c.clave] ?? [], usuario, errores);
+        }
+
+        const nuevas = cambiadas.filter(x => x.nueva && !x.borrada);
+        if (nuevas.length) {
+          try {
+            const creadas = await firstValueFrom(this.cabeceras.createBulk({
+              subPortfolioId: sub,
+              loadType: carga as LoadType,
+              headers: nuevas.map(c => ({
+                fieldDefinitionId: c.fieldDefinitionId,
+                headerName: c.headerName.trim(),
+                dataType: c.dataType,
+                displayLabel: c.displayLabel.trim(),
+                format: c.format.trim() || undefined,
+                required: c.required,
+                sourceField: c.sourceField.trim() || undefined,
+                regexPattern: c.regexPattern.trim() || undefined
+              }))
+            }));
+            for (const c of nuevas.filter(x => x.alias?.length)) {
+              const h = creadas.find(x => clave(x.headerName) === clave(c.headerName));
+              if (h) await this.aplicarAlias(h.id, c.headerName, c.alias!, [], usuario, errores);
+            }
+          } catch (e) {
+            errores.push(`Cabeceras nuevas: ${this.mensajeError(e)}`);
           }
-          // Para 409 (Conflict), usar el mensaje del backend que indica que tiene datos
-          const errorMsg = error?.error?.message || this.getFriendlyErrorMessage(error);
-          deletionErrors.push(`${header.headerName}: ${errorMsg}`);
         }
       }
-
-      // 2. Actualizar cabeceras existentes
-      for (const header of existingHeaders) {
-        if (!header.id) continue;
-        try {
-          await firstValueFrom(this.headerConfigService.update(header.id, {
-            displayLabel: header.displayLabel,
-            format: header.format,
-            required: header.required,
-            regexPattern: header.regexPattern
-          }));
-        } catch (error: any) {
-          const friendlyMsg = this.getFriendlyErrorMessage(error);
-          errors.push(`${header.headerName}: ${friendlyMsg}`);
-        }
-      }
-
-      // 3. Crear nuevas cabeceras
-      if (newHeaders.length > 0) {
-        try {
-          const request = {
-            subPortfolioId: this.selectedSubPortfolioId,
-            loadType: this.selectedLoadType,
-            headers: newHeaders.map(h => ({
-              fieldDefinitionId: h.fieldDefinitionId,
-              headerName: h.headerName,
-              dataType: h.dataType,
-              displayLabel: h.displayLabel,
-              format: h.format,
-              required: h.required,
-              sourceField: h.sourceField,
-              regexPattern: h.regexPattern
-            }))
-          };
-          await firstValueFrom(this.headerConfigService.createBulk(request));
-        } catch (error: any) {
-          const friendlyMsg = this.getFriendlyErrorMessage(error);
-          errors.push(`Creación de cabeceras: ${friendlyMsg}`);
-        }
-      }
-
-      // Mostrar resultados
-      if (deletionErrors.length > 0) {
-        const errorDetails = deletionErrors.join('\n• ');
-        this.notificationService.warning(
-          'Algunas cabeceras no se eliminaron',
-          `Las siguientes cabeceras no pudieron eliminarse (probablemente tienen datos):\n• ${errorDetails}`
-        );
-      }
-
-      if (errors.length > 0) {
-        const errorDetails = errors.join('\n• ');
-        this.notificationService.error('Errores durante el guardado', `• ${errorDetails}`);
-      }
-
-      if (deletionErrors.length === 0 && errors.length === 0) {
-        this.notificationService.success('Configuración guardada', 'Todos los cambios se aplicaron exitosamente');
-      } else if (errors.length === 0 && deletionErrors.length > 0) {
-        this.notificationService.info('Guardado parcial', 'El resto de la configuración se guardó correctamente');
-      }
-
     } finally {
-      this.isSaving.set(false);
-      this.loadExistingHeaders();
+      this.trabajo.set({});
+      this.aliasBase.set({});
+      this.abierta.set(null);
+      this.version.update(v => v + 1);
+      this.guardando.set(false);
+      this.leerCabeceras([...tocadas]);
     }
-  }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    this.importFileName.set(file.name);
-    const fileName = file.name.toLowerCase();
-    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-
-    if (isExcel) {
-      this.parseExcel(file);
+    if (errores.length) {
+      this.avisos.error(`No se guardó todo: ${errores.slice(0, 3).join(' · ')}${errores.length > 3 ? ` y ${errores.length - 3} más` : ''}`, 9000);
     } else {
-      // Es CSV - mostrar diálogo para seleccionar separador
-      this.pendingCsvFile.set(file);
-      this.showCsvSeparatorDialog.set(true);
+      this.avisos.success(n === 1 ? '1 cambio guardado' : `${n} cambios guardados`);
     }
-
-    event.target.value = ''; // Reset input
   }
 
-  /**
-   * Confirma el separador seleccionado y procesa el archivo CSV
-   */
-  confirmCsvSeparator() {
-    const file = this.pendingCsvFile();
-    if (!file) return;
+  private async intentar(errores: string[], nombre: string, pedido: Observable<unknown>, ignorar404 = false): Promise<void> {
+    try {
+      await firstValueFrom(pedido, { defaultValue: null });
+    } catch (e: any) {
+      if (!(ignorar404 && e?.status === 404)) errores.push(`${nombre}: ${this.mensajeError(e)}`);
+    }
+  }
 
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const csv = e.target.result;
-      this.parseCSV(csv);
+  private async aplicarAlias(id: number, nombre: string, quedan: string[], antes: HeaderAlias[], usuario: string, errores: string[]): Promise<void> {
+    const previos = antes.filter(a => !a.isPrincipal);
+    for (const a of previos.filter(a => !quedan.includes(a.alias))) {
+      await this.intentar(errores, `${nombre} (alias ${a.alias})`, this.cabeceras.removeAlias(a.id, usuario), true);
+    }
+    for (const alias of quedan.filter(x => !previos.some(a => a.alias === x))) {
+      await this.intentar(errores, `${nombre} (alias ${alias})`, this.cabeceras.addAlias(id, { alias, username: usuario }));
+    }
+  }
+
+  // ---------------------------------------------------------------- Importar desde archivo
+
+  elegirArchivo(entrada: HTMLInputElement): void {
+    const archivo = entrada.files?.[0];
+    entrada.value = '';
+    if (!archivo) return;
+    this.nombreArchivo.set(archivo.name);
+    if (/\.xlsx?$/i.test(archivo.name)) {
+      this.leerExcel(archivo);
+    } else {
+      this.archivoCsv.set(archivo);
+    }
+  }
+
+  leerCsv(): void {
+    const archivo = this.archivoCsv();
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = () => {
+      const filas = String(lector.result ?? '').replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim())
+        .map(l => this.partirLineaCsv(l, this.separador()));
+      this.leerFilasConfiguracion(filas);
     };
-    reader.readAsText(file);
-
-    this.showCsvSeparatorDialog.set(false);
-    this.pendingCsvFile.set(null);
+    lector.readAsText(archivo);
+    this.archivoCsv.set(null);
   }
 
-  /**
-   * Cancela la importación de CSV
-   */
-  cancelCsvImport() {
-    this.showCsvSeparatorDialog.set(false);
-    this.pendingCsvFile.set(null);
-    this.importFileName.set('');
-  }
-
-  /**
-   * Parsea un archivo Excel (.xlsx o .xls)
-   */
-  parseExcel(file: File) {
-    const reader = new FileReader();
-    reader.onload = async (e: any) => {
+  private leerExcel(archivo: File): void {
+    const lector = new FileReader();
+    lector.onload = async () => {
       try {
-        // Cargar librería XLSX de forma dinámica desde CDN
-        if (!(window as any).XLSX) {
-          this.notificationService.info('Cargando soporte Excel', 'Por favor espere...');
-          await this.loadXLSXLibrary();
-        }
-
-        const XLSX = (window as any).XLSX;
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-
-        // Leer la primera hoja
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-
-        const rows = XLSX.utils.sheet_to_json(worksheet, {
-          header: 1,
-          defval: ''
-        }) as unknown[][];
-        this.parseHeaderConfigurationRows(rows.map(row => row.map(value => String(value ?? ''))));
-      } catch (error) {
-        console.error('Error al procesar Excel:', error);
-        this.notificationService.error('Error al procesar Excel', 'Verifique que el formato del archivo sea correcto');
+        const XLSX = await this.libreriaExcel();
+        const libro = XLSX.read(new Uint8Array(lector.result as ArrayBuffer), { type: 'array' });
+        const filas = XLSX.utils.sheet_to_json(libro.Sheets[libro.SheetNames[0]], { header: 1, defval: '' }) as unknown[][];
+        this.leerFilasConfiguracion(filas.map(f => f.map(v => String(v ?? ''))));
+      } catch {
+        this.avisos.error('No se pudo leer el Excel: revisa que tenga una cabecera por fila');
       }
     };
-    reader.readAsArrayBuffer(file);
+    lector.readAsArrayBuffer(archivo);
   }
 
-  /**
-   * Carga la librería XLSX desde CDN si no está disponible
-   */
-  private loadXLSXLibrary(): Promise<void> {
+  /** SheetJS se carga solo cuando hace falta. */
+  private libreriaExcel(): Promise<any> {
+    const w = window as any;
+    if (w.XLSX) return Promise.resolve(w.XLSX);
     return new Promise((resolve, reject) => {
-      if ((window as any).XLSX) {
-        resolve();
-        return;
-      }
-
       const script = document.createElement('script');
       script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
-      script.onload = () => resolve();
+      script.onload = () => resolve(w.XLSX);
       script.onerror = () => reject(new Error('No se pudo cargar la librería XLSX'));
       document.head.appendChild(script);
     });
   }
 
-  /**
-   * Parsea una línea CSV respetando comillas dobles
-   * Los separadores dentro de comillas no se consideran delimitadores
-   * Ejemplo: "DECIMAL(10,2)" se mantiene como un solo campo aunque contenga coma
-   */
-  private parseCsvLine(line: string, separator: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
+  /** Una línea CSV; el separador dentro de comillas no corta el campo («DECIMAL(10,2)»). */
+  private partirLineaCsv(linea: string, separador: string): string[] {
+    const campos: string[] = [];
+    let actual = '', entreComillas = false;
+    for (let i = 0; i < linea.length; i++) {
+      const ch = linea[i];
+      if (ch === '"') {
+        if (entreComillas && linea[i + 1] === '"') {
+          actual += '"';
           i++;
         } else {
-          inQuotes = !inQuotes;
+          entreComillas = !entreComillas;
         }
-      } else if (char === separator && !inQuotes) {
-        // Si es el separador y no estamos dentro de comillas, guardamos el campo
-        result.push(current.trim());
-        current = '';
+      } else if (ch === separador && !entreComillas) {
+        campos.push(actual.trim());
+        actual = '';
       } else {
-        // Cualquier otro carácter se agrega al campo actual
-        current += char;
+        actual += ch;
       }
     }
-
-    // Agregar el último campo
-    result.push(current.trim());
-
-    // Limpiar comillas dobles al inicio y final de cada campo
-    return result.map(field => {
-      if (field.startsWith('"') && field.endsWith('"')) {
-        return field.slice(1, -1);
-      }
-      return field;
-    });
+    campos.push(actual.trim());
+    return campos;
   }
 
   /**
-   * Detecta el tipo de dato basándose en los valores de muestra
-   * Analiza los primeros N registros para inferir el tipo
+   * El archivo de configuración trae una cabecera por fila (no es un archivo de cartera, donde la primera fila
+   * son las columnas de datos).
    */
-  private detectDataType(sampleValues: string[]): { dataType: DataType; format?: string } {
-    // Filtrar valores vacíos y NULL para el análisis
-    const nonEmptyValues = sampleValues.filter(v =>
-      v && v.trim() !== '' && v.trim().toUpperCase() !== 'NULL'
-    );
-
-    if (nonEmptyValues.length === 0) {
-      return { dataType: 'TEXTO' };
-    }
-
-    // Umbral dinámico: si hay pocos valores, ser más permisivo
-    const threshold = nonEmptyValues.length <= 2 ? 0.5 : 0.8;
-
-    // Usar patrones centralizados de shared/constants/date-formats.ts
-    // IMPORTANTE: Estos patrones están sincronizados con el backend (DateParserUtil.java)
-    for (const pattern of DATE_DETECTION_PATTERNS) {
-      const matchCount = nonEmptyValues.filter(v => pattern.regex.test(v.trim())).length;
-      // Si al menos threshold% de los valores no vacíos coinciden con el patrón de fecha
-      if (matchCount >= nonEmptyValues.length * threshold) {
-        console.log(`Fecha detectada: ${nonEmptyValues[0]} -> formato: ${pattern.format}`);
-        return { dataType: 'FECHA', format: pattern.format };
-      }
-    }
-
-    // Verificar si es numérico
-    const numericRegex = /^-?\d+([.,]\d+)?$/;
-    const numericCount = nonEmptyValues.filter(v => {
-      const cleaned = v.trim().replace(/,/g, '.');
-      return numericRegex.test(cleaned);
-    }).length;
-
-    // Si al menos threshold% de los valores son numéricos
-    if (numericCount >= nonEmptyValues.length * threshold) {
-      // Detectar si tiene decimales
-      const hasDecimals = nonEmptyValues.some(v => v.includes('.') || v.includes(','));
-      return {
-        dataType: 'NUMERICO',
-        format: hasDecimals ? 'decimal(18,2)' : undefined
-      };
-    }
-
-    // Por defecto es texto
-    return { dataType: 'TEXTO' };
-  }
-
-  /**
-   * Genera una etiqueta visual legible a partir del nombre de columna
-   * Ejemplo: "FECHA_PROCESO" -> "Fecha Proceso"
-   */
-  private generateDisplayLabel(headerName: string): string {
-    return headerName
-      .toLowerCase()
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  /**
-   * Normaliza un string para comparación de similitud
-   * Elimina acentos, convierte a minúsculas, elimina caracteres especiales
-   */
-  private normalizeForMatching(str: string): string {
-    return str
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Elimina acentos
-      .replace(/[^a-z0-9]/g, ''); // Solo letras y números
-  }
-
-  /**
-   * Calcula la distancia de Levenshtein entre dos strings
-   */
-  private levenshteinDistance(s1: string, s2: string): number {
-    const len1 = s1.length;
-    const len2 = s2.length;
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= len1; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= len2; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= len1; i++) {
-      for (let j = 1; j <= len2; j++) {
-        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,      // deletion
-          matrix[i][j - 1] + 1,      // insertion
-          matrix[i - 1][j - 1] + cost // substitution
-        );
-      }
-    }
-
-    return matrix[len1][len2];
-  }
-
-  /**
-   * Calcula el score de similitud entre dos strings (0-100)
-   */
-  private calculateSimilarityScore(str1: string, str2: string): number {
-    const norm1 = this.normalizeForMatching(str1);
-    const norm2 = this.normalizeForMatching(str2);
-
-    if (norm1 === norm2) return 100;
-    if (norm1.length === 0 || norm2.length === 0) return 0;
-
-    // Check if one contains the other
-    if (norm1.includes(norm2) || norm2.includes(norm1)) {
-      const containScore = Math.min(norm1.length, norm2.length) / Math.max(norm1.length, norm2.length) * 80;
-      return Math.round(containScore + 20); // Bonus for containing
-    }
-
-    const distance = this.levenshteinDistance(norm1, norm2);
-    const maxLen = Math.max(norm1.length, norm2.length);
-    const similarity = (1 - distance / maxLen) * 100;
-
-    return Math.round(Math.max(0, similarity));
-  }
-
-  /**
-   * Busca el FieldDefinition que mejor coincide con el nombre de columna
-   * Retorna el match con score >= 60, o undefined si no hay match suficiente
-   * Usa fieldDefinitions() para buscar en TODOS los campos, no solo los disponibles
-   */
-  private findMatchingFieldDefinition(columnName: string): { field: FieldDefinition; score: number } | undefined {
-    // Usar fieldDefinitions() en lugar de availableFieldDefinitions() para buscar en todos
-    const availableFields = this.fieldDefinitions();
-    if (availableFields.length === 0) {
-      console.warn('Auto-matching: No hay campos cargados en fieldDefinitions');
-      return undefined;
-    }
-
-    let bestMatch: { field: FieldDefinition; score: number } | undefined;
-
-    for (const field of availableFields) {
-      // Comparar contra fieldCode y fieldName
-      const scoreCode = this.calculateSimilarityScore(columnName, field.fieldCode);
-      const scoreName = this.calculateSimilarityScore(columnName, field.fieldName);
-      const maxScore = Math.max(scoreCode, scoreName);
-
-      if (maxScore >= 60 && (!bestMatch || maxScore > bestMatch.score)) {
-        bestMatch = { field, score: maxScore };
-      }
-    }
-
-    return bestMatch;
-  }
-
-  parseCSV(csv: string) {
-    const rows = csv
-      .replace(/^\uFEFF/, '')
-      .split(/\r?\n/)
-      .filter(line => line.trim())
-      .map(line => this.parseCsvLine(line, this.csvSeparator));
-    this.parseHeaderConfigurationRows(rows);
-  }
-
-  /**
-   * La plantilla de configuración representa una cabecera por fila. No debe tratarse
-   * como un archivo de cartera, donde la primera fila sí define las columnas de datos.
-   */
-  private parseHeaderConfigurationRows(rows: string[][]) {
-    if (rows.length < 2) {
-      this.notificationService.error('Archivo vacío', 'El archivo debe incluir una fila de títulos y al menos una cabecera');
+  private leerFilasConfiguracion(filas: string[][]): void {
+    if (filas.length < 2) {
+      this.avisos.error('El archivo debe tener una fila de títulos y al menos una cabecera');
       return;
     }
-
-    const columnIndexes = new Map<string, number>();
-    rows[0].forEach((name, index) => columnIndexes.set(this.normalizeForMatching(name), index));
-    const getColumn = (row: string[], ...names: string[]) => {
-      const index = names
-        .map(name => columnIndexes.get(this.normalizeForMatching(name)))
-        .find((value): value is number => value !== undefined);
-      return index === undefined ? '' : (row[index] || '').trim();
+    const indices = new Map<string, number>();
+    filas[0].forEach((nombre, i) => indices.set(clave(nombre), i));
+    const col = (fila: string[], ...nombres: string[]) => {
+      const i = nombres.map(n => indices.get(clave(n))).find((x): x is number => x !== undefined);
+      return i === undefined ? '' : (fila[i] || '').trim();
     };
 
-    const detected: DetectedColumn[] = [];
-    const errors: string[] = [];
-    const names = new Set<string>();
-
-    rows.slice(1).forEach((row, rowIndex) => {
-      const line = rowIndex + 2;
-      const headerName = getColumn(row, 'nombreCabecera', 'headerName');
-      const displayLabel = getColumn(row, 'etiquetaVisual', 'displayLabel');
-      const dataType = getColumn(row, 'tipoDato', 'dataType').toUpperCase() as DataType;
-      const fieldCode = getColumn(row, 'codigoCampo', 'fieldCode');
-      const format = getColumn(row, 'formato', 'format');
-      const requiredValue = getColumn(row, 'obligatorio', 'required').toLowerCase();
-      const sourceField = getColumn(row, 'campoAsociado', 'sourceField');
-      const regexPattern = getColumn(row, 'regEx', 'regexPattern');
-
+    const leidas: ColumnaArchivo[] = [], errores: string[] = [], vistos = new Set<string>();
+    filas.slice(1).forEach((fila, i) => {
+      const linea = i + 2;
+      const headerName = col(fila, 'nombreCabecera', 'headerName');
+      const displayLabel = col(fila, 'etiquetaVisual', 'displayLabel');
+      const dataType = col(fila, 'tipoDato', 'dataType').toUpperCase() as DataType;
+      const codigoCampo = col(fila, 'codigoCampo', 'fieldCode');
+      const sourceField = col(fila, 'campoAsociado', 'sourceField');
+      const regexPattern = col(fila, 'regEx', 'regexPattern');
       if (!headerName && !displayLabel && !dataType) return;
-      if (!headerName || !displayLabel || !['TEXTO', 'NUMERICO', 'FECHA', 'BOOLEANO'].includes(dataType)) {
-        errors.push(`Fila ${line}: nombre, etiqueta y tipo de dato válido son obligatorios`);
+      if (!headerName || !displayLabel || !TIPOS.some(t => t.valor === dataType)) {
+        errores.push(`Fila ${linea}: nombre, etiqueta y tipo de dato válido son obligatorios`);
         return;
       }
-      if ((sourceField && !regexPattern) || (!sourceField && regexPattern)) {
-        errors.push(`Fila ${line}: campo asociado y regex deben configurarse juntos`);
+      const origenes = columnasOrigen(sourceField);
+      if ((origenes.length === 1 && !regexPattern) || (!origenes.length && regexPattern)) {
+        errores.push(`Fila ${linea}: con un campo asociado el regex es obligatorio, y un regex necesita campo asociado`);
         return;
       }
-
-      const normalizedName = this.normalizeForMatching(headerName);
-      if (names.has(normalizedName)) {
-        errors.push(`Fila ${line}: la cabecera "${headerName}" está duplicada en el archivo`);
+      if (sourceField.length > LARGO_MAX_ORIGEN) {
+        errores.push(`Fila ${linea}: el campo asociado pasa de ${LARGO_MAX_ORIGEN} caracteres`);
         return;
       }
-      names.add(normalizedName);
-
-      const matchedFieldDefinition = fieldCode
-        ? this.fieldDefinitions().find(field => this.normalizeForMatching(field.fieldCode) === this.normalizeForMatching(fieldCode))
-        : undefined;
-      if (fieldCode && !matchedFieldDefinition) {
-        errors.push(`Fila ${line}: el código de campo "${fieldCode}" no existe en el catálogo`);
+      if (vistos.has(clave(headerName))) {
+        errores.push(`Fila ${linea}: la cabecera ${headerName} está repetida en el archivo`);
         return;
       }
-
-      const importedHeader: HeaderConfigurationItem = {
-        fieldDefinitionId: matchedFieldDefinition?.id ?? 0,
-        headerName,
-        dataType,
-        displayLabel,
-        format: format || undefined,
-        required: ['1', 'true', 'si', 'sí'].includes(requiredValue),
-        sourceField: sourceField || undefined,
-        regexPattern: regexPattern || undefined
-      };
-      detected.push({
-        name: headerName,
-        dataType,
-        format: importedHeader.format,
-        displayLabel,
-        sampleValues: [fieldCode || 'Campo personalizado'],
-        selected: true,
-        matchedFieldDefinition,
-        matchStatus: matchedFieldDefinition ? 'matched' : 'no-match',
-        matchScore: matchedFieldDefinition ? 100 : undefined,
-        importedHeader
-      });
-    });
-
-    if (errors.length > 0) {
-      this.notificationService.error('Archivo de configuración inválido', errors.slice(0, 5).join('\n'));
-      return;
-    }
-    if (detected.length === 0) {
-      this.notificationService.error('Sin cabeceras válidas', 'No se encontraron filas de configuración válidas');
-      return;
-    }
-
-    const configuredNames = new Set(this.previewHeaders().map(header =>
-      this.normalizeForMatching(header.headerName)
-    ));
-    const newHeaders = detected.filter(header => !configuredNames.has(this.normalizeForMatching(header.name)));
-    const duplicateCount = detected.length - newHeaders.length;
-
-    if (newHeaders.length === 0) {
-      this.notificationService.info(
-        'Sin cabeceras nuevas',
-        `Las ${duplicateCount} cabecera(s) del archivo ya están configuradas para esta subcartera y tipo de carga.`
-      );
-      return;
-    }
-
-    if (duplicateCount > 0) {
-      this.notificationService.info(
-        'Cabeceras existentes omitidas',
-        `${duplicateCount} cabecera(s) ya configurada(s) fueron omitidas. Seleccione las ${newHeaders.length} cabecera(s) nueva(s).`
-      );
-    }
-
-    this.detectedColumns.set(newHeaders);
-    this.showColumnSelectionDialog.set(true);
-  }
-
-  // ==================== Métodos para selección de columnas ====================
-
-  /**
-   * Alterna la selección de una columna detectada
-   */
-  toggleColumnDetected(index: number) {
-    this.detectedColumns.update(cols => {
-      const updated = [...cols];
-      updated[index] = { ...updated[index], selected: !updated[index].selected };
-      return updated;
-    });
-  }
-
-  /**
-   * Obtiene el conteo de columnas seleccionadas
-   */
-  getSelectedColumnsCount(): number {
-    return this.detectedColumns().filter(c => c.selected).length;
-  }
-
-  /**
-   * Selecciona todas las columnas detectadas
-   */
-  selectAllDetectedColumns() {
-    this.detectedColumns.update(cols =>
-      cols.map(col => ({ ...col, selected: true }))
-    );
-  }
-
-  /**
-   * Deselecciona todas las columnas detectadas
-   */
-  deselectAllDetectedColumns() {
-    this.detectedColumns.update(cols =>
-      cols.map(col => ({ ...col, selected: false }))
-    );
-  }
-
-  /**
-   * Cancela la selección de columnas
-   */
-  cancelColumnSelection() {
-    this.showColumnSelectionDialog.set(false);
-    this.detectedColumns.set([]);
-    this.importFileName.set('');
-    this.notificationService.info('Importación cancelada', 'No se agregaron cabeceras');
-  }
-
-  /**
-   * Confirma la selección de columnas y las agrega como cabeceras
-   */
-  confirmColumnSelection() {
-    const selectedColumns = this.detectedColumns().filter(c => c.selected);
-
-    if (selectedColumns.length === 0) {
-      this.notificationService.warning('Sin selección', 'Debe seleccionar al menos una columna');
-      return;
-    }
-
-    // Crear cabeceras a partir de las columnas seleccionadas
-    // Usar el FieldDefinition matched si existe, sino fieldDefinitionId = 0
-    const newHeaders: HeaderConfigurationItem[] = selectedColumns.map(col => col.importedHeader ?? ({
-      fieldDefinitionId: col.matchedFieldDefinition?.id ?? 0,
-      headerName: col.name,
-      dataType: col.dataType,
-      displayLabel: col.displayLabel,
-      format: col.format,
-      required: false
-    }));
-
-    // Agregar a las cabeceras existentes (no reemplazar)
-    const currentHeaders = this.previewHeaders();
-    const existingNames = new Set(currentHeaders.map(h => this.normalizeForMatching(h.headerName)));
-
-    // Filtrar cabeceras que ya existen
-    const uniqueNewHeaders = newHeaders.filter(h => !existingNames.has(this.normalizeForMatching(h.headerName)));
-    const duplicateCount = newHeaders.length - uniqueNewHeaders.length;
-
-    if (uniqueNewHeaders.length > 0) {
-      this.previewHeaders.set([...currentHeaders, ...uniqueNewHeaders]);
-    }
-
-    // Cerrar diálogo
-    this.showColumnSelectionDialog.set(false);
-    this.detectedColumns.set([]);
-    this.importFileName.set('');
-
-    // Contar columnas con match de campo BD
-    const matchedWithField = selectedColumns.filter(c => c.matchedFieldDefinition).length;
-    const unmatchedCount = selectedColumns.length - matchedWithField;
-
-    // Mostrar mensaje
-    if (duplicateCount > 0) {
-      this.notificationService.success(
-        `${uniqueNewHeaders.length} cabecera(s) agregada(s)`,
-        `${duplicateCount} columna(s) ignorada(s) por duplicado. ${matchedWithField} con campo BD asignado.`
-      );
-    } else {
-      this.notificationService.success(
-        `${uniqueNewHeaders.length} cabecera(s) agregada(s)`,
-        `${matchedWithField} con campo BD asignado, ${unmatchedCount} sin asignar`
-      );
-    }
-  }
-
-  toggleDownloadMenu() {
-    this.downloadMenuOpen.update(v => !v);
-
-    if (this.downloadMenuOpen() && this.downloadButton) {
-      const rect = this.downloadButton.nativeElement.getBoundingClientRect();
-      this.dropdownPosition.set({
-        top: rect.bottom + 8,
-        left: rect.left
-      });
-    }
-  }
-
-  /**
-   * Escapa un valor para CSV: si contiene el separador, comillas o saltos de línea,
-   * lo envuelve en comillas dobles y escapa las comillas internas
-   */
-  private escapeCsvValue(value: string, separator: string): string {
-    if (!value) return '';
-
-    // Si el valor contiene el separador, comillas o saltos de línea, debe estar entre comillas
-    if (value.includes(separator) || value.includes('"') || value.includes('\n') || value.includes('\r')) {
-      // Escapar comillas dobles duplicándolas
-      const escaped = value.replace(/"/g, '""');
-      return `"${escaped}"`;
-    }
-
-    return value;
-  }
-
-  /**
-   * Crea una fila CSV escapando correctamente los valores
-   */
-  private createCsvRow(values: string[], separator: string): string {
-    return values.map(v => this.escapeCsvValue(v, separator)).join(separator);
-  }
-
-  downloadCSVTemplate() {
-    this.downloadMenuOpen.set(false);
-
-    // Crear el contenido del CSV con el separador seleccionado
-    const sep = this.csvSeparator;
-
-    let rows: string[][];
-    let hasConfiguration = false;
-
-    // Prioridad: previewHeaders > savedHeaders > plantilla vacía
-    const headersToExport = this.previewHeaders().length > 0
-      ? this.previewHeaders()
-      : this.savedHeaders().length > 0
-        ? this.savedHeaders().map(h => ({
-            fieldDefinitionId: h.fieldDefinitionId,
-            headerName: h.headerName,
-            displayLabel: h.displayLabel,
-            format: h.format,
-            dataType: h.dataType,
-            required: h.required,
-            sourceField: h.sourceField,
-            regexPattern: h.regexPattern
-          }))
-        : [];
-
-    // Si hay configuración (preview o guardada), exportar la configuración actual
-    if (headersToExport.length > 0) {
-      hasConfiguration = true;
-      // Cabecera
-      rows = [
-        ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx']
-      ];
-
-      // Agregar cada header de la configuración actual
-      headersToExport.forEach(header => {
-        // Buscar el código del campo en fieldDefinitions
-        const fieldDef = this.fieldDefinitions().find(fd => fd.id === header.fieldDefinitionId);
-        const codigoCampo = fieldDef ? fieldDef.fieldCode : '';
-
-        rows.push([
-          codigoCampo,
-          header.headerName,
-          header.displayLabel,
-          header.format || '',
-          header.dataType || '',
-          header.required ? '1' : '0',
-          header.sourceField || '',
-          header.regexPattern || ''
-        ]);
-      });
-    } else {
-      // Si no hay configuración, exportar plantilla vacía con ejemplos
-      rows = [
-        ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx'],
-        ['documento', 'DNI', 'Número de Documento', '', 'TEXTO', '1', '', ''],
-        ['nombre_completo', 'NOMBRE', 'Nombre del Cliente', '', 'TEXTO', '1', '', ''],
-        ['telefono_principal', 'TELEFONO', 'Teléfono Principal', '', 'TEXTO', '0', '', ''],
-        ['email', 'CORREO', 'Correo Electrónico', '', 'TEXTO', '0', '', ''],
-        ['monto_capital', 'MONTO_CAPITAL', 'Monto Capital (S/.)', 'decimal(18,2)', 'NUMERICO', '1', '', ''],
-        ['fecha_vencimiento', 'FEC_VENC', 'Fecha de Vencimiento', 'dd/MM/yyyy', 'FECHA', '1', '', ''],
-        ['', 'DOCUMENTO_EXTRAIDO', 'Documento Extraído', '', 'TEXTO', '0', 'DNI', '"^D.*?(\\d{7})$|^C.*?(\\d{8})$"']
-      ];
-    }
-
-    // Crear CSV con tratamiento especial para el campo regEx (última columna)
-    const csvLines = rows.map((row, index) => {
-      if (index === 0) {
-        // La cabecera se procesa normalmente
-        return this.createCsvRow(row, sep);
-      }
-
-      // Para las filas de datos, procesar los primeros 7 campos normalmente
-      // y el último campo (regEx) con comillas forzadas si tiene valor
-      const firstSevenFields = row.slice(0, 7);
-      const regexField = row[7] || '';
-
-      let csvRow = this.createCsvRow(firstSevenFields, sep);
-
-      // Agregar el campo regEx con comillas forzadas si tiene valor
-      if (regexField && regexField.trim() !== '') {
-        // Escapar comillas dobles internas duplicándolas
-        const escapedRegex = regexField.replace(/"/g, '""');
-        csvRow += sep + `"${escapedRegex}"`;
-      } else {
-        csvRow += sep;
-      }
-
-      return csvRow;
-    });
-
-    const csvContent = csvLines.join('\n');
-
-    // Crear el blob y descargar
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-
-    const separatorName = this.csvSeparator === ',' ? 'coma' :
-                         this.csvSeparator === ';' ? 'punto-coma' :
-                         this.csvSeparator === '|' ? 'pipe' : 'tab';
-
-    const fileName = hasConfiguration
-      ? `cabeceras-${this.selectedLoadType.toLowerCase()}-${separatorName}.csv`
-      : `plantilla-cabeceras-${separatorName}.csv`;
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    this.notificationService.success(
-      'Archivo descargado',
-      hasConfiguration
-        ? `Configuración de ${headersToExport.length} cabecera(s) exportada`
-        : 'Plantilla CSV descargada'
-    );
-  }
-
-  async downloadExcelTemplate() {
-    this.downloadMenuOpen.set(false);
-
-    // Cargar librería XLSX si no está disponible
-    if (!(window as any).XLSX) {
-      try {
-        this.notificationService.info('Cargando', 'Preparando soporte para Excel...');
-        await this.loadXLSXLibrary();
-      } catch (error) {
-        this.notificationService.error('Error', 'No se pudo cargar el soporte para Excel');
+      vistos.add(clave(headerName));
+      const definicion = codigoCampo ? this.definiciones().find(d => clave(d.fieldCode) === clave(codigoCampo)) : undefined;
+      if (codigoCampo && !definicion) {
+        errores.push(`Fila ${linea}: el código de campo ${codigoCampo} no existe en el catálogo`);
         return;
       }
-    }
-
-    const XLSX = (window as any).XLSX;
-
-    let data: any[][];
-    let hasConfiguration = false;
-
-    // Prioridad: previewHeaders > savedHeaders > plantilla vacía
-    const headersToExport = this.previewHeaders().length > 0
-      ? this.previewHeaders()
-      : this.savedHeaders().length > 0
-        ? this.savedHeaders().map(h => ({
-            fieldDefinitionId: h.fieldDefinitionId,
-            headerName: h.headerName,
-            displayLabel: h.displayLabel,
-            format: h.format,
-            dataType: h.dataType,
-            required: h.required,
-            sourceField: h.sourceField,
-            regexPattern: h.regexPattern
-          }))
-        : [];
-
-    if (headersToExport.length > 0) {
-      hasConfiguration = true;
-      // Cabecera
-      data = [
-        ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx']
-      ];
-
-      // Agregar cada header de la configuración actual
-      headersToExport.forEach(header => {
-        const fieldDef = this.fieldDefinitions().find(fd => fd.id === header.fieldDefinitionId);
-        const codigoCampo = fieldDef ? fieldDef.fieldCode : '';
-
-        data.push([
-          codigoCampo,
-          header.headerName,
-          header.displayLabel,
-          header.format || '',
-          header.dataType || '',
-          header.required ? '1' : '0',
-          header.sourceField || '',
-          header.regexPattern || ''
-        ]);
-      });
-    } else {
-      // Plantilla vacía con ejemplos
-      data = [
-        ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx'],
-        ['documento', 'DNI', 'Número de Documento', '', 'TEXTO', '1', '', ''],
-        ['nombre_completo', 'NOMBRE', 'Nombre del Cliente', '', 'TEXTO', '1', '', ''],
-        ['telefono_principal', 'TELEFONO', 'Teléfono Principal', '', 'TEXTO', '0', '', ''],
-        ['email', 'CORREO', 'Correo Electrónico', '', 'TEXTO', '0', '', ''],
-        ['monto_capital', 'MONTO_CAPITAL', 'Monto Capital (S/.)', 'decimal(18,2)', 'NUMERICO', '1', '', ''],
-        ['fecha_vencimiento', 'FEC_VENC', 'Fecha de Vencimiento', 'dd/MM/yyyy', 'FECHA', '1', '', ''],
-        ['', 'DOCUMENTO_EXTRAIDO', 'Doc. Extraído (ejemplo regex)', '', 'TEXTO', '0', 'DNI', '^D.*?(\\d{7})$|^C.*?(\\d{8})$']
-      ];
-    }
-
-    // Crear workbook y worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // Aplicar anchos de columna para mejor formato
-    ws['!cols'] = [
-      { wch: 25 }, // codigoCampo
-      { wch: 20 }, // nombreCabecera
-      { wch: 30 }, // etiquetaVisual
-      { wch: 20 }, // formato
-      { wch: 12 }, // tipoDato
-      { wch: 12 }, // obligatorio
-      { wch: 18 }, // campoAsociado
-      { wch: 35 }  // regEx
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Configuración Cabeceras');
-
-    // Nombre del archivo
-    const fileName = hasConfiguration
-      ? `cabeceras-${this.selectedLoadType.toLowerCase()}.xlsx`
-      : 'plantilla-cabeceras.xlsx';
-
-    // Descargar el archivo
-    XLSX.writeFile(wb, fileName);
-
-    this.notificationService.success(
-      'Archivo descargado',
-      hasConfiguration
-        ? `Configuración de ${headersToExport.length} cabecera(s) exportada`
-        : 'Plantilla Excel descargada'
-    );
-  }
-
-  getDataTypeBadgeClass(dataType: DataType): string {
-    switch (dataType) {
-      case 'TEXTO':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
-      case 'NUMERICO':
-        return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
-      case 'FECHA':
-        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400';
-      case 'BOOLEANO':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400';
-      default:
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400';
-    }
-  }
-
-  getFieldCodeById(fieldDefinitionId: number): string {
-    const field = this.fieldDefinitions().find(f => f.id === fieldDefinitionId);
-    return field ? field.fieldCode : '-';
-  }
-
-  // ==================== Gestión de Alias ====================
-
-  /**
-   * Abre el diálogo de gestión de alias para una cabecera
-   */
-  openAliasDialog(index: number) {
-    // Buscar la cabecera guardada por su ID, no por índice
-    const previewHeader = this.previewHeaders()[index];
-    if (!previewHeader || !previewHeader.id) {
-      this.notificationService.warning('Cabecera no guardada', 'Debe guardar las cabeceras primero para poder gestionar alias');
-      return;
-    }
-
-    // Buscar en savedHeaders por el ID
-    const savedHeader = this.savedHeaders().find(h => h.id === previewHeader.id);
-    if (!savedHeader) {
-      this.notificationService.warning('Cabecera no encontrada', 'No se encontró la cabecera en la base de datos');
-      return;
-    }
-
-    this.selectedHeaderForAlias.set(savedHeader);
-    this.newAliasName.set('');
-    this.showAliasDialog.set(true);
-    this.loadAliases(savedHeader.id);
-  }
-
-  /**
-   * Cierra el diálogo de alias
-   */
-  closeAliasDialog() {
-    this.showAliasDialog.set(false);
-    this.selectedHeaderForAlias.set(null);
-    this.aliases.set([]);
-    this.newAliasName.set('');
-  }
-
-  /**
-   * Carga los alias de una cabecera
-   */
-  loadAliases(headerConfigId: number) {
-    this.loadingAliases.set(true);
-    this.headerConfigService.getAliases(headerConfigId).subscribe({
-      next: (aliases) => {
-        this.aliases.set(aliases);
-        this.loadingAliases.set(false);
-      },
-      error: (error) => {
-        console.error('Error al cargar alias:', error);
-        this.loadingAliases.set(false);
-        this.aliases.set([]);
-        // 404 significa que no hay alias - no es un error
-        if (error?.status !== 404) {
-          const friendlyMsg = this.getFriendlyErrorMessage(error);
-          this.notificationService.error('Error al cargar alias', friendlyMsg);
+      leidas.push({
+        codigoCampo: definicion ? this.nombreDato(definicion) : '',
+        elegida: true,
+        cabecera: {
+          fieldDefinitionId: definicion?.id ?? 0,
+          headerName,
+          dataType,
+          displayLabel,
+          format: col(fila, 'formato', 'format') || undefined,
+          required: ['1', 'true', 'si', 'sí'].includes(col(fila, 'obligatorio', 'required').toLowerCase()),
+          sourceField: sourceField || undefined,
+          regexPattern: regexPattern || undefined
         }
-      }
+      });
     });
-  }
 
-  /**
-   * Agrega un nuevo alias
-   */
-  addAlias() {
-    const header = this.selectedHeaderForAlias();
-    const aliasName = this.newAliasName().trim();
-
-    if (!header || !header.id || !aliasName) {
+    if (errores.length) {
+      this.avisos.error(`Archivo inválido. ${errores.slice(0, 3).join(' · ')}`, 9000);
       return;
     }
-
-    this.headerConfigService.addAlias(header.id, {
-      alias: aliasName,
-      username: 'admin' // TODO: obtener del usuario autenticado
-    }).subscribe({
-      next: (newAlias) => {
-        this.aliases.update(current => [...current, newAlias]);
-        this.newAliasName.set('');
-        this.notificationService.success('Alias agregado', `Se agregó "${aliasName}" como alias`);
-      },
-      error: (error) => {
-        console.error('Error al agregar alias:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error('Error al agregar alias', friendlyMsg);
-      }
-    });
-  }
-
-  /**
-   * Elimina un alias
-   */
-  async removeAlias(alias: HeaderAlias) {
-    const confirmed = await this.notificationService.confirm({
-      title: 'Eliminar alias',
-      message: `¿Está seguro de eliminar el alias "${alias.alias}"?`,
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-      type: 'warning'
-    });
-
-    if (!confirmed) return;
-
-    this.headerConfigService.removeAlias(alias.id, 'admin').subscribe({
-      next: () => {
-        this.aliases.update(current => current.filter(a => a.id !== alias.id));
-        this.notificationService.success('Alias eliminado', `Se eliminó el alias "${alias.alias}"`);
-      },
-      error: (error) => {
-        // Si es 404, el alias ya no existe - eliminarlo de la lista local
-        if (error?.status === 404) {
-          this.aliases.update(current => current.filter(a => a.id !== alias.id));
-          this.notificationService.info('Alias no encontrado', 'El alias ya no existe en el sistema');
-          return;
-        }
-        console.error('Error al eliminar alias:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error('Error al eliminar alias', friendlyMsg);
-      }
-    });
-  }
-
-  /**
-   * Verifica si una cabecera tiene ID guardado (puede gestionar alias)
-   */
-  canManageAlias(index: number): boolean {
-    const previewHeader = this.previewHeaders()[index];
-    return !!previewHeader && !!previewHeader.id;
-  }
-
-  /**
-   * Obtiene la cantidad de alias de una cabecera
-   */
-  getAliasCount(index: number): number {
-    const previewHeader = this.previewHeaders()[index];
-    if (!previewHeader || !previewHeader.id) return 0;
-
-    const savedHeader = this.savedHeaders().find(h => h.id === previewHeader.id);
-    return savedHeader?.aliases?.length || 0;
-  }
-
-  /**
-   * Convierte errores HTTP técnicos a mensajes amigables para el usuario
-   */
-  private getFriendlyErrorMessage(error: any): string {
-    // Si el error tiene un mensaje personalizado del backend, usarlo (prioridad alta)
-    if (error?.error?.message && !error.error.message.includes('Http failure')) {
-      return error.error.message;
-    }
-
-    // Mapear códigos de estado HTTP a mensajes amigables
-    const status = error?.status;
-    switch (status) {
-      case 400:
-        return 'Datos inválidos. Por favor verifique la información ingresada.';
-      case 401:
-        return 'Sesión expirada. Por favor inicie sesión nuevamente.';
-      case 403:
-        return 'No tiene permisos para realizar esta acción.';
-      case 404:
-        return 'El recurso ya no existe en el sistema.';
-      case 409:
-        // Para conflictos, el backend debería enviar un mensaje específico
-        return error?.error?.message || 'No se puede completar la operación porque hay datos asociados.';
-      case 422:
-        return 'No se puede procesar: la cabecera tiene datos asociados.';
-      case 500:
-        return 'Error interno del servidor. Por favor intente más tarde.';
-      case 502:
-      case 503:
-      case 504:
-        return 'La carga no pudo completarse porque el servidor tardó demasiado en responder.';
-      case 0:
-        return 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
-      default:
-        // Para errores desconocidos, dar un mensaje genérico
-        if (error?.message && !error.message.includes('Http failure')) {
-          return error.message;
-        }
-        return 'Ocurrió un error inesperado. Por favor intente nuevamente.';
-    }
-  }
-
-  // ==================== Métodos para Importar desde otra Subcartera ====================
-
-  /**
-   * Abre el diálogo para importar cabeceras desde otra subcartera
-   */
-  async openImportFromSubPortfolioDialog(): Promise<void> {
-    // Cargar todas las subcarteras si no están cargadas
-    if (this.allSubPortfolios().length === 0) {
-      try {
-        const allSubPortfolios = await firstValueFrom(this.portfolioService.getAllSubPortfolios());
-        this.allSubPortfolios.set(allSubPortfolios);
-      } catch (error) {
-        this.notificationService.error('Error al cargar subcarteras');
-        return;
-      }
-    }
-
-    // Reset state
-    this.importSourceSubPortfolioId.set(0);
-    this.importPreviewResult.set(null);
-    this.importConflictResolution.set('SKIP');
-    this.selectedConflictsToReplace.set(new Set());
-    this.isLoadingImportPreview.set(false);
-    this.isExecutingImport.set(false);
-
-    this.showImportFromSubPortfolioDialog.set(true);
-  }
-
-  /**
-   * Cierra el diálogo de importación
-   */
-  closeImportFromSubPortfolioDialog(): void {
-    this.showImportFromSubPortfolioDialog.set(false);
-    this.importPreviewResult.set(null);
-  }
-
-  /**
-   * Obtiene las subcarteras disponibles como origen (excluyendo la actual)
-   */
-  getAvailableSourceSubPortfolios(): SubPortfolio[] {
-    return this.allSubPortfolios().filter(sp => sp.id !== this.selectedSubPortfolioId);
-  }
-
-  /**
-   * Maneja el cambio de subcartera origen y carga el preview
-   */
-  async onImportSourceChange(sourceId: number): Promise<void> {
-    this.importSourceSubPortfolioId.set(sourceId);
-
-    if (sourceId <= 0) {
-      this.importPreviewResult.set(null);
+    const existentes = new Set(this.filas().filter(c => !c.borrada).map(c => clave(c.headerName)));
+    const nuevas = leidas.filter(c => !existentes.has(clave(c.cabecera.headerName)));
+    if (!nuevas.length) {
+      this.avisos.info(leidas.length ? 'Todas las cabeceras del archivo ya están en esta carga' : 'El archivo no trae cabeceras');
       return;
     }
+    this.columnasArchivo.set(nuevas);
+  }
 
-    this.isLoadingImportPreview.set(true);
-    this.importPreviewResult.set(null);
-    this.selectedConflictsToReplace.set(new Set());
+  alternarColumnaArchivo(i: number): void {
+    this.columnasArchivo.update(l => l?.map((c, j) => j === i ? { ...c, elegida: !c.elegida } : c) ?? null);
+  }
 
+  marcarColumnasArchivo(elegida: boolean): void {
+    this.columnasArchivo.update(l => l?.map(c => ({ ...c, elegida })) ?? null);
+  }
+
+  get columnasElegidas(): number {
+    return this.columnasArchivo()?.filter(c => c.elegida).length ?? 0;
+  }
+
+  agregarDelArchivo(): void {
+    const elegidas = (this.columnasArchivo() ?? []).filter(c => c.elegida).map(c => c.cabecera);
+    this.columnasArchivo.set(null);
+    this.sumarNuevas(elegidas);
+  }
+
+  /** Cabeceras que llegan de un archivo o de otra subcartera: se suman como nuevas, sin las que ya están. */
+  private sumarNuevas(cabeceras: HeaderConfigurationItem[]): void {
+    const id = this.sub();
+    if (!id || !cabeceras.length) return;
+    const actuales = this.filasDe(id, this.carga()), usados = new Set(actuales.filter(c => !c.borrada).map(c => c.fieldDefinitionId).filter(Boolean));
+    const nombres = new Set(actuales.filter(c => !c.borrada).map(c => clave(c.headerName)));
+    const nuevas: Cabecera[] = [];
+    for (const h of cabeceras.filter(x => !nombres.has(clave(x.headerName)))) {
+      // Un dato del sistema que ya tiene otra cabecera de esta carga no se repite.
+      const dato = h.fieldDefinitionId && !usados.has(h.fieldDefinitionId) ? h.fieldDefinitionId : 0;
+      if (dato) usados.add(dato);
+      nombres.add(clave(h.headerName));
+      nuevas.push({
+        clave: this.siguienteClave--, headerName: h.headerName.trim().toUpperCase().replace(/\s+/g, '_'), displayLabel: h.displayLabel ?? '',
+        dataType: h.dataType, format: h.format ?? '', required: !!h.required, fieldDefinitionId: dato,
+        sourceField: h.sourceField ?? '', regexPattern: h.regexPattern ?? '', alias: [], nueva: true
+      });
+    }
+    if (!nuevas.length) {
+      this.avisos.info('Esas cabeceras ya están en esta carga');
+      return;
+    }
+    const k = this.llave(id, this.carga());
+    this.trabajo.update(t => ({ ...t, [k]: [...nuevas, ...actuales] }));
+    this.buscar.set('');
+    this.avisos.success(`${nuevas.length} ${nuevas.length === 1 ? 'cabecera agregada' : 'cabeceras agregadas'}; revisa y guarda`);
+  }
+
+  // ---------------------------------------------------------------- Copiar de otra subcartera
+
+  readonly otrasSubs = computed(() => this.ambito().filter(a => a.subId !== this.sub() && this.base()[a.subId]?.some(h => h.loadType === this.carga())));
+
+  abrirCopiar(): void {
+    this.copiarOrigen.set(0);
+    this.copiarVista.set(null);
+    this.copiar.set(true);
+  }
+
+  async elegirOrigenCopia(valor: string): Promise<void> {
+    const origen = Number(valor), destino = this.sub();
+    this.copiarOrigen.set(origen);
+    this.copiarVista.set(null);
+    if (!origen || !destino) return;
+    this.copiarCargando.set(true);
     try {
-      const preview = await firstValueFrom(
-        this.headerConfigService.previewImportFromSubPortfolio(
-          this.selectedSubPortfolioId,
-          sourceId,
-          this.selectedLoadType
-        )
-      );
-      this.importPreviewResult.set(preview);
-    } catch (error) {
-      console.error('Error loading import preview:', error);
-      this.notificationService.error('Error al cargar preview de importación');
+      this.copiarVista.set(await firstValueFrom(this.cabeceras.previewImportFromSubPortfolio(destino, origen, this.carga())));
+    } catch (e) {
+      this.avisos.error(this.mensajeError(e));
     } finally {
-      this.isLoadingImportPreview.set(false);
+      this.copiarCargando.set(false);
     }
   }
 
-  /**
-   * Toggle selection de un conflicto para reemplazar
-   */
-  toggleConflictSelection(headerName: string): void {
-    const current = this.selectedConflictsToReplace();
-    const newSet = new Set(current);
-
-    if (newSet.has(headerName)) {
-      newSet.delete(headerName);
-    } else {
-      newSet.add(headerName);
-    }
-
-    this.selectedConflictsToReplace.set(newSet);
+  confirmarCopia(): void {
+    const vista = this.copiarVista();
+    this.copiar.set(false);
+    if (!vista) return;
+    this.sumarNuevas(vista.headersToImport.map(h => ({
+      fieldDefinitionId: h.fieldDefinitionId ?? 0,
+      headerName: h.headerName,
+      dataType: h.dataType,
+      displayLabel: h.displayLabel,
+      format: h.format,
+      required: h.required,
+      sourceField: h.sourceField,
+      regexPattern: h.regexPattern
+    })));
   }
 
-  /**
-   * Agrega las cabeceras seleccionadas del preview a la memoria local (previewHeaders).
-   * NO guarda en base de datos - eso se hace al presionar "Guardar".
-   */
-  executeImportFromSubPortfolio(): void {
-    const preview = this.importPreviewResult();
-    if (!preview) return;
+  // ---------------------------------------------------------------- Plantilla
 
-    // Validar que hay algo que importar
-    if (preview.totalNew === 0 && preview.totalConflicts === 0) {
-      this.notificationService.warning('No hay cabeceras para importar');
-      return;
-    }
+  private filasPlantilla(): { filas: string[][]; conConfiguracion: boolean } {
+    const vivas = this.filas().filter(c => !c.borrada);
+    if (!vivas.length) return { filas: [COLUMNAS_PLANTILLA, ...EJEMPLO_PLANTILLA], conConfiguracion: false };
+    return {
+      conConfiguracion: true,
+      filas: [COLUMNAS_PLANTILLA, ...vivas.map(c => [
+        this.definicion(c.fieldDefinitionId)?.fieldCode ?? '', c.headerName, c.displayLabel, c.format, c.dataType,
+        c.required ? '1' : '0', c.sourceField, c.regexPattern
+      ])]
+    };
+  }
 
-    // Si es SELECTIVE y hay conflictos pero no se seleccionó ninguno, y no hay nuevas
-    if (this.importConflictResolution() === 'SELECTIVE' &&
-        preview.totalConflicts > 0 &&
-        this.selectedConflictsToReplace().size === 0 &&
-        preview.totalNew === 0) {
-      this.notificationService.warning('Seleccione al menos una cabecera para reemplazar o cambie la resolución de conflictos');
-      return;
-    }
+  private nombrePlantilla(extension: string): string {
+    const a = this.actual(), { conConfiguracion } = this.filasPlantilla();
+    const sufijo = this.carga() === 'INICIAL' ? 'inicial' : 'diaria';
+    return conConfiguracion && a ? `cabeceras-${columnaEnTabla(a.subcartera)}-${sufijo}.${extension}` : `plantilla-cabeceras.${extension}`;
+  }
 
-    this.isExecutingImport.set(true);
+  descargarCsv(): void {
+    this.menuPlantilla.set(false);
+    const sep = ';', { filas } = this.filasPlantilla();
+    const escapar = (v: string, forzar: boolean) => !v ? '' : (forzar || /["\r\n]/.test(v) || v.includes(sep)) ? `"${v.replace(/"/g, '""')}"` : v;
+    // El regex va siempre entre comillas: suele traer separadores.
+    const texto = filas.map((f, i) => f.map((v, j) => escapar(v, i > 0 && j === 7)).join(sep)).join('\n');
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8;' }));
+    enlace.download = this.nombrePlantilla('csv');
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+  }
 
+  async descargarExcel(): Promise<void> {
+    this.menuPlantilla.set(false);
     try {
-      const currentHeaders = [...this.previewHeaders()];
-      const currentHeaderNames = new Set(currentHeaders.map(h => h.headerName.toLowerCase().trim()));
-      let addedCount = 0;
-      let skippedCount = 0;
+      const XLSX = await this.libreriaExcel(), libro = XLSX.utils.book_new(), hoja = XLSX.utils.aoa_to_sheet(this.filasPlantilla().filas);
+      hoja['!cols'] = [25, 20, 30, 20, 12, 12, 18, 35].map(wch => ({ wch }));
+      XLSX.utils.book_append_sheet(libro, hoja, 'Configuración Cabeceras');
+      XLSX.writeFile(libro, this.nombrePlantilla('xlsx'));
+    } catch {
+      this.avisos.error('No se pudo preparar el Excel');
+    }
+  }
 
-      // Verificar si hay cabeceras para importar
-      if (!preview.headersToImport || preview.headersToImport.length === 0) {
-        if (preview.conflicts && preview.conflicts.length > 0) {
-          this.notificationService.warning(
-            `Todas las ${preview.conflicts.length} cabeceras ya existen en la configuración destino (conflictos).`
-          );
-        } else {
-          this.notificationService.warning('La subcartera origen no tiene cabeceras configuradas para este tipo de carga.');
-        }
-        this.isExecutingImport.set(false);
-        return;
-      }
+  // ---------------------------------------------------------------- Errores
 
-      // 1. Agregar cabeceras nuevas (que no existen en destino)
-      for (const item of preview.headersToImport) {
-        // Verificar si ya existe en previewHeaders local
-        if (currentHeaderNames.has(item.headerName.toLowerCase().trim())) {
-          skippedCount++;
-          continue;
-        }
-
-        // Convertir HeaderPreviewItem a HeaderConfigurationItem
-        const newHeader: HeaderConfigurationItem = {
-          // Sin id = nuevo registro
-          fieldDefinitionId: item.fieldDefinitionId,
-          headerName: item.headerName,
-          dataType: item.dataType,
-          displayLabel: item.displayLabel,
-          format: item.format,
-          required: item.required,
-          sourceField: item.sourceField,
-          regexPattern: item.regexPattern
-        };
-
-        currentHeaders.push(newHeader);
-        currentHeaderNames.add(item.headerName.toLowerCase().trim());
-        addedCount++;
-      }
-
-      // 2. Manejar conflictos según la estrategia seleccionada
-      const conflictResolution = this.importConflictResolution();
-      if (preview.conflicts.length > 0 && conflictResolution !== 'SKIP') {
-        // Nota: Para reemplazar conflictos, necesitaríamos los datos completos del origen
-        // Por ahora solo agregamos las nuevas cabeceras
-        // Los conflictos se manejarán manualmente por el usuario editando las existentes
-        if (conflictResolution === 'REPLACE') {
-          this.notificationService.info(
-            `${preview.conflicts.length} cabeceras ya existen. Edítelas manualmente si desea cambiar sus valores.`
-          );
-        } else if (conflictResolution === 'SELECTIVE') {
-          const selectedCount = this.selectedConflictsToReplace().size;
-          if (selectedCount > 0) {
-            this.notificationService.info(
-              `${selectedCount} cabeceras seleccionadas ya existen. Edítelas manualmente si desea cambiar sus valores.`
-            );
-          }
-        }
-      }
-
-      // Actualizar el estado local
-      this.previewHeaders.set(currentHeaders);
-
-      // Mostrar mensaje de éxito
-      const message = addedCount > 0
-        ? `Se agregaron ${addedCount} cabeceras a la configuración. Presione "Guardar" para aplicar los cambios.`
-        : 'No se agregaron cabeceras nuevas (ya existían todas).';
-
-      if (addedCount > 0) {
-        this.notificationService.success(message);
-      } else {
-        this.notificationService.info(message);
-      }
-
-      this.closeImportFromSubPortfolioDialog();
-
-    } catch (error) {
-      console.error('Error agregando cabeceras importadas:', error);
-      this.notificationService.error('Error al procesar las cabeceras importadas');
-    } finally {
-      this.isExecutingImport.set(false);
+  private mensajeError(error: any): string {
+    const mensaje = error?.error?.message;
+    if (mensaje && !String(mensaje).includes('Http failure')) return mensaje;
+    switch (error?.status) {
+      case 0: return 'No se pudo conectar con el servidor';
+      case 400: return 'Datos inválidos';
+      case 403: return 'No tienes permiso para esta acción';
+      case 404: return 'Ya no existe en el sistema';
+      case 409: return 'Tiene datos asociados';
+      case 502: case 503: case 504: return 'El servidor tardó demasiado en responder';
+      default: return 'Ocurrió un error inesperado';
     }
   }
 }

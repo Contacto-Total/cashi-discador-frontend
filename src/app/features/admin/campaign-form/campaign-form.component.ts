@@ -23,6 +23,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_FORMATS } from '@angular/material/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
+import { NombrePropioPipe } from '@/shared/ui/nombre-propio.pipe';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
 type OrderableCampaignField = Omit<CampaignOrderField, 'orderDirection'> & {
@@ -46,7 +47,7 @@ const DUPLICATE_CAMPAIGN_STORAGE_KEY = 'campaign-duplicate-draft';
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule,
+  imports: [CommonModule, FormsModule, LucideAngularModule, NombrePropioPipe,
     MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
@@ -167,6 +168,8 @@ export class CampaignFormComponent implements OnInit {
   // Rango de antigüedad (filtro categórico) - rangos fijos basados en dias_mora
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
+  /** El filtro solo aplica si la subcartera tiene enlazados los días de mora: la rutina de campañas los lee de esa columna. */
+  tieneDiasMora = false;
 
   // Grupo dirigido de la campaña. null = todos los asesores de la subcartera.
   grupos: GrupoAsesor[] = [];
@@ -317,6 +320,7 @@ export class CampaignFormComponent implements OnInit {
   onSubPortfolioChange(): void {
     this.filterableFields = [];
     this.selectedRangosAntiguedad = [];
+    this.tieneDiasMora = false;
     this.grupos = [];
     this.selectedGrupoId = null;
     if (this.selectedSubPortfolioId > 0) {
@@ -558,6 +562,10 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.getFilterableFieldsBySubcartera(subcarteraId).subscribe({
       next: (fields) => {
         this.filterableFields = fields;
+        this.tieneDiasMora = fields.some(f => f.fieldCode?.toLowerCase() === 'dias_mora');
+        if (!this.tieneDiasMora) {
+          this.selectedRangosAntiguedad = [];
+        }
         console.log('Campos filtrables cargados:', fields);
       },
       error: (err) => console.error('Error loading filterable fields:', err)
@@ -1196,7 +1204,7 @@ export class CampaignFormComponent implements OnInit {
     }
 
     if (!this.isEditMode) {
-      this.campaign.filtroRangoAntiguedad = this.selectedRangosAntiguedad.length > 0
+      this.campaign.filtroRangoAntiguedad = this.tieneDiasMora && this.selectedRangosAntiguedad.length > 0
         ? this.selectedRangosAntiguedad.join(',')
         : undefined;
       this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0

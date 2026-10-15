@@ -1,0 +1,627 @@
+<!-- Misma composición que Umbrales de estado y Tipificaciones: la tarjeta principal ocupa el alto disponible y la
+     lista se desplaza por dentro; a su lado, las subcarteras, que entran solo si la tabla queda holgada. -->
+<div class="font-cashi grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_min(28cqw,26rem)] grid-rows-[minmax(0,1fr)] items-start gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased @max-[70.5rem]/cab:grid-cols-[minmax(0,1fr)]">
+  <section appTarjeta class="@container/tabla flex min-h-0 flex-col self-stretch overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5">
+    <app-page-header class="flex-none" titulo="Configuración de cabeceras" subtitulo="Columnas de la carga por subcartera" [sinRaya]="true"
+                     fila="items-start gap-y-6 [&>div:first-child]:flex-none @max-[42.5rem]/tabla:flex-wrap">
+      <div class="grid min-w-0 flex-[0_1_29.5rem] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 @max-[42.5rem]/tabla:basis-full">
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="cb-cli" [class]="ETIQUETA">Cliente</label>
+          <select id="cb-cli" [class]="LISTA" (change)="elegirCliente($any($event.target).value)">
+            @for (c of clientes(); track c) {
+              <option [value]="c" [selected]="c === actual()?.cliente">{{ c | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="cb-car" [class]="ETIQUETA">Cartera</label>
+          <select id="cb-car" [class]="LISTA" (change)="elegirCartera($any($event.target).value)">
+            @for (c of carteras(); track c) {
+              <option [value]="c" [selected]="c === actual()?.cartera">{{ c | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+        <div class="flex min-w-0 flex-col gap-[.3125rem]">
+          <label for="cb-sub" [class]="ETIQUETA">Subcartera</label>
+          <select id="cb-sub" [class]="LISTA" (change)="elegirSub($any($event.target).value)">
+            @for (s of deLaCartera(); track s.subId) {
+              <option [value]="s.subId" [selected]="s.subId === sub()">{{ s.subcartera | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </app-page-header>
+
+    @let lista = !!actual() && !sinDatos() && !error();
+    @if (lista) {
+      <!-- Tipo de carga y búsqueda en la misma fila. -->
+      <div class="mb-3 flex flex-none flex-wrap items-center gap-3">
+        <div class="grid w-[min(100%,24rem)] grid-cols-2 gap-[.1875rem] rounded-lg bg-muted p-[.1875rem]" role="group" aria-label="Tipo de carga">
+          <button type="button" [class]="PESTANA" [ngClass]="carga() === 'INICIAL' ? PESTANA_ACTIVA : PESTANA_REPOSO"
+                  [attr.aria-pressed]="carga() === 'INICIAL'" (click)="elegirCarga('INICIAL')">
+            Carga inicial del mes<span class="ml-1.5 text-[.75rem] font-medium text-muted-foreground tabular-nums">{{ cuenta().INICIAL }}</span>
+          </button>
+          <button type="button" [class]="PESTANA" [ngClass]="carga() === 'ACTUALIZACION' ? PESTANA_ACTIVA : PESTANA_REPOSO"
+                  [attr.aria-pressed]="carga() === 'ACTUALIZACION'" (click)="elegirCarga('ACTUALIZACION')">
+            Carga diaria<span class="ml-1.5 text-[.75rem] font-medium text-muted-foreground tabular-nums">{{ cuenta().ACTUALIZACION }}</span>
+          </button>
+        </div>
+        <label class="relative m-0! ml-auto! min-w-48 flex-[0_1_18rem]">
+          <lucide-angular name="search" [size]="16" class="pointer-events-none absolute top-1/2 left-2.5 flex -translate-y-1/2 text-muted-foreground"></lucide-angular>
+          <input type="search" autocomplete="off" placeholder="Buscar cabecera" aria-label="Buscar cabecera por nombre, etiqueta o dato del sistema"
+                 [class]="CAMPO + ' py-[.4375rem]! ps-9!'" [value]="buscar()" (input)="escribirBusqueda($any($event.target).value)">
+        </label>
+      </div>
+
+      <div [class]="REJILLA + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
+        <span class="pl-7">Cabecera</span>
+        <span class="hidden @min-[44rem]/tabla:block"></span>
+        <span class="hidden @min-[44rem]/tabla:block">Tipo</span>
+        <span class="hidden @min-[50rem]/tabla:block">Formato</span>
+        <span>Dato del sistema</span>
+        <span class="text-center whitespace-nowrap"><span class="@min-[44rem]/tabla:hidden">Oblig.</span><span class="hidden @min-[44rem]/tabla:inline">Obligatoria</span></span>
+        <span></span>
+      </div>
+    }
+
+    <div class="-mx-8 min-h-0 flex-1 overflow-y-auto px-8 pb-3">
+      @if (error() || sinDatos()) {
+        <div role="alert" class="mt-[.875rem] flex flex-wrap items-center justify-between gap-3 rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--ro)">
+          <span>{{ error() || 'No se pudieron leer las cabeceras de esta subcartera' }}</span>
+          <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="reintentar()">Reintentar</button>
+        </div>
+      } @else if (cargando() && !filas().length) {
+        <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">Cargando cabeceras…</p>
+      } @else if (!ambito().length) {
+        <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">No hay subcarteras activas</p>
+      } @else if (!filas().length) {
+        <div class="flex flex-col items-center gap-1 px-4 py-10 text-center text-[.875rem] text-muted-foreground">
+          <span class="font-semibold text-foreground">{{ actual()?.cliente | nombrePropio }} · {{ actual()?.subcartera | nombrePropio }} no tiene {{ carga() === 'INICIAL' ? 'carga inicial' : 'carga diaria' }} configurada</span>
+          <span>Agrega las cabeceras una por una, impórtalas desde el archivo del cliente o cópialas de otra subcartera.</span>
+        </div>
+      } @else if (!visibles().length) {
+        <div class="flex flex-col items-center gap-1 px-4 py-10 text-center text-[.875rem] text-muted-foreground">
+          <span class="font-semibold text-foreground">Ninguna cabecera coincide con «{{ buscar() }}»</span>
+          <span>Busca por el nombre de la columna, su etiqueta o el dato del sistema.</span>
+        </div>
+      }
+
+      @if (lista) {
+        @for (g of grupos(); track g.clave; let primero = $first) {
+          <!-- Cada grupo se pliega desde su título; al buscar se ven todos. -->
+          <div class="flex cursor-pointer items-center gap-2 rounded-[.625rem] px-2 py-[.4375rem] hover:bg-muted/55" [ngClass]="primero ? 'mt-1.5' : 'mt-[.875rem]'" (click)="alternarGrupo(g.clave)">
+            <button type="button" class="-mx-1 grid size-6 flex-none cursor-pointer place-items-center rounded-md border-0! bg-transparent p-0! text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                    [attr.aria-expanded]="g.abierto" [attr.aria-label]="(g.abierto ? 'Plegar ' : 'Desplegar ') + g.titulo">
+              <lucide-angular name="chevron-right" [size]="14" [ngClass]="'flex transition-transform duration-200 ' + (g.abierto ? 'rotate-90' : '')"></lucide-angular>
+            </button>
+            <span class="text-[.875rem] font-semibold">{{ g.titulo }}</span>
+            <span class="text-[.75rem] text-muted-foreground tabular-nums">{{ g.filas.length }}</span>
+            @if (g.enlazadas) {
+              <span class="ml-auto text-[.75rem] text-muted-foreground">{{ g.enlazadas }} con dato del sistema</span>
+            }
+          </div>
+
+          @if (g.abierto) {
+            @for (c of g.filas; track c.clave) {
+              @let alias = aliasDe(c);
+              <div [class]="REJILLA + ' min-h-[2.75rem] rounded-[.625rem] py-[.375rem]'"
+                   [ngClass]="c.nueva ? 'bg-[color-mix(in_srgb,var(--ok-bg)_60%,transparent)]' : c.borrada ? 'opacity-55 hover:bg-muted/55' : 'hover:bg-muted/55'">
+                <div class="flex min-w-0 items-baseline gap-2 pl-7">
+                  <span class="min-w-0 overflow-hidden text-[.875rem] text-ellipsis whitespace-nowrap text-foreground/80" [ngClass]="c.borrada ? 'line-through' : ''">{{ c.displayLabel || c.headerName || 'Cabecera nueva' }}</span>
+                  @if (c.headerName) {
+                    <span class="max-w-[45%] flex-none overflow-hidden font-mono text-[.6875rem] text-ellipsis whitespace-nowrap text-muted-foreground">{{ c.headerName }}</span>
+                  }
+                  @if (c.nueva) {
+                    <span [class]="CHIP + ' bg-(--ok-bg) font-semibold text-(--ok)! shadow-[inset_0_0_0_1px_var(--ok-ln)]!'">Nueva</span>
+                  }
+                  @if (c.borrada) {
+                    <span [class]="CHIP">Se eliminará</span>
+                  }
+                  @if (c.sourceField) {
+                    <span [class]="CHIP" [title]="'Se arma con ' + origenLegible(c.sourceField)">Derivada</span>
+                  }
+                  @if (alias?.length) {
+                    <span [class]="CHIP" [title]="'También se lee como: ' + alias!.join(', ')">{{ alias!.length }} alias</span>
+                  }
+                </div>
+
+                <div class="hidden items-center justify-end gap-1.5 @min-[44rem]/tabla:flex">
+                  @if (cambiada(c)) {
+                    <button type="button" appBoton="secundario" appBotonAlto="chico" class="flex-none" [attr.aria-label]="'Revertir cambios: ' + c.headerName" title="Revertir cambios" (click)="revertir(c)">
+                      <lucide-angular name="undo-2" [size]="16" [ngClass]="'hidden @min-[52.75rem]/tabla:flex'"></lucide-angular>Revertir
+                    </button>
+                  }
+                </div>
+                <span [class]="PILL + ' hidden justify-self-start @min-[44rem]/tabla:block'">{{ tipoTexto(c.dataType) }}</span>
+                <span class="hidden min-w-0 overflow-hidden font-mono text-[.6875rem] text-ellipsis whitespace-nowrap text-muted-foreground @min-[50rem]/tabla:block" [title]="c.format">{{ c.format || '—' }}</span>
+
+                <app-combobox [opciones]="opcionesPorFila().get(c.clave) ?? []" [valor]="valorDato(c)" marcador="Sin dato del sistema"
+                              marcadorBusqueda="Buscar dato…" vacio="Ningún dato coincide." [permiteCrear]="true" [deshabilitado]="!!c.borrada"
+                              [etiquetaAria]="'Dato del sistema de ' + (c.headerName || 'la cabecera nueva')"
+                              (cambio)="elegirDato(c, $event)" (crear)="abrirDatoNuevo(c, $event)" />
+
+                <button type="button" role="switch" [class]="INTERRUPTOR" [ngClass]="c.required ? 'bg-brand after:translate-x-3.5' : 'bg-(--campo-ln)'" [disabled]="!!c.borrada"
+                        [attr.aria-checked]="c.required" [attr.aria-label]="'Obligatoria: ' + (c.headerName || 'cabecera nueva')" (click)="alternarObligatoria(c)"></button>
+
+                <button type="button" [class]="ICONO" [attr.aria-expanded]="abierta() === c.clave"
+                        [attr.aria-label]="'Editar ' + (c.headerName || 'la cabecera nueva')" title="Editar" (click)="editar(c)">
+                  <lucide-angular name="pencil" [size]="16"></lucide-angular>
+                </button>
+              </div>
+
+              <!-- Edición en su sitio, debajo de la fila (solo las ya guardadas; las nuevas van en el modal). Los campos solo toman el valor al nacer. -->
+              @if (abierta() === c.clave && !c.nueva) {
+                @for (v of [version()]; track v) {
+                  @let id = idDom(c);
+                  <div class="mx-2 mt-0.5 mb-2.5 flex flex-col gap-3.5 rounded-xl border border-border bg-[color-mix(in_srgb,var(--muted)_40%,var(--card))] p-4">
+                    <div class="grid grid-cols-[repeat(3,minmax(0,1fr))] items-start gap-x-4 gap-y-3 @max-[44rem]/tabla:grid-cols-[minmax(0,1fr)]">
+                      <div class="flex min-w-0 flex-col gap-1.5">
+                        <label [attr.for]="'cb-e-' + id" [class]="ETIQUETA">Etiqueta visual</label>
+                        <input [id]="'cb-e-' + id" type="text" maxlength="255" autocomplete="off" placeholder="Fecha de castigo"
+                               [class]="CAMPO_ED" [attr.value]="c.displayLabel" (input)="escribir(c, 'displayLabel', $any($event.target).value)">
+                        <span [class]="AYUDA">Así se ve en filtros y reportes.</span>
+                      </div>
+                      <div class="flex min-w-0 flex-col gap-1.5">
+                        <label [attr.for]="'cb-t-' + id" [class]="ETIQUETA">Tipo de dato</label>
+                        <select [id]="'cb-t-' + id" [class]="LISTA_ED + ' w-full'" disabled>
+                          <option selected>{{ tipoTexto(c.dataType) }}</option>
+                        </select>
+                        <span [class]="AYUDA">No cambia: la columna ya existe en la tabla.</span>
+                      </div>
+                      <div class="flex min-w-0 flex-col gap-1.5">
+                        <label [attr.for]="'cb-f-' + id" [class]="ETIQUETA">Formato</label>
+                        <input [id]="'cb-f-' + id" type="text" maxlength="50" autocomplete="off" spellcheck="false" [placeholder]="FORMATO_EJEMPLO[c.dataType]"
+                               [class]="CAMPO_ED + ' font-mono!'" [attr.value]="c.format" (input)="escribir(c, 'format', $any($event.target).value)">
+                      </div>
+                      <div class="flex min-w-0 flex-col gap-1.5">
+                        <span [class]="ETIQUETA">Dato del sistema</span>
+                        <app-combobox alto="campo" [opciones]="opcionesPorFila().get(c.clave) ?? []" [valor]="valorDato(c)" marcador="Sin dato del sistema"
+                                      marcadorBusqueda="Buscar dato…" vacio="Ningún dato coincide." [permiteCrear]="true"
+                                      [etiquetaAria]="'Dato del sistema de ' + c.headerName"
+                                      (cambio)="elegirDato(c, $event)" (crear)="abrirDatoNuevo(c, $event)" />
+                        <span [class]="AYUDA">Lo usan los filtros de campañas, la ficha del cliente y las reglas.</span>
+                      </div>
+                      <div class="flex min-w-0 flex-col gap-1.5">
+                        <label [attr.for]="'cb-al-' + id" [class]="ETIQUETA">Alias</label>
+                        <input #campoAlias [id]="'cb-al-' + id" type="text" maxlength="100" autocomplete="off" spellcheck="false" [disabled]="alias === null"
+                               [placeholder]="alias === null ? 'Leyendo alias…' : 'Otro nombre de la columna y Enter'"
+                               [class]="CAMPO_ED" (keydown.enter)="$event.preventDefault(); agregarAlias(c, campoAlias)">
+                        @if (alias?.length) {
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            @for (a of alias; track a) {
+                              <span [class]="FICHA">{{ a }}
+                                <button type="button" [class]="FICHA_X" [attr.aria-label]="'Quitar alias ' + a" (click)="quitarAlias(c, a)">
+                                  <lucide-angular name="x" [size]="12"></lucide-angular>
+                                </button>
+                              </span>
+                            }
+                          </div>
+                        } @else {
+                          <span [class]="AYUDA">Otros nombres con los que puede llegar la columna.</span>
+                        }
+                      </div>
+                      <div class="flex min-w-0 flex-col gap-1.5">
+                        <span [class]="ETIQUETA">Origen</span>
+                        <div class="flex min-h-10 items-center rounded-[.625rem] border border-dashed border-border px-3 py-2 text-[.75rem] leading-[1.4] text-muted-foreground">
+                          <span>
+                            @if (c.sourceField) {
+                              Se arma con <b class="font-medium text-foreground">{{ origenLegible(c.sourceField) }}</b>
+                            } @else {
+                              Viene tal cual del archivo
+                            }
+                          </span>
+                        </div>
+                        <span [class]="AYUDA">{{ c.sourceField ? 'Las columnas no cambian: hay que crear la cabecera de nuevo.' : 'En la columna del mismo nombre.' }}</span>
+                      </div>
+                      @if (c.sourceField) {
+                        <div class="flex min-w-0 flex-col gap-1.5">
+                          <label [attr.for]="'cb-rx-' + id" [class]="ETIQUETA">Regex{{ origenes(c).length === 1 ? '' : ' (opcional)' }}</label>
+                          <input [id]="'cb-rx-' + id" type="text" maxlength="255" autocomplete="off" spellcheck="false" placeholder=".{8}$"
+                                 [class]="CAMPO_ED + ' font-mono!'" [attr.value]="c.regexPattern" (input)="escribir(c, 'regexPattern', $any($event.target).value)">
+                          <span [class]="AYUDA">Extrae parte del valor de la columna de origen.</span>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                      <button type="button" appBoton="secundario" appBotonAlto="chico" [ngClass]="c.borrada ? '' : 'text-(--ro)!'" (click)="alternarBorrada(c)">
+                        <lucide-angular [name]="c.borrada ? 'undo-2' : 'trash-2'" [size]="16"></lucide-angular>{{ c.borrada ? 'No eliminar' : 'Eliminar cabecera' }}
+                      </button>
+                      <span class="ml-auto text-[.75rem] text-muted-foreground">En la tabla: <span class="font-mono text-foreground">{{ columnaEnTabla(c.headerName) }}</span></span>
+                    </div>
+                  </div>
+                }
+              }
+            }
+          }
+        }
+      }
+    </div>
+
+    <!-- Pie de la tarjeta: queda fijo bajo la lista, que se desplaza por encima. -->
+    @if (lista) {
+      <div class="flex flex-none flex-wrap gap-2 border-t border-border pt-4">
+        <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="agregar()">
+          <lucide-angular name="plus" [size]="16"></lucide-angular>Agregar cabecera
+        </button>
+        <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="entradaArchivo.click()">
+          <lucide-angular name="file-up" [size]="16"></lucide-angular>Importar desde archivo
+        </button>
+        <input #entradaArchivo type="file" accept=".csv,.xlsx,.xls" class="hidden" (change)="elegirArchivo(entradaArchivo)">
+        <button type="button" appBoton="secundario" appBotonAlto="chico" [disabled]="!otrasSubs().length" (click)="abrirCopiar()"
+                [title]="otrasSubs().length ? 'Copiar de otra subcartera' : 'Ninguna otra subcartera tiene esta carga configurada'">
+          <lucide-angular name="copy" [size]="16"></lucide-angular>Copiar de otra subcartera
+        </button>
+        <button type="button" appBoton="secundario" appBotonAlto="chico" cdkOverlayOrigin #origenPlantilla="cdkOverlayOrigin"
+                aria-haspopup="menu" [attr.aria-expanded]="menuPlantilla()" (click)="menuPlantilla.set(!menuPlantilla())">
+          <lucide-angular name="file-down" [size]="16"></lucide-angular>Descargar plantilla
+        </button>
+        <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="origenPlantilla" [cdkConnectedOverlayOpen]="menuPlantilla()"
+                     [cdkConnectedOverlayPositions]="POSICIONES_MENU" [cdkConnectedOverlayHasBackdrop]="true"
+                     cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop" (backdropClick)="menuPlantilla.set(false)" (detach)="menuPlantilla.set(false)">
+          <div role="menu" aria-label="Descargar plantilla" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="menuPlantilla.set(false)"
+               class="font-cashi cashi-pantalla flex w-64 flex-col rounded-lg border border-border bg-popover p-1 text-foreground antialiased shadow-[0_10px_28px_rgb(0_0_0/.18)]">
+            <button type="button" role="menuitem" [class]="OPCION_MENU" (click)="descargarExcel()">
+              <lucide-angular name="file-down" [size]="16" class="flex flex-none text-muted-foreground"></lucide-angular>Excel (.xlsx)
+            </button>
+            <button type="button" role="menuitem" [class]="OPCION_MENU" (click)="descargarCsv()">
+              <lucide-angular name="file-down" [size]="16" class="flex flex-none text-muted-foreground"></lucide-angular>CSV separado por punto y coma
+            </button>
+          </div>
+        </ng-template>
+      </div>
+    }
+  </section>
+
+  <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
+  <app-panel-subcarteras class="@max-[70.5rem]/cab:hidden" [subcarteras]="panelSubs()" [seleccion]="sub()" [etiquetas]="etiquetasPanel()" (elegir)="elegirSub($event)" />
+</div>
+
+<!-- Barra de cambios: una tarjeta aparte, siempre abajo. -->
+<div appTarjeta class="font-cashi flex flex-none items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+  <span class="mr-auto text-[.875rem] font-medium" [ngClass]="problemas().length ? 'text-(--ro)' : cambios() ? 'text-foreground' : 'text-muted-foreground'">{{ resumen() }}</span>
+  <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="!cambios() || guardando()" (click)="descartar()">Descartar</button>
+  <button type="button" appBoton class="flex-none px-4!" [disabled]="!cambios() || problemas().length > 0 || guardando()" (click)="guardar()">
+    @if (guardando()) {
+      <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>Guardando
+    } @else {
+      <lucide-angular name="check" [size]="16"></lucide-angular>Guardar cambios
+    }
+  </button>
+</div>
+
+<!-- ============ Diálogo: confirmar las eliminaciones ============ -->
+@if (confirmarBorrado(); as borrar) {
+  <div [class]="ui.fondo" (click)="confirmarBorrado.set(null)">
+    <div [class]="ui.panel + ' max-w-[460px]'" role="alertdialog" aria-modal="true" aria-labelledby="cb-del-titulo" aria-describedby="cb-del-texto"
+         cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="confirmarBorrado.set(null)">
+      <div class="flex items-start gap-3 px-[18px] pt-[18px] pb-3.5">
+        <span class="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300" aria-hidden="true">
+          <lucide-angular name="trash-2" [size]="17"></lucide-angular>
+        </span>
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <h2 id="cb-del-titulo" class="m-0! text-[1rem] leading-[1.3] font-bold">¿Eliminar {{ borrar.length === 1 ? 'una cabecera' : borrar.length + ' cabeceras' }}?</h2>
+          <p id="cb-del-texto" class="m-0 text-[.875rem] leading-[1.5] text-muted-foreground">
+            Si la columna ya tiene datos en la tabla, el servidor no la elimina y te lo avisa. El resto de los cambios se guarda igual.
+          </p>
+          <div class="mt-1 flex flex-wrap gap-1.5">
+            @for (c of borrar; track c.clave) {
+              <span [class]="FICHA + ' pr-2'">{{ c.headerName }}</span>
+            }
+          </div>
+        </div>
+      </div>
+      <div [class]="ui.pie">
+        <button type="button" appBoton="secundario" (click)="confirmarBorrado.set(null)">Cancelar</button>
+        <button type="button" appBoton="peligro" (click)="guardar(true)">Eliminar y guardar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: cabecera nueva ============ -->
+@if (form(); as f) {
+  <div [class]="ui.fondo" (click)="form.set(null)">
+    <form [class]="ui.panel + ' max-h-[min(46rem,92vh)] max-w-[680px]'" role="dialog" aria-modal="true" aria-labelledby="cb-form-titulo"
+          cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="form.set(null)"
+          (submit)="$event.preventDefault(); confirmarForm()">
+      <div [class]="ui.cabecera">
+        <div class="min-w-0">
+          <h2 id="cb-form-titulo" [class]="ui.titulo">{{ formEsNueva() ? 'Nueva cabecera' : 'Cabecera nueva' }}</h2>
+          <p [class]="ui.subtitulo">{{ carga() === 'INICIAL' ? 'Carga inicial del mes' : 'Carga diaria' }} de {{ actual()?.cliente | nombrePropio }} · {{ actual()?.subcartera | nombrePropio }}. Se crea al guardar los cambios.</p>
+        </div>
+      </div>
+      <div [class]="ui.cuerpo">
+        <div class="grid grid-cols-2 items-start gap-x-4 gap-y-3 max-[36rem]:grid-cols-1">
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="cb-form-nombre" [class]="ETIQUETA">Nombre de la columna</label>
+            <input id="cb-form-nombre" type="text" maxlength="100" autocomplete="off" spellcheck="false" placeholder="FECHA_CASTIGO"
+                   [class]="CAMPO_ED + ' font-mono! uppercase'" [attr.value]="f.headerName" (input)="escribirNombre(f, $any($event.target).value)"
+                   (blur)="$any($event.target).value = form()?.headerName ?? ''">
+            <span [class]="AYUDA">
+              @if (columnaEnTabla(f.headerName)) {
+                Como viene en el archivo. En la tabla: <span class="font-mono text-foreground">{{ columnaEnTabla(f.headerName) }}</span>
+              } @else {
+                Como viene en el archivo del cliente.
+              }
+            </span>
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="cb-form-etiqueta" [class]="ETIQUETA">Etiqueta visual</label>
+            <input id="cb-form-etiqueta" type="text" maxlength="255" autocomplete="off" placeholder="Fecha de castigo"
+                   [class]="CAMPO_ED" [attr.value]="f.displayLabel" (input)="escribir(f, 'displayLabel', $any($event.target).value)">
+            <span [class]="AYUDA">Así se ve en filtros y reportes.</span>
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="cb-form-tipo" [class]="ETIQUETA">Tipo de dato</label>
+            <select id="cb-form-tipo" [class]="LISTA_ED + ' w-full'" (change)="elegirTipo(f, $any($event.target).value)">
+              @for (t of TIPOS; track t.valor) {
+                <option [value]="t.valor" [selected]="t.valor === f.dataType">{{ t.texto }}</option>
+              }
+            </select>
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="cb-form-formato" [class]="ETIQUETA">Formato</label>
+            <input id="cb-form-formato" type="text" maxlength="50" autocomplete="off" spellcheck="false" [placeholder]="FORMATO_EJEMPLO[f.dataType]"
+                   [class]="CAMPO_ED + ' font-mono!'" [attr.value]="f.format" (input)="escribir(f, 'format', $any($event.target).value)">
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <span [class]="ETIQUETA">Dato del sistema</span>
+            <app-combobox alto="campo" [opciones]="opcionesForm()" [valor]="valorDato(f)" marcador="Sin dato del sistema"
+                          marcadorBusqueda="Buscar dato…" vacio="Ningún dato coincide." [permiteCrear]="true" etiquetaAria="Dato del sistema"
+                          (cambio)="elegirDato(f, $event)" (crear)="abrirDatoNuevo(f, $event)" />
+            <span [class]="AYUDA">Lo usan los filtros de campañas, la ficha del cliente y las reglas.</span>
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <span id="cb-form-obl" [class]="ETIQUETA">Obligatoria</span>
+            <div class="flex h-10 items-center gap-2.5">
+              <button type="button" role="switch" [class]="INTERRUPTOR" [ngClass]="f.required ? 'bg-brand after:translate-x-3.5' : 'bg-(--campo-ln)'"
+                      [attr.aria-checked]="f.required" aria-labelledby="cb-form-obl" (click)="alternarObligatoria(f)"></button>
+              <span class="text-[.875rem] text-foreground/80">{{ f.required ? 'La carga exige esta columna' : 'Puede venir vacía o no venir' }}</span>
+            </div>
+          </div>
+          <div class="col-span-full flex min-w-0 flex-col gap-1.5">
+            <label for="cb-form-alias" [class]="ETIQUETA">Alias</label>
+            <input #aliasForm id="cb-form-alias" type="text" maxlength="100" autocomplete="off" spellcheck="false" placeholder="Otro nombre de la columna y Enter"
+                   [class]="CAMPO_ED" (keydown.enter)="$event.preventDefault(); agregarAlias(f, aliasForm)">
+            @if (f.alias?.length) {
+              <div class="flex flex-wrap items-center gap-1.5">
+                @for (a of f.alias; track a) {
+                  <span [class]="FICHA">{{ a }}
+                    <button type="button" [class]="FICHA_X" [attr.aria-label]="'Quitar alias ' + a" (click)="quitarAlias(f, a)">
+                      <lucide-angular name="x" [size]="12"></lucide-angular>
+                    </button>
+                  </span>
+                }
+              </div>
+            } @else {
+              <span [class]="AYUDA">Otros nombres con los que puede llegar la columna.</span>
+            }
+          </div>
+
+          <!-- Origen: columnas del archivo y regex, siempre a la vista. -->
+          <div class="col-span-full flex min-w-0 flex-col gap-3 rounded-xl border border-border p-3">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[.875rem] font-semibold">Se arma con otras columnas <span class="font-normal text-muted-foreground">(opcional)</span></span>
+              <span [class]="AYUDA">Con una columna, el regex extrae parte de su valor. Con varias, se unen con un espacio en este orden y el regex es opcional.</span>
+            </div>
+            <div class="grid grid-cols-2 items-start gap-x-4 gap-y-3 max-[36rem]:grid-cols-1">
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <label for="cb-form-origen" [class]="ETIQUETA">Columnas de origen</label>
+                <select id="cb-form-origen" [class]="LISTA_ED + ' w-full'" [disabled]="!columnasParaOrigen(f).length" (change)="agregarOrigen(f, $any($event.target).value); $any($event.target).value = ''">
+                  <option value="" selected>{{ columnasParaOrigen(f).length ? (origenes(f).length ? 'Agregar otra columna…' : 'Elegir columna…') : 'No hay más columnas' }}</option>
+                  @for (x of columnasParaOrigen(f); track x) {
+                    <option [value]="x">{{ x }}</option>
+                  }
+                </select>
+                @if (origenes(f).length) {
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    @for (o of origenes(f); track o; let i = $index) {
+                      @if (i) {
+                        <span class="text-[.75rem] text-muted-foreground">+</span>
+                      }
+                      <span [class]="FICHA">{{ o }}
+                        <button type="button" [class]="FICHA_X" [attr.aria-label]="'Quitar ' + o" (click)="quitarOrigen(f, o)">
+                          <lucide-angular name="x" [size]="12"></lucide-angular>
+                        </button>
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <label for="cb-form-regex" [class]="ETIQUETA">Regex{{ origenes(f).length === 1 ? '' : ' (opcional)' }}</label>
+                <input id="cb-form-regex" type="text" maxlength="255" autocomplete="off" spellcheck="false" [disabled]="!origenes(f).length"
+                       [placeholder]="origenes(f).length ? '.{8}$' : 'Elige antes una columna de origen'"
+                       [class]="CAMPO_ED + ' font-mono!'" [value]="f.regexPattern" (input)="escribir(f, 'regexPattern', $any($event.target).value)">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div [class]="ui.pie">
+        @if (!formEsNueva()) {
+          <button type="button" appBoton="secundario" class="text-(--ro)!" (click)="quitarForm()">
+            <lucide-angular name="trash-2" [size]="16"></lucide-angular>Quitar
+          </button>
+        }
+        <span class="mr-auto min-w-0 text-[.75rem] text-muted-foreground">{{ problemasForm()[0] }}</span>
+        <button type="button" appBoton="secundario" (click)="form.set(null)">Cancelar</button>
+        <button type="submit" appBoton [disabled]="problemasForm().length > 0">
+          <lucide-angular name="check" [size]="16"></lucide-angular>{{ formEsNueva() ? 'Agregar' : 'Listo' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============ Diálogo: dato nuevo del catálogo ============ -->
+@if (datoNuevo(); as d) {
+  <div [class]="ui.fondo" (click)="datoNuevo.set(null)">
+    <form [class]="ui.panel + ' max-w-[420px]'" role="dialog" aria-modal="true" aria-labelledby="cb-dato-titulo"
+          cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="datoNuevo.set(null)"
+          (submit)="$event.preventDefault(); crearDato(nombreDato.value, $any(tipoDato.value))">
+      <div [class]="ui.cabecera">
+        <div>
+          <h2 id="cb-dato-titulo" [class]="ui.titulo">Nuevo dato del sistema</h2>
+          <p [class]="ui.subtitulo">Se agrega al catálogo y queda elegido para esta cabecera.</p>
+        </div>
+      </div>
+      <div [class]="ui.cuerpo">
+        <div class="flex flex-col gap-1.5">
+          <label for="cb-dato-nombre" [class]="ETIQUETA">Nombre</label>
+          <input #nombreDato id="cb-dato-nombre" type="text" maxlength="100" autocomplete="off" [class]="CAMPO" [value]="d.nombre">
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="cb-dato-tipo" [class]="ETIQUETA">Tipo</label>
+          <select #tipoDato id="cb-dato-tipo" [class]="LISTA">
+            @for (t of TIPOS; track t.valor) {
+              <option [value]="t.valor" [selected]="t.valor === d.tipo">{{ t.texto }}</option>
+            }
+          </select>
+        </div>
+        <p class="m-0 text-[.75rem] leading-[1.5] text-muted-foreground">
+          Sirve para filtrar campañas por esta columna. No reemplaza a los datos que ya usa el sistema, como la deuda, los días de mora o el nombre completo.
+        </p>
+      </div>
+      <div [class]="ui.pie">
+        <button type="button" appBoton="secundario" [disabled]="creandoDato()" (click)="datoNuevo.set(null)">Cancelar</button>
+        <button type="submit" appBoton [disabled]="creandoDato()">
+          @if (creandoDato()) {
+            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>Creando
+          } @else {
+            <lucide-angular name="check" [size]="16"></lucide-angular>Crear y elegir
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============ Diálogo: separador del CSV ============ -->
+@if (archivoCsv()) {
+  <div [class]="ui.fondo" (click)="archivoCsv.set(null)">
+    <div [class]="ui.panel + ' max-w-[400px]'" role="dialog" aria-modal="true" aria-labelledby="cb-sep-titulo"
+         cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="archivoCsv.set(null)">
+      <div [class]="ui.cabecera">
+        <div class="min-w-0">
+          <h2 id="cb-sep-titulo" [class]="ui.titulo">¿Cómo separa las columnas?</h2>
+          <p [class]="ui.subtitulo + ' overflow-hidden text-ellipsis whitespace-nowrap'">{{ nombreArchivo() }}</p>
+        </div>
+      </div>
+      <div [class]="ui.cuerpo + ' gap-1.5!'" role="radiogroup" aria-labelledby="cb-sep-titulo">
+        @for (s of SEPARADORES; track s.valor) {
+          <button type="button" role="radio" [attr.aria-checked]="separador() === s.valor" (click)="separador.set(s.valor)"
+                  class="font-cashi flex cursor-pointer items-center justify-between gap-3 rounded-[.625rem] border! px-3! py-2.5! text-left text-[.875rem] text-foreground!"
+                  [ngClass]="separador() === s.valor ? 'border-ring! bg-(--ok-bg)!' : 'border-border! bg-transparent! hover:bg-muted!'">
+            <span class="font-medium">{{ s.nombre }}</span>
+            <span class="font-mono text-[.75rem] text-muted-foreground">{{ s.muestra }}</span>
+          </button>
+        }
+      </div>
+      <div [class]="ui.pie">
+        <button type="button" appBoton="secundario" (click)="archivoCsv.set(null)">Cancelar</button>
+        <button type="button" appBoton (click)="leerCsv()">Continuar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Diálogo: cabeceras del archivo ============ -->
+@if (columnasArchivo(); as columnas) {
+  <div [class]="ui.fondo" (click)="columnasArchivo.set(null)">
+    <div [class]="ui.panel + ' max-h-[min(40rem,90vh)] max-w-[640px]'" role="dialog" aria-modal="true" aria-labelledby="cb-arch-titulo"
+         cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="columnasArchivo.set(null)">
+      <div [class]="ui.cabecera">
+        <div class="min-w-0">
+          <h2 id="cb-arch-titulo" [class]="ui.titulo">Cabeceras del archivo</h2>
+          <p [class]="ui.subtitulo + ' overflow-hidden text-ellipsis whitespace-nowrap'">{{ columnas.length }} nuevas en {{ nombreArchivo() }}. Las que ya están en esta carga no se muestran.</p>
+        </div>
+      </div>
+      <div [class]="ui.cuerpo + ' gap-0.5!'">
+        @for (col of columnas; track col.cabecera.headerName; let i = $index) {
+          <label class="m-0! grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-[.625rem] px-2 py-2 hover:bg-muted/55">
+            <input type="checkbox" class="m-0 size-4 cursor-pointer accent-brand" [checked]="col.elegida" (change)="alternarColumnaArchivo(i)">
+            <span class="flex min-w-0 items-baseline gap-2">
+              <span class="min-w-0 overflow-hidden text-[.875rem] text-ellipsis whitespace-nowrap">{{ col.cabecera.displayLabel }}</span>
+              <span class="flex-none font-mono text-[.6875rem] text-muted-foreground">{{ col.cabecera.headerName }}</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              @if (col.codigoCampo) {
+                <span class="max-w-[10rem] overflow-hidden text-[.75rem] text-ellipsis whitespace-nowrap text-muted-foreground">{{ col.codigoCampo }}</span>
+              }
+              <span [class]="PILL">{{ tipoTexto(col.cabecera.dataType) }}</span>
+            </span>
+          </label>
+        }
+      </div>
+      <div [class]="ui.pie">
+        <button type="button" appBoton="secundario" appBotonAlto="chico" class="mr-auto" (click)="marcarColumnasArchivo(columnasElegidas < columnas.length)">
+          {{ columnasElegidas < columnas.length ? 'Marcar todas' : 'Desmarcar todas' }}
+        </button>
+        <button type="button" appBoton="secundario" (click)="columnasArchivo.set(null)">Cancelar</button>
+        <button type="button" appBoton [disabled]="!columnasElegidas" (click)="agregarDelArchivo()">
+          Agregar {{ columnasElegidas }} {{ columnasElegidas === 1 ? 'cabecera' : 'cabeceras' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Diálogo: copiar de otra subcartera ============ -->
+@if (copiar()) {
+  <div [class]="ui.fondo" (click)="copiar.set(false)">
+    <div [class]="ui.panel + ' max-h-[min(40rem,90vh)] max-w-[560px]'" role="dialog" aria-modal="true" aria-labelledby="cb-cop-titulo"
+         cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="copiar.set(false)">
+      <div [class]="ui.cabecera">
+        <div>
+          <h2 id="cb-cop-titulo" [class]="ui.titulo">Copiar de otra subcartera</h2>
+          <p [class]="ui.subtitulo">Se agregan las cabeceras de su {{ carga() === 'INICIAL' ? 'carga inicial' : 'carga diaria' }} que aquí no existen.</p>
+        </div>
+      </div>
+      <div [class]="ui.cuerpo">
+        <div class="flex flex-col gap-1.5">
+          <label for="cb-cop-origen" [class]="ETIQUETA">Copiar de</label>
+          <select id="cb-cop-origen" [class]="LISTA" (change)="elegirOrigenCopia($any($event.target).value)">
+            <option value="0" [selected]="!copiarOrigen()">Elegir subcartera…</option>
+            @for (a of otrasSubs(); track a.subId) {
+              <option [value]="a.subId" [selected]="a.subId === copiarOrigen()">{{ a.cliente | nombrePropio }} · {{ a.subcartera | nombrePropio }}</option>
+            }
+          </select>
+        </div>
+        @if (copiarCargando()) {
+          <p class="m-0 text-[.875rem] text-muted-foreground">Comparando cabeceras…</p>
+        } @else if (copiarVista(); as v) {
+          <div class="flex flex-col gap-1.5">
+            <span [class]="ETIQUETA">{{ v.totalNew }} {{ v.totalNew === 1 ? 'cabecera nueva' : 'cabeceras nuevas' }}</span>
+            @if (v.headersToImport.length) {
+              <div class="flex flex-wrap gap-1.5">
+                @for (h of v.headersToImport; track h.headerName) {
+                  <span [class]="FICHA + ' pr-2'" [title]="h.displayLabel">{{ h.headerName }}</span>
+                }
+              </div>
+            } @else {
+              <span [class]="AYUDA">Todas sus cabeceras ya están aquí.</span>
+            }
+          </div>
+          @if (v.conflicts.length) {
+            <div class="flex flex-col gap-1.5">
+              <span [class]="ETIQUETA">{{ v.totalConflicts }} ya {{ v.totalConflicts === 1 ? 'existe' : 'existen' }} aquí y se {{ v.totalConflicts === 1 ? 'deja' : 'dejan' }} como {{ v.totalConflicts === 1 ? 'está' : 'están' }}</span>
+              <div class="flex flex-wrap gap-1.5">
+                @for (h of v.conflicts; track h.headerName) {
+                  <span [class]="FICHA + ' pr-2 opacity-70'">{{ h.headerName }}</span>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+      <div [class]="ui.pie">
+        <button type="button" appBoton="secundario" (click)="copiar.set(false)">Cancelar</button>
+        <button type="button" appBoton [disabled]="!copiarVista()?.headersToImport?.length" (click)="confirmarCopia()">
+          Agregar {{ copiarVista()?.headersToImport?.length || '' }} {{ copiarVista()?.headersToImport?.length === 1 ? 'cabecera' : 'cabeceras' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
