@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
-import { Observable } from 'rxjs';
-import { DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { DiaDetalle, METRICA_INFO, MOTIVO_INFO, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
+import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
+import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
+import { DiaDetalle, METRICA_INFO, MOTIVO_INFO, agruparContenidosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -32,11 +32,8 @@ const T = 16;
 const B = 28;
 
 /**
- * Sustento del período: por asesor (contra su meta individual) o por el supervisor (el total de los
- * asesores contra la meta del mes). Gráfico del acumulado por fecha banco, día a día y, en cada día,
- * los pagos con hora, cliente y monto. En contención cada pago muestra su PDP, la fecha de contención, lo
- * pagado y el capital asignado que suma (solo en el primer pago del cliente). Abajo, los pagos que no suman y
- * por qué.
+ * Sustento del período por persona. En CONTENCION, el supervisor ve todos los clientes contenidos del mes
+ * por fecha de contención; los asesores conservan el detalle de sus pagos por fecha de banco.
  */
 @Component({
   selector: 'cmx-sustento-tab',
@@ -79,17 +76,22 @@ const B = 28;
             <h3 id="cmx-sus-nombre" class="cmx-block-title">{{ p.nombre }}</h3>
             <span class="cmx-block-desc">
               @if (p.esSupervisor) {
-                {{ metrica().logrado }} total de los {{ totalAsesores() }} asesores contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
+                @if (porCapital()) {
+                  Suma el saldo capital asignado de todos los clientes CONTENIDO del mes, gestionados o no por su equipo.
+                  Meta del mes: S/ {{ p.meta | appNumber:'1.2-2' }}.
+                } @else {
+                  {{ metrica().logrado }} total de los {{ totalAsesores() }} asesores contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
+                }
               } @else {
                 {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
               }
             </span>
           </div>
-          <div class="cmx-legend"><span><i></i>{{ metrica().logrado }} acumulado por fecha banco</span></div>
+          <div class="cmx-legend"><span><i></i>{{ metrica().logrado }} acumulado por {{ p.esSupervisor && porCapital() ? 'fecha de contención' : 'fecha banco' }}</span></div>
           <div style="padding:6px 14px 8px">
             @if (grafico(); as g) {
               <svg class="cmx-chart" [attr.viewBox]="'0 0 ' + g.w + ' ' + g.h" role="img"
-                   [attr.aria-label]="'Avance de ' + p.nombre + ' sobre su meta por fecha banco'">
+                   [attr.aria-label]="'Avance de ' + p.nombre + ' sobre su meta por ' + (p.esSupervisor && porCapital() ? 'fecha de contención' : 'fecha banco')">
                 <defs>
                   <pattern id="cmx-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                     <rect width="6" height="6" fill="#F8FAFC" /><line x1="0" y1="0" x2="0" y2="6" stroke="#E2E8F0" stroke-width="3" />
@@ -97,7 +99,7 @@ const B = 28;
                 </defs>
                 @if (g.pendiente; as pe) {
                   <rect [attr.x]="pe.x" [attr.y]="g.t" [attr.width]="pe.w" [attr.height]="g.alto" fill="url(#cmx-hatch)" />
-                  <text class="cmx-ch-axis" [attr.x]="pe.x + pe.w / 2" [attr.y]="g.base - 8" text-anchor="middle">aún sin pagos</text>
+                  <text class="cmx-ch-axis" [attr.x]="pe.x + pe.w / 2" [attr.y]="g.base - 8" text-anchor="middle">{{ p.esSupervisor && porCapital() ? 'sin nuevos contenidos' : 'aún sin pagos' }}</text>
                 }
                 @for (l of g.lineas; track l.desde) {
                   <line class="cmx-ch-tramo" [class.is-hit]="l.hit" [attr.x1]="g.l" [attr.x2]="g.xFin" [attr.y1]="l.y" [attr.y2]="l.y" />
@@ -136,7 +138,9 @@ const B = 28;
               <div class="cmx-reads-v">S/ {{ p.comision + p.bonos | appNumber:'1.2-2' }}</div>
               <div class="cmx-reads-d">
                 Comisión S/ {{ p.comision | appNumber:'1.2-2' }}@if (p.bonos) { + bonos S/ {{ p.bonos | appNumber:'1.2-2' }} } ·
-                @if (vista().pagos.ultimaFechaBanco; as u) { con los pagos conciliados hasta el {{ diaMes(u) }} } @else { sin pagos conciliados }
+                @if (p.esSupervisor && porCapital()) {
+                  sustento de {{ contenidos().length }} clientes contenidos
+                } @else if (vista().pagos.ultimaFechaBanco; as u) { con los pagos conciliados hasta el {{ diaMes(u) }} } @else { sin pagos conciliados }
               </div>
             </div>
           </div>
@@ -168,24 +172,30 @@ const B = 28;
         <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-sus-dias">
           <div class="cmx-block-head">
             <h3 id="cmx-sus-dias" class="cmx-block-title">Día a día</h3>
-            <span class="cmx-block-desc">Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente contenido suma su capital asignado el día de su primer pago del mes }</span>
+            <span class="cmx-block-desc">
+              @if (p.esSupervisor && porCapital()) {
+                Por fecha de contención. Los que ya venían contenidos se muestran en el día 1 del mes.
+              } @else {
+                Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente contenido suma su capital asignado el día de su primer pago del mes }
+              }
+            </span>
           </div>
           <div class="cmx-tw">
             <table class="cmx-table">
               <thead>
                 <tr>
-                  <th scope="col">Fecha banco</th>
+                  <th scope="col">{{ p.esSupervisor && porCapital() ? 'Fecha de contención' : 'Fecha banco' }}</th>
                   <th scope="col" class="n">{{ porCapital() ? 'Capital del día' : 'Monto del día' }}</th>
                   <th scope="col" class="n">Acumulado</th>
                   <th scope="col" class="n">% de la meta</th>
                   <th scope="col">Nivel</th>
-                  <th scope="col"><span class="sr-only">Pagos</span></th>
+                  <th scope="col"><span class="sr-only">{{ p.esSupervisor && porCapital() ? 'Clientes' : 'Pagos' }}</span></th>
                 </tr>
               </thead>
               <tbody>
                 @for (d of dias(); track d.fecha) {
                   <tr [class.is-open]="abiertos().has(d.fecha)">
-                    <td class="n" style="text-align:left">{{ diaMes(d.fecha) }}</td>
+                    <td class="n" style="text-align:left">{{ diaMes(d.fecha) }}@if (d.etiqueta) { <span class="cmx-tag">{{ d.etiqueta }}</span> }</td>
                     <td class="n">{{ d.monto | appNumber:'1.2-2' }}</td>
                     <td class="n">{{ d.acumulado | appNumber:'1.2-2' }}</td>
                     <td class="n">{{ d.porcentaje ?? 0 | appNumber:'1.1-1' }} %</td>
@@ -194,7 +204,7 @@ const B = 28;
                     </td>
                     <td style="text-align:right">
                       <button type="button" class="cmx-dbtn" [attr.aria-expanded]="abiertos().has(d.fecha)" (click)="alternarDia(d.fecha)">
-                        {{ abiertos().has(d.fecha) ? 'Ocultar' : 'Ver pagos (' + d.pagos.length + ')' }}
+                        {{ abiertos().has(d.fecha) ? 'Ocultar' : d.clientes ? 'Ver clientes (' + d.clientes.length + ')' : 'Ver pagos (' + d.pagos.length + ')' }}
                         <span class="cmx-chev" [class.is-open]="abiertos().has(d.fecha)"><cmx-icon name="chevron-down" [size]="13" /></span>
                       </button>
                     </td>
@@ -203,6 +213,22 @@ const B = 28;
                     <tr class="cmx-det">
                       <td colspan="6">
                         <div class="cmx-det-in">
+                          @if (d.clientes; as clientes) {
+                            <div class="cmx-tw">
+                              <table class="cmx-table">
+                                <thead><tr><th scope="col">Documento</th><th scope="col">Cliente</th><th scope="col" class="n">Capital</th></tr></thead>
+                                <tbody>
+                                  @for (cliente of clientes; track cliente.documentoCliente) {
+                                    <tr>
+                                      <td>{{ cliente.documentoCliente }}</td>
+                                      <td>{{ cliente.nombreCliente || '—' }}</td>
+                                      <td class="n">{{ cliente.capitalAsignado ?? 0 | appNumber:'1.2-2' }}</td>
+                                    </tr>
+                                  }
+                                </tbody>
+                              </table>
+                            </div>
+                          } @else {
                           <div class="cmx-tw">
                             <table class="cmx-table">
                               <thead>
@@ -259,24 +285,62 @@ const B = 28;
                               </tbody>
                             </table>
                           </div>
+                          }
                         </div>
                       </td>
                     </tr>
                   }
                 } @empty {
-                  <tr><td colspan="6" class="empty">Todavía no hay pagos que sumen en este periodo.</td></tr>
+                  <tr><td colspan="6" class="empty">{{ p.esSupervisor && porCapital() ? 'No hay clientes contenidos en la tabla de este periodo.' : 'Todavía no hay pagos que sumen en este periodo.' }}</td></tr>
                 }
               </tbody>
             </table>
           </div>
         </section>
 
+        @if (p.esSupervisor && porCapital()) {
+          <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-sus-contenidos">
+            <div class="cmx-block-head">
+              <h3 id="cmx-sus-contenidos" class="cmx-block-title">Clientes contenidos del mes ({{ contenidos().length }})</h3>
+              <span class="cmx-block-desc">Total S/ {{ totalContenidos() | appNumber:'1.2-2' }}</span>
+            </div>
+            @if (contenidosDesactualizados()) {
+              <p class="cmx-block-desc" role="status" style="padding:0 14px">
+                La tabla del mes cambió después del último recálculo: recalcula el período para actualizar el logrado.
+              </p>
+            }
+            <div class="cmx-tw">
+              <table class="cmx-table">
+                <thead>
+                  <tr><th scope="col">Documento</th><th scope="col">Cliente</th><th scope="col">Fecha de contención</th><th scope="col" class="n">Capital</th></tr>
+                </thead>
+                <tbody>
+                  @for (cliente of contenidos(); track cliente.documentoCliente) {
+                    <tr>
+                      <td>{{ cliente.documentoCliente }}</td>
+                      <td>{{ cliente.nombreCliente || '—' }}</td>
+                      <td>{{ cliente.fechaContencion ? diaMes(cliente.fechaContencion) : 'Ya venía contenido' }}</td>
+                      <td class="n">{{ cliente.capitalAsignado ?? 0 | appNumber:'1.2-2' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="4" class="empty">No hay clientes contenidos en la tabla de este periodo.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
         @if (noSuman().length) {
-          <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-sus-nosuman">
+          <section class="cmx-block cmx-enter" style="--i:3" aria-labelledby="cmx-sus-nosuman">
             <div class="cmx-block-head">
               <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman ({{ noSuman().length }})</h3>
               <span class="cmx-block-desc">
-                Conciliados en el mes, pero no suman {{ porCapital() ? 'capital' : 'al recaudo' }}@if (porCapital()) {. Los de clientes que no contuvo siguen contando para la meta de pagos }
+                @if (p.esSupervisor && porCapital()) {
+                  Conciliados en el mes, pero no suman capital a los asesores. Los motivos de contención siguen contando para su meta de pagos.
+                } @else {
+                  Conciliados en el mes, pero no suman {{ porCapital() ? 'capital' : 'al recaudo' }}@if (porCapital()) {. Los de clientes que no contuvo siguen contando para la meta de pagos }
+                }
               </span>
             </div>
             <div class="cmx-tw">
@@ -328,6 +392,7 @@ const B = 28;
 })
 export class SustentoTabComponent {
   private readonly service = inject(ComisionesService);
+  private carga: Subscription | null = null;
 
   readonly reporte = input.required<ReportePeriodo>();
   readonly vista = input.required<VistaSustento>();
@@ -342,6 +407,9 @@ export class SustentoTabComponent {
 
   readonly filas = signal<DetalleComision[]>([]);
   readonly pagos = signal<PagoSustento[]>([]);
+  readonly contenidos = signal<ClienteContenido[]>([]);
+  private readonly contenidosDisponibles = signal(false);
+  readonly totalContenidos = computed(() => this.contenidos().reduce((total, c) => total + (c.capitalAsignado ?? 0), 0));
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
   readonly abiertos = signal<Set<string>>(new Set());
@@ -407,7 +475,7 @@ export class SustentoTabComponent {
     return partes.join(' + ');
   }
 
-  /** Asesores que suma el supervisor (en Mis comisiones solo llega su fila: se cuentan en el detalle) */
+  /** Equipo del supervisor en RECAUDO (en Mis comisiones se cuenta en el detalle) */
   readonly totalAsesores = computed(() => {
     const n = this.reporte().participantes.filter(p => p.rol === 'ASESOR').length;
     return n || new Set(this.filas().map(f => f.idUsuario)).size;
@@ -416,6 +484,13 @@ export class SustentoTabComponent {
   readonly persona = computed(() => {
     const lista = this.personas();
     return lista.find(p => p.clave === this.seleccion()) ?? lista[0] ?? null;
+  });
+
+  /** El sustento es una consulta actual; el logrado corresponde al último recálculo */
+  readonly contenidosDesactualizados = computed(() => {
+    const p = this.persona();
+    return !!p?.esSupervisor && this.porCapital() && this.contenidosDisponibles()
+      && Math.round(this.totalContenidos() * 100) !== Math.round(p.logrado * 100);
   });
 
   /** Pagos que no suman: los de las gestiones del asesor o, para el supervisor, todos */
@@ -429,7 +504,15 @@ export class SustentoTabComponent {
 
   readonly dias = computed<DiaDetalle[]>(() => {
     const p = this.persona();
-    return p ? agruparPorDia(p.filas, p.meta, p.tramos, p.esSupervisor && this.porCapital()) : [];
+    if (!p) {
+      return [];
+    }
+    if (p.esSupervisor && this.porCapital()) {
+      const periodo = this.reporte().periodo;
+      const primerDiaMes = `${periodo.anio}-${String(periodo.mes).padStart(2, '0')}-01`;
+      return agruparContenidosPorDia(this.contenidos(), primerDiaMes, p.meta, p.tramos);
+    }
+    return agruparPorDia(p.filas, p.meta, p.tramos);
   });
 
   readonly siguiente = computed(() => {
@@ -445,9 +528,12 @@ export class SustentoTabComponent {
       return null;
     }
     const diasMes = new Date(v.anio, v.mes, 0).getDate();
-    const ultimo = v.pagos.ultimaFechaBanco ? Number(v.pagos.ultimaFechaBanco.slice(8, 10)) : 0;
+    const dias = this.dias();
+    const ultimaFecha = p.esSupervisor && this.porCapital() ? dias.at(-1)?.fecha : v.pagos.ultimaFechaBanco;
+    const ultimo = ultimaFecha ? Number(ultimaFecha.slice(8, 10)) : 0;
     const niveles = p.tramos.filter(t => t.porcentajeDesde > 0);
-    const maxP = Math.max(p.porcentaje ?? 0, 110, niveles.length ? niveles[niveles.length - 1].porcentajeDesde + 10 : 0) * 1.06;
+    const porcentajeContenidos = p.esSupervisor && this.porCapital() ? dias.at(-1)?.porcentaje ?? 0 : 0;
+    const maxP = Math.max(p.porcentaje ?? 0, porcentajeContenidos, 110, niveles.length ? niveles[niveles.length - 1].porcentajeDesde + 10 : 0) * 1.06;
     const x = (d: number) => L + (d - 1) / (diasMes - 1) * (W - L - R);
     const y = (pct: number) => T + (1 - pct / maxP) * (H - T - B);
     const base = y(0);
@@ -459,7 +545,6 @@ export class SustentoTabComponent {
       }
     }
 
-    const dias = this.dias();
     const puntos: [number, number][] = [];
     if (dias.length && p.meta) {
       puntos.push([x(Number(dias[0].fecha.slice(8, 10))), base]);
@@ -484,6 +569,7 @@ export class SustentoTabComponent {
   });
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.carga?.unsubscribe());
     // Cada cálculo nuevo del período trae otro detalle
     effect(() => {
       const r = this.reporte();
@@ -494,24 +580,35 @@ export class SustentoTabComponent {
   }
 
   cargar(): void {
+    this.carga?.unsubscribe();
     this.cargando.set(true);
     this.error.set(null);
+    this.filas.set([]);
+    this.pagos.set([]);
+    this.contenidos.set([]);
+    this.contenidosDisponibles.set(false);
+    this.abiertos.set(new Set());
     const fuente = this.fuenteDetalle() ?? ((id: number) => this.service.obtenerDetalle(id));
-    fuente(this.reporte().periodo.id).subscribe({
-      next: filas => {
+    const fuentePagos = this.fuentePagos() ?? ((id: number) => this.service.obtenerPagos(id));
+    const id = this.reporte().periodo.id;
+    // Los pagos excluidos y los contenidos son complementos: si fallan, el sustento se ve igual.
+    this.carga = forkJoin({
+      filas: fuente(id),
+      pagos: fuentePagos(id).pipe(catchError(() => of<PagoSustento[]>([]))),
+      contenidos: this.porCapital() && this.reporte().participantes.some(p => p.rol === 'SUPERVISOR')
+        ? this.service.obtenerContenidos(id).pipe(catchError(() => of(null))) : of<ClienteContenido[]>([])
+    }).subscribe({
+      next: ({ filas, pagos, contenidos }) => {
         this.filas.set(filas);
+        this.pagos.set(pagos);
+        this.contenidos.set(contenidos ?? []);
+        this.contenidosDisponibles.set(contenidos != null);
         this.cargando.set(false);
       },
       error: e => {
         this.cargando.set(false);
         this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
       }
-    });
-    // Los pagos que no suman son un complemento: si fallan, el sustento se ve igual
-    const fuentePagos = this.fuentePagos() ?? ((id: number) => this.service.obtenerPagos(id));
-    fuentePagos(this.reporte().periodo.id).subscribe({
-      next: pagos => this.pagos.set(pagos),
-      error: () => this.pagos.set([])
     });
   }
 
