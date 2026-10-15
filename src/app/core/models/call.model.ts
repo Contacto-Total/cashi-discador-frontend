@@ -52,6 +52,11 @@ export interface MakeCallRequest {
   carteraId?: number;
   subcarteraId?: number;
   campaignId?: number;
+  // Queda en marcador_llamadas.resultado y es lo que le dice al backend que esta
+  // llamada la marco el asesor, no el discador: con eso no la barre el limpiador de
+  // huerfanas ni le reenvia la ficha que ya tiene abierta. Si no se manda, el backend
+  // asume MANUAL.
+  origen?: 'MANUAL' | 'RELLAMADA';
 }
 
 export interface CompleteCallRequest {

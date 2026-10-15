@@ -4903,7 +4903,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
-    // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
+    // Registrar en BD y marcar: /calls/make origina via FreeSWITCH (llama primero al
+    // anexo del asesor y de ahi hace bridge al cliente) y deja la llamada en
+    // marcador_llamadas, que es lo que mueve al asesor a EN_LLAMADA y, al colgar, a
+    // TIPIFICANDO. El `origen` distingue esta fila de las del discador.
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
       await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
@@ -4917,7 +4920,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         contactId,
         tenantId: this.selectedTenantId,
         carteraId: this.selectedPortfolioId,
-        subcarteraId: this.selectedSubPortfolioId
+        subcarteraId: this.selectedSubPortfolioId,
+        origen: 'RELLAMADA'
       }).subscribe({
         next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
         error: (err: any) => {
