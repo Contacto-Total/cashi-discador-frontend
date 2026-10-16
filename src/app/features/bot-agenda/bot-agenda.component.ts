@@ -93,7 +93,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   equidad: RepartoSubcartera[] = [];
   equidadError = false;
 
-  /** Vista elegida arriba. La de equidad es solo para ADMIN. */
+  /** Vista elegida arriba. La de equidad es para ADMIN y supervisión. */
   vista: 'agenda' | 'equidad' = 'agenda';
 
   cargando = false;
@@ -148,13 +148,19 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     this.reloj = setInterval(() => (this.ahora = Date.now()), 30000);
   }
 
-  /** La equidad del reparto la ve solo el ADMIN; el resto sigue con la agenda de siempre. */
-  get esAdmin(): boolean {
-    return this.auth.hasAnyRole('ADMIN');
+  /**
+   * La equidad del reparto la ven el ADMIN y la supervisión (cualquier rol con SUPERVISOR).
+   * Operaciones y asesores siguen con la agenda de siempre. El backend lo vuelve a exigir.
+   */
+  get puedeVerEquidad(): boolean {
+    const u = this.auth.getCurrentUser();
+    if (!u) return false;
+    const roles = (u.roles?.length ? u.roles : [u.role]).map((r) => String(r ?? '').toUpperCase());
+    return roles.some((r) => r === 'ADMIN' || r.includes('SUPERVISOR'));
   }
 
   get verEquidad(): boolean {
-    return this.esAdmin && this.vista === 'equidad';
+    return this.puedeVerEquidad && this.vista === 'equidad';
   }
 
   elegirVista(v: 'agenda' | 'equidad'): void {

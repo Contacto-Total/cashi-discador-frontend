@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    @if (esAdmin) {
+    @if (puedeVerEquidad) {
       <div class="flex gap-1 border-b border-[#e6e9ee] dark:border-slate-800" role="tablist"
            aria-label="Vistas de la agenda del bot">
         <button type="button" role="tab" [attr.aria-selected]="!verEquidad"
@@ -237,7 +237,7 @@
   </div>
   }
 
-  <!-- ===================== EQUIDAD DEL REPARTO (solo ADMIN, en su propia vista) ===================== -->
+  <!-- ===================== EQUIDAD DEL REPARTO (ADMIN y supervisión, en su propia vista) ===================== -->
   @if (verEquidad) {
     <section class="contenido" aria-labelledby="titulo-equidad">
       <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
