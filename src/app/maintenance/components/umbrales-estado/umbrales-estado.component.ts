@@ -124,8 +124,8 @@ export class UmbralesEstadoComponent implements OnInit {
   readonly etiquetasSubs = computed(() => Object.fromEntries(this.subcarteras().map(s => [s.idSubcartera,
     this.personalizada(s.idSubcartera) ? { texto: 'Personalizado', tono: 'ok' } : { texto: 'General', tono: 'neutra' }])) as Record<number, EtiquetaSubcartera>);
 
-  /** Grupos plegados, como los tipos de contacto de Tipificaciones; al entrar, todos desplegados. */
-  readonly plegados = signal<ReadonlySet<string>>(new Set());
+  /** Grupos desplegados; al entrar, todos plegados, como los tipos de contacto de Tipificaciones. */
+  readonly desplegados = signal<ReadonlySet<string>>(new Set());
 
   /** Estados de cada grupo que tienen configuración general; los que no, no se listan. */
   readonly grupos = computed(() => GRUPOS
@@ -211,7 +211,7 @@ export class UmbralesEstadoComponent implements OnInit {
   }
 
   alternarGrupo(nombre: string): void {
-    this.plegados.update(p => {
+    this.desplegados.update(p => {
       const s = new Set(p);
       if (!s.delete(nombre)) {
         s.add(nombre);

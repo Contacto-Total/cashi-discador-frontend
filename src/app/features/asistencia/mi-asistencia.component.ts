@@ -17,7 +17,7 @@ import {
 } from './asistencia.models';
 import {
   RECUPERACION, TIPOS_DE_CALENDARIO, abrirArchivo, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
-  hoy as hoyLocal, lunesDe as lunesLocal, primerDiaPermitido, sumarDias as sumarDiasLocal
+  hoy as hoyLocal, inicioDiasSinCompletar, lunesDe as lunesLocal, primerDiaPermitido, sumarDias as sumarDiasLocal
 } from './asistencia.estilos';
 
 const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -540,7 +540,7 @@ const ESTILOS = {
               @if (verPasado()) {
                 <div class="flex flex-col gap-1.5">
                   <span [class]="estilos.etiqueta">Tus días sin completar</span>
-                  <div class="tarjeta !px-3.5 !py-0.5">
+                  <div class="tarjeta max-h-64 overflow-y-auto !px-3.5 !py-0.5">
                     <ul class="lista-limpia">
                       @for (f of sinCompletar(); track f.fecha) {
                         <li>
@@ -773,7 +773,7 @@ export class MiAsistenciaComponent implements OnInit {
   /** La solicitud que se está modificando; null al registrar una nueva. */
   readonly editando = signal<Justificacion | null>(null);
 
-  /** Un día que ya pasó: los días desde el lunes de la semana pasada y los que la persona marcó. */
+  /** Un día que ya pasó: los días del mes (al menos desde la semana pasada) y los que la persona marcó. */
   readonly diasRecientes = signal<AsistenciaDia[]>([]);
   readonly cargandoRecientes = signal(false);
   readonly marcados = signal(new Set<string>());
@@ -1239,10 +1239,10 @@ export class MiAsistenciaComponent implements OnInit {
     });
   }
 
-  /** Los días desde el lunes de la semana pasada: de ahí salen los que quedaron sin completar. */
+  /** Los días del mes: de ahí salen los que quedaron sin completar. */
   private cargarRecientes(): void {
     this.cargandoRecientes.set(true);
-    this.servicio.reporteMio(this.sumarDias(this.lunesDe(new Date()), -7), this.hoy()).subscribe({
+    this.servicio.reporteMio(inicioDiasSinCompletar(), this.hoy()).subscribe({
       next: r => {
         this.diasRecientes.set(r.dias ?? []);
         this.cargandoRecientes.set(false);

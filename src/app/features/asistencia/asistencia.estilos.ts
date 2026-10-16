@@ -206,6 +206,17 @@ export function lunesDe(fecha: Date): string {
 }
 
 /**
+ * Desde dónde se buscan los días sin completar: el lunes de la semana del día 1
+ * del mes, o el de la semana pasada si cae antes (los primeros días del mes).
+ * Las semanas que RR.HH. ya cerró se descartan después, con `semanaCerrada`.
+ */
+export function inicioDiasSinCompletar(hoyDate = new Date()): string {
+  const delMes = lunesDe(new Date(hoyDate.getFullYear(), hoyDate.getMonth(), 1));
+  const semanaPasada = sumarDias(lunesDe(hoyDate), -7);
+  return delMes < semanaPasada ? delMes : semanaPasada;
+}
+
+/**
  * El sábado de la semana de una fecha: el final del rango que se mira.
  *
  * Va hasta el sábado y no hasta hoy porque la semana se revisa entera —el mapa
