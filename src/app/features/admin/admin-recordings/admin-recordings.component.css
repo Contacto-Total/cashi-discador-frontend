@@ -467,6 +467,91 @@
   cursor: wait;
 }
 
+/* Llamadas de la gestión */
+.btn-llamadas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  height: 28px;
+  padding: 0 0.55rem;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 999px;
+  color: #8b5cf6;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-llamadas:hover,
+.btn-llamadas.active {
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.llamadas-una {
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.8rem;
+}
+
+.recordings-table tbody tr.row-expanded {
+  background: rgba(139, 92, 246, 0.06);
+}
+
+.recordings-table tbody tr.gestion-detalle:hover {
+  background: transparent;
+}
+
+.recordings-table tr.gestion-detalle > td {
+  padding: 0 0.75rem 0.75rem;
+}
+
+.gestion-detalle-box {
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 10px;
+  background: var(--bg-secondary, #f8fafc);
+  padding: 0.6rem 0.75rem;
+}
+
+.gestion-detalle-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 0.4rem;
+}
+
+.gestion-detalle-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.gestion-detalle-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.gestion-detalle-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.recordings-table .gestion-detalle-table td {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.gestion-detalle-table tr.llamada-actual td {
+  font-weight: 600;
+}
+
 /* ============== Pagination ============== */
 .pagination {
   display: flex;
