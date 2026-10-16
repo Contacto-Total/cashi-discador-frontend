@@ -52,6 +52,28 @@ export interface AsesorAgenda {
   subcartera?: string;
 }
 
+/** Un asesor en el reparto del mes de una subcartera. */
+export interface RepartoAsesorMes {
+  idAgente: number;
+  nombre?: string;
+  promesas: number;
+  prometido: number;
+  /** Lo prometido del mes: lo que el sorteo usa para repartir. */
+  carga: number;
+  peso: number;
+  /** Probabilidad de que le toque la próxima promesa. */
+  probabilidadPct: number;
+}
+
+export interface RepartoSubcartera {
+  idSubcartera: number;
+  /** Cliente y cartera: hay subcarteras con el mismo nombre en clientes distintos. */
+  inquilino?: string;
+  cartera?: string;
+  subcartera?: string;
+  asesores: RepartoAsesorMes[];
+}
+
 /**
  * Prefijo propio `/api/bot-agenda`, distinto de `/api/bot-admin`: aquí el asesor
  * tiene que poder ver lo suyo, y ese otro es solo-ADMIN.
@@ -75,6 +97,11 @@ export class BotAgendaService {
   /** Los asesores a los que se puede repartir. Solo responde a supervisión. */
   asesores(): Observable<AsesorAgenda[]> {
     return this.http.get<AsesorAgenda[]>(`${this.apiUrl}/asesores`);
+  }
+
+  /** Cómo va el reparto del mes en cada subcartera. Solo responde a supervisión. */
+  repartoMes(): Observable<RepartoSubcartera[]> {
+    return this.http.get<RepartoSubcartera[]>(`${this.apiUrl}/reparto/todas`);
   }
 
   /** Le avisa al asesor que mire su agenda. Solo le llega si tiene Cashi abierto. */

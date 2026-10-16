@@ -9,6 +9,17 @@
       </div>
     </div>
 
+    @if (esAdmin) {
+      <div class="flex gap-1 border-b border-[#e6e9ee] dark:border-slate-800" role="tablist"
+           aria-label="Vistas de la agenda del bot">
+        <button type="button" role="tab" [attr.aria-selected]="!verEquidad"
+                (click)="elegirVista('agenda')" [class]="claseTab(!verEquidad)">Agenda del bot</button>
+        <button type="button" role="tab" [attr.aria-selected]="verEquidad"
+                (click)="elegirVista('equidad')" [class]="claseTab(verEquidad)">Equidad del reparto · mes en curso</button>
+      </div>
+    }
+
+    @if (!verEquidad) {
     <div class="flex flex-wrap items-end gap-3">
       <div class="flex flex-col gap-1.5">
         <label [class]="ui.etiqueta" for="dia">Día</label>
@@ -30,9 +41,11 @@
                placeholder="Cliente, documento o teléfono" [class]="ui.campo + ' !w-[230px]'">
       </div>
     </div>
+    }
   </div>
 
   <!-- ===================== CONTENIDO ===================== -->
+  @if (!verEquidad) {
   <div class="contenido">
     <div class="tablero grid items-stretch gap-4" [class.con-reparto]="repartidas.length">
 
@@ -222,6 +235,66 @@
       }
     </div>
   </div>
+  }
+
+  <!-- ===================== EQUIDAD DEL REPARTO (solo ADMIN, en su propia vista) ===================== -->
+  @if (verEquidad) {
+    <section class="contenido" aria-labelledby="titulo-equidad">
+      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="titulo-equidad" [class]="ui.rotulo">Equidad del reparto · mes en curso</h2>
+      </div>
+
+      @if (equidadError) {
+        <div [class]="ui.vacio">
+          <p [class]="ui.ayuda + ' !m-0'">No se pudo cargar el reparto del mes.</p>
+        </div>
+      }
+
+      @if (!equidadError && !equidad.length) {
+        <div [class]="ui.vacio">
+          <p [class]="ui.ayuda + ' !m-0'">No hay subcarteras con asesores asignados hoy.</p>
+        </div>
+      }
+
+      <div class="grid gap-4 md:grid-cols-2">
+        @for (sc of equidad; track sc.idSubcartera) {
+          <article [class]="ui.tarjeta">
+            <h3 class="!m-0 mb-2 text-[13px] font-extrabold">{{ sc.subcartera || ('Subcartera ' + sc.idSubcartera) }}@if (sc.inquilino) { <span class="font-semibold text-[#5f6c80] dark:text-slate-400"> · {{ sc.inquilino }}</span>}</h3>
+            <table class="w-full text-left text-[12px] tabular-nums">
+              <thead>
+                <tr [class]="ui.etiqueta">
+                  <th class="py-1 pr-2 font-bold">Asesor</th>
+                  <th class="py-1 pr-2 text-right font-bold">Prom.</th>
+                  <th class="py-1 pr-2 font-bold">Prometido</th>
+                  <th class="py-1 text-right font-bold"
+                      title="100 menos la probabilidad de recibir la próxima promesa: más alto, más carga ya tiene">Carga</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of sc.asesores; track a.idAgente) {
+                  <tr class="border-t border-[#e6e9ee] dark:border-slate-800">
+                    <td class="max-w-[140px] truncate py-1.5 pr-2 font-semibold">{{ a.nombre || ('Asesor ' + a.idAgente) }}</td>
+                    <td class="py-1.5 pr-2 text-right">{{ a.promesas }}</td>
+                    <td class="py-1.5 pr-2">
+                      <div class="relative h-1.5 w-full rounded bg-[#eef2f7] dark:bg-slate-800"
+                           [attr.title]="'Promedio de la subcartera: ' + soles(promedio(sc))">
+                        <div class="h-1.5 rounded" [style.background]="colorBarra(sc, a)"
+                             [style.width.%]="anchoBarra(sc, a)"></div>
+                        <span class="absolute -top-[2px] bottom-[-2px] left-1/2 w-px bg-[#0f172a] dark:bg-slate-200"
+                              aria-hidden="true"></span>
+                      </div>
+                      <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ soles(a.prometido) }}</span>
+                    </td>
+                    <td class="py-1.5 text-right font-bold">{{ nivelCarga(a) }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </article>
+        }
+      </div>
+    </section>
+  }
 
   <!-- ===================== FICHA DEL CASO ===================== -->
   @if (casoAbierto; as c) {
