@@ -36,10 +36,10 @@
     @if (hayLista) {
       <div class="mb-3 flex flex-none flex-wrap items-center gap-3">
         <div class="grid w-[min(100%,24rem)] grid-cols-2 gap-[.1875rem] rounded-lg bg-muted p-[.1875rem]" role="group" aria-label="Panel de la ficha">
-          <button type="button" [class]="PESTANA" [ngClass]="panel() === 'cli' ? PESTANA_ACTIVA : PESTANA_REPOSO" [attr.aria-pressed]="panel() === 'cli'" (click)="panel.set('cli')">
+          <button type="button" [class]="PESTANA" [ngClass]="panel() === 'cli' ? PESTANA_ACTIVA : PESTANA_REPOSO" [attr.aria-pressed]="panel() === 'cli'" (click)="elegirPanel('cli')">
             Panel del cliente<span class="ml-1.5 text-[.75rem] font-medium text-muted-foreground tabular-nums">{{ config()?.cli?.length }}</span>
           </button>
-          <button type="button" [class]="PESTANA" [ngClass]="panel() === 'mon' ? PESTANA_ACTIVA : PESTANA_REPOSO" [attr.aria-pressed]="panel() === 'mon'" (click)="panel.set('mon')">
+          <button type="button" [class]="PESTANA" [ngClass]="panel() === 'mon' ? PESTANA_ACTIVA : PESTANA_REPOSO" [attr.aria-pressed]="panel() === 'mon'" (click)="elegirPanel('mon')">
             Panel de montos<span class="ml-1.5 text-[.75rem] font-medium text-muted-foreground tabular-nums">{{ config()?.mon?.length }}</span>
           </button>
         </div>
@@ -67,7 +67,7 @@
       </div>
     }
 
-    <div class="-mx-8 min-h-0 flex-1 overflow-y-auto px-8 pb-3">
+    <div #desplazable class="-mx-8 min-h-0 flex-1 overflow-y-auto px-8 pb-3">
       @if (error() || sinDatos()) {
         <div role="alert" class="mt-[.875rem] flex flex-wrap items-center justify-between gap-3 rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--ro)">
           <span>{{ error() || 'No se pudo leer la configuración de esta subcartera' }}</span>
@@ -132,7 +132,51 @@
             </button>
           </div>
         }
-        @if (panel() === 'mon' && !filas().length) {
+        @if (agregando()) {
+          <!-- Fila nueva: se escribe en la tabla y las opciones salen debajo, dentro de la tarjeta. -->
+          <div #zonaAgregar (keydown)="teclaAgregar($event)" [ngClass]="filas().length || panel() === 'mon' ? 'mt-0.5' : ''">
+            <div [class]="(panel() === 'mon' ? REJILLA_MON : REJILLA) + ' min-h-[2.75rem] rounded-[.625rem] bg-card py-[.375rem] shadow-[inset_0_0_0_1px_var(--ring),0_0_0_3px_rgb(16_185_129/.22)]'">
+              <div class="flex items-center gap-0.5">
+                <span class="min-w-5 text-right text-[.75rem] font-semibold text-muted-foreground tabular-nums">{{ filas().length + 1 }}</span>
+              </div>
+              <input #busquedaAgregar type="text" autocomplete="off" placeholder="Escribe el nombre de la columna…" [value]="consulta()"
+                     role="combobox" aria-autocomplete="list" aria-controls="fc-opciones" aria-expanded="true" aria-label="Columna a agregar"
+                     (input)="buscarAgregar($any($event.target).value)"
+                     class="font-cashi col-[2/-2] m-0! h-8 w-full min-w-0 border-0! bg-transparent! p-0! text-[.875rem] text-foreground shadow-none! outline-none! placeholder:text-muted-foreground" />
+              <button type="button" [class]="QUITAR" aria-label="Cancelar" title="Cancelar" (click)="cerrarAgregar(true)">
+                <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>
+              </button>
+            </div>
+            <div id="fc-opciones" role="listbox" aria-label="Columnas"
+                 class="mt-1.5 mr-[calc(2.25rem+clamp(.5rem,2cqw,1.25rem))] mb-1 ml-[calc(5rem+clamp(.5rem,2cqw,1.25rem))] flex flex-col gap-0.5 rounded-xl bg-muted p-1">
+              @for (f of opcionesPagina(); track f.opcion.valor) {
+                <button type="button" role="option" [attr.aria-selected]="f.indice === focoAgregar()" [title]="f.opcion.titulo ?? ''"
+                        (click)="elegirAgregar(f.opcion)" (mousemove)="focoAgregar.set(f.indice)"
+                        class="font-cashi m-0! flex min-h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border-0! px-2.5! py-1.5! text-left text-[.875rem] text-foreground! transition-colors duration-100"
+                        [ngClass]="f.indice === focoAgregar() ? 'bg-card!' : 'bg-transparent!'">
+                  <span class="grid size-6 flex-none place-items-center rounded-md text-muted-foreground" [ngClass]="f.indice === focoAgregar() ? 'bg-muted' : 'bg-card'">
+                    <lucide-angular [name]="f.opcion.icono ?? 'type'" [size]="14" class="flex"></lucide-angular>
+                  </span>
+                  <span class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ f.opcion.etiqueta }}</span>
+                </button>
+              }
+              @if (!coincidencias().length) {
+                <div class="px-2 py-4 text-center text-[.875rem] text-muted-foreground">Ninguna columna coincide.</div>
+              }
+              @if (paginasAgregar() > 1) {
+                <div class="flex items-center gap-0.5 py-0.5 pr-0.5 pl-2.5 text-[.75rem] text-muted-foreground tabular-nums">
+                  <span class="mr-auto">{{ desdeAgregar() + 1 }}–{{ hastaAgregar() }} de {{ coincidencias().length }}</span>
+                  <button type="button" [class]="ICONO + ' size-7!'" aria-label="Anteriores" [disabled]="desdeAgregar() === 0" (click)="irAPaginaAgregar(paginaAgregar() - 1)">
+                    <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
+                  </button>
+                  <button type="button" [class]="ICONO + ' size-7!'" aria-label="Siguientes" [disabled]="hastaAgregar() >= coincidencias().length" (click)="irAPaginaAgregar(paginaAgregar() + 1)">
+                    <lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        } @else if (panel() === 'mon' && !filas().length) {
           <p class="m-0 mt-1.5 px-2 py-3 text-[.875rem] text-muted-foreground">Sin montos</p>
         }
       }
@@ -140,8 +184,10 @@
 
     @if (hayLista) {
       <div class="flex flex-none flex-wrap gap-2 border-t border-border pt-4">
-        <app-combobox boton="Agregar columna" [opciones]="opcionesAgregar()" marcadorBusqueda="Buscar columna…" vacio="Ninguna columna coincide."
-                      [anchoMinimo]="352" (cambio)="agregar($event)" />
+        <button #botonAgregar type="button" appBoton="secundario" appBotonAlto="chico" [ngClass]="agregando() ? 'invisible' : ''"
+                [disabled]="!opcionesAgregar().length" (click)="abrirAgregar()">
+          <lucide-angular name="plus" [size]="16"></lucide-angular>Agregar columna
+        </button>
       </div>
     }
   </section>

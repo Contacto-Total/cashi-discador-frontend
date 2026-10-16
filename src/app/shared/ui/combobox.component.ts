@@ -67,7 +67,7 @@ const normalizar = (s: string | undefined) => (s ?? '').normalize('NFD').replace
                  [cdkConnectedOverlayPositions]="boton() ? POSICIONES_BOTON : POSICIONES" [cdkConnectedOverlayWidth]="ancho()"
                  (overlayOutsideClick)="clicFuera($event)" (detach)="cerrar()" (attach)="alAbrir()">
       <div role="dialog" [attr.aria-label]="etiquetaAria() || boton() || marcador()" (keydown)="tecla($event)"
-           class="font-cashi cashi-pantalla flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-popover text-foreground antialiased shadow-[0_16px_36px_-12px_rgb(0_0_0/.22),0_2px_6px_-2px_rgb(0_0_0/.06)]">
+           class="font-cashi cashi-pantalla flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-(--campo-ln) bg-card text-foreground antialiased shadow-lg">
         <div class="flex h-11 flex-none items-center gap-2 border-b border-border px-3.5">
           <lucide-angular name="search" [size]="16" class="flex flex-none opacity-45"></lucide-angular>
           <input #busqueda type="text" autocomplete="off" [placeholder]="marcadorBusqueda()" [value]="consulta()"

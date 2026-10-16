@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { catchError, firstValueFrom, forkJoin, map, of, switchMap } from 'rxjs';
@@ -12,7 +12,7 @@ import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
 import { EtiquetaSubcartera, PanelSubcarterasComponent, SubcarteraPanel } from '../../../shared/ui/panel-subcarteras.component';
 import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
 import { NombrePropioPipe } from '../../../shared/ui/nombre-propio.pipe';
-import { ComboboxComponent, OpcionCombobox } from '../../../shared/ui/combobox.component';
+import { OpcionCombobox } from '../../../shared/ui/combobox.component';
 
 type Panel = 'cli' | 'mon';
 
@@ -47,6 +47,9 @@ const TIPOS: Record<string, { texto: string; icono: string }> = {
 const DIAS_PRIMERA_CUOTA = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 /** Bloques fijos del panel del cliente, en el orden de la ficha; las columnas elegidas salen debajo. */
 const FIJOS = ['DNI/Documento', 'Nombre completo', 'Edad', 'Métodos de contacto'];
+/** Opciones por página en la fila nueva, como el selector compartido. */
+const POR_PAGINA = 5;
+const normalizar = (s: string | undefined) => (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /**
  * Ficha del cliente: por subcartera, qué columnas de la carga inicial ve el asesor en el panel del cliente
@@ -59,7 +62,7 @@ const FIJOS = ['DNI/Documento', 'Nombre completo', 'Edad', 'Métodos de contacto
 @Component({
   selector: 'app-amount-display-config',
   standalone: true,
-  imports: [NgClass, LucideAngularModule, PageHeaderComponent, PanelSubcarterasComponent, TarjetaDirective, BotonDirective, NombrePropioPipe, ComboboxComponent],
+  imports: [NgClass, LucideAngularModule, PageHeaderComponent, PanelSubcarterasComponent, TarjetaDirective, BotonDirective, NombrePropioPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './amount-display-config.component.html',
   host: { class: 'cashi-pantalla @container/fic flex min-h-0 flex-1 flex-col gap-3' }
@@ -109,6 +112,16 @@ export class AmountDisplayConfigComponent implements OnInit {
   private readonly diasBase = signal<Record<number, number | null>>({});
   /** Lo editado sin guardar, por subcartera. Lo que no está, no cambió. */
   private readonly trabajo = signal<Record<number, Config>>({});
+  /** Fila nueva al pie de la tabla: lo escrito, la página de opciones y la opción con el foco. */
+  readonly agregando = signal(false);
+  readonly consulta = signal('');
+  readonly paginaAgregar = signal(0);
+  readonly focoAgregar = signal(0);
+  private readonly injector = inject(Injector);
+  private readonly zonaAgregar = viewChild<ElementRef<HTMLElement>>('zonaAgregar');
+  private readonly busquedaAgregar = viewChild<ElementRef<HTMLInputElement>>('busquedaAgregar');
+  private readonly botonAgregar = viewChild<ElementRef<HTMLButtonElement>>('botonAgregar');
+  private readonly desplazable = viewChild<ElementRef<HTMLElement>>('desplazable');
 
   readonly actual = computed(() => this.ambito().find(a => a.subId === this.sub()) ?? null);
   readonly clientes = computed(() => [...new Set(this.ambito().map(a => a.cliente))]);
@@ -164,6 +177,15 @@ export class AmountDisplayConfigComponent implements OnInit {
       .map(h => ({ valor: String(h.id), etiqueta: c.etiquetas[h.id] ?? h.nombre, titulo: h.codigo, icono: TIPOS[h.tipoDato]?.icono ?? 'type' }))
       .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
   });
+  readonly coincidencias = computed(() => {
+    const q = normalizar(this.consulta().trim());
+    return q ? this.opcionesAgregar().filter(o => normalizar(o.etiqueta).includes(q) || normalizar(o.titulo).includes(q)) : this.opcionesAgregar();
+  });
+  readonly paginasAgregar = computed(() => Math.max(1, Math.ceil(this.coincidencias().length / POR_PAGINA)));
+  readonly desdeAgregar = computed(() => Math.min(this.paginaAgregar(), this.paginasAgregar() - 1) * POR_PAGINA);
+  readonly hastaAgregar = computed(() => Math.min(this.desdeAgregar() + POR_PAGINA, this.coincidencias().length));
+  readonly opcionesPagina = computed(() => this.coincidencias().slice(this.desdeAgregar(), this.hastaAgregar())
+    .map((opcion, k) => ({ opcion, indice: this.desdeAgregar() + k })));
 
   readonly cambios = computed(() => Object.keys(this.trabajo()).reduce((n, id) => n + this.cambiosDe(Number(id)), 0));
   readonly resumen = computed(() => {
@@ -279,8 +301,75 @@ export class AmountDisplayConfigComponent implements OnInit {
   }
 
   elegirSub(id: number | string): void {
+    this.cerrarAgregar();
     this.sub.set(Number(id));
     this.version.update(v => v + 1);
+  }
+
+  elegirPanel(p: Panel): void {
+    this.cerrarAgregar();
+    this.panel.set(p);
+  }
+
+  // ---------------------------------------------------------------- Fila nueva
+
+  abrirAgregar(): void {
+    this.consulta.set('');
+    this.paginaAgregar.set(0);
+    this.focoAgregar.set(0);
+    this.agregando.set(true);
+    afterNextRender(() => {
+      this.busquedaAgregar()?.nativeElement.focus();
+      const d = this.desplazable()?.nativeElement;
+      if (d) d.scrollTop = d.scrollHeight;
+    }, { injector: this.injector });
+  }
+
+  cerrarAgregar(devolverFoco = false): void {
+    if (!this.agregando()) return;
+    this.agregando.set(false);
+    if (devolverFoco) afterNextRender(() => this.botonAgregar()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  buscarAgregar(texto: string): void {
+    this.consulta.set(texto);
+    this.paginaAgregar.set(0);
+    this.focoAgregar.set(0);
+  }
+
+  irAPaginaAgregar(p: number): void {
+    const pagina = Math.max(0, Math.min(p, this.paginasAgregar() - 1));
+    this.paginaAgregar.set(pagina);
+    this.focoAgregar.set(pagina * POR_PAGINA);
+    this.busquedaAgregar()?.nativeElement.focus();
+  }
+
+  elegirAgregar(o: OpcionCombobox): void {
+    this.agregar(o.valor);
+    this.cerrarAgregar(true);
+  }
+
+  /** ↑↓ recorren las opciones (y cambian de página), RePág/AvPág saltan de página, Enter agrega y Esc cancela. */
+  teclaAgregar(ev: KeyboardEvent): void {
+    const n = this.coincidencias().length;
+    let foco = this.focoAgregar();
+    if (ev.key === 'Escape') { ev.preventDefault(); this.cerrarAgregar(true); return; }
+    if (ev.key === 'Enter') { ev.preventDefault(); const o = this.coincidencias()[foco]; if (o) this.elegirAgregar(o); return; }
+    if (ev.key === 'ArrowDown') foco = Math.min(n - 1, foco + 1);
+    else if (ev.key === 'ArrowUp') foco = Math.max(0, foco - 1);
+    else if (ev.key === 'PageDown') foco = Math.min(n - 1, (Math.floor(foco / POR_PAGINA) + 1) * POR_PAGINA);
+    else if (ev.key === 'PageUp') foco = Math.max(0, (Math.floor(foco / POR_PAGINA) - 1) * POR_PAGINA);
+    else return;
+    ev.preventDefault();
+    this.focoAgregar.set(Math.max(0, foco));
+    this.paginaAgregar.set(Math.floor(Math.max(0, foco) / POR_PAGINA));
+  }
+
+  /** Un clic fuera de la fila nueva la cierra sin agregar. */
+  @HostListener('document:mousedown', ['$event'])
+  clicFuera(ev: MouseEvent): void {
+    const zona = this.zonaAgregar()?.nativeElement;
+    if (this.agregando() && zona && !zona.contains(ev.target as Node)) this.cerrarAgregar();
   }
 
   // ---------------------------------------------------------------- Edición
@@ -335,6 +424,7 @@ export class AmountDisplayConfigComponent implements OnInit {
   }
 
   descartar(): void {
+    this.cerrarAgregar();
     this.trabajo.set({});
     this.version.update(v => v + 1);
   }
