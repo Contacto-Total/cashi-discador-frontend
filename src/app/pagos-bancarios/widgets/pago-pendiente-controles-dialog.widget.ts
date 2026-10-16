@@ -16,7 +16,6 @@ interface PagoAsesor {
   fecha: string;
   total: number;
   cuotas: PagoPendienteConciliacion[];
-  eliminable: boolean;
 }
 
 interface PagosPorFecha {
@@ -265,19 +264,17 @@ function finDeMes(fechaIso: string): string {
                               >
                                 Modificar
                               </button>
-                              @if (item.eliminable) {
-                                <button
-                                  type="button"
-                                  (click)="abrirEliminar(item)"
-                                  [disabled]="guardando()"
-                                  [attr.aria-expanded]="eliminando() === item.clave"
-                                  [attr.aria-controls]="'ppc-eliminar-' + item.clave"
-                                  [attr.aria-label]="'Eliminar pago de ' + monto(item.total) + ' del ' + fecha(item.fecha)"
-                                  class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-bold text-red-800 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40"
-                                >
-                                  Eliminar
-                                </button>
-                              }
+                              <button
+                                type="button"
+                                (click)="abrirEliminar(item)"
+                                [disabled]="guardando()"
+                                [attr.aria-expanded]="eliminando() === item.clave"
+                                [attr.aria-controls]="'ppc-eliminar-' + item.clave"
+                                [attr.aria-label]="'Eliminar pago de ' + monto(item.total) + ' del ' + fecha(item.fecha)"
+                                class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-bold text-red-800 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40"
+                              >
+                                Eliminar
+                              </button>
                             </div>
                           </div>
 
@@ -806,8 +803,8 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
       case 'crear':
         if (this.cuotas().length > 0) return 'El asesor no registró la cancelación de este pago.';
         return this.cuotaActual()
-          ? 'No disponible: esta cuota no admite un pago nuevo (ya está pagada o no es de la última promesa).'
-          : 'No disponible: el cliente no tiene cuotas pendientes en su última promesa.';
+          ? 'No disponible: esta cuota no admite un pago nuevo (ya está pagada o la promesa fue anulada).'
+          : 'No disponible: el cliente no tiene cuotas pendientes.';
       case 'ampliar':
         if (this.cuotasAmpliables().length > 0) return 'La cuota venció y el pago llegó hasta 3 días después. Mueve el vencimiento y crea el pago.';
         if (conBanco) return 'No disponible: no hay cuotas vencidas a 3 días o menos de la fecha del banco.';
@@ -958,7 +955,6 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
       PAGO_CUOTA_NO_ENCONTRADO: 'El pago ya no existe o fue eliminado.',
       PAGO_CUOTA_FUERA_DE_CONTEXTO: 'El pago no pertenece a la cartera o subcartera seleccionada.',
       PAGO_CUOTA_SIN_GESTION_ASOCIADA: 'El pago no tiene una promesa asociada y no puede eliminarse.',
-      ELIMINACION_SOLO_PERMITIDA_PARA_PROMESA_PAGADA: 'Solo se pueden eliminar pagos de promesas que están pagadas.',
       PAGO_VERIFICADO_POR_BANCO_NO_ELIMINABLE: 'No se puede eliminar porque el pago ya fue validado por banco.',
       TRANSACCION_CON_PAGOS_FUERA_DE_GESTION: 'La transacción tiene aplicaciones inconsistentes y no puede eliminarse.'
     };
@@ -1067,8 +1063,7 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
           pagoCuotaId: fila.pagoCuotaId,
           fecha: aFechaIso(fila.fechaPago),
           total: 0,
-          cuotas: [],
-          eliminable: fila.estadoPagoGestion === 'PAGADA'
+          cuotas: []
         };
         porPago.set(clave, item);
       }
@@ -1095,7 +1090,7 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
       return;
     }
     const fechaBanco = aFechaIso(this.pago.fechaBanco);
-    const vencidas = cuotas.filter(c => c.estadoCuota === 'VENCIDA' && !!fechaBanco);
+    const vencidas = cuotas.filter(c => c.ultimaPromesa && c.estadoCuota === 'VENCIDA' && !!fechaBanco);
 
     this.cuotas.set(cuotas);
     this.cuotasAmpliables.set(vencidas.filter(c =>
@@ -1111,7 +1106,7 @@ export class PagoPendienteControlesDialogWidget implements OnChanges {
   private asignarCuotasSinBanco(cuotas: CuotaValidaTipificar[]): void {
     const cuotaId = this.cuotaActual()?.cuotaId;
     const disponibles = cuotaId ? cuotas.filter(c => c.cuotaId === cuotaId) : cuotas;
-    const vencidas = disponibles.filter(c => c.estadoCuota === 'VENCIDA');
+    const vencidas = disponibles.filter(c => c.ultimaPromesa && c.estadoCuota === 'VENCIDA');
     const promesa = this.cliente?.promesa;
 
     this.cuotas.set(disponibles);
