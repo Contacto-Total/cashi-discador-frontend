@@ -149,14 +149,14 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * La equidad del reparto la ven el ADMIN y la supervisión (cualquier rol con SUPERVISOR).
-   * Operaciones y asesores siguen con la agenda de siempre. El backend lo vuelve a exigir.
+   * La equidad del reparto la ve solo el ADMIN. Supervisión, operaciones y asesores siguen
+   * con la agenda de siempre. El backend lo vuelve a exigir.
    */
   get puedeVerEquidad(): boolean {
     const u = this.auth.getCurrentUser();
     if (!u) return false;
     const roles = (u.roles?.length ? u.roles : [u.role]).map((r) => String(r ?? '').toUpperCase());
-    return roles.some((r) => r === 'ADMIN' || r.includes('SUPERVISOR'));
+    return roles.some((r) => r === 'ADMIN');
   }
 
   get verEquidad(): boolean {
