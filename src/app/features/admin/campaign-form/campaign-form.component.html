@@ -346,9 +346,7 @@
                 name="tipoContacto"
                 class="form-select form-select-lg">
                 <option [ngValue]="null">Todos los tipos</option>
-                <option *ngFor="let tipo of tiposContacto" [ngValue]="tipo.codigo">
-                  {{ tipo.codigo }} - {{ tipo.nombre }}
-                </option>
+                <option *ngFor="let tipo of tiposContacto" [ngValue]="tipo.codigo">{{ tipo.nombre }}</option>
               </select>
             </div>
 

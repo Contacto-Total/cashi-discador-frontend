@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, CampaignOrderField, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, CampaignOrderField, TipoContacto, TipoContactoInfo, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -138,7 +138,8 @@ export class CampaignFormComponent implements OnInit {
   newFilterSelectedDueDates: string[] = [];
 
   // Tipos de contacto y filtro de estado
-  tiposContacto = TIPOS_CONTACTO;
+  /** Tipos de contacto con los nombres de la subcartera elegida; el filtro guarda el código. */
+  tiposContacto: TipoContactoInfo[] = TIPOS_CONTACTO;
   tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
   selectedTipoContacto: TipoContacto | null = null;
 
@@ -319,6 +320,7 @@ export class CampaignFormComponent implements OnInit {
 
   onSubPortfolioChange(): void {
     this.filterableFields = [];
+    this.tiposContacto = TIPOS_CONTACTO;
     this.selectedRangosAntiguedad = [];
     this.tieneDiasMora = false;
     this.grupos = [];
@@ -559,6 +561,7 @@ export class CampaignFormComponent implements OnInit {
   }
 
   loadFilterableFields(subcarteraId: number): void {
+    this.loadTiposContacto(subcarteraId);
     this.campaignService.getFilterableFieldsBySubcartera(subcarteraId).subscribe({
       next: (fields) => {
         this.filterableFields = fields;
@@ -569,6 +572,19 @@ export class CampaignFormComponent implements OnInit {
         console.log('Campos filtrables cargados:', fields);
       },
       error: (err) => console.error('Error loading filterable fields:', err)
+    });
+  }
+
+  /** Cada tipo de contacto se muestra con los tipos de nivel 1 de la subcartera que van a él («Tercero relacionado / Tercero no relacionado»). */
+  private loadTiposContacto(subcarteraId: number): void {
+    this.tiposContacto = TIPOS_CONTACTO;
+    const nombre = new NombrePropioPipe();
+    this.campaignService.getTiposContactoBySubcartera(subcarteraId).subscribe({
+      next: tipos => this.tiposContacto = TIPOS_CONTACTO.map(t => {
+        const nombres = tipos.find(x => x.codigo === t.codigo)?.nombres ?? [];
+        return nombres.length ? { ...t, nombre: nombres.map(n => nombre.transform(n, 'oracion')).join(' / ') } : t;
+      }),
+      error: () => this.tiposContacto = TIPOS_CONTACTO
     });
   }
 

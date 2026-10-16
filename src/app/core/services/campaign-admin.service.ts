@@ -404,6 +404,14 @@ export class CampaignAdminService {
   /**
    * Obtiene los campos numéricos disponibles para filtrar según la subcartera
    */
+  /** Nombres de nivel 1 del árbol de tipificación de la subcartera que van a cada tipo de contacto. */
+  getTiposContactoBySubcartera(subcarteraId: number): Observable<{ codigo: TipoContacto; nombres: string[] }[]> {
+    return this.http.get<{ codigo: TipoContacto; nombres: string[] }[]>(
+      `${this.apiUrl}/tipos-contacto/by-subcartera/${subcarteraId}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
   getFilterableFieldsBySubcartera(subcarteraId: number): Observable<FilterableField[]> {
     return this.http.get<FilterableField[]>(
       `${this.apiUrl}/filterable-fields/by-subcartera/${subcarteraId}`,
