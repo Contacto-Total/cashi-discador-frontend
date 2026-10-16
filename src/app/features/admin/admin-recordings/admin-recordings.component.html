@@ -177,6 +177,7 @@
             <th></th>
             <th></th>
             <th></th>
+            <th></th>
             <th class="col-action">
               <button class="btn-clear-filters" (click)="clearFilters()" title="Limpiar filtros">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
@@ -215,13 +216,15 @@
               <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th>Hora</th>
+            <th class="col-action" title="Llamadas de la misma gestión (discador + rellamadas)">Llamadas</th>
             <th class="col-action">Audio</th>
             <th class="col-action">Reporte</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let recording of paginatedRecordings; let i = index"
-              class="animate-row" [style.animation-delay]="(i * 30) + 'ms'">
+          <ng-container *ngFor="let recording of paginatedRecordings; let i = index">
+          <tr class="animate-row" [style.animation-delay]="(i * 30) + 'ms'"
+              [class.row-expanded]="expandedUuid === recording.uuidLlamada">
             <td class="cell-mono">{{ recording.documento }}</td>
             <td class="cell-mono">{{ recording.telefono }}</td>
             <td class="cell-truncate" [title]="recording.cliente">{{ recording.cliente }}</td>
@@ -230,6 +233,18 @@
             <td class="cell-truncate" [title]="recording.tipificacion">{{ recording.tipificacion || '-' }}</td>
             <td class="cell-mono">{{ formatDate(recording.fechaInicio) }}</td>
             <td class="cell-mono">{{ formatTime(recording.fechaInicio) }}</td>
+            <td class="col-action">
+              <button *ngIf="tieneVariasLlamadas(recording); else unaLlamada"
+                      class="btn-llamadas" (click)="toggleLlamadas(recording)"
+                      [class.active]="expandedUuid === recording.uuidLlamada"
+                      title="Ver las llamadas de esta gestión">
+                {{ recording.llamadasGestion }}
+                <lucide-angular [img]="expandedUuid === recording.uuidLlamada ? ChevronUp : ChevronDown" [size]="13"></lucide-angular>
+              </button>
+              <ng-template #unaLlamada>
+                <span class="llamadas-una">{{ recording.idGestion ? 1 : '-' }}</span>
+              </ng-template>
+            </td>
             <td class="col-action">
               <button class="btn-audio" (click)="downloadAudio(recording)"
                       [disabled]="downloadingUuid === recording.uuidLlamada"
@@ -249,6 +264,59 @@
               </button>
             </td>
           </tr>
+
+          <!-- Llamadas de la gestión (gestion_llamada) -->
+          <tr class="gestion-detalle" *ngIf="expandedUuid === recording.uuidLlamada">
+            <td colspan="11">
+              <div class="gestion-detalle-box">
+                <div class="gestion-detalle-title">
+                  Gestión #{{ recording.idGestion }} · {{ recording.llamadasGestion }} llamadas
+                </div>
+                <div class="gestion-detalle-loading" *ngIf="cargandoGestion === recording.idGestion">
+                  <lucide-angular [img]="Loader" [size]="16" class="spin"></lucide-angular>
+                  Cargando llamadas...
+                </div>
+                <table class="gestion-detalle-table" *ngIf="recording.idGestion && llamadasPorGestion.get(recording.idGestion) as llamadas">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Origen</th>
+                      <th>Teléfono</th>
+                      <th>Agente</th>
+                      <th>Fecha</th>
+                      <th>Hora</th>
+                      <th>Duración</th>
+                      <th>Estado</th>
+                      <th class="col-action">Audio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let llamada of llamadas; let n = index"
+                        [class.llamada-actual]="llamada.uuidLlamada === recording.uuidLlamada">
+                      <td>{{ n + 1 }}</td>
+                      <td>{{ formatOrigen(llamada.origen) }}</td>
+                      <td class="cell-mono">{{ llamada.telefono || '-' }}</td>
+                      <td>{{ llamada.agente || '-' }}</td>
+                      <td class="cell-mono">{{ formatDate(llamada.fechaInicio) }}</td>
+                      <td class="cell-mono">{{ formatTime(llamada.fechaInicio) }}</td>
+                      <td class="cell-mono">{{ formatDuration(llamada.duracionSegundos) }}</td>
+                      <td>{{ llamada.estadoLlamada || '-' }}</td>
+                      <td class="col-action">
+                        <button class="btn-audio" (click)="downloadAudio(llamada)"
+                                [disabled]="!llamada.uuidLlamada || downloadingUuid === llamada.uuidLlamada"
+                                title="Descargar audio">
+                          <lucide-angular [img]="downloadingUuid === llamada.uuidLlamada ? Loader : Volume2"
+                                          [size]="15"
+                                          [class.spin]="downloadingUuid === llamada.uuidLlamada"></lucide-angular>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          </ng-container>
         </tbody>
       </table>
     </div>

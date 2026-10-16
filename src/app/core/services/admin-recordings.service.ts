@@ -19,6 +19,11 @@ export interface RecordingDTO {
   tipificacion: string;
   /** Si la grabación tiene evaluación de calidad: habilita el botón de reporte. */
   tieneEvaluacion: boolean;
+  /** Gestión a la que quedó enlazada la llamada (gestion_llamada) y cuántas llamadas tiene. */
+  idGestion?: number | null;
+  llamadasGestion?: number | null;
+  /** marcador_llamadas.origen; solo viene en el detalle de llamadas de una gestión. */
+  origen?: string | null;
 }
 
 @Injectable({
@@ -53,6 +58,11 @@ export class AdminRecordingsService {
   /** Tipificaciones de nivel 1 activas, para el combo del filtro. */
   getTipificaciones(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/tipificaciones`);
+  }
+
+  /** Todas las llamadas de una gestión (discador + rellamadas), en orden de fecha. */
+  getLlamadasDeGestion(idGestion: number): Observable<RecordingDTO[]> {
+    return this.http.get<RecordingDTO[]>(`${this.apiUrl}/gestion/${idGestion}/llamadas`);
   }
 
   downloadAudio(uuid: string): Observable<Blob> {

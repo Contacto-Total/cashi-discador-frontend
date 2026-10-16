@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, FileAudio, Loader, FileSpreadsheet } from 'lucide-angular';
+import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, FileAudio, Loader, FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -51,6 +51,8 @@ export class AdminRecordingsComponent implements OnInit {
   readonly FileAudio = FileAudio;
   readonly Loader = Loader;
   readonly FileSpreadsheet = FileSpreadsheet;
+  readonly ChevronDown = ChevronDown;
+  readonly ChevronUp = ChevronUp;
   readonly Math = Math;
 
   pestana: Pestana = 'grabaciones';
@@ -113,6 +115,13 @@ export class AdminRecordingsComponent implements OnInit {
   // Id numérico y no uuid, para que el spinner del reporte sea independiente del
   // de audio: bajar el audio de una fila no debe girar el botón de reporte.
   downloadingReporteId: number | null = null;
+
+  // Llamadas de la gestión (gestion_llamada). Se despliega una fila a la vez, por uuid,
+  // porque varias filas visibles pueden ser de la misma gestión. El detalle se pide una
+  // sola vez por gestión y queda en caché hasta la siguiente búsqueda.
+  expandedUuid: string | null = null;
+  cargandoGestion: number | null = null;
+  llamadasPorGestion = new Map<number, RecordingDTO[]>();
 
   constructor(
     private recordingsService: AdminRecordingsService,
@@ -249,6 +258,8 @@ export class AdminRecordingsComponent implements OnInit {
     }
 
     this.resetTableFilters();
+    this.expandedUuid = null;
+    this.llamadasPorGestion.clear();
     this.isLoading = true;
     this.recordingsService.search(
       this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
@@ -367,6 +378,52 @@ export class AdminRecordingsComponent implements OnInit {
     if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
     for (let i = start; i <= end; i++) pages.push(i);
     return pages;
+  }
+
+  // === Llamadas de la gestión ===
+
+  tieneVariasLlamadas(recording: RecordingDTO): boolean {
+    return !!recording.idGestion && (recording.llamadasGestion ?? 0) > 1;
+  }
+
+  toggleLlamadas(recording: RecordingDTO): void {
+    if (!recording.idGestion) return;
+    if (this.expandedUuid === recording.uuidLlamada) {
+      this.expandedUuid = null;
+      return;
+    }
+    this.expandedUuid = recording.uuidLlamada;
+    const idGestion = recording.idGestion;
+    if (this.llamadasPorGestion.has(idGestion)) return;
+
+    this.cargandoGestion = idGestion;
+    this.recordingsService.getLlamadasDeGestion(idGestion).subscribe({
+      next: (data) => {
+        // Las manuales pueden venir sin documento; se hereda el de la fila para
+        // que el nombre del audio descargado no salga con "null".
+        data.forEach(d => d.documento = d.documento || recording.documento);
+        this.llamadasPorGestion.set(idGestion, data);
+        this.cargandoGestion = null;
+      },
+      error: (err) => {
+        console.error(err);
+        this.cargandoGestion = null;
+        this.expandedUuid = null;
+        this.toastService.error('No se pudieron cargar las llamadas de la gestión.');
+      }
+    });
+  }
+
+  formatOrigen(origen: string | null | undefined): string {
+    switch (origen) {
+      case 'DISCADOR': return 'Discador';
+      case 'RELLAMADA_DISCADOR': return 'Rellamada (discador)';
+      case 'MANUAL': return 'Manual';
+      case 'RELLAMADA_MANUAL': return 'Rellamada (manual)';
+      case 'BOT': return 'Bot';
+      case 'RECORDATORIO': return 'Recordatorio';
+      default: return origen || '-';
+    }
   }
 
   // === Downloads ===
