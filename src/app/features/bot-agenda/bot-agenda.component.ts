@@ -5,8 +5,9 @@ import { Router } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
+import { AuthService } from '../../core/services/auth.service';
 import { AVATARES_PERSONAL } from '../asistencia/avatares-personal';
-import { AsesorAgenda, BotAgendaService, CasoAgendaBot } from './bot-agenda.service';
+import { AsesorAgenda, BotAgendaService, CasoAgendaBot, RepartoSubcartera } from './bot-agenda.service';
 
 /**
  * Clases que se repiten en la pantalla, con el sistema de Gestión de Tenores (el
@@ -88,6 +89,12 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   casos: CasoAgendaBot[] = [];
   asesores: AsesorAgenda[] = [];
+  /** Equidad del reparto del mes por subcartera; solo la supervisión la recibe. */
+  equidad: RepartoSubcartera[] = [];
+  equidadError = false;
+
+  /** Vista elegida arriba. La de equidad es solo para ADMIN. */
+  vista: 'agenda' | 'equidad' = 'agenda';
 
   cargando = false;
   error = false;
@@ -122,6 +129,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     this.sanitizer.bypassSecurityTrustHtml(a.replace('<svg ', '<svg width="100%" height="100%" ')));
 
   constructor(private svc: BotAgendaService,
+              private auth: AuthService,
               private router: Router,
               private sanitizer: DomSanitizer) {}
 
@@ -133,8 +141,69 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
       error: () => { this.esSupervision = false; this.asesores = []; },
     });
     this.cargar();
-    this.refresco = setInterval(() => this.cargar(true), this.REFRESCO_MS);
+    this.refresco = setInterval(() => {
+      this.cargar(true);
+      if (this.verEquidad) this.cargarEquidad();
+    }, this.REFRESCO_MS);
     this.reloj = setInterval(() => (this.ahora = Date.now()), 30000);
+  }
+
+  /** La equidad del reparto la ve solo el ADMIN; el resto sigue con la agenda de siempre. */
+  get esAdmin(): boolean {
+    return this.auth.hasAnyRole('ADMIN');
+  }
+
+  get verEquidad(): boolean {
+    return this.esAdmin && this.vista === 'equidad';
+  }
+
+  elegirVista(v: 'agenda' | 'equidad'): void {
+    this.vista = v;
+    if (v === 'equidad') this.cargarEquidad();
+  }
+
+  claseTab(activa: boolean): string {
+    return 'border-b-2 px-3 py-2 text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] '
+      + (activa
+        ? 'border-[#2563eb] text-[#2563eb]'
+        : 'border-transparent text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100');
+  }
+
+  /** Reparto del mes por subcartera: promesas, prometido y probabilidad de la próxima. */
+  cargarEquidad(): void {
+    this.svc.repartoMes().subscribe({
+      next: (e) => { this.equidad = e; this.equidadError = false; },
+      error: () => { this.equidad = []; this.equidadError = true; },
+    });
+  }
+
+  /**
+   * Lo que se muestra en la última columna: 100 menos la probabilidad de recibir la próxima
+   * promesa. Quien tiene poca probabilidad ve un número alto, que se lee como "ya va bien de
+   * trabajo", en vez de un porcentaje bajo que parece castigo. El sorteo no cambia.
+   */
+  nivelCarga(a: { probabilidadPct: number }): number {
+    return Math.round((100 - a.probabilidadPct) * 10) / 10;
+  }
+
+  /** Lo prometido en promedio por asesor de la subcartera: es la línea de referencia de las barras. */
+  promedio(sc: RepartoSubcartera): number {
+    if (!sc.asesores.length) return 0;
+    return sc.asesores.reduce((s, a) => s + a.prometido, 0) / sc.asesores.length;
+  }
+
+  /**
+   * Ancho de la barra: el promedio cae en el 50 % y solo se llena del todo quien lleva el
+   * doble. Así una barra llena significa desigualdad de verdad, no "el que va primero".
+   */
+  anchoBarra(sc: RepartoSubcartera, a: { prometido: number }): number {
+    const prom = this.promedio(sc);
+    return prom > 0 ? Math.min(100, (a.prometido / (2 * prom)) * 100) : 0;
+  }
+
+  /** Azul si lleva el promedio o menos; ámbar si lo pasa (y por eso tiene menos probabilidad). */
+  colorBarra(sc: RepartoSubcartera, a: { prometido: number }): string {
+    return a.prometido > this.promedio(sc) ? '#b45309' : '#2563eb';
   }
 
   ngOnDestroy(): void {
