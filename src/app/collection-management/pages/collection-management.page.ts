@@ -3003,7 +3003,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               value: 0,
               field: lowerCodigo,
               formato,
-              rawValue: String(value)
+              rawValue: this.valorCampoCliente(value, cabecera.tipoDato)
             });
           } else {
             const numValue = typeof value === 'number' ? value : parseFloat(value);
@@ -6111,11 +6111,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       .join(' ');
   }
 
-  /**
-   * Formatea un valor numérico como moneda (Soles)
-   */
+  /** Símbolo de los montos del cliente: US$ si su columna MONEDA dice dólares; si no la tiene, S/. */
+  simboloMoneda = computed(() => {
+    const datos = this.rawClientData();
+    const clave = Object.keys(datos).find(k => k.toLowerCase() === 'moneda');
+    const moneda = clave ? String(datos[clave] ?? '').trim().toUpperCase() : '';
+    return ['USD', 'US$', 'DOLARES', 'DÓLARES', 'DOLAR', 'DÓLAR'].includes(moneda) ? 'US$' : 'S/';
+  });
+
+  /** Formatea un monto del cliente con el símbolo de su moneda: «S/ 1,234.56». */
   formatCurrency(value: number): string {
-    return this.fmt.currency(value);
+    const numero = this.fmt.number(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return numero ? `${this.simboloMoneda()} ${numero}` : '';
   }
 
   /**
