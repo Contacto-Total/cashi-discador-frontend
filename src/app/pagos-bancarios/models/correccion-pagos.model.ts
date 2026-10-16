@@ -80,6 +80,8 @@ export interface CuotaValidaTipificar {
   nombreAsesor: string;
   estadoPagoGestion: string;
   rutaTipificacion: string;
+  /** Solo en la promesa más reciente se amplía fecha o se crea promesa sistema. */
+  ultimaPromesa: boolean;
 }
 
 export interface CrearCancelacionRequest {
