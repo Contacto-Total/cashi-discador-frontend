@@ -12,7 +12,7 @@ import { AsistenciaService } from './asistencia.service';
 import { AsistenciaDia, AsistenciaReporte, Justificacion, SolicitudPrevista, TipoDia } from './asistencia.models';
 import {
   ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
-  fechaTexto, hoy, lunesDe, primerDiaPermitido, sumarDias
+  fechaTexto, hoy, inicioDiasSinCompletar, lunesDe, primerDiaPermitido, sumarDias
 } from './asistencia.estilos';
 import { Visor, VisorArchivoComponent } from './visor-archivo.component';
 import { PaginadorComponent, pagina } from './paginador.component';
@@ -577,7 +577,7 @@ const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
             @if (verPasado()) {
               <div class="flex flex-col gap-1.5">
                 <span [class]="estilos.etiqueta">Sus días sin completar</span>
-                <ul class="!m-0 list-none rounded-xl border border-[#e6e9ee] !px-3.5 !py-0.5 dark:border-slate-800">
+                <ul class="!m-0 max-h-64 list-none overflow-y-auto rounded-xl border border-[#e6e9ee] !px-3.5 !py-0.5 dark:border-slate-800">
                   @for (f of sinCompletar(); track f.fecha) {
                     <li class="flex items-center justify-between gap-3 border-b border-[#f1f3f6] py-[11px] last:border-0 dark:border-slate-800">
                       <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-[13px]">
@@ -776,7 +776,7 @@ export class AsistenciaEquipoComponent implements OnInit {
   readonly horaSalir = signal('15:00');
   readonly horaEntrar = signal('10:00');
   readonly horaElegida = computed(() => (this.que() === 'entrar' ? this.horaEntrar() : this.horaSalir()));
-  /** Los días de esa persona desde el lunes de la semana pasada, y los que se marcaron. */
+  /** Los días de esa persona en el mes (al menos desde la semana pasada), y los que se marcaron. */
   readonly diasRecientes = signal<AsistenciaDia[]>([]);
   readonly cargandoRecientes = signal(false);
   readonly marcados = signal(new Set<string>());
@@ -1250,7 +1250,7 @@ export class AsistenciaEquipoComponent implements OnInit {
     this.prever();
   }
 
-  /** Los días de esa persona desde el lunes de la semana pasada: de ahí salen los que quedaron sin completar. */
+  /** Los días de esa persona en el mes: de ahí salen los que quedaron sin completar. */
   private cargarRecientes(): void {
     const turno = ++this.turnoRecientes;
     this.marcados.set(new Set());
@@ -1260,7 +1260,7 @@ export class AsistenciaEquipoComponent implements OnInit {
       return;
     }
     this.cargandoRecientes.set(true);
-    this.servicio.reporte(sumarDias(lunesDe(new Date()), -7), hoy(), this.idSubcartera(), [idUsuario]).subscribe({
+    this.servicio.reporte(inicioDiasSinCompletar(), hoy(), this.idSubcartera(), [idUsuario]).subscribe({
       next: r => {
         if (turno === this.turnoRecientes) {
           this.diasRecientes.set((r.dias ?? []).filter(d => d.idUsuario === idUsuario));
