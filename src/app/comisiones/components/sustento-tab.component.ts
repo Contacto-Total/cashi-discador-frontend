@@ -3,7 +3,7 @@ import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
 import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { DiaDetalle, METRICA_INFO, MOTIVO_INFO, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
+import { DiaDetalle, GRUPO_INFO, METRICA_INFO, MOTIVO_INFO, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -80,7 +80,11 @@ const B = 28;
                   Suma el saldo capital asignado de todos los clientes CONTENIDO del mes, gestionados o no por su equipo.
                   Meta del mes: S/ {{ p.meta | appNumber:'1.2-2' }}.
                 } @else {
-                  Suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
+                  @if (cartera(); as c) {
+                    Suma los pagos conciliados del mes de los asesores de {{ c }}, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }}). No suma los de la otra cartera ni los pagos voluntarios o no asignados.
+                  } @else {
+                    Suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
+                  }
                 }
               } @else {
                 {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
@@ -363,10 +367,12 @@ const B = 28;
         @if (noSuman().length) {
           <section class="cmx-block cmx-enter" style="--i:3" aria-labelledby="cmx-sus-nosuman">
             <div class="cmx-block-head">
-              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman{{ p.esSupervisor && !porCapital() ? ' a los asesores' : '' }} ({{ noSuman().length }})</h3>
+              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman{{ p.esSupervisor && !porCapital() && !cartera() ? ' a los asesores' : '' }} ({{ noSuman().length }})</h3>
               <span class="cmx-block-desc">
                 @if (p.esSupervisor && porCapital()) {
                   Conciliados en el mes, pero no suman capital a los asesores. Los motivos de contención siguen contando para su meta de pagos.
+                } @else if (p.esSupervisor && cartera()) {
+                  Conciliados en el mes, pero no son de los asesores de {{ cartera() }}: no suman a ellos ni a tu logrado como supervisor.
                 } @else if (p.esSupervisor) {
                   Conciliados en el mes, pero no suman al recaudo de los asesores. Estos pagos sí suman a tu logrado como supervisor.
                 } @else {
@@ -448,6 +454,11 @@ export class SustentoTabComponent {
   readonly metrica = computed(() => METRICA_INFO[this.reporte().periodo.tipoMetrica]);
   /** Contención: suma el capital asignado del cliente, no lo pagado */
   readonly porCapital = computed(() => this.reporte().periodo.tipoMetrica === 'CONTENCION');
+  /** Cartera de Tramo Propio (CP Antigua o CP Nueva): el supervisor solo suma los pagos de sus asesores */
+  readonly cartera = computed(() => {
+    const grupo = this.reporte().periodo.grupo;
+    return grupo !== 'GENERAL' ? GRUPO_INFO[grupo] : null;
+  });
 
   readonly personas = computed<Persona[]>(() => {
     const r = this.reporte();
@@ -544,8 +555,9 @@ export class SustentoTabComponent {
       return agruparContenidosPorDia(this.contenidos(), primerDiaMes, p.meta, p.tramos);
     }
     if (p.esSupervisor) {
-      // RECAUDO: al supervisor le suman todos los pagos conciliados, no solo los que suman a un asesor
-      return agruparPagosPorDia(this.pagos(), p.meta, p.tramos);
+      // RECAUDO: al supervisor le suman todos los pagos conciliados; en Tramo Propio, solo los de los asesores de su cartera
+      const pagos = this.cartera() ? this.pagos().filter(pg => pg.motivoExclusion == null) : this.pagos();
+      return agruparPagosPorDia(pagos, p.meta, p.tramos);
     }
     return agruparPorDia(p.filas, p.meta, p.tramos);
   });

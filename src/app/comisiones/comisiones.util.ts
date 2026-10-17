@@ -71,7 +71,7 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
   RECAUDO: {
     etiqueta: 'Recaudo',
     logrado: 'Recaudo',
-    descripcion: 'Todo lo que pagan los clientes: cada pago conciliado suma su monto. Supervisor: suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa.'
+    descripcion: 'Todo lo que pagan los clientes: cada pago conciliado suma su monto. Supervisor: suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa. En Tramo Propio, solo los de los asesores de su cartera (CP Antigua o CP Nueva).'
   },
   CONTENCION: {
     etiqueta: 'Contención',

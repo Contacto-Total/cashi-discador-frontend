@@ -200,7 +200,7 @@ let secuencia = 0;
 
         <!-- Supervisor -->
         <section class="cmx-card cmx-enter" style="--i:3">
-          <div class="cmx-card-h">Supervisor<em>Comisiona sobre {{ tipoMetrica() === 'CONTENCION' ? 'el capital de todos los clientes contenidos del mes' : tipoMetrica() === 'RECAUDO' ? 'todos los pagos conciliados del mes, sumen o no a un asesor' : 'el recaudo o la contención del mes' }} contra la meta del mes</em></div>
+          <div class="cmx-card-h">Supervisor<em>Comisiona sobre {{ tipoMetrica() === 'CONTENCION' ? 'el capital de todos los clientes contenidos del mes' : tipoMetrica() === 'RECAUDO' && grupo() ? 'los pagos conciliados del mes de los asesores de ' + grupoInfo[grupo()!] : tipoMetrica() === 'RECAUDO' ? 'todos los pagos conciliados del mes, sumen o no a un asesor' : 'el recaudo o la contención del mes' }} contra la meta del mes</em></div>
           <div class="cmx-card-b">
             <div class="cmx-field">
               <label for="cmx-supervisor">Supervisor de {{ codigo() }}</label>
