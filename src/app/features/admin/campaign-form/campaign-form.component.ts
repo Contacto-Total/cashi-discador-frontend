@@ -126,6 +126,8 @@ export class CampaignFormComponent implements OnInit {
   newFilterSelectedValues: string[] = [];
   distinctValuesForField: string[] = [];
   loadingDistinctValues: boolean = false;
+  /** Valores guardados del filtro en edición: se marcan cuando llegan los valores del campo. */
+  private valoresPorMarcar: string | null = null;
 
   // Filtros PERIODO (campos YYYYMM, ej: 202504) → selección por AÑO
   availableYears: string[] = [];
@@ -591,6 +593,7 @@ export class CampaignFormComponent implements OnInit {
   onFieldChange(): void {
     const dataType = this.getSelectedFieldDataType();
     // Reset all type-specific inputs
+    this.valoresPorMarcar = null;
     this.newFilterMinValue = null;
     this.newFilterMaxValue = null;
     this.newFilterSelectedValues = [];
@@ -611,6 +614,13 @@ export class CampaignFormComponent implements OnInit {
         ).subscribe({
           next: (values) => {
             this.distinctValuesForField = values;
+            // Los valores se guardan unidos por coma y un valor puede traer comas propias
+            // («1.[0 - 2,999.99]»): se marca cada valor del campo que aparece completo en lo guardado.
+            if (this.valoresPorMarcar !== null && values.length) {
+              const guardados = `,${this.valoresPorMarcar},`;
+              this.newFilterSelectedValues = values.filter(v => guardados.includes(`,${v},`));
+            }
+            this.valoresPorMarcar = null;
             this.loadingDistinctValues = false;
           },
           error: (err) => {
@@ -898,6 +908,7 @@ export class CampaignFormComponent implements OnInit {
     this.newFilterMinValue = filter.minValue ?? null;
     this.newFilterMaxValue = filter.maxValue ?? null;
     this.newFilterSelectedValues = filter.selectedValues?.split(',').filter(Boolean) || [];
+    this.valoresPorMarcar = filter.selectedValues || null;
     this.newFilterMinDate = filter.minDate || '';
     this.newFilterMaxDate = filter.maxDate || '';
 
