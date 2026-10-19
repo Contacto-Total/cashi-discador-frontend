@@ -896,25 +896,24 @@ type EvaluacionConvenio =
                         </select>
                       </div>
                     }
-                    <!-- Lo que el nivel 1 pide antes del detalle (motivo de no pago) -->
-                    @if ($index === 0) {
-                      @for (campo of camposDeRama(); track campo.id) {
-                        <div class="flex-1 min-w-[140px]">
-                          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">{{ campo.label }}{{ campo.required ? ' *' : '' }}</label>
-                          <select
-                            [ngModel]="valoresDeRama()[campo.id] || ''"
-                            (ngModelChange)="elegirValorDeRama(campo.id, $event)"
-                            [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white ' +
-                              (valoresDeRama()[campo.id] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
-                          >
-                            <option value="">Seleccionar...</option>
-                            @for (op of campo.options || []; track op.value) {
-                              <option [value]="op.value">{{ op.label }}</option>
-                            }
-                          </select>
-                        </div>
-                      }
-                    }
+                  }
+                  <!-- Lista que un nivel pasa a sus descendientes (motivo de no pago): va después de la opción final,
+                       en el mismo lugar que ocupa en la ruta guardada -->
+                  @for (campo of camposDeRama(); track campo.id) {
+                    <div class="flex-1 min-w-[140px]">
+                      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">{{ campo.label }}{{ campo.required ? ' *' : '' }}</label>
+                      <select
+                        [ngModel]="valoresDeRama()[campo.id] || ''"
+                        (ngModelChange)="elegirValorDeRama(campo.id, $event)"
+                        [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white ' +
+                          (valoresDeRama()[campo.id] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
+                      >
+                        <option value="">Seleccionar...</option>
+                        @for (op of campo.options || []; track op.value) {
+                          <option [value]="op.value">{{ op.label }}</option>
+                        }
+                      </select>
+                    </div>
                   }
                 </div>
                 @if (errors().tipoGestion) {
