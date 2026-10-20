@@ -33,6 +33,34 @@ const MAX_DIAS_RANGO = 31;
  */
 type Pestana = 'grabaciones' | 'monitoreo';
 
+/**
+ * Una gestión con sus llamadas, que es la unidad que lista la pantalla.
+ *
+ * Antes la grilla mostraba una fila por llamada. Como una gestión puede abarcar
+ * varias (la del discador más sus rellamadas, o una manual más las suyas), dos o
+ * tres filas seguidas salían con el mismo cliente, documento, teléfono y
+ * tipificación, y solo cambiaba la hora: parecían el mismo registro repetido.
+ * Ahora la fila es la gestión y las llamadas van adentro.
+ *
+ * `principal` es la primera llamada por fecha. De ahí salen los datos de cabecera
+ * y la fecha por la que se ordena: lo que se busca es cuándo empezó la gestión.
+ *
+ * `llamadas` son las que pasaron el filtro de la tabla, y `totalGestion` cuántas
+ * tiene la gestión de verdad. Pueden no coincidir: una llamada fuera del rango de
+ * fechas, o una que perdió su uuid y no entra en la búsqueda, dejan el grupo corto.
+ * Por eso se muestran los dos números y se puede traer el resto.
+ */
+interface GrupoGestion {
+  /** Identifica la fila. Por gestión, o por uuid cuando la llamada no tiene una. */
+  clave: string;
+  idGestion: number | null;
+  principal: RecordingDTO;
+  llamadas: RecordingDTO[];
+  totalGestion: number;
+  /** Las que se trajeron aparte y el filtro de la tabla no había dejado pasar. */
+  fueraDelFiltro: Set<string>;
+}
+
 @Component({
   selector: 'app-admin-recordings',
   standalone: true,
@@ -61,10 +89,12 @@ export class AdminRecordingsComponent implements OnInit {
     this.pestana = pestana;
   }
 
-  // Data
+  // Data. `recordings` y `filteredRecordings` siguen siendo llamadas: son la unidad
+  // que baja del backend y la que se descarga en el zip. `grupos` es lo que se pinta.
   recordings: RecordingDTO[] = [];
   filteredRecordings: RecordingDTO[] = [];
-  paginatedRecordings: RecordingDTO[] = [];
+  grupos: GrupoGestion[] = [];
+  paginatedGrupos: GrupoGestion[] = [];
   hasSearched: boolean = false;
 
   // Tenant/Portfolio/SubPortfolio cascade
@@ -116,11 +146,11 @@ export class AdminRecordingsComponent implements OnInit {
   // de audio: bajar el audio de una fila no debe girar el botón de reporte.
   downloadingReporteId: number | null = null;
 
-  // Llamadas de la gestión (gestion_llamada). Se despliega una fila a la vez, por uuid,
-  // porque varias filas visibles pueden ser de la misma gestión. El detalle se pide una
-  // sola vez por gestión y queda en caché hasta la siguiente búsqueda.
-  expandedUuid: string | null = null;
+  // Las gestiones de varias llamadas salen desplegadas: tener que abrir cada una para
+  // ver qué pasó cambia un problema por otro. Acá solo viven las que el usuario plegó.
+  gruposPlegados = new Set<string>();
   cargandoGestion: number | null = null;
+  /** Detalle completo por gestión, para las llamadas que el filtro dejó fuera. */
   llamadasPorGestion = new Map<number, RecordingDTO[]>();
 
   constructor(
@@ -258,7 +288,7 @@ export class AdminRecordingsComponent implements OnInit {
     }
 
     this.resetTableFilters();
-    this.expandedUuid = null;
+    this.gruposPlegados.clear();
     this.llamadasPorGestion.clear();
     this.isLoading = true;
     this.recordingsService.search(
@@ -307,9 +337,52 @@ export class AdminRecordingsComponent implements OnInit {
       filtered = filtered.filter(r => r.tipificacion === this.filterTipificacion);
     }
 
+    // El filtro se aplica sobre llamadas y recién después se agrupa, para que
+    // filtrar por agente muestre lo que hizo ese agente y no lo de sus compañeros
+    // que tocaron la misma gestión. La gestión aparece si alguna llamada calza.
     this.filteredRecordings = filtered;
+    this.grupos = this.agrupar(filtered);
+    this.ordenarGrupos();
     this.currentPage = 1;
     this.updatePagination();
+  }
+
+  /**
+   * Junta las llamadas por gestión conservando el orden en que vinieron.
+   *
+   * Las que no tienen gestión van cada una por su cuenta: no hay nada que las
+   * relacione y meterlas juntas mezclaría clientes distintos en una misma fila.
+   */
+  private agrupar(llamadas: RecordingDTO[]): GrupoGestion[] {
+    const grupos = new Map<string, GrupoGestion>();
+
+    for (const llamada of llamadas) {
+      const clave = llamada.idGestion ? `g${llamada.idGestion}` : `u${llamada.uuidLlamada}`;
+      const grupo = grupos.get(clave);
+      if (grupo) {
+        grupo.llamadas.push(llamada);
+      } else {
+        grupos.set(clave, {
+          clave,
+          idGestion: llamada.idGestion ?? null,
+          principal: llamada,
+          llamadas: [llamada],
+          totalGestion: llamada.llamadasGestion ?? 1,
+          fueraDelFiltro: new Set<string>()
+        });
+      }
+    }
+
+    for (const grupo of grupos.values()) {
+      this.ordenarLlamadas(grupo);
+    }
+    return [...grupos.values()];
+  }
+
+  /** Cronológico dentro de la gestión, y la primera manda en la cabecera. */
+  private ordenarLlamadas(grupo: GrupoGestion): void {
+    grupo.llamadas.sort((a, b) => (a.fechaInicio || '').localeCompare(b.fechaInicio || ''));
+    grupo.principal = grupo.llamadas[0];
   }
 
   clearFilters(): void {
@@ -334,8 +407,20 @@ export class AdminRecordingsComponent implements OnInit {
       this.sortOrder = 1;
     }
 
-    this.filteredRecordings.sort((a: any, b: any) => {
-      const v1 = a[field], v2 = b[field];
+    this.ordenarGrupos();
+    this.updatePagination();
+  }
+
+  /**
+   * Ordena las filas por el campo elegido, leyéndolo de la llamada principal:
+   * la fila es la gestión, así que ordenar por fecha es ordenar por cuándo empezó.
+   */
+  private ordenarGrupos(): void {
+    if (!this.sortField || this.sortOrder === 0) return;
+    const field = this.sortField;
+
+    this.grupos.sort((ga, gb) => {
+      const v1 = (ga.principal as any)[field], v2 = (gb.principal as any)[field];
       let result = 0;
       if (v1 == null && v2 != null) result = -1;
       else if (v1 != null && v2 == null) result = 1;
@@ -344,17 +429,17 @@ export class AdminRecordingsComponent implements OnInit {
       else result = v1 < v2 ? -1 : v1 > v2 ? 1 : 0;
       return this.sortOrder * result;
     });
-
-    this.updatePagination();
   }
 
   // === Pagination ===
 
   updatePagination(): void {
-    this.totalPages = Math.max(1, Math.ceil(this.filteredRecordings.length / this.pageSize));
+    // Se pagina por gestión, no por llamada: una página de 10 puede traer más
+    // de 10 audios si alguna gestión tuvo rellamadas.
+    this.totalPages = Math.max(1, Math.ceil(this.grupos.length / this.pageSize));
     if (this.currentPage > this.totalPages) this.currentPage = 1;
     const start = (this.currentPage - 1) * this.pageSize;
-    this.paginatedRecordings = this.filteredRecordings.slice(start, start + this.pageSize);
+    this.paginatedGrupos = this.grupos.slice(start, start + this.pageSize);
   }
 
   onPageSizeChange(newSize: number): void {
@@ -382,36 +467,78 @@ export class AdminRecordingsComponent implements OnInit {
 
   // === Llamadas de la gestión ===
 
-  tieneVariasLlamadas(recording: RecordingDTO): boolean {
-    return !!recording.idGestion && (recording.llamadasGestion ?? 0) > 1;
+  /** Una gestión de una sola llamada se pinta como fila simple, sin desplegable. */
+  tieneVariasLlamadas(grupo: GrupoGestion): boolean {
+    return grupo.llamadas.length > 1;
   }
 
-  toggleLlamadas(recording: RecordingDTO): void {
-    if (!recording.idGestion) return;
-    if (this.expandedUuid === recording.uuidLlamada) {
-      this.expandedUuid = null;
+  estaAbierto(grupo: GrupoGestion): boolean {
+    return this.tieneVariasLlamadas(grupo) && !this.gruposPlegados.has(grupo.clave);
+  }
+
+  alternarGrupo(grupo: GrupoGestion): void {
+    if (this.gruposPlegados.has(grupo.clave)) {
+      this.gruposPlegados.delete(grupo.clave);
+    } else {
+      this.gruposPlegados.add(grupo.clave);
+    }
+  }
+
+  /** Quedaron llamadas de esta gestión fuera del filtro o del rango de fechas. */
+  faltanLlamadas(grupo: GrupoGestion): boolean {
+    return !!grupo.idGestion && grupo.totalGestion > grupo.llamadas.length;
+  }
+
+  /**
+   * Trae las llamadas de la gestión que la búsqueda no devolvió y las suma a la
+   * fila, marcadas para que se note que no cumplen el filtro vigente.
+   *
+   * No se hace solo al pintar: serían tantas consultas como gestiones en pantalla,
+   * y casi siempre el grupo ya está completo.
+   */
+  completarGestion(grupo: GrupoGestion): void {
+    if (!grupo.idGestion) return;
+    const idGestion = grupo.idGestion;
+
+    const enCache = this.llamadasPorGestion.get(idGestion);
+    if (enCache) {
+      this.fusionar(grupo, enCache);
       return;
     }
-    this.expandedUuid = recording.uuidLlamada;
-    const idGestion = recording.idGestion;
-    if (this.llamadasPorGestion.has(idGestion)) return;
 
     this.cargandoGestion = idGestion;
     this.recordingsService.getLlamadasDeGestion(idGestion).subscribe({
       next: (data) => {
         // Las manuales pueden venir sin documento; se hereda el de la fila para
         // que el nombre del audio descargado no salga con "null".
-        data.forEach(d => d.documento = d.documento || recording.documento);
+        data.forEach(d => d.documento = d.documento || grupo.principal.documento);
         this.llamadasPorGestion.set(idGestion, data);
+        this.fusionar(grupo, data);
         this.cargandoGestion = null;
       },
       error: (err) => {
         console.error(err);
         this.cargandoGestion = null;
-        this.expandedUuid = null;
         this.toastService.error('No se pudieron cargar las llamadas de la gestión.');
       }
     });
+  }
+
+  /** Suma al grupo las llamadas que le faltaban, sin perder las que ya tenía. */
+  private fusionar(grupo: GrupoGestion, todas: RecordingDTO[]): void {
+    const presentes = new Set(grupo.llamadas.map(l => l.uuidLlamada));
+    const faltantes = todas.filter(l => !presentes.has(l.uuidLlamada));
+    if (faltantes.length === 0) {
+      // La gestión dice tener más llamadas de las que el backend devuelve acá.
+      // Se deja el contador al día para que la fila no insista con un botón
+      // que no va a traer nada.
+      grupo.totalGestion = grupo.llamadas.length;
+      return;
+    }
+    faltantes.forEach(l => grupo.fueraDelFiltro.add(l.uuidLlamada));
+    grupo.llamadas = [...grupo.llamadas, ...faltantes];
+    this.ordenarLlamadas(grupo);
+    this.gruposPlegados.delete(grupo.clave);
   }
 
   formatOrigen(origen: string | null | undefined): string {

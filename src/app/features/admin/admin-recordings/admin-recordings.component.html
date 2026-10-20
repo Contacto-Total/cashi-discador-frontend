@@ -222,66 +222,82 @@
           </tr>
         </thead>
         <tbody>
-          <ng-container *ngFor="let recording of paginatedRecordings; let i = index">
+          <ng-container *ngFor="let grupo of paginatedGrupos; let i = index">
           <tr class="animate-row" [style.animation-delay]="(i * 30) + 'ms'"
-              [class.row-expanded]="expandedUuid === recording.uuidLlamada">
-            <td class="cell-mono">{{ recording.documento }}</td>
-            <td class="cell-mono">{{ recording.telefono }}</td>
-            <td class="cell-truncate" [title]="recording.cliente">{{ recording.cliente }}</td>
-            <td class="cell-truncate" [title]="recording.campana">{{ recording.campana }}</td>
-            <td>{{ recording.agente || '-' }}</td>
-            <td class="cell-truncate" [title]="recording.tipificacion">{{ recording.tipificacion || '-' }}</td>
-            <td class="cell-mono">{{ formatDate(recording.fechaInicio) }}</td>
-            <td class="cell-mono">{{ formatTime(recording.fechaInicio) }}</td>
+              [class.row-expanded]="estaAbierto(grupo)">
+            <td class="cell-mono">{{ grupo.principal.documento }}</td>
+            <td class="cell-mono">{{ grupo.principal.telefono }}</td>
+            <td class="cell-truncate" [title]="grupo.principal.cliente">{{ grupo.principal.cliente }}</td>
+            <td class="cell-truncate" [title]="grupo.principal.campana">{{ grupo.principal.campana }}</td>
+            <td>{{ grupo.principal.agente || '-' }}</td>
+            <td class="cell-truncate" [title]="grupo.principal.tipificacion">{{ grupo.principal.tipificacion || '-' }}</td>
+            <td class="cell-mono">{{ formatDate(grupo.principal.fechaInicio) }}</td>
+            <td class="cell-mono">{{ formatTime(grupo.principal.fechaInicio) }}</td>
             <td class="col-action">
-              <button *ngIf="tieneVariasLlamadas(recording); else unaLlamada"
-                      class="btn-llamadas" (click)="toggleLlamadas(recording)"
-                      [class.active]="expandedUuid === recording.uuidLlamada"
-                      [title]="'Gestión #' + recording.idGestion + ': ver sus llamadas'">
-                {{ recording.llamadasGestion }} llamadas
-                <lucide-angular [img]="expandedUuid === recording.uuidLlamada ? ChevronUp : ChevronDown" [size]="13"></lucide-angular>
+              <button *ngIf="tieneVariasLlamadas(grupo); else unaLlamada"
+                      class="btn-llamadas" (click)="alternarGrupo(grupo)"
+                      [class.active]="estaAbierto(grupo)"
+                      [title]="'Gestión #' + grupo.idGestion + ': ver sus llamadas'">
+                {{ grupo.llamadas.length }} llamadas
+                <lucide-angular [img]="estaAbierto(grupo) ? ChevronUp : ChevronDown" [size]="13"></lucide-angular>
               </button>
               <ng-template #unaLlamada>
-                <span *ngIf="recording.idGestion; else sinGestion" class="llamadas-una"
-                      [title]="'Gestión #' + recording.idGestion">1 llamada</span>
+                <span *ngIf="grupo.idGestion; else sinGestion" class="llamadas-una"
+                      [title]="'Gestión #' + grupo.idGestion">1 llamada</span>
               </ng-template>
               <ng-template #sinGestion>
                 <span class="sin-gestion"
                       title="Esta llamada no quedó enlazada a ninguna gestión: el asesor no tipificó, o es una llamada manual anterior al enlace de llamadas por gestión.">Sin gestión</span>
               </ng-template>
             </td>
+            <!-- Sin botón de audio cuando la gestión tuvo varias llamadas: hay un audio
+                 por llamada, y cada uno se baja desde su fila del detalle. -->
             <td class="col-action">
-              <button class="btn-audio" (click)="downloadAudio(recording)"
-                      [disabled]="downloadingUuid === recording.uuidLlamada"
+              <button *ngIf="!tieneVariasLlamadas(grupo); else audioEnDetalle"
+                      class="btn-audio" (click)="downloadAudio(grupo.principal)"
+                      [disabled]="downloadingUuid === grupo.principal.uuidLlamada"
                       title="Descargar audio">
-                <lucide-angular [img]="downloadingUuid === recording.uuidLlamada ? Loader : Volume2"
+                <lucide-angular [img]="downloadingUuid === grupo.principal.uuidLlamada ? Loader : Volume2"
                                 [size]="15"
-                                [class.spin]="downloadingUuid === recording.uuidLlamada"></lucide-angular>
+                                [class.spin]="downloadingUuid === grupo.principal.uuidLlamada"></lucide-angular>
               </button>
+              <ng-template #audioEnDetalle>
+                <span class="audio-en-detalle" title="Esta gestión tuvo varias llamadas: el audio de cada una está en el detalle.">
+                  {{ grupo.llamadas.length }} audios
+                </span>
+              </ng-template>
             </td>
             <td class="col-action">
-              <button class="btn-audio" (click)="downloadReporte(recording)"
-                      [disabled]="downloadingReporteId === recording.id"
+              <button class="btn-audio" (click)="downloadReporte(grupo.principal)"
+                      [disabled]="downloadingReporteId === grupo.principal.id"
                       title="Descargar reporte de evaluación">
-                <lucide-angular [img]="downloadingReporteId === recording.id ? Loader : FileSpreadsheet"
+                <lucide-angular [img]="downloadingReporteId === grupo.principal.id ? Loader : FileSpreadsheet"
                                 [size]="15"
-                                [class.spin]="downloadingReporteId === recording.id"></lucide-angular>
+                                [class.spin]="downloadingReporteId === grupo.principal.id"></lucide-angular>
               </button>
             </td>
           </tr>
 
-          <!-- Llamadas de la gestión (gestion_llamada) -->
-          <tr class="gestion-detalle" *ngIf="expandedUuid === recording.uuidLlamada">
+          <!-- Las llamadas de la gestión (gestion_llamada) -->
+          <tr class="gestion-detalle" *ngIf="estaAbierto(grupo)">
             <td colspan="11">
               <div class="gestion-detalle-box">
                 <div class="gestion-detalle-title">
-                  Gestión #{{ recording.idGestion }} · {{ recording.llamadasGestion }} llamadas
+                  Gestión #{{ grupo.idGestion }} · {{ grupo.llamadas.length }} llamadas
+                  <!-- La gestión tiene más llamadas de las que trajo la búsqueda: quedaron
+                       fuera por el rango de fechas o por los filtros de la tabla. -->
+                  <button *ngIf="faltanLlamadas(grupo)" class="btn-completar"
+                          (click)="completarGestion(grupo)"
+                          [disabled]="cargandoGestion === grupo.idGestion"
+                          title="Esta gestión tuvo más llamadas de las que entraron en la búsqueda">
+                    de {{ grupo.totalGestion }} · ver las que faltan
+                  </button>
                 </div>
-                <div class="gestion-detalle-loading" *ngIf="cargandoGestion === recording.idGestion">
+                <div class="gestion-detalle-loading" *ngIf="cargandoGestion === grupo.idGestion">
                   <lucide-angular [img]="Loader" [size]="16" class="spin"></lucide-angular>
                   Cargando llamadas...
                 </div>
-                <table class="gestion-detalle-table" *ngIf="recording.idGestion && llamadasPorGestion.get(recording.idGestion) as llamadas">
+                <table class="gestion-detalle-table">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -296,8 +312,9 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let llamada of llamadas; let n = index"
-                        [class.llamada-actual]="llamada.uuidLlamada === recording.uuidLlamada">
+                    <tr *ngFor="let llamada of grupo.llamadas; let n = index"
+                        [class.fuera-del-filtro]="grupo.fueraDelFiltro.has(llamada.uuidLlamada)"
+                        [title]="grupo.fueraDelFiltro.has(llamada.uuidLlamada) ? 'No cumple los filtros de la búsqueda; se muestra para completar la gestión.' : ''">
                       <td>{{ n + 1 }}</td>
                       <td>{{ formatOrigen(llamada.origen) }}</td>
                       <td class="cell-mono">{{ llamada.telefono || '-' }}</td>
