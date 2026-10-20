@@ -480,6 +480,7 @@
   color: #8b5cf6;
   font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -492,6 +493,18 @@
 .llamadas-una {
   color: var(--text-secondary, #94a3b8);
   font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.sin-gestion {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  cursor: help;
 }
 
 .recordings-table tbody tr.row-expanded {
