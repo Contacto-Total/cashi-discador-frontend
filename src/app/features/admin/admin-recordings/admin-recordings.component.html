@@ -100,7 +100,7 @@
       <div class="filter-group">
         <label>Tipificación</label>
         <select [(ngModel)]="rutaNivel1"
-                title="Filtra por la ultima tipificacion de la llamada. Las llamadas manuales no tienen tipificacion enlazada y quedan fuera.">
+                title="Filtra por la tipificación que se muestra: la de la llamada o la de su gestión. Si es el único criterio, solo entran las llamadas del discador que tienen gestión propia; combínala con fechas, documento o teléfono para incluir manuales y rellamadas.">
           <option value="">Todas</option>
           <option *ngFor="let t of tipificaciones" [value]="t">{{ t }}</option>
         </select>
@@ -216,7 +216,7 @@
               <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th>Hora</th>
-            <th class="col-action" title="Llamadas de la misma gestión (discador + rellamadas)">Llamadas</th>
+            <th class="col-action" title="Gestión a la que pertenece la llamada y cuántas llamadas tuvo (discador + rellamadas)">Gestión</th>
             <th class="col-action">Audio</th>
             <th class="col-action">Reporte</th>
           </tr>
@@ -237,12 +237,17 @@
               <button *ngIf="tieneVariasLlamadas(recording); else unaLlamada"
                       class="btn-llamadas" (click)="toggleLlamadas(recording)"
                       [class.active]="expandedUuid === recording.uuidLlamada"
-                      title="Ver las llamadas de esta gestión">
-                {{ recording.llamadasGestion }}
+                      [title]="'Gestión #' + recording.idGestion + ': ver sus llamadas'">
+                {{ recording.llamadasGestion }} llamadas
                 <lucide-angular [img]="expandedUuid === recording.uuidLlamada ? ChevronUp : ChevronDown" [size]="13"></lucide-angular>
               </button>
               <ng-template #unaLlamada>
-                <span class="llamadas-una">{{ recording.idGestion ? 1 : '-' }}</span>
+                <span *ngIf="recording.idGestion; else sinGestion" class="llamadas-una"
+                      [title]="'Gestión #' + recording.idGestion">1 llamada</span>
+              </ng-template>
+              <ng-template #sinGestion>
+                <span class="sin-gestion"
+                      title="Esta llamada no quedó enlazada a ninguna gestión: el asesor no tipificó, o es una llamada manual anterior al enlace de llamadas por gestión.">Sin gestión</span>
               </ng-template>
             </td>
             <td class="col-action">
