@@ -388,6 +388,8 @@ export interface PagoSustento {
   baja30Fuente: string | null;
   /** null = suma */
   motivoExclusion: MotivoExclusion | null;
+  /** Solo Tramo Propio: cartera del cliente según su periodo de compra; null = de ninguna */
+  cartera?: GrupoComision | null;
 }
 
 export interface AuditoriaComision {

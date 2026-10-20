@@ -81,7 +81,7 @@ const B = 28;
                   Meta del mes: S/ {{ p.meta | appNumber:'1.2-2' }}.
                 } @else {
                   @if (cartera(); as c) {
-                    Suma los pagos conciliados del mes de los asesores de {{ c }}, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }}). No suma los de la otra cartera ni los pagos voluntarios o no asignados.
+                    Suma todos los pagos conciliados del mes de los clientes de {{ c }} (según su periodo de compra), los gestione quien sea, incluidos los pagos voluntarios y los no asignados, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }}). No suma los de clientes de la otra cartera.
                   } @else {
                     Suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa, contra la meta del mes (S/ {{ p.meta | appNumber:'1.2-2' }})
                   }
@@ -372,7 +372,7 @@ const B = 28;
                 @if (p.esSupervisor && porCapital()) {
                   Conciliados en el mes, pero no suman capital a los asesores. Los motivos de contención siguen contando para su meta de pagos.
                 } @else if (p.esSupervisor && cartera()) {
-                  Conciliados en el mes, pero no son de los asesores de {{ cartera() }}: no suman a ellos ni a tu logrado como supervisor.
+                  Conciliados en el mes, pero el cliente no es de {{ cartera() }} (es de la otra cartera o no tiene un periodo de compra único): no suman a tu logrado como supervisor.
                 } @else if (p.esSupervisor) {
                   Conciliados en el mes, pero no suman al recaudo de los asesores. Estos pagos sí suman a tu logrado como supervisor.
                 } @else {
@@ -454,11 +454,16 @@ export class SustentoTabComponent {
   readonly metrica = computed(() => METRICA_INFO[this.reporte().periodo.tipoMetrica]);
   /** Contención: suma el capital asignado del cliente, no lo pagado */
   readonly porCapital = computed(() => this.reporte().periodo.tipoMetrica === 'CONTENCION');
-  /** Cartera de Tramo Propio (CP Antigua o CP Nueva): el supervisor solo suma los pagos de sus asesores */
+  /** Cartera de Tramo Propio (CP Antigua o CP Nueva): el supervisor solo suma los pagos de los clientes de su cartera */
   readonly cartera = computed(() => {
     const grupo = this.reporte().periodo.grupo;
     return grupo !== 'GENERAL' ? GRUPO_INFO[grupo] : null;
   });
+
+  /** Tramo Propio: el cliente del pago es de la cartera del periodo (por su periodo de compra) */
+  private deLaCartera(pg: PagoSustento): boolean {
+    return pg.cartera === this.reporte().periodo.grupo;
+  }
 
   readonly personas = computed<Persona[]>(() => {
     const r = this.reporte();
@@ -535,11 +540,14 @@ export class SustentoTabComponent {
       && Math.round(this.totalContenidos() * 100) !== Math.round(p.logrado * 100);
   });
 
-  /** Pagos que no suman: los de las gestiones del asesor o, para el supervisor, todos */
+  /** Pagos que no suman: los de las gestiones del asesor o, para el supervisor, todos; en Tramo Propio, los de clientes fuera de su cartera */
   readonly noSuman = computed<PagoSustento[]>(() => {
     const p = this.persona();
     if (!p) {
       return [];
+    }
+    if (p.esSupervisor && !this.porCapital() && this.cartera()) {
+      return this.pagos().filter(pg => !this.deLaCartera(pg));
     }
     return this.pagos().filter(pg => pg.motivoExclusion != null && (p.esSupervisor || pg.idAgenteGestion === p.clave));
   });
@@ -555,8 +563,8 @@ export class SustentoTabComponent {
       return agruparContenidosPorDia(this.contenidos(), primerDiaMes, p.meta, p.tramos);
     }
     if (p.esSupervisor) {
-      // RECAUDO: al supervisor le suman todos los pagos conciliados; en Tramo Propio, solo los de los asesores de su cartera
-      const pagos = this.cartera() ? this.pagos().filter(pg => pg.motivoExclusion == null) : this.pagos();
+      // RECAUDO: al supervisor le suman todos los pagos conciliados; en Tramo Propio, solo los de los clientes de su cartera
+      const pagos = this.cartera() ? this.pagos().filter(pg => this.deLaCartera(pg)) : this.pagos();
       return agruparPagosPorDia(pagos, p.meta, p.tramos);
     }
     return agruparPorDia(p.filas, p.meta, p.tramos);
