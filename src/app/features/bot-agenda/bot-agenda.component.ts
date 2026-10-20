@@ -9,6 +9,18 @@ import { AuthService } from '../../core/services/auth.service';
 import { AVATARES_PERSONAL } from '../asistencia/avatares-personal';
 import { AsesorAgenda, BotAgendaService, CasoAgendaBot, RepartoSubcartera } from './bot-agenda.service';
 
+/** Qué necesita el cliente, dicho para el asesor. */
+const INFOS: Record<string, string> = {
+  MONTO:           'Quiere saber el monto',
+  CRONOGRAMA:      'Quiere conocer el cronograma',
+  MEDIO_PAGO:      'Necesita saber cómo pagar',
+  ENVIO_DOCUMENTO: 'Pidió un documento',
+  ORIGEN_DEUDA:    'Pregunta de qué es la deuda',
+  NEGOCIACION:     'Quiere negociar condiciones',
+  OTRO:            'Pidió información',
+};
+
+
 /**
  * Clases que se repiten en la pantalla, con el sistema de Gestión de Tenores (el
  * mismo de bot de voz y control de asistencia).
@@ -106,6 +118,8 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   esSupervision = false;
 
   filtroTipo = '';
+  /** Solo los casos donde el cliente necesita información. */
+  soloConInfo = false;
   /**
    * Día suelto; vacío es toda la cola, que es como abre: lo pendiente no caduca con la
    * jornada y lo de días anteriores es justo lo que hay que levantar. El día sirve para
@@ -274,6 +288,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     return this.colaSinDia
       .filter((c) => !this.filtroDia || (c.cuando || '').slice(0, 10) === this.filtroDia)
       .filter((c) => !this.filtroTipo || c.tipo === this.filtroTipo)
+      .filter((c) => !this.soloConInfo || !!c.infoSolicitada)
       .filter((c) => !q || (`${c.nombreCliente ?? ''} ${c.documento ?? ''} ${c.telefono ?? ''}`)
         .toLowerCase().includes(q))
       .sort((a, b) => (a.cuando || '').localeCompare(b.cuando || ''));
@@ -313,6 +328,23 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
    */
   get tiposConCasos(): string[] {
     return this.clavesTipo.filter((t) => this.contar(t) > 0 || this.filtroTipo === t);
+  }
+
+  // ---------- información que necesita el cliente ----------
+
+  /** Cuántos casos de la cola traen una necesidad de información: lo que contará la pastilla. */
+  get casosConInfo(): number {
+    return this.colaSinDia.filter((c) => !!c.infoSolicitada).length;
+  }
+
+  alternarSoloInfo(): void {
+    this.soloConInfo = !this.soloConInfo;
+    this.pagina = 0;
+  }
+
+  /** Lo que necesita el cliente, en palabras del asesor. */
+  rotuloInfo(c: CasoAgendaBot): string {
+    return c.infoSolicitada ? (INFOS[c.infoSolicitada.tipo] ?? 'Pidió información') : '';
   }
 
   alternarTipo(tipo: string): void {

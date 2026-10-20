@@ -42,6 +42,16 @@ export interface CasoAgendaBot {
   asignadoPor?: string;
   /** Cuándo se asignó, para separar lo que repartió el sistema esta mañana. */
   asignadoAt?: string;
+
+  /** Información que el cliente necesita, reconocida por el bot; ausente si no pidió nada. */
+  infoSolicitada?: InfoSolicitada | null;
+}
+
+/** Lo que el bot reconoció que el cliente necesita que le hagan llegar o le aclaren. */
+export interface InfoSolicitada {
+  tipo: 'MONTO' | 'CRONOGRAMA' | 'MEDIO_PAGO' | 'ENVIO_DOCUMENTO' | 'ORIGEN_DEUDA' | 'NEGOCIACION' | 'OTRO';
+  /** Lo que dijo el cliente al pedirlo; puede venir vacío. */
+  frase?: string;
 }
 
 export interface AsesorAgenda {
