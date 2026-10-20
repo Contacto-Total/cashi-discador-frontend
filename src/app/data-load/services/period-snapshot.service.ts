@@ -39,6 +39,7 @@ export interface DailyStatusResponse {
   lastLoadDate: string | null;
   lastArchivedDate: string | null;
   requiresConfirmation: boolean;
+  currentFileDate: string | null; // yyyy_MM_dd del archivo cargado hoy en la tabla diaria
 }
 
 export interface DailyRequiresConfirmationResponse {
@@ -137,10 +138,12 @@ export class PeriodSnapshotService {
    * Ejecuta snapshot diario para una subcartera específica
    * @param subPortfolioId ID de la subcartera
    */
-  executeDailySnapshotForSubPortfolio(subPortfolioId: number): Observable<SnapshotResultResponse> {
+  executeDailySnapshotForSubPortfolio(subPortfolioId: number, fileName: string): Observable<SnapshotResultResponse> {
+    // fileName: archivo que se va a cargar; si es del mismo día que el cargado, se reemplaza sin archivar
     return this.http.post<SnapshotResultResponse>(
       `${this.baseUrl}/subportfolio/${subPortfolioId}/daily-execute`,
-      {}
+      {},
+      { params: { fileName } }
     );
   }
 

@@ -130,12 +130,13 @@ export class HeaderConfigurationService {
    * @param data Datos a importar
    * @param linkField Campo de enlace para vincular con tabla inicial
    */
-  importDailyData(subPortfolioId: number, data: any[], linkField: string): Observable<any> {
+  importDailyData(subPortfolioId: number, data: any[], linkField: string, fileName: string): Observable<any> {
     // Timeout de 10 minutos para cargas grandes (600000ms)
     return this.http.post<any>(`${this.baseUrl}/subportfolio/${subPortfolioId}/import-daily`, {
       subPortfolioId,
       data,
-      linkField
+      linkField,
+      fileName
     }).pipe(timeout(600000));
   }
 

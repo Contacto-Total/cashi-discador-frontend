@@ -34,7 +34,9 @@ import {
   FILE_CONFIG_STATES,
   LOAD_TYPES,
   DATA_TYPES,
-  formatFileSize
+  formatFileSize,
+  extractDailyFileDate,
+  DAILY_FILE_DATE_ERROR
 } from '../../constants/data-load.constants';
 
 @Component({
@@ -333,7 +335,7 @@ import {
               </div>
               <div>
                 <h2 class="text-xl font-bold !text-white">Datos Diarios Existentes</h2>
-                <p class="text-blue-100 text-sm">Se archivará la carga anterior</p>
+                <p class="text-blue-100 text-sm">{{ isReplacingDailyLoad() ? 'Se reemplazará la carga del mismo día' : 'Se archivará la carga anterior' }}</p>
               </div>
             </div>
           </div>
@@ -360,9 +362,15 @@ import {
                       <p class="text-blue-800 dark:text-blue-200 text-sm font-medium">
                         Ya existen <span class="font-bold">{{ dailyStatus()?.recordCount | number }}</span> registros de carga diaria.
                       </p>
-                      <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
-                        Al continuar, se archivará la información actual antes de cargar los nuevos datos.
-                      </p>
+                      @if (isReplacingDailyLoad()) {
+                        <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                          Ya existe una carga del <span class="font-bold">{{ dailyStatus()?.currentFileDate }}</span>; se reemplazará por este archivo.
+                        </p>
+                      } @else {
+                        <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                          Al continuar, se archivará la información actual antes de cargar los nuevos datos.
+                        </p>
+                      }
                     </div>
                   </div>
                 </div>
@@ -386,19 +394,21 @@ import {
                   }
                 </div>
 
-                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
-                  <div class="flex items-start gap-3">
-                    <lucide-angular name="archive" [size]="20" class="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0"></lucide-angular>
-                    <div>
-                      <p class="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
-                        Los datos actuales se guardarán en el histórico
-                      </p>
-                      <p class="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
-                        Podrá consultar los datos archivados posteriormente.
-                      </p>
+                @if (!isReplacingDailyLoad()) {
+                  <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                      <lucide-angular name="archive" [size]="20" class="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                      <div>
+                        <p class="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
+                          Los datos actuales se guardarán en el histórico
+                        </p>
+                        <p class="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                          Podrá consultar los datos archivados posteriormente.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                }
               </div>
             }
           </div>
@@ -413,7 +423,7 @@ import {
               <button (click)="confirmDailySnapshot()"
                       class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
                 <lucide-angular name="archive" [size]="16"></lucide-angular>
-                Archivar y Continuar
+                {{ isReplacingDailyLoad() ? 'Reemplazar y Continuar' : 'Archivar y Continuar' }}
               </button>
             </div>
           }
@@ -2904,6 +2914,8 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     const file = this.filesToProcess().find(f => f.type === 'MAIN');
     if (!file || !file.data) throw new Error('No hay archivo de carga diaria');
     if (!file.linkField) throw new Error('No se ha seleccionado un campo de enlace');
+    // La fecha del nombre nombra la tabla histórica: validar ANTES del snapshot
+    if (!extractDailyFileDate(file.file.name)) throw new Error(DAILY_FILE_DATE_ERROR);
 
     // Verificar si se requiere confirmación de snapshot diario
     try {
@@ -2953,8 +2965,14 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     const result = await firstValueFrom(this.headerConfigService.importDailyData(
       this.selectedSubPortfolioId,
       file.data,
-      file.linkField
+      file.linkField,
+      file.file.name
     ));
+
+    // La fecha del nombre no coincide con la FECHA_PROCESO de los datos: solo se avisa
+    if (result.advertenciaFechaProceso) {
+      this.notificationService.warning('Revise la fecha del archivo', result.advertenciaFechaProceso);
+    }
 
     // Calcular totales de ambas tablas
     const actualizacionResult = result.actualizacion || {};
@@ -3239,6 +3257,15 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * true si el archivo nuevo es del mismo día que la carga diaria actual: se reemplaza sin archivar
+   */
+  isReplacingDailyLoad(): boolean {
+    const currentFileDate = this.dailyStatus()?.currentFileDate;
+    const newFileDate = extractDailyFileDate(this.filesToProcess().find(f => f.type === 'MAIN')?.file.name);
+    return !!currentFileDate && currentFileDate === newFileDate;
+  }
+
+  /**
    * Confirma el snapshot diario, ejecuta el archivado y continúa con la carga
    */
   async confirmDailySnapshot() {
@@ -3247,11 +3274,13 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
 
     let snapshotCompleted = false;
     let archiveDate: string | null = null;
+    const isReplacing = this.isReplacingDailyLoad();
+    const fileName = this.filesToProcess().find(f => f.type === 'MAIN')?.file.name ?? '';
 
     try {
       // Ejecutar snapshot diario
       const snapshotResult = await firstValueFrom(
-        this.periodSnapshotService.executeDailySnapshotForSubPortfolio(this.selectedSubPortfolioId)
+        this.periodSnapshotService.executeDailySnapshotForSubPortfolio(this.selectedSubPortfolioId, fileName)
       );
 
       if (!snapshotResult.success) {
@@ -3264,11 +3293,15 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
 
       this.dailySnapshotProgress.set('Archivo completado. Iniciando carga...');
 
-      // Notificar éxito del snapshot
-      this.notificationService.success(
-        'Datos diarios archivados',
-        `${snapshotResult.tablesArchived} tabla(s) archivada(s) para fecha ${snapshotResult.archivePeriod}`
-      );
+      // Notificar éxito del snapshot (en una resubida del mismo día no se archiva: se reemplaza)
+      if (isReplacing) {
+        this.notificationService.info('Carga del día reemplazada', snapshotResult.message);
+      } else {
+        this.notificationService.success(
+          'Datos diarios archivados',
+          `${snapshotResult.tablesArchived} tabla(s) archivada(s) para fecha ${snapshotResult.archivePeriod}`
+        );
+      }
 
       // Cerrar diálogo y continuar con la carga
       this.showDailySnapshotDialog.set(false);
