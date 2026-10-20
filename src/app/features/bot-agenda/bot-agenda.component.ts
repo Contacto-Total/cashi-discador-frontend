@@ -288,7 +288,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     return this.colaSinDia
       .filter((c) => !this.filtroDia || (c.cuando || '').slice(0, 10) === this.filtroDia)
       .filter((c) => !this.filtroTipo || c.tipo === this.filtroTipo)
-      .filter((c) => !this.soloConInfo || !!c.infoSolicitada)
+      .filter((c) => !this.soloConInfo || this.tienePedido(c))
       .filter((c) => !q || (`${c.nombreCliente ?? ''} ${c.documento ?? ''} ${c.telefono ?? ''}`)
         .toLowerCase().includes(q))
       .sort((a, b) => (a.cuando || '').localeCompare(b.cuando || ''));
@@ -334,7 +334,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   /** Cuántos casos de la cola traen una necesidad de información: lo que contará la pastilla. */
   get casosConInfo(): number {
-    return this.colaSinDia.filter((c) => !!c.infoSolicitada).length;
+    return this.colaSinDia.filter((c) => this.tienePedido(c)).length;
   }
 
   alternarSoloInfo(): void {
@@ -344,7 +344,34 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   /** Lo que necesita el cliente, en palabras del asesor. */
   rotuloInfo(c: CasoAgendaBot): string {
-    return c.infoSolicitada ? (INFOS[c.infoSolicitada.tipo] ?? 'Pidió información') : '';
+    const t = c.infoSolicitada?.tipo;
+    return t ? (INFOS[t] ?? 'Pidió información') : '';
+  }
+
+  /** El cliente pidió algo concreto (no solo aceptó). */
+  tienePedido(c: CasoAgendaBot): boolean {
+    return !!c.infoSolicitada?.tipo;
+  }
+
+  /** Todos los pedidos de la llamada, con su rótulo y frase. */
+  pedidosDe(c: CasoAgendaBot): { rotulo: string; frase?: string }[] {
+    const i = c.infoSolicitada;
+    if (!i) return [];
+    const lista = i.pedidos?.length ? i.pedidos : i.tipo ? [i] : [];
+    return lista.map((p) => ({ rotulo: INFOS[p.tipo ?? ''] ?? 'Pidió información', frase: p.frase }));
+  }
+
+  /** Lo que el cliente aceptó o prefiere, en palabras del asesor. */
+  acuerdosDe(c: CasoAgendaBot): { rotulo: string; valor: string }[] {
+    const i = c.infoSolicitada;
+    if (!i) return [];
+    const canales: Record<string, string> = { WHATSAPP: 'WhatsApp', SMS: 'SMS', CORREO: 'Correo', LLAMADA: 'Llamada' };
+    const l: { rotulo: string; valor: string }[] = [];
+    if (i.canal) l.push({ rotulo: 'Prefiere que le escriban por', valor: canales[i.canal] ?? i.canal });
+    if (i.medioPago) l.push({ rotulo: 'Medio de pago elegido', valor: i.medioPago });
+    if (i.fechaPrometida) l.push({ rotulo: 'Fecha que dijo', valor: i.fechaPrometida });
+    if (i.cuotas) l.push({ rotulo: 'Cuotas que aceptó', valor: String(i.cuotas) });
+    return l;
   }
 
   alternarTipo(tipo: string): void {

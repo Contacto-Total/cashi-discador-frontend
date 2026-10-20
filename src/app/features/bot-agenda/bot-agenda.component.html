@@ -168,10 +168,10 @@
                         <lucide-angular name="user" [size]="12"></lucide-angular> {{ c.nombreAsignado }}
                       </span>
                     }
-                    @if (c.infoSolicitada) {
+                    @for (p of pedidosDe(c); track $index) {
                       <span [class]="insignia('azul')">
                         <lucide-angular name="help-circle" [size]="12"></lucide-angular>
-                        {{ rotuloInfo(c) }}
+                        {{ p.rotulo }}
                       </span>
                     }
                     <span [class]="insignia('gris')">
@@ -186,6 +186,14 @@
                   @if (c.infoSolicitada?.frase) {
                     <p class="!m-0 text-[12px] italic text-[#1e40af] dark:text-blue-300">
                       Cliente: “{{ c.infoSolicitada?.frase }}”
+                    </p>
+                  }
+                  @if (acuerdosDe(c).length) {
+                    <p class="!m-0 text-[12px] text-[#166534] dark:text-green-300">
+                      Aceptó:
+                      @for (a of acuerdosDe(c); track a.rotulo; let ult = $last) {
+                        {{ a.valor }}{{ ult ? '' : ' · ' }}
+                      }
                     </p>
                   }
                 </div>
@@ -374,19 +382,35 @@
           }
         </div>
 
-        @if (c.infoSolicitada) {
+        @if (pedidosDe(c).length) {
           <div class="flex flex-col gap-1.5 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
             <span [class]="ui.etiqueta">El cliente necesita información</span>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <span [class]="insignia('azul')">
-                <lucide-angular name="help-circle" [size]="12"></lucide-angular>
-                {{ rotuloInfo(c) }}
-              </span>
-              <span [class]="ui.ayuda">Reconocido por el bot; conviene confirmarlo con el cliente.</span>
-            </div>
-            @if (c.infoSolicitada.frase) {
-              <p class="!m-0 text-[13px] italic leading-snug">“{{ c.infoSolicitada.frase }}”</p>
+            @for (p of pedidosDe(c); track $index) {
+              <div class="flex flex-col gap-0.5">
+                <span [class]="insignia('azul')">
+                  <lucide-angular name="help-circle" [size]="12"></lucide-angular>
+                  {{ p.rotulo }}
+                </span>
+                @if (p.frase) {
+                  <p class="!m-0 text-[13px] italic leading-snug">“{{ p.frase }}”</p>
+                }
+              </div>
             }
+            <span [class]="ui.ayuda">Reconocido por el bot; conviene confirmarlo con el cliente.</span>
+          </div>
+        }
+
+        @if (acuerdosDe(c).length) {
+          <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+            <span [class]="ui.etiqueta">Lo que aceptó o prefiere el cliente</span>
+            <div class="flex flex-col gap-1.5">
+              @for (a of acuerdosDe(c); track a.rotulo) {
+                <div class="linea-hablado">
+                  <span class="linea-rotulo">{{ a.rotulo }}</span>
+                  <span class="linea-valor">{{ a.valor }}</span>
+                </div>
+              }
+            </div>
           </div>
         }
 
@@ -461,10 +485,10 @@
                   </span>
                   <span class="flex flex-wrap items-center gap-1.5">
                     <span [class]="insignia(marcaDePromesa(c).tono)">{{ marcaDePromesa(c).texto }}</span>
-                    @if (c.infoSolicitada) {
+                    @for (p of pedidosDe(c); track $index) {
                       <span [class]="insignia('azul')">
                         <lucide-angular name="help-circle" [size]="12"></lucide-angular>
-                        {{ rotuloInfo(c) }}
+                        {{ p.rotulo }}
                       </span>
                     }
                   </span>
