@@ -64,3 +64,23 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+export const DAILY_FILE_DATE_ERROR =
+  'El nombre del archivo debe incluir la fecha (yyyy_MM_dd, yyyy-MM-dd o yyyyMMdd). Ej.: Cartera_Castigo_2026_10_17.xlsx';
+
+/**
+ * Fecha del nombre del archivo de carga diaria en formato yyyy_MM_dd (el de la tabla histórica).
+ * Acepta yyyy_MM_dd, yyyy-MM-dd o yyyyMMdd con el mismo separador. null si no trae una fecha
+ * válida o trae más de una. Misma regla que DailyFileDateUtil en el backend.
+ */
+export function extractDailyFileDate(fileName: string | null | undefined): string | null {
+  if (!fileName) return null;
+  const matches = [...fileName.matchAll(/(?<!\d)(\d{4})([-_]?)(\d{2})\2(\d{2})(?!\d)/g)];
+  if (matches.length !== 1) return null;
+  const [, year, , month, day] = matches[0];
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  const isValid = date.getFullYear() === Number(year)
+    && date.getMonth() === Number(month) - 1
+    && date.getDate() === Number(day);
+  return isValid ? `${year}_${month}_${day}` : null;
+}
