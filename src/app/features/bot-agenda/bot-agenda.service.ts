@@ -49,9 +49,17 @@ export interface CasoAgendaBot {
 
 /** Lo que el bot reconoció que el cliente necesita que le hagan llegar o le aclaren. */
 export interface InfoSolicitada {
-  tipo: 'MONTO' | 'CRONOGRAMA' | 'MEDIO_PAGO' | 'ENVIO_DOCUMENTO' | 'ORIGEN_DEUDA' | 'NEGOCIACION' | 'OTRO';
+  /** Ausente si el cliente no pidió nada pero sí aceptó algo. */
+  tipo?: 'MONTO' | 'CRONOGRAMA' | 'MEDIO_PAGO' | 'ENVIO_DOCUMENTO' | 'ORIGEN_DEUDA' | 'NEGOCIACION' | 'OTRO';
   /** Lo que dijo el cliente al pedirlo; puede venir vacío. */
   frase?: string;
+  /** Todos los pedidos de la llamada (el primero es el principal). */
+  pedidos?: InfoSolicitada[];
+  /** Lo que el cliente aceptó o prefiere, solo para mostrar. */
+  canal?: 'WHATSAPP' | 'SMS' | 'CORREO' | 'LLAMADA';
+  medioPago?: string;
+  fechaPrometida?: string;
+  cuotas?: number;
 }
 
 export interface AsesorAgenda {
