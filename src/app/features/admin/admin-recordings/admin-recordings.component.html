@@ -238,7 +238,7 @@
                       class="btn-llamadas" (click)="alternarGrupo(grupo)"
                       [class.active]="estaAbierto(grupo)"
                       [title]="'Gestión #' + grupo.idGestion + ': ver sus llamadas'">
-                {{ grupo.llamadas.length }} llamadas
+                {{ cantidadLlamadas(grupo) }} llamadas
                 <lucide-angular [img]="estaAbierto(grupo) ? ChevronUp : ChevronDown" [size]="13"></lucide-angular>
               </button>
               <ng-template #unaLlamada>
@@ -263,7 +263,7 @@
               </button>
               <ng-template #audioEnDetalle>
                 <span class="audio-en-detalle" title="Esta gestión tuvo varias llamadas: el audio de cada una está en el detalle.">
-                  {{ grupo.llamadas.length }} audios
+                  {{ cantidadLlamadas(grupo) }} audios
                 </span>
               </ng-template>
             </td>
@@ -286,7 +286,7 @@
                   <!-- Las que el filtro dejó fuera ya vienen pedidas al abrir el grupo
                        (alternarGrupo), así que acá no hay nada que el usuario tenga que
                        accionar: se muestran todas las de la gestión. -->
-                  Gestión #{{ grupo.idGestion }} · {{ grupo.llamadas.length }} llamadas
+                  Gestión #{{ grupo.idGestion }} · {{ cantidadLlamadas(grupo) }} llamadas
                 </div>
                 <div class="gestion-detalle-loading" *ngIf="cargandoGestion === grupo.idGestion">
                   <lucide-angular [img]="Loader" [size]="16" class="spin"></lucide-angular>
