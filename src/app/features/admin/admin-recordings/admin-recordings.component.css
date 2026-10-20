@@ -561,8 +561,37 @@
   font-size: 0.8rem;
 }
 
-.gestion-detalle-table tr.llamada-actual td {
-  font-weight: 600;
+/* Llamada traída para completar la gestión: existe, pero no cumple los filtros de
+   la búsqueda. Se atenúa para que no se confunda con los resultados propiamente. */
+.gestion-detalle-table tr.fuera-del-filtro td {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.btn-completar {
+  margin-left: 0.4rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--primary-color, #8b5cf6);
+  cursor: pointer;
+}
+
+.btn-completar:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-completar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* La gestión tuvo varias llamadas: su audio vive en cada fila del detalle. */
+.audio-en-detalle {
+  font-size: 0.7rem;
+  color: var(--text-tertiary, #94a3b8);
+  white-space: nowrap;
 }
 
 /* ============== Pagination ============== */
