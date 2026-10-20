@@ -467,9 +467,20 @@ export class AdminRecordingsComponent implements OnInit {
 
   // === Llamadas de la gestión ===
 
+  /**
+   * Cuántas llamadas tuvo la gestión de verdad, no cuántas pasaron el filtro.
+   *
+   * `totalGestion` lo cuenta el backend sobre gestion_llamada; `llamadas` son las que
+   * entraron en la búsqueda. Contar estas últimas hacía que la fila dijera "2 llamadas"
+   * y pasara a 3 al abrirla, que es el momento en que se piden las que faltaban.
+   */
+  cantidadLlamadas(grupo: GrupoGestion): number {
+    return Math.max(grupo.totalGestion, grupo.llamadas.length);
+  }
+
   /** Una gestión de una sola llamada se pinta como fila simple, sin desplegable. */
   tieneVariasLlamadas(grupo: GrupoGestion): boolean {
-    return grupo.llamadas.length > 1;
+    return this.cantidadLlamadas(grupo) > 1;
   }
 
   estaAbierto(grupo: GrupoGestion): boolean {
