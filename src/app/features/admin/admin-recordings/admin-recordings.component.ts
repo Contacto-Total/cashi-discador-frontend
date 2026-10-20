@@ -146,9 +146,9 @@ export class AdminRecordingsComponent implements OnInit {
   // de audio: bajar el audio de una fila no debe girar el botón de reporte.
   downloadingReporteId: number | null = null;
 
-  // Las gestiones de varias llamadas salen desplegadas: tener que abrir cada una para
-  // ver qué pasó cambia un problema por otro. Acá solo viven las que el usuario plegó.
-  gruposPlegados = new Set<string>();
+  // Las gestiones arrancan plegadas: con varias en pantalla, todas abiertas a la vez
+  // tapan la tabla. Acá viven las que el usuario abrió.
+  gruposAbiertos = new Set<string>();
   cargandoGestion: number | null = null;
   /** Detalle completo por gestión, para las llamadas que el filtro dejó fuera. */
   llamadasPorGestion = new Map<number, RecordingDTO[]>();
@@ -288,7 +288,7 @@ export class AdminRecordingsComponent implements OnInit {
     }
 
     this.resetTableFilters();
-    this.gruposPlegados.clear();
+    this.gruposAbiertos.clear();
     this.llamadasPorGestion.clear();
     this.isLoading = true;
     this.recordingsService.search(
@@ -473,14 +473,24 @@ export class AdminRecordingsComponent implements OnInit {
   }
 
   estaAbierto(grupo: GrupoGestion): boolean {
-    return this.tieneVariasLlamadas(grupo) && !this.gruposPlegados.has(grupo.clave);
+    return this.tieneVariasLlamadas(grupo) && this.gruposAbiertos.has(grupo.clave);
   }
 
+  /**
+   * Al abrir se traen de una las llamadas que la búsqueda dejó fuera, para que la
+   * gestión se vea completa sin que el usuario tenga que pedirlo.
+   *
+   * Se hace acá y no al pintar la tabla porque serían tantas consultas como gestiones
+   * en pantalla; abriendo es una sola, y la respuesta queda cacheada.
+   */
   alternarGrupo(grupo: GrupoGestion): void {
-    if (this.gruposPlegados.has(grupo.clave)) {
-      this.gruposPlegados.delete(grupo.clave);
-    } else {
-      this.gruposPlegados.add(grupo.clave);
+    if (this.gruposAbiertos.has(grupo.clave)) {
+      this.gruposAbiertos.delete(grupo.clave);
+      return;
+    }
+    this.gruposAbiertos.add(grupo.clave);
+    if (this.faltanLlamadas(grupo)) {
+      this.completarGestion(grupo);
     }
   }
 
@@ -538,7 +548,7 @@ export class AdminRecordingsComponent implements OnInit {
     faltantes.forEach(l => grupo.fueraDelFiltro.add(l.uuidLlamada));
     grupo.llamadas = [...grupo.llamadas, ...faltantes];
     this.ordenarLlamadas(grupo);
-    this.gruposPlegados.delete(grupo.clave);
+    this.gruposAbiertos.add(grupo.clave);
   }
 
   formatOrigen(origen: string | null | undefined): string {
