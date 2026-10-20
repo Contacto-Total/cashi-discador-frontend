@@ -66,6 +66,17 @@
                 {{ tipos[t].plural }}<span class="tabular-nums font-bold">{{ contar(t) }}</span>
               </button>
             }
+            @if (casosConInfo > 0 || soloConInfo) {
+              <button type="button" (click)="alternarSoloInfo()" [attr.aria-pressed]="soloConInfo"
+                      class="pastilla-filtro"
+                      [attr.aria-label]="'Necesitan información: ' + casosConInfo + ' casos'"
+                      [style.--pf-borde]="soloConInfo ? '#0f172a' : '#3b82f659'"
+                      [style.--pf-fondo]="soloConInfo ? '#0f172a' : '#dbeafe'"
+                      [style.--pf-texto]="soloConInfo ? '#ffffff' : '#1e40af'">
+                <lucide-angular name="help-circle" [size]="13" class="block"></lucide-angular>
+                Necesita información<span class="tabular-nums font-bold">{{ casosConInfo }}</span>
+              </button>
+            }
           </div>
 
           @if (visibles.length > 4) {
@@ -157,6 +168,12 @@
                         <lucide-angular name="user" [size]="12"></lucide-angular> {{ c.nombreAsignado }}
                       </span>
                     }
+                    @if (c.infoSolicitada) {
+                      <span [class]="insignia('azul')">
+                        <lucide-angular name="help-circle" [size]="12"></lucide-angular>
+                        {{ rotuloInfo(c) }}
+                      </span>
+                    }
                     <span [class]="insignia('gris')">
                       <lucide-angular name="bot" [size]="12"></lucide-angular> Bot
                     </span>
@@ -165,6 +182,12 @@
                   <p class="!m-0 line-clamp-2 text-[12.5px] leading-snug text-[#5f6c80] dark:text-slate-400">
                     {{ c.resumen || 'El bot no dejó resumen de esta llamada.' }}
                   </p>
+
+                  @if (c.infoSolicitada?.frase) {
+                    <p class="!m-0 text-[12px] italic text-[#1e40af] dark:text-blue-300">
+                      Cliente: “{{ c.infoSolicitada?.frase }}”
+                    </p>
+                  }
                 </div>
 
                 <div class="caso-dato">
@@ -351,6 +374,22 @@
           }
         </div>
 
+        @if (c.infoSolicitada) {
+          <div class="flex flex-col gap-1.5 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
+            <span [class]="ui.etiqueta">El cliente necesita información</span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span [class]="insignia('azul')">
+                <lucide-angular name="help-circle" [size]="12"></lucide-angular>
+                {{ rotuloInfo(c) }}
+              </span>
+              <span [class]="ui.ayuda">Reconocido por el bot; conviene confirmarlo con el cliente.</span>
+            </div>
+            @if (c.infoSolicitada.frase) {
+              <p class="!m-0 text-[13px] italic leading-snug">“{{ c.infoSolicitada.frase }}”</p>
+            }
+          </div>
+        }
+
         @if (negociado(c).length) {
           <div class="flex flex-col gap-2 border-t border-[#f1f3f6] pt-4 dark:border-slate-800">
             <span [class]="ui.etiqueta">Lo que se habló</span>
@@ -420,7 +459,15 @@
                   <span class="text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
                     {{ c.documento }} · {{ cuentaAtras(c).toLowerCase() }}
                   </span>
-                  <span [class]="insignia(marcaDePromesa(c).tono)">{{ marcaDePromesa(c).texto }}</span>
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    <span [class]="insignia(marcaDePromesa(c).tono)">{{ marcaDePromesa(c).texto }}</span>
+                    @if (c.infoSolicitada) {
+                      <span [class]="insignia('azul')">
+                        <lucide-angular name="help-circle" [size]="12"></lucide-angular>
+                        {{ rotuloInfo(c) }}
+                      </span>
+                    }
+                  </span>
                 </span>
                 <span class="shrink-0 text-[13px] font-extrabold tabular-nums">{{ soles(c.monto) }}</span>
               </button>
