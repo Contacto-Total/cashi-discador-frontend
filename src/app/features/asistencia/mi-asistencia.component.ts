@@ -356,8 +356,13 @@ const ESTILOS = {
                   @for (b of misBloques(); track b.fecha) {
                     <li>
                       <span>{{ diaLargo(b.fecha) }}</span>
-                      <strong>Sales a las {{ enHoras(minutosDe(b.salida) + b.minutos) }}</strong>
-                      <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">+{{ duracion(b.minutos) }}</span>
+                      @if (esSabado(b.fecha)) {
+                        <strong>Trabajas {{ duracion(b.minutos) }}</strong>
+                        <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">sin hora fija</span>
+                      } @else {
+                        <strong>Sales a las {{ enHoras(minutosDe(b.salida) + b.minutos) }}</strong>
+                        <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">+{{ duracion(b.minutos) }}</span>
+                      }
                     </li>
                   }
                 </ul>
@@ -1637,6 +1642,11 @@ export class MiAsistenciaComponent implements OnInit {
       case 'APROBADA': return `Aprobada el ${s.resueltaEn ? this.corta(s.resueltaEn.slice(0, 10)) : '—'}`;
       default: return s.motivoResolucion ? `Rechazada: ${s.motivoResolucion}` : 'Rechazada';
     }
+  }
+
+  /** El sábado se recupera viniendo, no quedándose después de la salida. */
+  esSabado(fecha: string): boolean {
+    return new Date(fecha + 'T00:00:00').getDay() === 6;
   }
 
   /** «Lunes 28/09». */
