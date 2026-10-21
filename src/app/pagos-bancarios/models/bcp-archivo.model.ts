@@ -34,6 +34,8 @@ export interface BcpArchivoDetalle {
   numeroOperacionBd: string;
   referencia: string;
   numeroOperacionCanal: string;
+  /** Al aprobar: retenido por el supervisor para resolverlo a mano. */
+  retenerRevision?: boolean;
 }
 
 /**
@@ -151,6 +153,10 @@ export interface PrevalidacionArchivoBcp {
   transaccionId?: number | null;
   montoEsperado?: number | null;
   montoFaltante?: number | null;
+  /** Enlace automático de baja confianza: códigos de ALERTAS_PREVALIDACION separados por coma. */
+  alerta?: string | null;
+  /** Marcado en pantalla: el supervisor no quiere que se aplique solo; queda pendiente al guardar. */
+  retenerRevision?: boolean;
 }
 
 export type CategoriaPagoBanco =

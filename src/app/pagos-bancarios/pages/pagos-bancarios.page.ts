@@ -30,11 +30,12 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
 import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
+import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
   template: `
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
     <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
@@ -115,6 +116,18 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               Historial
+            </button>
+            <button
+              (click)="activeTab.set('consolidado')"
+              [class]="activeTab() === 'consolidado'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Consolidado mensual
             </button>
           </nav>
         </div>
@@ -980,6 +993,10 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
         <app-historial-cargas-bcp></app-historial-cargas-bcp>
       }
 
+      @if (activeTab() === 'consolidado') {
+        <app-consolidado-banco></app-consolidado-banco>
+      }
+
       <!-- Modal de confirmación de eliminación -->
       @if (showDeleteModal()) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1100]">
@@ -1045,7 +1062,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
 })
 export class PagosBancariosPage implements OnInit {
   // Tab activa
-  activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial'>('masiva');
+  activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial' | 'consolidado'>('masiva');
 
   // Carga Masiva BCP
   selectedFile = signal<File | null>(null);
@@ -1557,7 +1574,8 @@ export class PagosBancariosPage implements OnInit {
     this.bcpService.aprobarArchivo({
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
-      detalles: paresAprobados.map(par => par.detalle),
+      // Los pagos con alerta que el supervisor retuvo se guardan pendientes, sin aplicarse.
+      detalles: paresAprobados.map(par => ({ ...par.detalle, retenerRevision: !!par.prevalidacion.retenerRevision })),
       tenantId: this.selectedTenantId,
       carteraId: this.selectedPortfolioId,
       subcarteraId: this.selectedSubPortfolioId,
@@ -1771,7 +1789,8 @@ export class PagosBancariosPage implements OnInit {
     this.bcpService.aprobarArchivo({
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
-      detalles: paresAprobados.map(par => par.detalle),
+      // Los pagos con alerta que el supervisor retuvo se guardan pendientes, sin aplicarse.
+      detalles: paresAprobados.map(par => ({ ...par.detalle, retenerRevision: !!par.prevalidacion.retenerRevision })),
       tenantId: this.selectedTenantIdOh,
       carteraId: this.selectedPortfolioIdOh,
       subcarteraId: this.selectedSubPortfolioIdOh,
@@ -1805,7 +1824,12 @@ export class PagosBancariosPage implements OnInit {
       .filter(row => aprobadas.has(row) && !this.isOmitidoPorFecha(row) && !this.isPagoYaConciliado(row))
       .map((row: any) => {
         const index = Number(row.__prevalidacionIndex);
-        return { detalle: detalles[index], prevalidacion: prevalidacion[index] };
+        const original = prevalidacion[index];
+        // La fila mostrada puede ser una copia: la marca de retener viene de ella.
+        return {
+          detalle: detalles[index],
+          prevalidacion: original ? { ...original, retenerRevision: !!row.retenerRevision } : original
+        };
       })
       .filter(par => !!par.detalle && !!par.prevalidacion);
   }
