@@ -1,10 +1,11 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
 import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 import {
+  ALERTAS_PREVALIDACION,
   CategoriaPagoInfo,
   MOTIVOS_REVISION,
   TONO_BORDE,
@@ -17,6 +18,9 @@ import {
 import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
 import { TablaPaginacionWidget } from './tabla-paginacion.widget';
+
+/** Filtro especial: pagos con alerta, sin importar su categoría. */
+const FILTRO_ALERTA = '__ALERTA__';
 
 interface ResumenCategoria {
   categoria: string;
@@ -58,6 +62,17 @@ interface ResumenCategoria {
           >
             Todas ({{ data.length }})
           </button>
+          @if (totalAlertas() > 0) {
+            <button
+              type="button"
+              (click)="filtrar(filtroAlerta)"
+              [attr.aria-pressed]="filtro === filtroAlerta"
+              class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+              [class]="filtro === filtroAlerta ? 'border-slate-800 ' + pill('espera') : 'border-amber-400 ' + pill('espera') + ' opacity-80 hover:opacity-100'"
+            >
+              Con alerta ({{ totalAlertas() }})
+            </button>
+          }
           @for (item of resumen(); track item.categoria) {
             <button
               type="button"
@@ -110,6 +125,26 @@ interface ResumenCategoria {
                   <span class="inline-flex rounded-full px-2 py-1 text-[11px] font-bold leading-tight" [class]="pill(info(row).tono)">
                     {{ info(row).label }}
                   </span>
+                  @if (alertas(row).length > 0) {
+                    <div class="mt-2 max-w-56 whitespace-normal rounded-lg border border-amber-300 bg-amber-50 p-2 text-[11px] leading-snug text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+                      <p class="font-bold">Confirmar antes de guardar</p>
+                      <ul class="mt-1 list-disc pl-4">
+                        @for (alerta of alertas(row); track alerta) { <li>{{ alerta }}</li> }
+                      </ul>
+                      @if (!completed) {
+                        <button
+                          type="button"
+                          (click)="alternarRetener(row)"
+                          [attr.aria-pressed]="!!row.retenerRevision"
+                          [attr.aria-label]="(row.retenerRevision ? 'Aplicar automáticamente el pago de ' : 'Retener para revisión el pago de ') + (value(row, 'documentoBanco', 'documento_banco') || '')"
+                          class="mt-2 rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+                          [class]="row.retenerRevision ? 'border-amber-700 bg-amber-700 text-white hover:bg-amber-800' : 'border-amber-600 bg-white text-amber-900 hover:bg-amber-100 dark:bg-slate-800 dark:text-amber-200 dark:hover:bg-slate-700'"
+                        >
+                          {{ row.retenerRevision ? 'Retenido: queda pendiente' : 'Retener para revisión' }}
+                        </button>
+                      }
+                    </div>
+                  }
                 </td>
                 <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ detalle(row) }}</td>
                 <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">
@@ -157,9 +192,25 @@ interface ResumenCategoria {
       ></app-tabla-paginacion>
 
       <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-slate-600 dark:text-slate-400">
-          Se guardan todos los pagos. Los que requieren revisión quedan como pendientes y se pueden resolver después.
-        </p>
+        <div class="space-y-2">
+          <p class="text-xs text-slate-600 dark:text-slate-400">
+            Se guardan todos los pagos. Los que requieren revisión quedan como pendientes y se pueden resolver después.
+          </p>
+          @if (totalAlertas() > 0 && !completed) {
+            <label class="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-200">
+              <input
+                type="checkbox"
+                [checked]="alertasRevisadas"
+                (change)="alertasRevisadas = $any($event.target).checked"
+                class="mt-0.5 h-4 w-4 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
+              />
+              <span>
+                Revisé los {{ totalAlertas() }} pago(s) con alerta.
+                {{ totalRetenidos() > 0 ? totalRetenidos() + ' quedarán pendientes para resolverlos a mano; el resto se aplicará.' : 'Todos se aplicarán automáticamente.' }}
+              </span>
+            </label>
+          }
+        </div>
         <div class="flex items-center gap-2">
           @if (tienePendientes()) {
             <button type="button" (click)="descargarReportePendientes()" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-amber-700 text-white hover:bg-amber-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800">
@@ -176,7 +227,7 @@ interface ResumenCategoria {
     </section>
   `
 })
-export class BcpPrevalidacionArchivoWidget {
+export class BcpPrevalidacionArchivoWidget implements OnChanges {
   private fmt = inject(FormatService);
   @Input() data: PrevalidacionArchivoBcp[] = [];
   @Input() approvalEnabled = false;
@@ -188,9 +239,45 @@ export class BcpPrevalidacionArchivoWidget {
   @Output() documentoClick = new EventEmitter<PrevalidacionArchivoBcp>();
   @Output() resolver = new EventEmitter<PrevalidacionArchivoBcp>();
 
+  readonly filtroAlerta = FILTRO_ALERTA;
   filtro: string | null = null;
   busqueda = '';
   pagina = 1;
+  /** Con pagos con alerta, guardar exige confirmar que se revisaron. */
+  alertasRevisadas = false;
+  // La página entrega un arreglo nuevo en cada detección de cambios con las mismas filas:
+  // la confirmación solo se reinicia cuando llega otro resultado de carga.
+  private primeraFila: PrevalidacionArchivoBcp | null = null;
+  private totalFilas = -1;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['data']) {
+      const primera = this.data[0] ?? null;
+      if (primera !== this.primeraFila || this.data.length !== this.totalFilas) {
+        this.alertasRevisadas = false;
+        this.primeraFila = primera;
+        this.totalFilas = this.data.length;
+      }
+    }
+  }
+
+  alertas(row: PrevalidacionArchivoBcp): string[] {
+    const codigos = String(this.value(row, 'alerta') || '').split(',').map(c => c.trim()).filter(Boolean);
+    return codigos.map(c => ALERTAS_PREVALIDACION[c] || c);
+  }
+
+  totalAlertas(): number {
+    return this.data.filter(row => this.alertas(row).length > 0).length;
+  }
+
+  totalRetenidos(): number {
+    return this.data.filter(row => row.retenerRevision && this.alertas(row).length > 0).length;
+  }
+
+  /** Se marca sobre la misma fila: la página identifica las filas aprobadas por referencia. */
+  alternarRetener(row: PrevalidacionArchivoBcp): void {
+    row.retenerRevision = !row.retenerRevision;
+  }
 
   /** Cambiar de categoría o de búsqueda vuelve a la primera página. */
   filtrar(categoria: string | null): void {
@@ -244,9 +331,11 @@ export class BcpPrevalidacionArchivoWidget {
   /** Filas de la categoría elegida que coinciden con el documento buscado. */
   filasVisibles(): PrevalidacionArchivoBcp[] {
     // Si el filtro quedó en una categoría que ya no existe tras recargar, se muestran todas.
-    const porCategoria = this.filtro === null || !this.data.some(row => this.categoria(row) === this.filtro)
-      ? this.data
-      : this.data.filter(row => this.categoria(row) === this.filtro);
+    const porCategoria = this.filtro === FILTRO_ALERTA
+      ? this.data.filter(row => this.alertas(row).length > 0)
+      : this.filtro === null || !this.data.some(row => this.categoria(row) === this.filtro)
+        ? this.data
+        : this.data.filter(row => this.categoria(row) === this.filtro);
     return porCategoria.filter(row => coincideDocumento(this.value(row, 'documentoBanco', 'documento_banco'), this.busqueda));
   }
 
@@ -276,7 +365,10 @@ export class BcpPrevalidacionArchivoWidget {
   }
 
   puedeGuardar(): boolean {
-    return !this.completed && this.approvalEnabled && this.filasParaGuardar().length > 0;
+    return !this.completed
+      && this.approvalEnabled
+      && this.filasParaGuardar().length > 0
+      && (this.totalAlertas() === 0 || this.alertasRevisadas);
   }
 
   filasParaGuardar(): PrevalidacionArchivoBcp[] {

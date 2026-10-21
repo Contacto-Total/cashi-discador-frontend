@@ -466,6 +466,13 @@ export class BcpPagosPendientesWidget implements OnChanges {
       const espera = pago.fechaLimiteGrupo ? ` Se espera hasta el ${this.fecha(pago.fechaLimiteGrupo)}.` : '';
       return `Falta ${this.monto(pago.montoFaltante)} de ${this.monto(pago.montoEsperado)}.${espera}`;
     }
+    // Retenido por un supervisor: "Reevaluar pendientes" no lo aplica, se resuelve a mano.
+    if (pago.motivo === 'RETENIDO_POR_SUPERVISOR') {
+      const sugerida = pago.categoriaSugerida && pago.categoriaSugerida !== 'REQUIERE_REVISION'
+        ? ` El sistema lo aplicaría como "${infoCategoria(pago.categoriaSugerida).label}".`
+        : '';
+      return MOTIVOS_REVISION['RETENIDO_POR_SUPERVISOR'].problema + sugerida;
+    }
     // La corrección ya se hizo y el pago calzaría si se reevalúa.
     if (pago.categoriaSugerida && pago.categoriaSugerida !== 'REQUIERE_REVISION') {
       return `Ya puede conciliarse como "${infoCategoria(pago.categoriaSugerida).label}". Usa Reevaluar pendientes.`;

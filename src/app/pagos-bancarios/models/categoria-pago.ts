@@ -67,6 +67,22 @@ export const MOTIVOS_REVISION: Record<string, { problema: string; accion: string
     problema: 'El monto coincide, pero la fecha está fuera de los días permitidos o en otro mes.',
     accion: 'Verificar el pago y, si corresponde, corregir la fecha registrada por el asesor.'
   },
+  MONTO_CERCANO: {
+    problema: 'El monto difiere poco del pago sugerido del asesor, pero supera la tolerancia.',
+    accion: 'Confirmar que es el mismo pago y corregir el monto registrado o aplicarlo a ese pago.'
+  },
+  PARCIAL_MENOR_AL_MINIMO: {
+    problema: 'El banco trajo mucho menos de lo que registró el asesor: es poco probable que sea una parte de ese pago.',
+    accion: 'Revisar en el resumen del cliente si corresponde a otra promesa o cuota.'
+  },
+  PAGO_ANTERIOR_A_LA_PROMESA: {
+    problema: 'El único pago del asesor que calzaba es de una promesa creada después de la fecha del banco.',
+    accion: 'Buscar la promesa anterior a la que corresponde el pago; si no existe, registrarlo como corresponda.'
+  },
+  RETENIDO_POR_SUPERVISOR: {
+    problema: 'Un supervisor lo retuvo al guardar el archivo: el sistema lo iba a aplicar con poca confianza.',
+    accion: 'Revisar el resumen del cliente y aplicarlo al pago o cuota que corresponde.'
+  },
   MONTO_MAYOR_AL_REGISTRADO: {
     problema: 'El banco reporta un monto mayor al que registró el asesor.',
     accion: 'Corregir el monto del pago registrado o crear el pago que falta.'
@@ -99,6 +115,13 @@ export const MOTIVOS_REVISION: Record<string, { problema: string; accion: string
     problema: 'El cliente pertenece a otra subcartera.',
     accion: 'Cargar el archivo en la subcartera correcta.'
   }
+};
+
+/** Enlaces automáticos de baja confianza que la prevalidación pide confirmar antes de guardar. */
+export const ALERTAS_PREVALIDACION: Record<string, string> = {
+  PARCIAL_BAJO: 'Parcial que cubre menos de la mitad de lo registrado',
+  DESFASE_ALTO: 'Concilia con 3 o más días de diferencia',
+  VARIAS_PROMESAS: 'El cliente tiene más de una promesa con cuotas pendientes'
 };
 
 export function infoCategoria(categoria: string | null | undefined): CategoriaPagoInfo {
