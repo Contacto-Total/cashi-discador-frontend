@@ -1037,8 +1037,9 @@ export class AsistenciaHorarioComponent {
       return `Ese día tiene ${ausencia.tipo.toLowerCase()}`;
     }
     const salida = d.abierto ? CAL.desde : aMin(d.salida);
-    if (salida + minutos > CAL.hasta) {
-      return d.abierto ? 'No puede pasar de las 20:00' : `No puede pasar de las 20:00: ese día sale a las ${enHoras(salida)}`;
+    const fin = this.finDe(fecha);
+    if (salida + minutos > fin) {
+      return d.abierto ? `El sábado se recupera de ${enHoras(salida)} a ${enHoras(fin)}` : `No puede pasar de las 20:00: ese día sale a las ${enHoras(salida)}`;
     }
     return null;
   }
@@ -1046,6 +1047,12 @@ export class AsistenciaHorarioComponent {
   private salidaDe(fecha: string): number {
     const d = this.plan()?.dias.find(x => x.fecha === fecha);
     return !d ? CAL.desde : d.abierto ? CAL.desde : aMin(d.salida);
+  }
+
+  /** Hasta dónde puede llegar una recuperación ese día: las 20:00, o la salida del sábado, que se recupera viniendo. */
+  private finDe(fecha: string): number {
+    const d = this.plan()?.dias.find(x => x.fecha === fecha);
+    return d?.abierto && d.salida ? aMin(d.salida) : CAL.hasta;
   }
 
   /** Cambia un plan aquí, sin guardar: lo tocado queda por confirmar. */
@@ -1081,14 +1088,14 @@ export class AsistenciaHorarioComponent {
       && !(y.plan === x.plan && y.equipo === x.equipo)));
   }
 
-  /** Lleva un bloque (el del equipo, con todos) a otro día; si ya hay uno ese día, se suman. Si no cabe hasta las 20:00, se acorta. */
+  /** Lleva un bloque (el del equipo, con todos) a otro día; si ya hay uno ese día, se suman. Si no cabe hasta su tope, se acorta. */
   private moverBloque(b: Bloque, destino: string): boolean {
     const motivo = this.motivoGrupo(b, destino, 30);
     if (motivo) {
       this.toast.error(motivo);
       return false;
     }
-    const tope = CAL.hasta - this.salidaDe(destino);
+    const tope = this.finDe(destino) - this.salidaDe(destino);
     const delGrupo = this.enGrupo(b);
     let ajustado = false;
     this.cambiarPlan(b.plan, lista => {
@@ -1146,10 +1153,10 @@ export class AsistenciaHorarioComponent {
       return;
     }
     if (g.modo === 'estirar') {
-      // De 30 en 30 minutos, sin pasar de las 20:00.
+      // De 30 en 30 minutos, sin pasar de las 20:00 (de la salida, el sábado).
       const base = Math.max(30, Math.round(g.bloque.minutos / 30) * 30);
       const pedido = Math.max(30, base + Math.round(dy / CAL.alto) * 30);
-      this.gesto.set({ ...g, movido: true, minutos: Math.min(pedido, CAL.hasta - g.bloque.salida) });
+      this.gesto.set({ ...g, movido: true, minutos: Math.min(pedido, this.finDe(g.bloque.fecha) - g.bloque.salida) });
     } else {
       const columnas = Array.from(this.marco()?.nativeElement.querySelectorAll<HTMLElement>('.cal-col') ?? []);
       const col = columnas.find(c => {
@@ -1245,10 +1252,10 @@ export class AsistenciaHorarioComponent {
       const movidos = lista.filter(delGrupo);
       let salidaLista = lista.filter(x => !delGrupo(x));
       for (const x of movidos) {
-        const suyos = Math.min(minutos ?? x.minutos, CAL.hasta - salida);
+        const suyos = Math.min(minutos ?? x.minutos, this.finDe(fecha) - salida);
         const ya = salidaLista.find(y => y.idUsuario === x.idUsuario && y.fecha === fecha);
         if (ya) {
-          ya.minutos = Math.min(ya.minutos + suyos, CAL.hasta - salida);
+          ya.minutos = Math.min(ya.minutos + suyos, this.finDe(fecha) - salida);
           ya.confirmado = false;
         } else {
           salidaLista = [...salidaLista, { ...x, fecha, minutos: suyos, salida, clave: `${x.idUsuario}-${fecha}`, confirmado: false }];
@@ -1286,7 +1293,7 @@ export class AsistenciaHorarioComponent {
       ev.preventDefault();
     }
     if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
-      const tope = CAL.hasta - b.salida;
+      const tope = this.finDe(b.fecha) - b.salida;
       const nuevo = b.minutos + (ev.key === 'ArrowUp' ? -30 : 30);
       if (nuevo >= 30 && nuevo <= tope) {
         const delGrupo = this.enGrupo(b);
