@@ -158,6 +158,10 @@ export class ApiSystemConfigService {
     this.cargarTipificacionesBase();
   }
 
+  private claveContexto(): string {
+    return `${this.currentTenantId ?? ''}/${this.currentPortfolioId ?? ''}/${this.currentSubPortfolioId ?? ''}`;
+  }
+
   /**
    * Carga todos los datos del backend
    * Se ejecuta en segundo plano sin bloquear la UI
@@ -194,12 +198,15 @@ export class ApiSystemConfigService {
       const subportfolioParam = this.currentSubPortfolioId || 0;
       const portfolioParam = this.currentPortfolioId || 0;
       const url = `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${this.currentTenantId}/portfolio/${portfolioParam}/subportfolio/${subportfolioParam}`;
+      // Con dos contextos pedidos seguidos, solo vale la respuesta del último
+      const contextoPedido = this.claveContexto();
 
       console.log('[V2] Cargando tipificaciones efectivas desde:', url);
 
       this.http.get<TypificationCatalogResource[]>(url)
         .pipe(
           tap(data => {
+            if (contextoPedido !== this.claveContexto()) return;
             console.log('[V2] Tipificaciones efectivas cargadas:', data);
             const managementClasses: ManagementClassificationResource[] = data.map(t => ({
               id: t.id,
@@ -224,6 +231,7 @@ export class ApiSystemConfigService {
           }),
           catchError(error => {
             console.error('[V2] Error cargando tipificaciones efectivas:', error);
+            if (contextoPedido !== this.claveContexto()) return of([]);
             this.managementClassifications.set([]);
             return of([]);
           })
