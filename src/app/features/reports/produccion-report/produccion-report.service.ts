@@ -35,12 +35,19 @@ export interface ReporteProduccionResponse {
 
 export type TipoMetaReporteProduccion = 'INTERNA' | 'SIP';
 
+/**
+ * Carteras que conviven dentro de Tramo Propio. Las separa el orden_compra de la tabla dinámica:
+ * la compra de orden menor es ANTIGUA y cualquier otra NUEVA. Sin grupo el reporte no filtra.
+ */
+export type GrupoProduccion = 'ANTIGUA' | 'NUEVA';
+
 export interface FiltrosReporteProduccion {
   fecha?: string;
   idTenant?: number;
   idCartera?: number;
   idSubcartera?: number;
   tipoMeta: TipoMetaReporteProduccion;
+  grupo?: GrupoProduccion;
 }
 
 export interface MetaReporteProduccion {
@@ -86,6 +93,7 @@ export class ProduccionReportService {
     if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
     if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
+    if (filtros.grupo) params = params.set('grupo', filtros.grupo);
 
     return this.http.get<ReporteProduccionResponse>(this.baseUrl, { params });
   }
@@ -98,6 +106,7 @@ export class ProduccionReportService {
     if (filtros.idCartera != null) params = params.set('idCartera', filtros.idCartera.toString());
     if (filtros.idSubcartera != null) params = params.set('idSubcartera', filtros.idSubcartera.toString());
     params = params.set('tipoMeta', filtros.tipoMeta);
+    if (filtros.grupo) params = params.set('grupo', filtros.grupo);
 
     return this.http.get(`${this.baseUrl}/excel`, {
       params,
