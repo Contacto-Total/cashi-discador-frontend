@@ -250,6 +250,9 @@ export class BcpPagosService {
     if (request.tipoCaso) {
       params = params.set('tipoCaso', request.tipoCaso);
     }
+    if (request.refrescar) {
+      params = params.set('refrescar', 'true');
+    }
     return this.http.get<ReporteConciliacionPagina>(`${this.baseUrl}/reporte-conciliacion`, { params });
   }
 
