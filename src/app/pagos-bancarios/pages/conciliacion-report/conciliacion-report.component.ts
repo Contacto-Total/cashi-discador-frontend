@@ -504,7 +504,8 @@ export class ConciliacionReportComponent implements OnInit {
       documento: this.documento.trim() || undefined
     });
     this.tipoCaso.set(null);
-    this.cargar(0);
+    // Solo Buscar vuelve a ejecutar el procedure; tipo y páginas reutilizan esta consulta
+    this.cargar(0, true);
   }
 
   /** Clic en un documento de la tabla: muestra solo ese cliente con los mismos filtros. */
@@ -581,12 +582,14 @@ export class ConciliacionReportComponent implements OnInit {
     return Math.min((r.page + 1) * r.size, r.total);
   }
 
-  private cargar(page: number): void {
+  private cargar(page: number, refrescar = false): void {
     const c = this.consulta();
     if (!c) return;
     this.cargando.set(true);
     this.error.set(null);
-    this.bcpService.consultarReporteConciliacion({ ...c, tipoCaso: this.tipoCaso(), page, size: TAMANO_PAGINA }).subscribe({
+    this.bcpService.consultarReporteConciliacion({
+      ...c, tipoCaso: this.tipoCaso(), page, size: TAMANO_PAGINA, refrescar
+    }).subscribe({
       next: r => {
         this.resultado.set(r);
         this.cargando.set(false);

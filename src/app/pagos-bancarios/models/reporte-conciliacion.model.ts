@@ -20,6 +20,8 @@ export interface ReporteConciliacionRequest {
   /** Desde 0. */
   page: number;
   size: number;
+  /** true vuelve a ejecutar el procedure; si no, el back reutiliza la última consulta (5 min). */
+  refrescar?: boolean;
 }
 
 export interface ReporteConciliacionFila {
