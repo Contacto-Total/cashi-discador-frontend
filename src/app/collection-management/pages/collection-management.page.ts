@@ -3395,6 +3395,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.activeCallContext.set(context);
   }
 
+  /**
+   * Toma la cartera y subcartera del cliente de la llamada. Tipificaciones, opciones y cabeceras de montos
+   * y tope de primera cuota se configuran por subcartera, y la del login es una sola aunque el asesor
+   * tenga roles en varias.
+   */
+  private aplicarContextoDelCliente(clienteDetalle: any): void {
+    const tenantId = clienteDetalle?.idInquilino;
+    const portfolioId = clienteDetalle?.idCartera;
+    const subPortfolioId = clienteDetalle?.idSubcartera;
+    if (!tenantId || !portfolioId || !subPortfolioId) return;
+    if (this.selectedTenantId === tenantId && this.selectedPortfolioId === portfolioId
+        && this.selectedSubPortfolioId === subPortfolioId) return;
+
+    this.selectedTenantId = tenantId;
+    this.selectedPortfolioId = portfolioId;
+    this.selectedSubPortfolioId = subPortfolioId;
+    this.reloadTypifications();
+    this.loadCustomerOutputConfig();
+    this.loadFirstInstallmentConfig();
+  }
+
   private setPredictiveCallContext(data: any): void {
     this.fichaDelDiscador.set(true);
     this.setActiveCallContext({
@@ -3950,12 +3971,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     console.log('[CABECERAS] Cargando cabeceras de montos para subcartera:', this.selectedSubPortfolioId);
 
-    this.managementService.getMontoCabeceras(this.selectedSubPortfolioId).pipe(
+    const subcartera = this.selectedSubPortfolioId;
+    this.managementService.getMontoCabeceras(subcartera).pipe(
       catchError(error => {
         console.error('[CABECERAS] Error cargando cabeceras:', error);
         return of([]);
       })
     ).subscribe(cabeceras => {
+      // Si la subcartera cambió mientras tanto, la respuesta es de otro cliente
+      if (subcartera !== this.selectedSubPortfolioId) return;
       console.log('[CABECERAS] Cabeceras cargadas:', cabeceras);
       this.montoCabeceras.set(cabeceras.map(c => ({
         codigo: c.codigo,
@@ -4122,14 +4146,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
-    this.firstInstallmentConfigService.getConfig(this.selectedSubPortfolioId).subscribe({
+    const subcartera = this.selectedSubPortfolioId;
+    this.firstInstallmentConfigService.getConfig(subcartera).subscribe({
       next: (config) => {
+        if (subcartera !== this.selectedSubPortfolioId) return;
         const maxDays = config?.maxDays ?? null;
         this.firstInstallmentMaxDays.set(maxDays);
         console.log(`[PRIMERA-CUOTA] Config cargada para subcartera ${this.selectedSubPortfolioId}: maxDays=${maxDays}`);
       },
       error: (error) => {
         console.error('[PRIMERA-CUOTA] Error cargando config:', error);
+        if (subcartera !== this.selectedSubPortfolioId) return;
         this.firstInstallmentMaxDays.set(null);
       }
     });
@@ -4218,6 +4245,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         console.log(`✅ [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
 
         this.setPredictiveCallContext(fullData);
+        this.aplicarContextoDelCliente(fullData.clienteDetalle);
 
         // Guardar contactId del discador para posible rellamada
         if (fullData.contactId) {
@@ -4270,6 +4298,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
 
       this.setPredictiveCallContext(fullData);
+      this.aplicarContextoDelCliente(fullData.clienteDetalle);
       if (fullData.contactId) this.dialerContactId.set(fullData.contactId);
       if (fullData.dynamicData) {
         this.loadCustomerFromDynamicTable(fullData.dynamicData);
