@@ -29,10 +29,10 @@ import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-concil
     ClienteResumenConciliacionDrawerWidget
   ],
   template: `
-    <div class="space-y-6">
+    <div class="space-y-4">
       <div>
         <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Consolidado mensual del banco</h2>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Cuadra el total pagado por cliente que reporta el banco contra los pagos del sistema.</p>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Cuadra el total pagado por cliente que reporta el banco contra los pagos del sistema.</p>
       </div>
 
       <app-reporte-pagos-bancarios-filtros [loading]="cargandoCuadre()" (consulta)="consultar($event)"></app-reporte-pagos-bancarios-filtros>
@@ -113,38 +113,42 @@ import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-concil
 
         @if (cuadre(); as datos) {
           @if (datos.carga && datos.resumen) {
-            <section class="space-y-3" aria-labelledby="resumen-titulo">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 id="resumen-titulo" class="text-lg font-semibold text-slate-800 dark:text-white">Resumen del periodo {{ ctx.periodo }}</h3>
+            <section class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="resumen-titulo">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 dark:border-slate-700">
+                <div class="min-w-0">
+                  <h3 id="resumen-titulo" class="text-sm font-semibold text-slate-800 dark:text-white">Resumen del periodo {{ ctx.periodo }}</h3>
+                  <p class="truncate text-xs text-slate-600 dark:text-slate-400" [title]="datos.carga.nombreArchivo">
+                    {{ datos.carga.nombreArchivo }} · {{ fecha(datos.carga.fechaCarga) }} · {{ datos.carga.usuarioCargaNombre || '-' }}
+                    · {{ datos.carga.totalClientes }} clientes, {{ datos.carga.clientesConPago }} con pago
+                  </p>
+                </div>
                 @if (!mostrarCarga()) {
-                  <button type="button" (click)="reemplazar()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Reemplazar consolidado</button>
+                  <button type="button" (click)="reemplazar()" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">Reemplazar consolidado</button>
                 }
               </div>
-              <p class="text-xs text-slate-600 dark:text-slate-400">
-                {{ datos.carga.nombreArchivo }} · cargado el {{ fecha(datos.carga.fechaCarga) }} por {{ datos.carga.usuarioCargaNombre || '-' }}
-                · {{ datos.carga.totalClientes }} clientes, {{ datos.carga.clientesConPago }} con pago
-              </p>
-              <dl class="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                  <dt class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Banco</dt>
-                  <dd class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ monto(datos.resumen.montoConsolidado) }}</dd>
+              <dl class="grid grid-cols-2 divide-slate-200 tabular-nums md:grid-cols-4 md:divide-x dark:divide-slate-700">
+                <div class="px-4 py-2">
+                  <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Banco</dt>
+                  <dd class="text-base font-bold text-slate-900 dark:text-white">{{ monto(datos.resumen.montoConsolidado) }}</dd>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                  <dt class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Recibido</dt>
-                  <dd class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ monto(datos.resumen.montoRecibido) }}</dd>
-                  <dd class="text-xs text-slate-600 dark:text-slate-400">Diarios {{ monto(datos.resumen.montoDiarios) }} · Regularizado {{ monto(datos.resumen.montoRegularizado) }}</dd>
+                <div class="px-4 py-2">
+                  <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Recibido</dt>
+                  <dd class="text-base font-bold text-slate-900 dark:text-white">{{ monto(datos.resumen.montoRecibido) }}</dd>
+                  @if (datos.resumen.montoRegularizado > 0) {
+                    <dd class="text-[11px] text-slate-600 dark:text-slate-400">Regularizado {{ monto(datos.resumen.montoRegularizado) }}</dd>
+                  }
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                  <dt class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Conciliado</dt>
-                  <dd class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ monto(datos.resumen.montoConciliado) }}</dd>
+                <div class="px-4 py-2">
+                  <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Conciliado</dt>
+                  <dd class="text-base font-bold text-slate-900 dark:text-white">{{ monto(datos.resumen.montoConciliado) }}</dd>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                  <dt class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Diferencia banco − recibido</dt>
-                  <dd class="mt-1 text-xl font-bold" [class]="Math.abs(datos.resumen.diferencia) >= 0.5 ? 'text-red-800 dark:text-red-300' : 'text-emerald-800 dark:text-emerald-300'">{{ monto(datos.resumen.diferencia) }}</dd>
+                <div class="px-4 py-2">
+                  <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Banco − recibido</dt>
+                  <dd class="text-base font-bold" [class]="Math.abs(datos.resumen.diferencia) >= 0.5 ? 'text-red-800 dark:text-red-300' : 'text-emerald-800 dark:text-emerald-300'">{{ monto(datos.resumen.diferencia) }}</dd>
                 </div>
               </dl>
               @if (avisoArchivosDiarios(); as aviso) {
-                <p class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{{ aviso }}</p>
+                <p class="border-t border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{{ aviso }}</p>
               }
             </section>
 

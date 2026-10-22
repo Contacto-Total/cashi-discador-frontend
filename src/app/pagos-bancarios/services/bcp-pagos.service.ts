@@ -139,6 +139,8 @@ export class BcpPagosService {
       .set('carteraId', request.carteraId.toString())
       .set('subcarteraId', request.subcarteraId.toString());
 
+    if (request.documento) params = params.set('documento', request.documento);
+    if (request.mes) params = params.set('mes', request.mes);
     if (request.page !== undefined) params = params.set('page', request.page.toString());
     if (request.size !== undefined) params = params.set('size', request.size.toString());
 
@@ -146,10 +148,11 @@ export class BcpPagosService {
   }
 
   obtenerDetalleArchivoCarga(archivoCargaId: number, request: ArchivoCargaDetalleRequest): Observable<ArchivoCargaDetalleItem[]> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('tenantId', request.tenantId.toString())
       .set('carteraId', request.carteraId.toString())
       .set('subcarteraId', request.subcarteraId.toString());
+    if (request.documento) params = params.set('documento', request.documento);
 
     return this.http.get<ArchivoCargaDetalleItem[]>(`${this.baseUrl}/archivos-carga/${archivoCargaId}/detalle`, { params });
   }
