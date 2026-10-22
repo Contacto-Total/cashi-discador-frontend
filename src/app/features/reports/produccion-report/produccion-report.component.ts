@@ -9,6 +9,7 @@ import {
   MetaReporteProduccion,
   TipoMetaReporteProduccion,
   FiltrosReporteProduccion,
+  GrupoProduccion,
   PageResponse
 } from './produccion-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
@@ -83,14 +84,18 @@ import { UserRole } from '../../../core/models/user.model';
           <!-- Subcartera -->
           <div>
             <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Subcartera</label>
-            <select [(ngModel)]="filtros.idSubcartera" (ngModelChange)="onSubcarteraChange()"
+            <select [(ngModel)]="seleccionSubcartera" (ngModelChange)="onSubcarteraChange($event)"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-teal-500 focus:border-teal-500
                      disabled:opacity-50 disabled:cursor-not-allowed">
-              <option [ngValue]="null">Todas las subcarteras</option>
+              <option value="">Todas las subcarteras</option>
               @for (sub of subcarteras(); track sub.id) {
-                <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
+                <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
+                @if (tieneCarterasPorOrdenCompra(sub)) {
+                  <option [value]="sub.id + ':ANTIGUA'">{{ sub.nombreSubcartera }} · Antigua</option>
+                  <option [value]="sub.id + ':NUEVA'">{{ sub.nombreSubcartera }} · Nueva</option>
+                }
               }
             </select>
           </div>
@@ -340,8 +345,15 @@ export class ProduccionReportComponent implements OnInit {
     idProveedor: null as number | null,
     idCartera: null as number | null,
     idSubcartera: null as number | null,
-    tipoMeta: 'INTERNA' as TipoMetaReporteProduccion
+    tipoMeta: 'INTERNA' as TipoMetaReporteProduccion,
+    grupo: null as GrupoProduccion | null
   };
+
+  /**
+   * Lo que está elegido en el combo de subcartera: '' (todas), '21' o '21:ANTIGUA'. El combo
+   * maneja un solo valor, pero el reporte necesita la subcartera y el grupo por separado.
+   */
+  seleccionSubcartera = '';
 
   constructor(
     private produccionService: ProduccionReportService,
@@ -373,7 +385,7 @@ export class ProduccionReportComponent implements OnInit {
 
   onProveedorChange(idProveedor: number | null): void {
     this.filtros.idCartera = null;
-    this.filtros.idSubcartera = null;
+    this.limpiarSubcartera();
     this.subcarteras.set([]);
     this.limpiarResultados();
 
@@ -388,7 +400,7 @@ export class ProduccionReportComponent implements OnInit {
   }
 
   onCarteraChange(idCartera: number | null): void {
-    this.filtros.idSubcartera = null;
+    this.limpiarSubcartera();
     this.subcarteras.set([]);
     this.limpiarResultados();
 
@@ -450,11 +462,30 @@ export class ProduccionReportComponent implements OnInit {
     }
   }
 
-  onSubcarteraChange(): void {
+  onSubcarteraChange(seleccion: string): void {
+    const [id, grupo] = (seleccion || '').split(':');
+    this.filtros.idSubcartera = id ? Number(id) : null;
+    this.filtros.grupo = (grupo as GrupoProduccion) || null;
+
     this.limpiarResultados();
     if (this.contextoSeleccionado()) {
+      // La meta es una sola para toda la subcartera, así que no mira el grupo.
       this.cargarGestionMetas();
     }
+  }
+
+  /**
+   * Subcarteras que conviven con dos carteras por orden de compra. Hoy solo Tramo Propio,
+   * igual que comisiones.subcarteras-con-grupos en el backend.
+   */
+  tieneCarterasPorOrdenCompra(sub: Subcartera): boolean {
+    return sub.codigoSubcartera?.toUpperCase() === 'TPR';
+  }
+
+  private limpiarSubcartera(): void {
+    this.seleccionSubcartera = '';
+    this.filtros.idSubcartera = null;
+    this.filtros.grupo = null;
   }
 
   cargarGestionMetas(page = 0): void {
@@ -521,7 +552,8 @@ export class ProduccionReportComponent implements OnInit {
       idTenant: this.filtros.idProveedor ?? undefined,
       idCartera: this.filtros.idCartera ?? undefined,
       idSubcartera: this.filtros.idSubcartera ?? undefined,
-      tipoMeta: this.filtros.tipoMeta
+      tipoMeta: this.filtros.tipoMeta,
+      grupo: this.filtros.grupo ?? undefined
     };
   }
 
