@@ -1,601 +1,608 @@
-import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { BcpPagosService } from '../../services/bcp-pagos.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
+import {
+  ReporteConciliacionFila,
+  ReporteConciliacionPagina,
+  ReporteConciliacionRequest,
+  TipoCasoConciliacion
+} from '../../models/reporte-conciliacion.model';
+
+type Periodo = 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth' | 'custom';
+
+const TAMANO_PAGINA = 50;
+
+const TIPOS: Record<TipoCasoConciliacion, { l: string; c: string }> = {
+  MATCH_COMPLETO: { l: 'Conciliado', c: 'bg-[#e7f6ef] text-[#0f7a55] dark:bg-emerald-500/15 dark:text-emerald-300' },
+  PAGO_REGISTRADO: { l: 'Sin pago del banco', c: 'bg-[#e8effd] text-[#1d4ed8] dark:bg-blue-500/15 dark:text-blue-300' },
+  PROMESA_PENDIENTE: { l: 'Promesa pendiente', c: 'bg-[#eef1f5] text-[#334155] dark:bg-slate-800 dark:text-slate-300' },
+  PAGO_POR_FUERA: { l: 'Pago sin promesa', c: 'bg-[#fdf1e7] text-[#b45309] dark:bg-amber-500/15 dark:text-amber-300' },
+  PENDIENTE_CONCILIAR: { l: 'Banco pendiente', c: 'bg-[#fef7e0] text-[#92400e] dark:bg-yellow-500/15 dark:text-yellow-300' },
+  RETENIDO: { l: 'Retenido', c: 'bg-[#fdf0ee] text-[#b91c1c] dark:bg-red-500/15 dark:text-red-300' },
+  NO_CORRESPONDE: { l: 'No corresponde', c: 'bg-[#eef1f5] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' },
+  SIN_PROMESA: { l: 'Gestión sin cuota', c: 'bg-[#f4f6f9] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' }
+};
+
+const VALIDACIONES: Record<string, string> = {
+  MONTO_OK: 'Monto OK',
+  MONTO_DIFERENTE: 'Monto diferente',
+  PARCIAL_EN_ESPERA: 'Parcial en espera',
+  SIN_PAGO_AGENTE: 'Sin pago del asesor',
+  PENDIENTE_VERIFICAR: 'Sin pago del banco',
+  PAGO_SIN_GESTION: 'Sin gestión',
+  SIN_PAGO: 'Sin pago'
+};
 
 @Component({
   selector: 'app-conciliacion-report',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, LucideAngularModule, AppNumberPipe],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
-      <div class="max-w-4xl mx-auto">
-        <!-- Header con gradiente -->
-        <div class="mb-8">
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg shadow-emerald-500/25">
-              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-            </div>
-            <div>
-              <h1 class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white">
-                Reporte de Conciliación
-              </h1>
-              <p class="text-slate-500 dark:text-slate-400 mt-1">
-                Genera y descarga el reporte de conciliación de pagos bancarios
-              </p>
-            </div>
-          </div>
+    <div class="min-h-full bg-[#f6f7f9] p-4 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif]
+                text-[#0f172a] md:p-5 dark:bg-slate-950 dark:text-slate-100">
+
+      <!-- ============ Cabecera ============ -->
+      <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 class="!m-0 text-xl font-extrabold tracking-[-0.015em]">Reporte de Conciliación</h1>
+          <p class="mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subtitulo() }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" (click)="descargarExcel()" [disabled]="!consulta() || descargando() || cargando()"
+            class="inline-flex h-9 items-center gap-2 rounded-lg border border-[#c5ccd6] bg-white px-4 text-[12.5px] font-bold
+                   text-[#0f172a] transition duration-150 hover:bg-[#f4f6f9] active:scale-[0.98]
+                   disabled:cursor-not-allowed disabled:opacity-50
+                   dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            [attr.title]="consulta() ? 'Descarga lo que se está mostrando (sin el filtro de tipo)' : 'Primero busca para ver el reporte'">
+            @if (descargando()) {
+              <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+              Generando
+            } @else {
+              <lucide-angular name="download" [size]="15"></lucide-angular>
+              Descargar Excel
+            }
+          </button>
+          <button type="button" (click)="buscar()" [disabled]="!puedeBuscar() || cargando()"
+            class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0f172a] px-4 text-[12.5px] font-bold text-white
+                   transition duration-150 hover:bg-[#1e293b] active:scale-[0.98]
+                   disabled:cursor-not-allowed disabled:opacity-50
+                   dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+            @if (cargando()) {
+              <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+              Buscando
+            } @else {
+              <lucide-angular name="search" [size]="15"></lucide-angular>
+              Buscar
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ Filtros ============ -->
+      <form class="mb-3 flex flex-wrap items-end gap-2.5" (ngSubmit)="buscar()">
+        <div class="flex flex-col gap-1.5">
+          <label for="rc-periodo" [class]="claseLabel">Periodo</label>
+          <select id="rc-periodo" name="periodo" [(ngModel)]="periodo" (ngModelChange)="onPeriodoChange()" [class]="claseInput">
+            <option value="today">Hoy</option>
+            <option value="yesterday">Ayer</option>
+            <option value="week">Últimos 7 días</option>
+            <option value="month">Este mes</option>
+            <option value="lastMonth">Mes anterior</option>
+            <option value="custom">Personalizado</option>
+          </select>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Panel principal -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Card de selección de fecha -->
-            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
-              <!-- Header del card -->
-              <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                  <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
-                  Seleccionar Período
-                </h2>
-              </div>
+        @if (periodo === 'custom') {
+          <div class="flex flex-col gap-1.5">
+            <label for="rc-desde" [class]="claseLabel">Desde</label>
+            <input id="rc-desde" name="desde" type="date" [(ngModel)]="fechaInicio" [max]="fechaFin || hoy" [class]="claseInput"/>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="rc-hasta" [class]="claseLabel">Hasta</label>
+            <input id="rc-hasta" name="hasta" type="date" [(ngModel)]="fechaFin" [min]="fechaInicio" [max]="hoy" [class]="claseInput"/>
+          </div>
+        }
 
-              <div class="p-6 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Proveedor
-                      <span class="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      [(ngModel)]="selectedTenantId"
-                      (ngModelChange)="onTenantChange($event)"
-                      class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
-                    >
-                      <option [ngValue]="0">Seleccione un proveedor...</option>
-                      @for (tenant of tenants(); track tenant.id) {
-                        <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
-                      }
-                    </select>
-                  </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="rc-proveedor" [class]="claseLabel">Proveedor</label>
+          <select id="rc-proveedor" name="proveedor" [(ngModel)]="tenantId" (ngModelChange)="onTenantChange()" [class]="claseInput">
+            <option [ngValue]="0">Seleccione</option>
+            @for (tenant of tenants(); track tenant.id) {
+              <option [ngValue]="tenant.id">{{ tenant.tenantName }}</option>
+            }
+          </select>
+        </div>
 
-                  <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Cartera
-                      <span class="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      [(ngModel)]="selectedPortfolioId"
-                      (ngModelChange)="onPortfolioChange($event)"
-                      [disabled]="selectedTenantId === 0"
-                      class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
-                    >
-                      <option [ngValue]="0">Seleccione una cartera...</option>
-                      @for (portfolio of portfolios(); track portfolio.id) {
-                        <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
-                      }
-                    </select>
-                  </div>
+        <span class="pb-2.5 text-[#c5ccd6]" aria-hidden="true">&rsaquo;</span>
 
-                  <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Subcartera
-                      <span class="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      [(ngModel)]="selectedSubPortfolioId"
-                      [disabled]="selectedPortfolioId === 0"
-                      class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
-                    >
-                      <option [ngValue]="0">Seleccione una subcartera...</option>
-                      @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
-                        <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="rc-cartera" [class]="claseLabel">Cartera</label>
+          <select id="rc-cartera" name="cartera" [(ngModel)]="carteraId" (ngModelChange)="onCarteraChange()"
+                  [disabled]="!tenantId" [class]="claseInput">
+            <option [ngValue]="0">Seleccione</option>
+            @for (portfolio of portfolios(); track portfolio.id) {
+              <option [ngValue]="portfolio.id">{{ portfolio.portfolioName }}</option>
+            }
+          </select>
+        </div>
 
-                <!-- Tipo de consulta con tabs estilizados -->
-                <div>
-                  <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">
-                    Tipo de consulta
-                  </label>
-                  <div class="inline-flex p-1 bg-slate-100 dark:bg-slate-700/50 rounded-xl">
-                    <button
-                      (click)="tipoConsulta = 'unica'; fechaFin = ''"
-                      [class]="tipoConsulta === 'unica'
-                        ? 'bg-white dark:bg-slate-600 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'"
-                      class="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                      </svg>
-                      Fecha única
-                    </button>
-                    <button
-                      (click)="tipoConsulta = 'rango'"
-                      [class]="tipoConsulta === 'rango'
-                        ? 'bg-white dark:bg-slate-600 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'"
-                      class="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                      </svg>
-                      Rango de fechas
-                    </button>
-                  </div>
-                </div>
+        <span class="pb-2.5 text-[#c5ccd6]" aria-hidden="true">&rsaquo;</span>
 
-                <!-- Campos de fecha -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {{ tipoConsulta === 'unica' ? 'Fecha' : 'Fecha inicio' }}
-                      <span class="text-red-500 ml-1">*</span>
-                    </label>
-                    <div class="relative">
-                      <input
-                        type="date"
-                        [(ngModel)]="fechaInicio"
-                        [max]="fechaMaxima"
-                        class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
-                      />
-                    </div>
-                  </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="rc-subcartera" [class]="claseLabel">Subcartera</label>
+          <select id="rc-subcartera" name="subcartera" [(ngModel)]="subcarteraId" [disabled]="!carteraId" [class]="claseInput">
+            <option [ngValue]="0">Seleccione</option>
+            @for (sub of subPortfolios(); track sub.id) {
+              <option [ngValue]="sub.id">{{ sub.subPortfolioName }}</option>
+            }
+          </select>
+        </div>
 
-                  @if (tipoConsulta === 'rango') {
-                    <div class="space-y-2">
-                      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Fecha fin
-                        <span class="text-red-500 ml-1">*</span>
-                      </label>
-                      <div class="relative">
-                        <input
-                          type="date"
-                          [(ngModel)]="fechaFin"
-                          [min]="fechaInicio"
-                          [max]="fechaMaxima"
-                          class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
-                        />
-                      </div>
-                    </div>
-                  }
-                </div>
+        <label class="flex h-[38px] min-w-[190px] flex-1 items-center gap-2.5 rounded-lg border border-[#d5dbe3]
+                      bg-white px-3 transition-colors focus-within:border-[#2563eb]
+                      dark:border-slate-700 dark:bg-slate-900">
+          <lucide-angular name="search" [size]="14" class="shrink-0 text-[#8491a3]"></lucide-angular>
+          <input type="text" name="documento" [(ngModel)]="documento" inputmode="numeric" autocomplete="off"
+            placeholder="Buscar por documento (opcional)" aria-label="Buscar por documento"
+            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] outline-none
+                   placeholder:text-[#5f6c80] dark:text-slate-100"/>
+        </label>
+        <!-- Enter en cualquier campo busca -->
+        <button type="submit" class="sr-only">Buscar</button>
+      </form>
 
-                <!-- Accesos rápidos -->
-                <div>
-                  <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">
-                    Accesos rápidos
-                  </label>
-                  <div class="flex flex-wrap gap-2">
-                    @for (acceso of accesosRapidos; track acceso.label) {
-                      <button
-                        (click)="acceso.action()"
-                        class="group px-4 py-2 text-sm font-medium rounded-xl border-2 transition-all duration-200"
-                        [class]="isAccesoActivo(acceso.label)
-                          ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 text-emerald-700 dark:text-emerald-400'
-                          : 'bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20'"
-                      >
-                        <span class="flex items-center gap-2">
-                          @if (isAccesoActivo(acceso.label)) {
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                          }
-                          {{ acceso.label }}
-                        </span>
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
+      @if (error()) {
+        <div role="alert" class="rc-fade mb-3 flex items-center gap-2.5 rounded-[10px] border border-[#f3c9c5] bg-[#fdf0ee]
+                                 px-3.5 py-3 text-[12.5px] font-semibold text-[#b91c1c]
+                                 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+          <lucide-angular name="alert-circle" [size]="16" class="shrink-0"></lucide-angular>
+          <span>{{ error() }}</span>
+        </div>
+      }
 
-              <!-- Footer con acciones de descarga -->
-              <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/30">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div class="text-sm text-slate-500 dark:text-slate-400">
-                    @if (fechaInicio) {
-                      <span class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Período: <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatFechaDisplay(fechaInicio) }}</span>
-                        @if (tipoConsulta === 'rango' && fechaFin) {
-                          <span>al</span>
-                          <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatFechaDisplay(fechaFin) }}</span>
-                        }
-                      </span>
-                    }
-                  </div>
-                  <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-                    <button
-                      (click)="descargarReporte()"
-                      [disabled]="!puedeDescargar() || isLoading() || isLoadingResumen()"
-                      class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
-                    >
-                      @if (isLoading()) {
-                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                        </svg>
-                        <span>Generando...</span>
-                      } @else {
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                        </svg>
-                        <span>Descargar Excel</span>
-                      }
-                    </button>
-                    <!--
-                    <button
-                      (click)="descargarReporteResumen()"
-                      [disabled]="!puedeDescargarResumen() || isLoading() || isLoadingResumen()"
-                      class="px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-xl font-medium shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 hover:from-sky-600 hover:to-cyan-700 disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
-                    >
-                      @if (isLoadingResumen()) {
-                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                        </svg>
-                        <span>Generando resumido...</span>
-                      } @else {
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                        </svg>
-                        <span>Descargar reporte conciliación resumido</span>
-                      }
-                    </button>
-                    -->
-                  </div>
-                </div>
+      @if (resultado(); as r) {
+        <div [class]="'rc-fade transition-opacity duration-200 ' + (cargando() ? 'opacity-60' : '')" [attr.aria-busy]="cargando()">
+
+          <!-- Indicadores -->
+          <div class="mb-2.5 grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))]">
+            <div [class]="claseKpi">
+              <span [class]="claseLabel">Conciliado</span>
+              <span [class]="claseKpiV + ' text-[#0f7a55] dark:text-emerald-400'">S/ {{ r.resumen.montoMatchCompleto | appNumber:'1.2-2' }}</span>
+              <span [class]="claseKpiS">{{ r.resumen.matchCompleto | appNumber }} filas con pago del banco</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseLabel">Pago sin promesa</span>
+              <span [class]="claseKpiV">S/ {{ r.resumen.montoPagosPorFuera | appNumber:'1.2-2' }}</span>
+              <span [class]="claseKpiS">{{ r.resumen.pagosPorFuera | appNumber }} pagos del banco conciliados sin cuota</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseLabel">Banco sin conciliar</span>
+              <span [class]="claseKpiV + ' text-[#b45309] dark:text-amber-400'">S/ {{ r.resumen.montoPendienteConciliar | appNumber:'1.2-2' }}</span>
+              <span [class]="claseKpiS">{{ r.resumen.pendientesConciliar | appNumber }} pagos · {{ r.resumen.retenidos | appNumber }} retenidos</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseLabel">No corresponde</span>
+              <span [class]="claseKpiV">S/ {{ r.resumen.montoNoCorresponde | appNumber:'1.2-2' }}</span>
+              <span [class]="claseKpiS">{{ r.resumen.noCorresponden | appNumber }} pagos marcados por un supervisor</span>
+            </div>
+            <div [class]="claseKpi">
+              <span [class]="claseLabel">Pendiente del asesor</span>
+              <span [class]="claseKpiV">{{ r.resumen.pendientesProcesar | appNumber }}</span>
+              <span [class]="claseKpiS">Cuotas sin pago o pagos sin banco</span>
+            </div>
+          </div>
+
+          <!-- Tipo de fila -->
+          <div class="mb-2.5 flex flex-wrap items-center gap-x-5 gap-y-2.5">
+            <div class="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Filtrar por tipo de fila">
+              <span [class]="claseLabel">Tipo</span>
+              <div [class]="claseCaja">
+                <button type="button" (click)="elegirTipo(null)" [disabled]="cargando()"
+                        [attr.aria-pressed]="tipoCaso() === null" [class]="claseSeg(tipoCaso() === null)">Todos</button>
+                @for (t of tipos; track t.k) {
+                  <button type="button" (click)="elegirTipo(t.k)" [disabled]="cargando()"
+                          [attr.aria-pressed]="tipoCaso() === t.k" [class]="claseSeg(tipoCaso() === t.k)">{{ t.l }}</button>
+                }
               </div>
             </div>
+            <span class="ml-auto text-[12px] text-[#5f6c80] dark:text-slate-400">
+              <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ r.total | appNumber }}</b>
+              @if (tipoCaso()) { de {{ r.resumen.totalRegistros | appNumber }} }
+              filas
+            </span>
+          </div>
 
-            <!-- Mensaje de estado -->
-            @if (mensaje()) {
-              <div
-                class="p-4 rounded-xl flex items-center gap-3 animate-fade-in"
-                [class]="mensaje()!.tipo === 'success'
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
-                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'"
-              >
-                @if (mensaje()!.tipo === 'success') {
-                  <div class="p-2 bg-emerald-100 dark:bg-emerald-800/50 rounded-lg">
-                    <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+          <!-- Tabla -->
+          <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div class="overflow-x-auto">
+              <table class="w-full border-separate border-spacing-0 text-[12px] tabular-nums">
+                <thead>
+                  <tr>
+                    <th [class]="claseThIzq">Tipo</th>
+                    <th [class]="claseThIzq">Cliente</th>
+                    <th [class]="claseThIzq + claseSep">Gestión</th>
+                    <th [class]="claseThIzq">Cuota</th>
+                    <th [class]="claseTh + claseSep">Pago asesor</th>
+                    <th [class]="claseTh + claseSep">Pago banco</th>
+                    <th [class]="claseTh">Aplicado</th>
+                    <th [class]="claseThIzq + claseSep">Validación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (f of r.filas; track $index) {
+                    <tr class="bg-white transition-colors duration-150 hover:bg-[#f4f6f9] dark:bg-slate-900 dark:hover:bg-slate-800/60">
+                      <td [class]="claseTdIzq">
+                        <span [class]="'inline-flex h-[22px] items-center rounded-[6px] px-1.5 text-[11px] font-bold ' + tipo(f).c">{{ tipo(f).l }}</span>
+                      </td>
+                      <td [class]="claseTdIzq">
+                        <button type="button" (click)="buscarDocumento(f.documentoCliente)" [disabled]="!f.documentoCliente || cargando()"
+                                class="block font-bold text-[#0f172a] hover:text-[#2563eb] hover:underline disabled:no-underline dark:text-slate-100"
+                                title="Ver solo este cliente">{{ f.documentoCliente || '—' }}</button>
+                        <span [class]="claseSub + ' max-w-[200px] truncate'">{{ f.nombreCliente || '' }}</span>
+                      </td>
+                      <td [class]="claseTdIzq + claseSep">
+                        @if (f.idGestion) {
+                          <b class="block font-semibold">{{ fecha(f.fechaGestion) }}</b>
+                          <span [class]="claseSub + ' max-w-[170px] truncate'" [attr.title]="f.nombreAgente">{{ f.nombreAgente }}</span>
+                        } @else { <span class="text-[#8491a3]">—</span> }
+                      </td>
+                      <td [class]="claseTdIzq">
+                        @if (f.idCuota) {
+                          <b class="block font-semibold">#{{ f.numeroCuota }} · S/ {{ f.montoPromesa | appNumber:'1.2-2' }}</b>
+                          <span [class]="claseSub">{{ fecha(f.fechaPromesa) }} · {{ f.estadoCuota }}</span>
+                        } @else { <span class="text-[#8491a3]">—</span> }
+                      </td>
+                      <td [class]="claseTd + claseSep">
+                        @if (f.idPagoSistema) {
+                          <b class="block font-semibold">S/ {{ f.montoPagoRegistrado | appNumber:'1.2-2' }}</b>
+                          <span [class]="claseSub">{{ fecha(f.fechaPagoRegistrada) }}{{ f.operacionRegistrada ? ' · Op ' + f.operacionRegistrada : '' }}</span>
+                        } @else { <span class="text-[#8491a3]">—</span> }
+                      </td>
+                      <td [class]="claseTd + claseSep">
+                        @if (f.idPagoBanco) {
+                          <b class="block font-semibold">S/ {{ f.montoBancoReal | appNumber:'1.2-2' }}</b>
+                          <span [class]="claseSub">{{ fecha(f.fechaBancoReal) }}{{ f.operacionBanco ? ' · Op ' + f.operacionBanco : '' }}{{ f.entidadBancaria ? ' · ' + f.entidadBancaria : '' }}</span>
+                        } @else { <span class="text-[#8491a3]">—</span> }
+                      </td>
+                      <td [class]="claseTd + ' font-extrabold text-[#0f172a] dark:text-slate-100'">
+                        {{ f.montoAplicado !== null ? 'S/ ' + (f.montoAplicado | appNumber:'1.2-2') : '—' }}
+                      </td>
+                      <td [class]="claseTdIzq + claseSep">
+                        <b [class]="'block font-semibold ' + claseValidacion(f.validacionMonto)">{{ validacion(f.validacionMonto) }}</b>
+                        @if (f.diferenciaMonto !== null && f.validacionMonto === 'MONTO_DIFERENTE') {
+                          <span [class]="claseSub">Dif. S/ {{ f.diferenciaMonto | appNumber:'1.2-2' }}</span>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="px-4 py-10 text-center text-[#5f6c80] dark:text-slate-400">
+                        <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+                        <p class="text-[13px]">No hay filas para los filtros elegidos</p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Paginación -->
+            @if (r.total > 0) {
+              <nav class="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e9ee] px-3 py-2.5 dark:border-slate-800"
+                   aria-label="Paginación del reporte">
+                <p class="text-[12px] text-[#5f6c80] dark:text-slate-400" aria-live="polite">
+                  Mostrando <b class="tabular-nums text-[#0f172a] dark:text-slate-100">{{ desde(r) | appNumber }}–{{ hasta(r) | appNumber }}</b>
+                  de {{ r.total | appNumber }}
+                </p>
+                @if (paginas(r) > 1) {
+                  <div class="flex items-center gap-1">
+                    <button type="button" [class]="claseBotonPagina" [disabled]="r.page === 0 || cargando()" (click)="irPagina(0)" aria-label="Primera página">«</button>
+                    <button type="button" [class]="claseBotonPagina" [disabled]="r.page === 0 || cargando()" (click)="irPagina(r.page - 1)">Anterior</button>
+                    <span class="px-2 text-[12px] font-bold">Página {{ r.page + 1 }} de {{ paginas(r) }}</span>
+                    <button type="button" [class]="claseBotonPagina" [disabled]="r.page + 1 >= paginas(r) || cargando()" (click)="irPagina(r.page + 1)">Siguiente</button>
+                    <button type="button" [class]="claseBotonPagina" [disabled]="r.page + 1 >= paginas(r) || cargando()" (click)="irPagina(paginas(r) - 1)" aria-label="Última página">»</button>
                   </div>
-                  <p class="text-emerald-700 dark:text-emerald-300 font-medium">{{ mensaje()!.texto }}</p>
-                } @else {
-                  <div class="p-2 bg-red-100 dark:bg-red-800/50 rounded-lg">
-                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </div>
-                  <p class="text-red-700 dark:text-red-300 font-medium">{{ mensaje()!.texto }}</p>
                 }
+              </nav>
+            }
+          </div>
+        </div>
+      } @else if (cargando()) {
+        <div class="animate-pulse motion-reduce:animate-none" role="status">
+          <span class="sr-only">Cargando reporte…</span>
+          <div class="mb-2.5 grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))]">
+            @for (n of esqueletoKpi; track n) {
+              <div class="flex h-[92px] flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-3.5 py-3.5 dark:border-slate-800 dark:bg-slate-900">
+                <span class="h-2.5 w-24 rounded bg-[#e2e8f0] dark:bg-slate-800"></span>
+                <span class="h-6 w-28 rounded bg-[#e2e8f0] dark:bg-slate-800"></span>
+                <span class="h-2 w-32 rounded bg-[#eef1f5] dark:bg-slate-800"></span>
               </div>
             }
           </div>
-
-          <!-- Panel lateral de información -->
-          <div class="space-y-6">
-            <!-- Card de información -->
-            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
-              <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
-                <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                  <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  Información
-                </h3>
+          <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div class="h-[36px] border-b border-[#e6e9ee] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-800"></div>
+            @for (n of esqueletoFilas; track n) {
+              <div class="flex items-center gap-4 border-b border-[#e6e9ee] px-3 py-3.5 last:border-b-0 dark:border-slate-800">
+                <span class="h-3 w-44 shrink-0 rounded bg-[#e2e8f0] dark:bg-slate-800"></span>
+                <span class="h-3 flex-1 rounded bg-[#eef1f5] dark:bg-slate-800"></span>
               </div>
-              <div class="p-5">
-                <ul class="space-y-3">
-                  <li class="flex items-start gap-3 text-sm">
-                    <div class="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg mt-0.5">
-                      <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                    <span class="text-slate-600 dark:text-slate-400">Incluye todos los pagos procesados en el período</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-sm">
-                    <div class="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg mt-0.5">
-                      <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                    <span class="text-slate-600 dark:text-slate-400">Muestra el estado de conciliación de cada pago</span>
-                  </li>
-                  <li class="flex items-start gap-3 text-sm">
-                    <div class="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg mt-0.5">
-                      <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                    <span class="text-slate-600 dark:text-slate-400">Formato Excel (.xlsx) compatible con todas las versiones</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- Card de formato -->
-            <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-xl shadow-emerald-500/25">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="p-2 bg-white/20 rounded-xl">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                </div>
-                <div>
-                  <p class="font-semibold">Formato del reporte</p>
-                  <p class="text-emerald-100 text-sm">Microsoft Excel</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 text-sm text-emerald-100">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                <span>Descarga automática</span>
-              </div>
-            </div>
+            }
           </div>
         </div>
-      </div>
+      } @else {
+        <div class="rc-fade rounded-xl border border-dashed border-[#c5ccd6] bg-white px-6 py-12 text-center
+                    dark:border-slate-700 dark:bg-slate-900">
+          <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
+          <p class="text-[13px] text-[#5f6c80] dark:text-slate-400">
+            Elige el periodo, proveedor, cartera y subcartera y presiona Buscar. Luego podrás descargar el Excel.
+          </p>
+        </div>
+      }
     </div>
   `,
   styles: [`
-    @keyframes fade-in {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
-      animation: fade-in 0.3s ease-out;
-    }
+    .rc-fade { animation: rc-fade 180ms ease-out backwards; }
+    @keyframes rc-fade { from { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .rc-fade { animation: none; } }
   `]
 })
-export class ConciliacionReportComponent {
-  tipoConsulta: 'unica' | 'rango' = 'unica';
-  fechaInicio = '';
-  fechaFin = '';
-  fechaMaxima = this.formatDate(new Date());
-  isLoading = signal(false);
-  isLoadingResumen = signal(false);
-  mensaje = signal<{ tipo: 'success' | 'error'; texto: string } | null>(null);
-  accesoSeleccionado = signal<string | null>('Hoy');
+export class ConciliacionReportComponent implements OnInit {
+  private readonly bcpService = inject(BcpPagosService);
+  private readonly tenantService = inject(TenantService);
+  private readonly portfolioService = inject(PortfolioService);
+
+  // Mismo sistema visual que /admin/agent-productivity
+  readonly claseLabel = 'text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400';
+  readonly claseInput =
+    'h-[38px] rounded-lg border border-[#d5dbe3] bg-white px-3 text-[13px] font-semibold text-[#0f172a] ' +
+    'outline-none transition-colors focus:border-[#2563eb] disabled:opacity-50 ' +
+    'dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
+  readonly claseKpi =
+    'rc-fade flex flex-col gap-0.5 rounded-xl border border-[#e6e9ee] bg-white px-3.5 py-3 dark:border-slate-800 dark:bg-slate-900';
+  readonly claseKpiV = 'text-[22px] font-extrabold leading-tight tracking-[-0.025em] tabular-nums';
+  readonly claseKpiS = 'mt-auto text-[11px] font-medium text-[#5f6c80] dark:text-slate-400';
+  readonly claseCaja =
+    'flex h-8 max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-[#d5dbe3] bg-white p-0.5 ' +
+    'dark:border-slate-700 dark:bg-slate-900';
+  readonly claseSep = 'border-l border-l-[#e6e9ee] dark:border-l-slate-800 ';
+  private readonly thBase =
+    'whitespace-nowrap border-b border-[#e6e9ee] bg-[#f8fafc] py-2 align-middle text-[11.5px] font-bold leading-[1.3] ' +
+    'text-[#334155] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 ';
+  readonly claseTh = this.thBase + 'px-2.5 text-right ';
+  readonly claseThIzq = this.thBase + 'px-2.5 text-left ';
+  private readonly tdBase = 'whitespace-nowrap border-b border-[#e6e9ee] bg-inherit py-2 align-middle dark:border-slate-800 ';
+  readonly claseTd = this.tdBase + 'px-2.5 text-right font-medium text-[#334155] dark:text-slate-300 ';
+  readonly claseTdIzq = this.tdBase + 'px-2.5 text-left font-medium text-[#334155] dark:text-slate-300 ';
+  readonly claseSub = 'block text-[10.5px] font-semibold leading-[1.3] text-[#5f6c80] dark:text-slate-400';
+  readonly claseBotonPagina =
+    'h-[28px] rounded-[6px] border border-[#d5dbe3] bg-white px-2.5 text-[12px] font-bold text-[#334155] ' +
+    'transition-colors hover:bg-[#f4f6f9] disabled:cursor-not-allowed disabled:opacity-50 ' +
+    'dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800';
+
+  claseSeg(activo: boolean): string {
+    return 'h-[26px] shrink-0 whitespace-nowrap rounded-[6px] px-2.5 text-[12px] font-bold transition-colors duration-150 ' +
+      'disabled:cursor-not-allowed ' +
+      (activo ? 'bg-[#e8effd] text-[#1d4ed8] dark:bg-blue-500/20 dark:text-blue-300'
+              : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100');
+  }
+
+  readonly tipos = (Object.keys(TIPOS) as TipoCasoConciliacion[]).map(k => ({ k, l: TIPOS[k].l }));
+  readonly esqueletoKpi = [0, 1, 2, 3, 4];
+  readonly esqueletoFilas = [0, 1, 2, 3, 4, 5, 6, 7];
+  readonly hoy = this.iso(new Date());
+
+  // Filtros del formulario
+  periodo: Periodo = 'today';
+  fechaInicio = this.hoy;
+  fechaFin = this.hoy;
+  tenantId = 0;
+  carteraId = 0;
+  subcarteraId = 0;
+  documento = '';
+
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
-  selectedTenantId = 0;
-  selectedPortfolioId = 0;
-  selectedSubPortfolioId = 0;
 
-  accesosRapidos = [
-    { label: 'Hoy', action: () => this.setHoy() },
-    { label: 'Ayer', action: () => this.setAyer() },
-    { label: 'Últimos 7 días', action: () => this.setUltimos7Dias() },
-    { label: 'Últimos 30 días', action: () => this.setUltimos30Dias() },
-    { label: 'Mes actual', action: () => this.setMesActual() }
-  ];
+  /** Filtros de la última búsqueda: la paginación, el tipo y el Excel usan estos, no los del formulario. */
+  consulta = signal<Omit<ReporteConciliacionRequest, 'page' | 'size' | 'tipoCaso'> | null>(null);
+  tipoCaso = signal<TipoCasoConciliacion | null>(null);
+  resultado = signal<ReporteConciliacionPagina | null>(null);
+  cargando = signal(false);
+  descargando = signal(false);
+  error = signal<string | null>(null);
 
-  constructor(
-    private bcpService: BcpPagosService,
-    private tenantService: TenantService,
-    private portfolioService: PortfolioService
-  ) {
-    this.setHoy();
-    this.cargarTenants();
+  ngOnInit(): void {
+    this.tenantService.getAllTenants().subscribe({
+      next: tenants => this.tenants.set(tenants),
+      error: () => this.error.set('No se pudieron cargar los proveedores. Recargue la página.')
+    });
   }
 
-  isAccesoActivo(label: string): boolean {
-    return this.accesoSeleccionado() === label;
+  subtitulo(): string {
+    const c = this.consulta();
+    if (!c) return 'Pagos del banco frente a lo registrado por los asesores';
+    const rango = c.fechaInicio === c.fechaFin
+      ? this.fecha(c.fechaInicio)
+      : `${this.fecha(c.fechaInicio)} al ${this.fecha(c.fechaFin ?? c.fechaInicio)}`;
+    return c.documento ? `${rango} · documento ${c.documento}` : rango;
   }
 
-  puedeDescargar(): boolean {
-    if (!this.fechaInicio) return false;
-    if (this.tipoConsulta === 'rango' && !this.fechaFin) return false;
-    if (this.selectedTenantId <= 0) return false;
-    if (this.selectedPortfolioId <= 0) return false;
-    if (this.selectedSubPortfolioId <= 0) return false;
-    return true;
+  puedeBuscar(): boolean {
+    return !!this.fechaInicio && !!this.fechaFin && this.fechaInicio <= this.fechaFin
+      && this.tenantId > 0 && this.carteraId > 0 && this.subcarteraId > 0;
   }
 
-  // puedeDescargarResumen(): boolean {
-  //   return !!this.fechaInicio
-  //     && this.selectedTenantId > 0
-  //     && this.selectedPortfolioId > 0
-  //     && this.selectedSubPortfolioId > 0;
-  // }
-
-  descargarReporte(): void {
-    if (!this.puedeDescargar()) return;
-
-    this.isLoading.set(true);
-    this.mensaje.set(null);
-
-    // Simular pequeño delay para mostrar el estado de carga
-    setTimeout(() => {
-      const fechaFin = this.tipoConsulta === 'rango' ? this.fechaFin : undefined;
-
-      this.bcpService.descargarReporteConciliacionPorFecha(
-        this.fechaInicio,
-        this.selectedTenantId,
-        this.selectedPortfolioId,
-        this.selectedSubPortfolioId,
-        fechaFin
-      ).subscribe({
-        next: (response) => {
-          const nombreArchivo = fechaFin
-            ? `reporte-conciliacion-${this.fechaInicio}-a-${fechaFin}.xlsx`
-            : `reporte-conciliacion-${this.fechaInicio}.xlsx`;
-          this.bcpService.procesarDescargaArchivo(response, nombreArchivo);
-          this.mensaje.set({ tipo: 'success', texto: 'Reporte generado correctamente. La descarga iniciará en breve.' });
-          this.isLoading.set(false);
-          setTimeout(() => this.mensaje.set(null), 5000);
-        },
-        error: (error) => {
-          const esErrorFiltros = error?.status === 400;
-          this.mensaje.set({
-            tipo: 'error',
-            texto: esErrorFiltros
-              ? 'Debe seleccionar proveedor, cartera y subcartera para generar el reporte.'
-              : 'No se pudo descargar el reporte. Verifique sus permisos o intente nuevamente.'
-          });
-          this.isLoading.set(false);
-          setTimeout(() => this.mensaje.set(null), 5000);
-        }
-      });
-    }, 500);
+  onPeriodoChange(): void {
+    const hoy = new Date();
+    const y = hoy.getFullYear();
+    const m = hoy.getMonth();
+    switch (this.periodo) {
+      case 'today':
+        this.fechaInicio = this.fechaFin = this.hoy;
+        break;
+      case 'yesterday': {
+        const ayer = new Date(y, m, hoy.getDate() - 1);
+        this.fechaInicio = this.fechaFin = this.iso(ayer);
+        break;
+      }
+      case 'week':
+        this.fechaInicio = this.iso(new Date(y, m, hoy.getDate() - 6));
+        this.fechaFin = this.hoy;
+        break;
+      case 'month':
+        this.fechaInicio = this.iso(new Date(y, m, 1));
+        this.fechaFin = this.hoy;
+        break;
+      case 'lastMonth':
+        this.fechaInicio = this.iso(new Date(y, m - 1, 1));
+        this.fechaFin = this.iso(new Date(y, m, 0));
+        break;
+      case 'custom':
+        break;
+    }
   }
 
-  // descargarReporteResumen(): void {
-  //   if (!this.puedeDescargarResumen()) return;
-  //
-  //   this.isLoadingResumen.set(true);
-  //   this.mensaje.set(null);
-  //
-  //   setTimeout(() => {
-  //     const fechaFin = this.tipoConsulta === 'rango' && this.fechaFin ? this.fechaFin : undefined;
-  //
-  //     this.bcpService.descargarReporteConciliacionResumenPorFecha(
-  //       this.fechaInicio,
-  //       this.selectedTenantId,
-  //       this.selectedPortfolioId,
-  //       this.selectedSubPortfolioId,
-  //       fechaFin
-  //     ).subscribe({
-  //       next: (response) => {
-  //         const nombreArchivo = fechaFin
-  //           ? `reporte-conciliacion-resumen-${this.fechaInicio}-a-${fechaFin}.xlsx`
-  //           : `reporte-conciliacion-resumen-${this.fechaInicio}.xlsx`;
-  //         this.bcpService.procesarDescargaArchivo(response, nombreArchivo);
-  //         this.mensaje.set({ tipo: 'success', texto: 'Reporte resumido generado correctamente. La descarga iniciará en breve.' });
-  //         this.isLoadingResumen.set(false);
-  //         setTimeout(() => this.mensaje.set(null), 5000);
-  //       },
-  //       error: (error) => {
-  //         const esErrorFiltros = error?.status === 400;
-  //         this.mensaje.set({
-  //           tipo: 'error',
-  //           texto: esErrorFiltros
-  //             ? 'Debe seleccionar proveedor, cartera y subcartera para generar el reporte resumido.'
-  //             : 'No se pudo descargar el reporte resumido. Verifique sus permisos o intente nuevamente.'
-  //         });
-  //         this.isLoadingResumen.set(false);
-  //         setTimeout(() => this.mensaje.set(null), 5000);
-  //       }
-  //     });
-  //   }, 500);
-  // }
-
-  onTenantChange(tenantId: number): void {
-    this.selectedTenantId = Number(tenantId) || 0;
-    this.selectedPortfolioId = 0;
-    this.selectedSubPortfolioId = 0;
+  onTenantChange(): void {
+    this.carteraId = 0;
+    this.subcarteraId = 0;
     this.portfolios.set([]);
     this.subPortfolios.set([]);
-
-    if (this.selectedTenantId > 0) {
-      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
-        next: (portfolios) => this.portfolios.set(portfolios),
-        error: () => {
-          this.mensaje.set({ tipo: 'error', texto: 'No se pudieron cargar las carteras del proveedor seleccionado.' });
-          setTimeout(() => this.mensaje.set(null), 5000);
-        }
+    if (this.tenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.tenantId).subscribe({
+        next: portfolios => this.portfolios.set(portfolios),
+        error: () => this.error.set('No se pudieron cargar las carteras del proveedor.')
       });
     }
   }
 
-  onPortfolioChange(portfolioId: number): void {
-    this.selectedPortfolioId = Number(portfolioId) || 0;
-    this.selectedSubPortfolioId = 0;
+  onCarteraChange(): void {
+    this.subcarteraId = 0;
     this.subPortfolios.set([]);
-
-    if (this.selectedPortfolioId > 0) {
-      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
-        next: (subPortfolios) => this.subPortfolios.set(subPortfolios),
-        error: () => {
-          this.mensaje.set({ tipo: 'error', texto: 'No se pudieron cargar las subcarteras de la cartera seleccionada.' });
-          setTimeout(() => this.mensaje.set(null), 5000);
-        }
+    if (this.carteraId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.carteraId).subscribe({
+        next: subs => this.subPortfolios.set(subs),
+        error: () => this.error.set('No se pudieron cargar las subcarteras de la cartera.')
       });
     }
   }
 
-  formatFechaDisplay(fecha: string): string {
-    if (!fecha) return '';
-    const [year, month, day] = fecha.split('-');
-    return `${day}/${month}/${year}`;
+  buscar(): void {
+    if (!this.puedeBuscar() || this.cargando()) return;
+    this.consulta.set({
+      fechaInicio: this.fechaInicio,
+      fechaFin: this.fechaFin,
+      tenantId: this.tenantId,
+      carteraId: this.carteraId,
+      subcarteraId: this.subcarteraId,
+      documento: this.documento.trim() || undefined
+    });
+    this.tipoCaso.set(null);
+    this.cargar(0);
   }
 
-  // Accesos rápidos
-  setHoy(): void {
-    this.tipoConsulta = 'unica';
-    this.fechaInicio = this.formatDate(new Date());
-    this.fechaFin = '';
-    this.accesoSeleccionado.set('Hoy');
+  /** Clic en un documento de la tabla: muestra solo ese cliente con los mismos filtros. */
+  buscarDocumento(documento: string | null): void {
+    if (!documento) return;
+    this.documento = documento;
+    this.buscar();
   }
 
-  setAyer(): void {
-    this.tipoConsulta = 'unica';
-    const ayer = new Date();
-    ayer.setDate(ayer.getDate() - 1);
-    this.fechaInicio = this.formatDate(ayer);
-    this.fechaFin = '';
-    this.accesoSeleccionado.set('Ayer');
+  elegirTipo(tipo: TipoCasoConciliacion | null): void {
+    this.tipoCaso.set(tipo);
+    this.cargar(0);
   }
 
-  setUltimos7Dias(): void {
-    this.tipoConsulta = 'rango';
-    const hoy = new Date();
-    const hace7Dias = new Date();
-    hace7Dias.setDate(hoy.getDate() - 6);
-    this.fechaInicio = this.formatDate(hace7Dias);
-    this.fechaFin = this.formatDate(hoy);
-    this.accesoSeleccionado.set('Últimos 7 días');
+  irPagina(page: number): void {
+    this.cargar(page);
   }
 
-  setUltimos30Dias(): void {
-    this.tipoConsulta = 'rango';
-    const hoy = new Date();
-    const hace30Dias = new Date();
-    hace30Dias.setDate(hoy.getDate() - 29);
-    this.fechaInicio = this.formatDate(hace30Dias);
-    this.fechaFin = this.formatDate(hoy);
-    this.accesoSeleccionado.set('Últimos 30 días');
-  }
-
-  setMesActual(): void {
-    this.tipoConsulta = 'rango';
-    const hoy = new Date();
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    this.fechaInicio = this.formatDate(primerDiaMes);
-    this.fechaFin = this.formatDate(hoy);
-    this.accesoSeleccionado.set('Mes actual');
-  }
-
-  private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
-  }
-
-  private cargarTenants(): void {
-    this.tenantService.getAllTenants().subscribe({
-      next: (tenants) => this.tenants.set(tenants),
+  descargarExcel(): void {
+    const c = this.consulta();
+    if (!c || this.descargando()) return;
+    this.descargando.set(true);
+    this.error.set(null);
+    this.bcpService.descargarReporteConciliacionPorFecha(
+      c.fechaInicio, c.tenantId, c.carteraId, c.subcarteraId, c.fechaFin, c.documento
+    ).subscribe({
+      next: response => {
+        const rango = c.fechaInicio === c.fechaFin ? c.fechaInicio : `${c.fechaInicio}-a-${c.fechaFin}`;
+        const nombre = `reporte-conciliacion-${rango}${c.documento ? '-' + c.documento : ''}.xlsx`;
+        this.bcpService.procesarDescargaArchivo(response, nombre);
+        this.descargando.set(false);
+      },
       error: () => {
-        this.mensaje.set({ tipo: 'error', texto: 'No se pudieron cargar los proveedores. Recargue la página e intente nuevamente.' });
-        setTimeout(() => this.mensaje.set(null), 5000);
+        this.error.set('No se pudo descargar el Excel. Intente nuevamente.');
+        this.descargando.set(false);
       }
     });
+  }
+
+  tipo(f: ReporteConciliacionFila): { l: string; c: string } {
+    return TIPOS[f.tipoCaso] ?? { l: f.tipoCaso, c: TIPOS.SIN_PROMESA.c };
+  }
+
+  validacion(valor: string | null): string {
+    return valor ? (VALIDACIONES[valor] ?? valor) : '—';
+  }
+
+  claseValidacion(valor: string | null): string {
+    switch (valor) {
+      case 'MONTO_OK': return 'text-[#0f7a55] dark:text-emerald-400';
+      case 'MONTO_DIFERENTE': return 'text-[#b91c1c] dark:text-red-400';
+      case 'PARCIAL_EN_ESPERA':
+      case 'PENDIENTE_VERIFICAR': return 'text-[#b45309] dark:text-amber-400';
+      default: return 'text-[#334155] dark:text-slate-300';
+    }
+  }
+
+  /** yyyy-MM-dd (o con hora) a dd/MM/yyyy sin pasar por Date, para no correr el día por la zona horaria. */
+  fecha(valor: string | null | undefined): string {
+    if (!valor) return '—';
+    const [y, m, d] = String(valor).slice(0, 10).split('-');
+    return d ? `${d}/${m}/${y}` : String(valor);
+  }
+
+  paginas(r: ReporteConciliacionPagina): number {
+    return Math.max(1, Math.ceil(r.total / r.size));
+  }
+
+  desde(r: ReporteConciliacionPagina): number {
+    return r.page * r.size + 1;
+  }
+
+  hasta(r: ReporteConciliacionPagina): number {
+    return Math.min((r.page + 1) * r.size, r.total);
+  }
+
+  private cargar(page: number): void {
+    const c = this.consulta();
+    if (!c) return;
+    this.cargando.set(true);
+    this.error.set(null);
+    this.bcpService.consultarReporteConciliacion({ ...c, tipoCaso: this.tipoCaso(), page, size: TAMANO_PAGINA }).subscribe({
+      next: r => {
+        this.resultado.set(r);
+        this.cargando.set(false);
+      },
+      error: err => {
+        this.error.set(err?.status === 400
+          ? 'Revise el periodo, proveedor, cartera y subcartera.'
+          : 'No se pudo cargar el reporte. Intente nuevamente.');
+        this.cargando.set(false);
+      }
+    });
+  }
+
+  private iso(date: Date): string {
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${m}-${d}`;
   }
 }

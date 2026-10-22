@@ -38,26 +38,29 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
   imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
   template: `
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
-    <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
-      <!-- Header -->
-      <div class="mb-6 flex items-start justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-slate-800 dark:text-white">
+    <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 px-6 pb-6 pt-4">
+      <!-- Header compacto: título y acciones en una sola línea -->
+      <div class="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div class="min-w-0">
+          <h1 class="text-xl font-bold leading-tight text-slate-800 dark:text-white">
             Pagos Bancarios
           </h1>
-          <p class="text-slate-600 dark:text-slate-400">
-            Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
+          <p class="text-xs text-slate-600 dark:text-slate-400">
+            Carga los pagos que entrega el banco: CREP de BCP (.txt) y archivo XLS de Financiera OH
           </p>
         </div>
-        <div class="flex flex-wrap justify-end gap-3">
-          <a routerLink="/reportes-pagos-bancarios" class="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-3 text-base font-bold text-blue-700 shadow-sm transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900">
-            Reportes
+        <div class="flex flex-wrap justify-end gap-2">
+          <a routerLink="/reportes-pagos-bancarios" class="inline-flex h-9 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3.5 text-sm font-bold text-blue-700 shadow-sm transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Descargar en Excel
           </a>
           <a
             routerLink="/correccion-pagos"
-            class="inline-flex items-center gap-3 rounded-xl bg-green-700 px-6 py-3 text-base font-bold !text-white shadow-md shadow-green-900/20 transition-colors hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-offset-slate-900"
+            class="inline-flex h-9 items-center gap-2 rounded-lg bg-green-700 px-3.5 text-sm font-bold !text-white shadow-sm transition-colors hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-offset-slate-900"
           >
-          <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
           Corrección de pagos
@@ -65,10 +68,10 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
         </div>
       </div>
 
-      <!-- Tabs -->
+      <!-- Tabs: CREP BCP, XLS OH, consolidado y, al extremo derecho, el historial -->
       <div class="mb-6">
         <div class="border-b border-slate-200 dark:border-slate-700">
-          <nav class="-mb-px flex space-x-8">
+          <nav class="-mb-px flex gap-8 overflow-x-auto">
             <button
               (click)="activeTab.set('masiva')"
               [class]="activeTab() === 'masiva'
@@ -79,8 +82,12 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              Carga Masiva
+              Carga CREP · BCP
             </button>
+            <!--
+              DEPRECADO (22/10/2026): "Ingreso manual" ya no se usará y queda oculto. Los pagos entran solo
+              por archivo (CREP de BCP, XLS de OH) y por la regularización del consolidado mensual.
+              No se borra el bloque del tab ni su lógica por si se retoma más adelante.
             <button
               (click)="activeTab.set('manual'); cargarPagosManuales()"
               [class]="activeTab() === 'manual'
@@ -93,6 +100,7 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
               </svg>
               Ingreso Manual
             </button>
+            -->
             <button
               (click)="activeTab.set('oh')"
               [class]="activeTab() === 'oh'
@@ -103,19 +111,7 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              Carga OH
-            </button>
-            <button
-              (click)="activeTab.set('historial')"
-              [class]="activeTab() === 'historial'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Historial
+              Carga XLS · OH
             </button>
             <button
               (click)="activeTab.set('consolidado')"
@@ -128,6 +124,18 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               Consolidado mensual
+            </button>
+            <button
+              (click)="activeTab.set('historial')"
+              [class]="activeTab() === 'historial'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="ml-auto whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Historial
             </button>
           </nav>
         </div>
@@ -333,7 +341,8 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
         }
       }
 
-      <!-- Tab: Ingreso Manual -->
+      <!-- Tab: Ingreso Manual. DEPRECADO (22/10/2026): su botón está oculto, así que este bloque no se
+           muestra. Se conserva por si el ingreso manual se retoma más adelante. -->
       @if (activeTab() === 'manual') {
         <!-- Formulario de registro (colapsable) -->
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 overflow-hidden">
@@ -1061,7 +1070,7 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
   `
 })
 export class PagosBancariosPage implements OnInit {
-  // Tab activa
+  // Tab activa. 'manual' está deprecado: su botón está oculto y no se usa (ver nota en el template).
   activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial' | 'consolidado'>('masiva');
 
   // Carga Masiva BCP
@@ -1082,7 +1091,7 @@ export class PagosBancariosPage implements OnInit {
   resultadoAprobacionOh = signal<AprobarArchivoBcpResponse | null>(null);
   archivoOhAprobado = signal(false);
 
-  // Ingreso Manual
+  // Ingreso Manual. DEPRECADO (22/10/2026): no se usará; se deja la lógica por si se retoma.
   pagoManual: BcpPagoManualRequest = {
     documento: '',
     fechaPago: '',
@@ -1834,7 +1843,7 @@ export class PagosBancariosPage implements OnInit {
       .filter(par => !!par.detalle && !!par.prevalidacion);
   }
 
-  // === Ingreso Manual ===
+  // === Ingreso Manual (DEPRECADO: tab oculto, no se usará; la lógica se conserva) ===
   toggleFormulario(): void {
     this.formExpanded.set(!this.formExpanded());
   }
