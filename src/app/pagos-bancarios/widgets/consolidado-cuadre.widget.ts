@@ -26,23 +26,23 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
   template: `
     <!-- relative: contiene el caption sr-only; sin esto se sale del scroll de .main-content y estira la página -->
     <section class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="cuadre-titulo">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 dark:border-slate-700">
         <div>
-          <h3 id="cuadre-titulo" class="text-lg font-semibold text-slate-800 dark:text-white">Cuadre por cliente</h3>
-          <p class="text-xs text-slate-600 dark:text-slate-400">Banco: lo que reporta el consolidado. Recibido: lo llegado en archivos diarios más lo regularizado.</p>
+          <h3 id="cuadre-titulo" class="text-sm font-semibold text-slate-800 dark:text-white">Cuadre por cliente</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400">Banco: el consolidado. Recibido: archivos diarios más lo regularizado.</p>
         </div>
         <app-buscador-documento inputId="cuadre-buscar" [valor]="busqueda()" (valorChange)="buscar($event)"></app-buscador-documento>
       </div>
 
-      <div class="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700" role="group" aria-label="Filtrar por resultado">
+      <div class="flex flex-wrap gap-1.5 border-b border-slate-200 px-4 py-2 dark:border-slate-700" role="group" aria-label="Filtrar por resultado">
         @for (opcion of opcionesFiltro(); track opcion.valor) {
           <button
             type="button"
             (click)="filtrar(opcion.valor)"
             [attr.aria-pressed]="filtro() === opcion.valor"
             [class]="filtro() === opcion.valor
-              ? 'rounded-full border border-blue-600 bg-blue-600 px-3 py-1 text-xs font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800'
-              : 'rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800'"
+              ? 'rounded-full border border-blue-600 bg-blue-600 px-2.5 py-0.5 text-xs font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800'
+              : 'rounded-full border border-slate-300 px-2.5 py-0.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800'"
           >
             {{ opcion.label }} ({{ opcion.total }})
           </button>
@@ -50,30 +50,30 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
       </div>
 
       @if (filtro() !== 'CON_DIFERENCIA' && filtro() !== 'TODOS') {
-        <p class="border-b border-slate-200 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">{{ infoResultado($any(filtro())).descripcion }}</p>
+        <p class="border-b border-slate-200 px-4 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">{{ infoResultado($any(filtro())).descripcion }}</p>
       }
 
       @if (filtradas().length === 0) {
-        <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay clientes con ese filtro.</p>
+        <p class="px-4 py-6 text-center text-sm text-slate-600 dark:text-slate-400">No hay clientes con ese filtro.</p>
       } @else {
         <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
+          <table class="min-w-full text-sm tabular-nums">
             <caption class="sr-only">Cuadre por cliente entre el consolidado del banco y los pagos del sistema</caption>
-            <thead class="bg-slate-100 text-xs uppercase tracking-wide text-slate-700 dark:bg-slate-700/60 dark:text-slate-200">
+            <thead class="bg-slate-100 text-[11px] uppercase tracking-wide text-slate-700 dark:bg-slate-700/60 dark:text-slate-200">
               <tr>
-                <th scope="col" class="px-3 py-2 text-left font-bold">Documento</th>
-                <th scope="col" class="px-3 py-2 text-right font-bold">Banco</th>
-                <th scope="col" class="px-3 py-2 text-right font-bold">Recibido</th>
-                <th scope="col" class="px-3 py-2 text-right font-bold">Conciliado</th>
-                <th scope="col" class="px-3 py-2 text-right font-bold">Diferencia</th>
-                <th scope="col" class="px-3 py-2 text-left font-bold">Resultado</th>
-                <th scope="col" class="px-3 py-2 text-left font-bold">Acción</th>
+                <th scope="col" class="px-3 py-1.5 text-left font-bold">Documento</th>
+                <th scope="col" class="px-3 py-1.5 text-right font-bold">Banco</th>
+                <th scope="col" class="px-3 py-1.5 text-right font-bold">Recibido</th>
+                <th scope="col" class="px-3 py-1.5 text-right font-bold">Diferencia</th>
+                <th scope="col" class="px-3 py-1.5 text-right font-bold">Conciliado</th>
+                <th scope="col" class="px-3 py-1.5 text-left font-bold">Resultado</th>
+                <th scope="col" class="px-3 py-1.5 text-right font-bold"><span class="sr-only">Acción</span></th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               @for (fila of filasPagina(); track fila.documento) {
-                <tr class="align-top">
-                  <th scope="row" class="whitespace-nowrap px-3 py-2 text-left font-semibold">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <th scope="row" class="whitespace-nowrap px-3 py-1 text-left font-semibold">
                     <button
                       type="button"
                       (click)="documentoClick.emit(fila.documento)"
@@ -83,45 +83,36 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
                       {{ fila.documento }}
                     </button>
                   </th>
-                  <td class="whitespace-nowrap px-3 py-2 text-right font-semibold text-slate-900 dark:text-white">{{ monto(fila.montoConsolidado) }}</td>
-                  <td class="whitespace-nowrap px-3 py-2 text-right text-slate-800 dark:text-slate-200">
+                  <td class="whitespace-nowrap px-3 py-1 text-right font-semibold text-slate-900 dark:text-white">{{ monto(fila.montoConsolidado) }}</td>
+                  <td class="whitespace-nowrap px-3 py-1 text-right text-slate-800 dark:text-slate-200">
                     {{ monto(fila.montoRecibido) }}
-                    <span class="block text-xs text-slate-600 dark:text-slate-400">{{ fila.pagosRecibidos }} pago(s)</span>
-                    @if (fila.montoRegularizado > 0) {
-                      <span class="block text-xs text-slate-600 dark:text-slate-400">Regularizado {{ monto(fila.montoRegularizado) }}</span>
-                    }
+                    <span class="text-[11px] text-slate-600 dark:text-slate-400">· {{ detalleRecibido(fila) }}</span>
                   </td>
-                  <td class="whitespace-nowrap px-3 py-2 text-right text-slate-800 dark:text-slate-200">
+                  <td class="whitespace-nowrap px-3 py-1 text-right font-bold" [class]="claseDiferencia(fila)">{{ diferenciaConSigno(fila) }}</td>
+                  <td class="whitespace-nowrap px-3 py-1 text-right text-slate-800 dark:text-slate-200">
                     {{ monto(fila.montoConciliado) }}
                     @if (fila.montoSinConciliar > 0) {
-                      <span class="block text-xs text-amber-800 dark:text-amber-300">Sin conciliar {{ monto(fila.montoSinConciliar) }}</span>
+                      <span class="block text-[11px] leading-tight text-amber-800 dark:text-amber-300">Sin conciliar {{ monto(fila.montoSinConciliar) }}</span>
                     }
                   </td>
-                  <td class="whitespace-nowrap px-3 py-2 text-right font-semibold" [class]="claseDiferencia(fila)">{{ diferenciaConSigno(fila) }}</td>
-                  <td class="px-3 py-2">
-                    <span class="inline-flex whitespace-nowrap rounded-full px-2 py-1 text-[11px] font-bold leading-tight" [class]="pill(fila.resultado)">{{ infoResultado(fila.resultado).label }}</span>
-                    @if (fila.posiblesDuplicados > 0) {
-                      <span class="mt-1 block text-xs text-red-800 dark:text-red-300">{{ fila.posiblesDuplicados }} pago(s) con mismo día y monto</span>
-                    }
-                    @if (fila.pagosAplicadosDeMas > 0) {
-                      <span class="mt-1 block text-xs text-red-800 dark:text-red-300">{{ fila.pagosAplicadosDeMas }} pago(s) aplicado(s) de más</span>
-                    }
-                    @if (fila.resultado === 'SOBRA_EN_SISTEMA' && fila.pagosFinDeMes > 0) {
-                      <span class="mt-1 block text-xs text-slate-600 dark:text-slate-400">{{ fila.pagosFinDeMes }} pago(s) de fin de mes</span>
-                    }
+                  <td class="px-3 py-1">
+                    <div class="flex flex-wrap items-center gap-1">
+                      <span class="inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold leading-tight" [class]="pill(fila.resultado)">{{ infoResultado(fila.resultado).label }}</span>
+                      @for (alerta of alertas(fila); track alerta) {
+                        <span class="whitespace-nowrap rounded border border-red-200 px-1.5 text-[11px] leading-tight text-red-800 dark:border-red-800 dark:text-red-300">{{ alerta }}</span>
+                      }
+                    </div>
                   </td>
-                  <td class="whitespace-nowrap px-3 py-2">
+                  <td class="whitespace-nowrap px-3 py-1 text-right">
                     @if (fila.resultado === 'FALTA_EN_SISTEMA') {
                       <button
                         type="button"
                         (click)="abrirRegularizar(fila, $event)"
                         [attr.aria-label]="'Regularizar ' + monto(fila.montoRegularizable) + ' de ' + fila.documento"
-                        class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+                        class="rounded-md bg-blue-600 px-2 py-0.5 text-xs font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
                       >
                         Regularizar
                       </button>
-                    } @else {
-                      <span class="text-xs text-slate-600 dark:text-slate-400">-</span>
                     }
                   </td>
                 </tr>
@@ -388,6 +379,21 @@ export class ConsolidadoCuadreWidget implements OnChanges {
     const valor = Number(fila.diferencia);
     if (Math.abs(valor) < 0.005) return montoSoles(0);
     return `${valor > 0 ? '+' : '-'} ${montoSoles(Math.abs(valor))}`;
+  }
+
+  /** Cantidad de pagos recibidos y, si hay, lo regularizado: va en una sola línea junto al monto. */
+  detalleRecibido(fila: ConsolidadoFila): string {
+    const pagos = `${fila.pagosRecibidos} pago${fila.pagosRecibidos === 1 ? '' : 's'}`;
+    return fila.montoRegularizado > 0 ? `${pagos}, reg. ${montoSoles(fila.montoRegularizado)}` : pagos;
+  }
+
+  /** Avisos del cliente que se muestran junto al resultado. */
+  alertas(fila: ConsolidadoFila): string[] {
+    const alertas: string[] = [];
+    if (fila.posiblesDuplicados > 0) alertas.push(`${fila.posiblesDuplicados} posible(s) duplicado(s)`);
+    if (fila.pagosAplicadosDeMas > 0) alertas.push(`${fila.pagosAplicadosDeMas} aplicado(s) de más`);
+    if (fila.resultado === 'SOBRA_EN_SISTEMA' && fila.pagosFinDeMes > 0) alertas.push(`${fila.pagosFinDeMes} de fin de mes`);
+    return alertas;
   }
 
   claseDiferencia(fila: ConsolidadoFila): string {

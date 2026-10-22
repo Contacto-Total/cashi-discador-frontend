@@ -285,16 +285,37 @@ export interface HistorialArchivosCargaRequest {
   tenantId: number;
   carteraId: number;
   subcarteraId: number;
+  /** Solo los archivos donde aparece este cliente. */
+  documento?: string;
+  /** yyyy-MM: solo los archivos con pagos de ese mes. */
+  mes?: string;
   page?: number;
   size?: number;
 }
 
+export type TipoArchivoCarga = 'BCP' | 'OH' | 'CONSOLIDADO';
+
 export interface ArchivoCargaHistorialItem {
   archivoCargaId: number;
   nombreArchivo: string;
-  subidoPorNombre: string;
-  cantidadPagos: number;
+  tipo: TipoArchivoCarga | string;
+  subidoPorNombre: string | null;
   fechaCarga: string;
+  fechaPagoDesde: string | null;
+  fechaPagoHasta: string | null;
+  cantidadPagos: number;
+  montoTotal: number;
+  conciliados: number;
+  montoConciliado: number;
+  /** Incluye los retenidos. */
+  pendientes: number;
+  montoPendiente: number;
+  retenidos: number;
+  noCorresponden: number;
+  montoNoCorresponde: number;
+  /** Solo al buscar por documento. */
+  pagosCliente: number | null;
+  montoCliente: number | null;
 }
 
 export interface ArchivoCargaHistorialPage {
@@ -313,17 +334,22 @@ export interface ArchivoCargaDetalleRequest {
   tenantId: number;
   carteraId: number;
   subcarteraId: number;
+  /** Solo las filas de este cliente. */
+  documento?: string;
 }
+
+export type EstadoFilaArchivo = 'CONCILIADO' | 'PENDIENTE' | 'RETENIDO' | 'NO_CORRESPONDE';
 
 export type TipoRelacionArchivoCarga = 'BCP_A_CUOTA' | 'BCP_A_TRANSACCION';
 
 export interface ArchivoCargaDetalleItem {
-  conciliacionId: number;
+  /** Null si la fila no tiene una conciliación activa. */
+  conciliacionId: number | null;
   archivoCargaId: number;
   nombreArchivo: string;
   fechaCarga: string;
   bcpPagoDetalleId: number;
-  numeroFila: number;
+  numeroFila: number | null;
   documento: string;
   codigoDepositante: string;
   fechaBanco: string;
@@ -331,21 +357,23 @@ export interface ArchivoCargaDetalleItem {
   montoBanco: number;
   banco: string;
   medioAtencion: string;
-  numeroOperacion: string;
-  pagoCuotaId: number;
-  transaccionId: number;
-  montoAplicado: number;
-  tipoRelacion: TipoRelacionArchivoCarga | string;
-  fechaAprobacion: string;
-  cuotaId: number;
-  numeroCuota: number;
-  fechaPromesa: string;
-  montoPromesa: number;
-  estadoCuota: string;
-  gestionId: number;
-  nombreCliente: string;
-  nombreAgente: string;
-  estadoPagoGestion: string;
+  numeroOperacion: string | null;
+  categoria: string | null;
+  estado: EstadoFilaArchivo;
+  pagoCuotaId: number | null;
+  transaccionId: number | null;
+  montoAplicado: number | null;
+  tipoRelacion: TipoRelacionArchivoCarga | string | null;
+  fechaAprobacion: string | null;
+  cuotaId: number | null;
+  numeroCuota: number | null;
+  fechaPromesa: string | null;
+  montoPromesa: number | null;
+  estadoCuota: string | null;
+  gestionId: number | null;
+  nombreCliente: string | null;
+  nombreAgente: string | null;
+  estadoPagoGestion: string | null;
   rutaNivel1: string;
   rutaNivel2: string;
   rutaNivel3: string;

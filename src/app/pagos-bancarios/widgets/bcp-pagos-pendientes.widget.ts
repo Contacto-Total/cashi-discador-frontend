@@ -9,7 +9,9 @@ import {
   TONO_PILL,
   fechaCorta,
   infoCategoria,
-  montoSoles
+  mesDeFecha,
+  montoSoles,
+  nombreMes
 } from '../models/categoria-pago';
 import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
@@ -32,6 +34,21 @@ import { TablaPaginacionWidget } from './tabla-paginacion.widget';
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <app-buscador-documento [inputId]="idPrefix + '-buscar'" [valor]="busqueda()" (valorChange)="buscar($event)"></app-buscador-documento>
+          <div>
+            <label [for]="idPrefix + '-mes'" class="sr-only">Filtrar por mes de la fecha del banco</label>
+            <select
+              [id]="idPrefix + '-mes'"
+              [value]="mes()"
+              (change)="filtrarMes($any($event.target).value)"
+              [disabled]="cargando()"
+              class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+            >
+              <option value="">Todos los meses</option>
+              @for (opcion of mesesDisponibles(); track opcion) {
+                <option [value]="opcion" [selected]="opcion === mes()">{{ nombreMes(opcion) }}</option>
+              }
+            </select>
+          </div>
           <button
             type="button"
             (click)="alternarNoCorresponden()"
@@ -75,10 +92,13 @@ import { TablaPaginacionWidget } from './tabla-paginacion.widget';
         } @else if (noCorresponden().length === 0) {
           <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos marcados como no corresponde en esta subcartera.</p>
         } @else if (noCorrespondenFiltrados().length === 0) {
-          <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos con ese documento.</p>
+          <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos con ese filtro.</p>
         } @else {
           <p class="border-b border-slate-200 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
             Pagos guardados que un supervisor sacó de pendientes porque no corresponden a la gestión de la empresa. El motivo queda en el histórico de correcciones.
+            @if (mes()) {
+              {{ noCorrespondenFiltrados().length }} pago(s) de {{ nombreMes(mes()) }} por {{ monto(totalMonto(noCorrespondenFiltrados())) }}.
+            }
           </p>
           <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
@@ -127,8 +147,13 @@ import { TablaPaginacionWidget } from './tabla-paginacion.widget';
       } @else if (pagos().length === 0) {
         <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes en esta subcartera.</p>
       } @else if (pendientesFiltrados().length === 0) {
-        <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes con ese documento.</p>
+        <p class="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">No hay pagos pendientes con ese filtro.</p>
       } @else {
+        @if (mes()) {
+          <p class="border-b border-slate-200 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
+            {{ pendientesFiltrados().length }} pago(s) de {{ nombreMes(mes()) }} por {{ monto(totalMonto(pendientesFiltrados())) }}.
+          </p>
+        }
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
             <caption class="sr-only">Pagos bancarios pendientes de conciliar</caption>
@@ -294,6 +319,8 @@ export class BcpPagosPendientesWidget implements OnChanges {
   errorNoCorresponde = signal<string | null>(null);
   guardando = signal(false);
   busqueda = signal('');
+  /** Mes yyyy-MM de la fecha del banco; vacío muestra todos. Se comparte entre ambas listas. */
+  mes = signal('');
   /** Página de la lista visible; se comparte entre pendientes y no corresponden. */
   pagina = signal(1);
   /** Botón que abrió el diálogo: recibe el foco al cerrarlo. */
@@ -306,6 +333,7 @@ export class BcpPagosPendientesWidget implements OnChanges {
       this.mensaje.set(null);
       this.verNoCorresponden.set(false);
       this.busqueda.set('');
+      this.mes.set('');
       this.pagina.set(1);
     }
     this.cargar();
@@ -365,8 +393,34 @@ export class BcpPagosPendientesWidget implements OnChanges {
     this.pagina.set(1);
   }
 
+  filtrarMes(mes: string): void {
+    this.mes.set(mes);
+    this.pagina.set(1);
+  }
+
+  /** Meses con pagos en la lista visible, del más reciente al más antiguo; incluye el elegido aunque no tenga pagos. */
+  mesesDisponibles(): string[] {
+    const lista = this.verNoCorresponden() ? this.noCorresponden() : this.pagos();
+    const meses = new Set(lista.map(pago => mesDeFecha(pago.fechaBanco)).filter(Boolean));
+    if (this.mes()) meses.add(this.mes());
+    return [...meses].sort().reverse();
+  }
+
+  totalMonto(pagos: PagoBancoPendiente[]): number {
+    return pagos.reduce((total, pago) => total + Number(pago.montoBanco || 0), 0);
+  }
+
+  nombreMes(mes: string): string {
+    return nombreMes(mes);
+  }
+
+  private coincideFiltros(pago: PagoBancoPendiente): boolean {
+    return coincideDocumento(pago.documento, this.busqueda())
+      && (!this.mes() || mesDeFecha(pago.fechaBanco) === this.mes());
+  }
+
   pendientesFiltrados(): PagoBancoPendiente[] {
-    return this.pagos().filter(pago => coincideDocumento(pago.documento, this.busqueda()));
+    return this.pagos().filter(pago => this.coincideFiltros(pago));
   }
 
   paginaPendientes(): PagoBancoPendiente[] {
@@ -374,7 +428,7 @@ export class BcpPagosPendientesWidget implements OnChanges {
   }
 
   noCorrespondenFiltrados(): PagoBancoPendiente[] {
-    return this.noCorresponden().filter(pago => coincideDocumento(pago.documento, this.busqueda()));
+    return this.noCorresponden().filter(pago => this.coincideFiltros(pago));
   }
 
   paginaNoCorresponden(): PagoBancoPendiente[] {

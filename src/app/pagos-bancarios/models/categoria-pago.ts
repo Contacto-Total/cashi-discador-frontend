@@ -143,6 +143,19 @@ export function aFechaIso(value: unknown): string {
   return text.slice(0, 10);
 }
 
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+/** Mes (yyyy-MM) de una fecha del backend; vacío si no hay fecha. */
+export function mesDeFecha(value: unknown): string {
+  return aFechaIso(value).slice(0, 7);
+}
+
+/** Muestra un mes yyyy-MM como "Septiembre 2026". */
+export function nombreMes(mes: string): string {
+  const [year, month] = mes.split('-').map(Number);
+  return MESES[month - 1] ? `${MESES[month - 1]} ${year}` : mes;
+}
+
 /** Muestra una fecha como dd/MM/yyyy. */
 export function fechaCorta(value: unknown): string {
   const iso = aFechaIso(value);
