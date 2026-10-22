@@ -1,8 +1,79 @@
-<div class="report-container">
-  <div class="report-header">
-    <h2 class="report-title">{{ reportTitle }}</h2>
-  </div>
-  <div class="report-content">
-    <iframe [src]="reportUrl" class="report-iframe" frameborder="0" allowfullscreen></iframe>
-  </div>
+<!-- Mismo molde que la ficha del cliente: el reporte ocupa la tarjeta y, a su lado, las subcarteras, que entran
+     solo si hay ancho. -->
+<div class="font-cashi grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_min(28cqw,26rem)] grid-rows-[minmax(0,1fr)] items-start gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased @max-[70.5rem]/pbi:grid-cols-[minmax(0,1fr)]">
+  <section appTarjeta class="@container/rep flex min-h-0 flex-col self-stretch overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5">
+    <app-page-header class="flex-none" titulo="Reporte Power BI" subtitulo="Indicadores de la cartera publicados en Power BI" [sinRaya]="true"
+                     fila="items-start gap-y-6 [&>div:first-child]:flex-none @max-[42.5rem]/rep:flex-wrap">
+      @if (actual()) {
+        <div class="grid min-w-0 flex-[0_1_29.5rem] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 @max-[42.5rem]/rep:basis-full">
+          <div class="flex min-w-0 flex-col gap-[.3125rem]">
+            <label for="pbi-cli" [class]="ETIQUETA">Cliente</label>
+            <select id="pbi-cli" [class]="LISTA" (change)="elegirCliente($any($event.target).value)">
+              @for (c of clientes(); track c) {
+                <option [value]="c" [selected]="c === actual()?.cliente">{{ c | nombrePropio }}</option>
+              }
+            </select>
+          </div>
+          <div class="flex min-w-0 flex-col gap-[.3125rem]">
+            <label for="pbi-car" [class]="ETIQUETA">Cartera</label>
+            <select id="pbi-car" [class]="LISTA" (change)="elegirCartera($any($event.target).value)">
+              @for (c of carteras(); track c) {
+                <option [value]="c" [selected]="c === actual()?.cartera">{{ c | nombrePropio }}</option>
+              }
+            </select>
+          </div>
+          <div class="flex min-w-0 flex-col gap-[.3125rem]">
+            <label for="pbi-sub" [class]="ETIQUETA">Subcartera</label>
+            <select id="pbi-sub" [class]="LISTA" (change)="elegirSub($any($event.target).value)">
+              @for (s of deLaCartera(); track s.subId) {
+                <option [value]="s.subId" [selected]="s.subId === sub()">{{ s.subcartera | nombrePropio }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      }
+    </app-page-header>
+
+    @if (error()) {
+      <div role="alert" class="mt-[.875rem] flex flex-wrap items-center justify-between gap-3 rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 text-[.875rem] font-medium text-(--ro)">
+        <span>{{ error() }}</span>
+        <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="cargarAmbito()">Reintentar</button>
+      </div>
+    } @else if (cargando()) {
+      <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">Cargando…</p>
+    } @else if (!actual()) {
+      <div class="flex flex-col items-center gap-1 px-4 py-10 text-center text-[.875rem] text-muted-foreground">
+        <span class="font-semibold text-foreground">No tienes carteras con reporte Power BI</span>
+        <span>Los reportes publicados son los de Tramo 3, Tramo 5 y Castigo.</span>
+      </div>
+    } @else {
+      <div class="mt-5 mb-3 flex flex-none flex-wrap items-center gap-3">
+        <div class="mr-auto flex min-w-0 items-center gap-2.5">
+          <span class="overflow-hidden text-[1rem] font-bold text-ellipsis whitespace-nowrap">{{ actual()?.cartera | nombrePropio }}</span>
+          <span class="flex-none rounded-full bg-(--ok-bg) px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]">Publicado</span>
+        </div>
+        <a appBoton="secundario" appBotonAlto="chico" class="flex-none no-underline!" target="_blank" rel="noopener noreferrer" [href]="enlace()">
+          <lucide-angular name="external-link" [size]="16"></lucide-angular>Abrir en Power BI
+        </a>
+        <button type="button" appBoton="secundario" appBotonAlto="icono" class="flex-none" aria-label="Pantalla completa" title="Pantalla completa" (click)="pantallaCompleta()">
+          <lucide-angular name="maximize-2" [size]="16"></lucide-angular>
+        </button>
+      </div>
+
+      <!-- El reporte publicado conserva sus propios colores en ambos temas. -->
+      <div #visor class="relative min-h-[28rem] flex-1 overflow-hidden rounded-[.625rem] border border-border bg-[#eaeaea]">
+        <iframe class="absolute inset-0 block size-full border-0" [src]="reporte()" [title]="'Reporte Power BI ' + (actual()?.cartera ?? '')"
+                allowfullscreen referrerpolicy="strict-origin-when-cross-origin" (load)="cargandoReporte.set(false)"></iframe>
+        <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[rgb(234_234_234/.78)] text-[#323130] transition-opacity duration-200"
+             [ngClass]="cargandoReporte() ? 'opacity-100' : 'opacity-0'" aria-hidden="true">
+          <span class="flex items-center gap-2 text-[.875rem] font-medium">
+            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>Cargando reporte…
+          </span>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- Subcarteras, por cliente. Elegir una equivale a elegirla en el filtro. -->
+  <app-panel-subcarteras class="@max-[70.5rem]/pbi:hidden" [subcarteras]="panelSubs()" [seleccion]="sub()" (elegir)="elegirSub($event)" />
 </div>
