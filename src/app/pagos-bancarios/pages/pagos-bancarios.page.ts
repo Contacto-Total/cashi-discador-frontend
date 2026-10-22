@@ -31,11 +31,12 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
 import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
+import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
   template: `
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
     <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 px-6 pb-6 pt-4">
@@ -126,11 +127,23 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
               Consolidado mensual
             </button>
             <button
+              (click)="activeTab.set('separador')"
+              [class]="activeTab() === 'separador'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="ml-auto whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+              Separar por tramo
+            </button>
+            <button
               (click)="activeTab.set('historial')"
               [class]="activeTab() === 'historial'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="ml-auto whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -998,6 +1011,10 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
         }
       }
 
+      @if (activeTab() === 'separador') {
+        <app-separador-excel-tramo></app-separador-excel-tramo>
+      }
+
       @if (activeTab() === 'historial') {
         <app-historial-cargas-bcp></app-historial-cargas-bcp>
       }
@@ -1071,7 +1088,7 @@ import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
 })
 export class PagosBancariosPage implements OnInit {
   // Tab activa. 'manual' está deprecado: su botón está oculto y no se usa (ver nota en el template).
-  activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial' | 'consolidado'>('masiva');
+  activeTab = signal<'masiva' | 'manual' | 'oh' | 'consolidado' | 'separador' | 'historial'>('masiva');
 
   // Carga Masiva BCP
   selectedFile = signal<File | null>(null);
