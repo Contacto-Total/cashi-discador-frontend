@@ -20,6 +20,7 @@ import {
   ResumenConciliacionCliente,
   ResumenConciliacionClienteRequest
 } from '../models/bcp-archivo.model';
+import { ReporteConciliacionPagina, ReporteConciliacionRequest } from '../models/reporte-conciliacion.model';
 
 @Injectable({
   providedIn: 'root'
@@ -230,6 +231,29 @@ export class BcpPagosService {
   // ============== REPORTES DE CONCILIACIÓN ==============
 
   /**
+   * Página del reporte de conciliación para mostrar en pantalla.
+   */
+  consultarReporteConciliacion(request: ReporteConciliacionRequest): Observable<ReporteConciliacionPagina> {
+    let params = new HttpParams()
+      .set('fechaInicio', request.fechaInicio)
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString())
+      .set('page', request.page.toString())
+      .set('size', request.size.toString());
+    if (request.fechaFin) {
+      params = params.set('fechaFin', request.fechaFin);
+    }
+    if (request.documento?.trim()) {
+      params = params.set('documento', request.documento.trim());
+    }
+    if (request.tipoCaso) {
+      params = params.set('tipoCaso', request.tipoCaso);
+    }
+    return this.http.get<ReporteConciliacionPagina>(`${this.baseUrl}/reporte-conciliacion`, { params });
+  }
+
+  /**
    * Descarga el reporte de conciliación en formato Excel por fecha o rango de fechas
    * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
    * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
@@ -239,16 +263,18 @@ export class BcpPagosService {
     tenantId: number,
     carteraId: number,
     subcarteraId: number,
-    fechaFin?: string
+    fechaFin?: string,
+    documento?: string
   ): Observable<HttpResponse<Blob>> {
     console.log('[BCP] Descargando reporte de conciliación por fecha:', {
       fechaInicio,
       fechaFin,
       tenantId,
       carteraId,
-      subcarteraId
+      subcarteraId,
+      documento
     });
-    return this.descargarArchivoExcelConFiltros('reporte-conciliacion/excel', fechaInicio, tenantId, carteraId, subcarteraId, fechaFin);
+    return this.descargarArchivoExcelConFiltros('reporte-conciliacion/excel', fechaInicio, tenantId, carteraId, subcarteraId, fechaFin, documento);
   }
 
   // /**
@@ -299,7 +325,8 @@ export class BcpPagosService {
     tenantId: number,
     carteraId: number,
     subcarteraId: number,
-    fechaFin?: string
+    fechaFin?: string,
+    documento?: string
   ): Observable<HttpResponse<Blob>> {
     let params = new HttpParams()
       .set('fechaInicio', fechaInicio)
@@ -309,6 +336,9 @@ export class BcpPagosService {
 
     if (fechaFin) {
       params = params.set('fechaFin', fechaFin);
+    }
+    if (documento?.trim()) {
+      params = params.set('documento', documento.trim());
     }
 
     return this.http.get(`${this.baseUrl}/${endpoint}`, {
