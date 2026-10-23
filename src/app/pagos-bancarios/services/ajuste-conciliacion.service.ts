@@ -6,6 +6,8 @@ import {
   ContextoAjuste,
   DesconciliarPagoRequest,
   FichaPagoBanco,
+  FiltroHistorialCambios,
+  HistorialCambios,
   PagoBancoCliente,
   PaginaHistoricoCorreccion,
   ResultadoAjuste,
@@ -38,6 +40,21 @@ export class AjusteConciliacionService {
     return this.http.get<PaginaHistoricoCorreccion>(`${environment.gatewayUrl}/pagos/historico-correcciones`, { params });
   }
 
+  historicoCambios(filtro: FiltroHistorialCambios): Observable<HistorialCambios> {
+    let params = new HttpParams()
+      .set('desde', filtro.desde)
+      .set('hasta', filtro.hasta)
+      .set('pagina', filtro.pagina.toString())
+      .set('tamano', filtro.tamano.toString());
+    if (filtro.tenantId) params = params.set('tenantId', filtro.tenantId.toString());
+    if (filtro.carteraId) params = params.set('carteraId', filtro.carteraId.toString());
+    if (filtro.subcarteraId) params = params.set('subcarteraId', filtro.subcarteraId.toString());
+    if (filtro.usuarioId !== null && filtro.usuarioId !== undefined) params = params.set('usuarioId', filtro.usuarioId.toString());
+    if (filtro.tipoCambio) params = params.set('tipoCambio', filtro.tipoCambio);
+    if (filtro.documento) params = params.set('documento', filtro.documento);
+    return this.http.get<HistorialCambios>(`${this.baseUrl}/historico-cambios`, { params });
+  }
+
   obtenerFicha(pagoId: number, contexto: ContextoAjuste): Observable<FichaPagoBanco> {
     return this.http.get<FichaPagoBanco>(`${this.baseUrl}/pagos/${pagoId}/ficha`, { params: this.params(contexto) });
   }
@@ -48,6 +65,14 @@ export class AjusteConciliacionService {
 
   desconciliar(pagoId: number, contexto: ContextoAjuste, request: DesconciliarPagoRequest): Observable<ResultadoAjuste> {
     return this.http.post<ResultadoAjuste>(`${this.baseUrl}/pagos/${pagoId}/desconciliar`, request, { params: this.params(contexto) });
+  }
+
+  vistaPreviaPagoVoluntario(pagoId: number, contexto: ContextoAjuste): Observable<VistaPreviaAjuste> {
+    return this.http.get<VistaPreviaAjuste>(`${this.baseUrl}/pagos/${pagoId}/pago-voluntario/vista-previa`, { params: this.params(contexto) });
+  }
+
+  registrarPagoVoluntario(pagoId: number, contexto: ContextoAjuste, motivo: string): Observable<ResultadoAjuste> {
+    return this.http.post<ResultadoAjuste>(`${this.baseUrl}/pagos/${pagoId}/pago-voluntario`, { motivo }, { params: this.params(contexto) });
   }
 
   vistaPreviaEliminarVoluntario(pagoCuotaId: number, contexto: ContextoAjuste): Observable<VistaPreviaAjuste> {

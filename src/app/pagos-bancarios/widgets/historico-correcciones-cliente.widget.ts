@@ -1,29 +1,7 @@
 import { Component, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
-import { ContextoAjuste, HistoricoCorreccion } from '../models/ajuste-conciliacion.model';
+import { ContextoAjuste, ETIQUETAS_TIPO_CAMBIO, HistoricoCorreccion } from '../models/ajuste-conciliacion.model';
 import { AjusteConciliacionService } from '../services/ajuste-conciliacion.service';
 
-const TIPOS: Record<string, string> = {
-  MODIFICACION_PAGO_CUOTA: 'Pago del asesor modificado',
-  ELIMINACION_PAGO_CUOTA: 'Pago del asesor eliminado',
-  CREACION_PAGO_CUOTA_CANCELACION: 'Pago creado en una cuota',
-  AMPLIACION_FECHA_CUOTA: 'Vencimiento ampliado',
-  REGULARIZACION_FECHA_CUOTA_CANCELACION: 'Vencimiento ampliado con pago',
-  CREACION_PROMESA_SISTEMA_PAGO_BANCO: 'Promesa del sistema creada',
-  PAGO_VOLUNTARIO_SISTEMA: 'Pago voluntario registrado',
-  REGULARIZACION_PAGO_CUOTA_PAGADA: 'Fecha de pago regularizada',
-  AJUSTE_PAGO_PARCIAL_BANCO: 'Pago parcial del banco',
-  COMPLEMENTO_PAGO_PARTIDO_BANCO: 'Complemento de pago parcial',
-  PAGO_NO_CORRESPONDE: 'Pago marcado No corresponde',
-  PAGO_NO_CORRESPONDE_REVERTIDO: 'Pago vuelto a pendientes',
-  RECALCULO_PAGO_CUMPLIDO: 'Carta de no adeudo recalculada',
-  REGULARIZACION_CONSOLIDADO_BANCO: 'Regularizado desde el consolidado',
-  CAMBIO_PERIODO_BANCO: 'Mes del pago cambiado',
-  DESCONCILIACION_PAGO_BANCO: 'Pago desconciliado',
-  ELIMINACION_PAGO_VOLUNTARIO_SISTEMA: 'Pago voluntario eliminado',
-  ENLACE_MANUAL_PAGO_BANCO: 'Pago enlazado a mano',
-  CAMBIO_SUBCARTERA_PAGO_BANCO: 'Pago movido de subcartera',
-  ANULACION_CARGA_BANCO: 'Carga anulada'
-};
 
 /** Histórico de correcciones del cliente en la subcartera, del más reciente al más antiguo. */
 @Component({
@@ -122,7 +100,7 @@ export class HistoricoCorreccionesClienteWidget implements OnChanges {
   }
 
   tipo(tipo: string | null): string {
-    return (tipo && TIPOS[tipo]) || tipo || 'Corrección';
+    return (tipo && ETIQUETAS_TIPO_CAMBIO[tipo]) || tipo || 'Corrección';
   }
 
   referencias(h: HistoricoCorreccion): string {

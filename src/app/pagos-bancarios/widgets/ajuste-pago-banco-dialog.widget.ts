@@ -10,7 +10,7 @@ import {
 import { TONO_PILL, fechaCorta, infoCategoria, montoSoles } from '../models/categoria-pago';
 import { AjusteConciliacionService } from '../services/ajuste-conciliacion.service';
 
-type Paso = 'ficha' | 'desconciliar' | 'eliminar-voluntario' | 'hecho';
+type Paso = 'ficha' | 'desconciliar' | 'pago-voluntario' | 'eliminar-voluntario' | 'hecho';
 
 const DESTINOS: { valor: DestinoDesconciliacion; titulo: string; detalle: string }[] = [
   {
@@ -191,7 +191,7 @@ const DESTINOS: { valor: DestinoDesconciliacion; titulo: string; detalle: string
             }
 
             <!-- Vista previa de la acción -->
-            @if ((paso() === 'desconciliar' || paso() === 'eliminar-voluntario') && vista(); as v) {
+            @if ((paso() === 'desconciliar' || paso() === 'pago-voluntario' || paso() === 'eliminar-voluntario') && vista(); as v) {
               <section aria-labelledby="ajuste-cambios">
                 <h4 id="ajuste-cambios" class="text-sm font-semibold text-slate-900 dark:text-white">Qué va a cambiar</h4>
                 @if (v.bcpPagoDetalleId) {
@@ -208,6 +208,10 @@ const DESTINOS: { valor: DestinoDesconciliacion; titulo: string; detalle: string
                   }
                   @for (p of v.pagosVoluntariosAEliminar; track p.pagoCuotaId) {
                     <li class="text-red-800 dark:text-red-300">Se elimina el pago voluntario del sistema del {{ fecha(p.fechaPago) }} por {{ monto(p.montoPago) }}: gestión {{ p.gestionId }}, cuota {{ p.cuotaId }}, pago cuota {{ p.pagoCuotaId }}{{ p.gestionCancelacionId ? ' y la gestión CANCELACION ' + p.gestionCancelacionId : '' }}.</li>
+                  }
+                  @if (paso() === 'pago-voluntario') {
+                    <li>Se crea una gestión PAGO VOLUNTARIO de SYS CASHI con su cuota, su pago y su CANCELACION, con la fecha y el monto del banco.</li>
+                    <li>El pago del banco queda conciliado con ese pago voluntario (categoría Pago voluntario).</li>
                   }
                   @if (v.bcpPagoDetalleId && v.periodoNuevo !== v.periodoActual) {
                     <li>El pago pasa a contar en {{ periodo(v.periodoNuevo) }} (estaba en {{ periodo(v.periodoActual) }}).</li>
@@ -271,10 +275,10 @@ const DESTINOS: { valor: DestinoDesconciliacion; titulo: string; detalle: string
 
                     <div class="flex justify-end gap-2">
                       <button type="button" (click)="volver()" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
-                        {{ paso() === 'desconciliar' ? 'Volver a la ficha' : 'Cancelar' }}
+                        {{ paso() === 'desconciliar' && ficha() ? 'Volver a la ficha' : 'Cancelar' }}
                       </button>
                       <button type="submit" [disabled]="!puedeConfirmar()" class="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-800">
-                        {{ guardando() ? 'Aplicando...' : (paso() === 'desconciliar' ? 'Desconciliar' : 'Eliminar pago voluntario') }}
+                        {{ guardando() ? 'Aplicando...' : textoConfirmar() }}
                       </button>
                     </div>
                   </form>
@@ -293,8 +297,8 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
   @Input() pagoBancoId: number | null = null;
   @Input() pagoVoluntarioId: number | null = null;
   @Input() contexto: ContextoAjuste | null = null;
-  /** Con 'desconciliar', abre directo en la vista previa de desconciliar (sin pasar por la ficha). */
-  @Input() accionInicial: 'ficha' | 'desconciliar' = 'ficha';
+  /** Abre directo en la vista previa de esa acción (sin pasar por la ficha). */
+  @Input() accionInicial: 'ficha' | 'desconciliar' | 'pago-voluntario' = 'ficha';
   @Output() cerrado = new EventEmitter<{ huboCambios: boolean; documento: string | null }>();
 
   readonly destinos = DESTINOS;
@@ -320,6 +324,10 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
       this.abierto.set(true);
       this.cargarFicha();
       if (this.accionInicial === 'desconciliar') this.irADesconciliar();
+      if (this.accionInicial === 'pago-voluntario') {
+        this.paso.set('pago-voluntario');
+        this.cargarVista();
+      }
     } else if (this.pagoVoluntarioId) {
       this.abierto.set(true);
       this.paso.set('eliminar-voluntario');
@@ -332,6 +340,7 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
   titulo(): string {
     switch (this.paso()) {
       case 'desconciliar': return 'Desconciliar pago del banco';
+      case 'pago-voluntario': return 'Registrar como pago voluntario y conciliar';
       case 'eliminar-voluntario': return 'Eliminar pago voluntario sin banco';
       case 'hecho': return 'Ajuste aplicado';
       default: return 'Ficha del pago bancario';
@@ -343,8 +352,16 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
     this.cargarVista();
   }
 
+  textoConfirmar(): string {
+    switch (this.paso()) {
+      case 'desconciliar': return 'Desconciliar';
+      case 'pago-voluntario': return 'Registrar y conciliar';
+      default: return 'Eliminar pago voluntario';
+    }
+  }
+
   volver(): void {
-    if (this.paso() === 'desconciliar') {
+    if (this.paso() === 'desconciliar' && this.ficha()) {
       this.paso.set('ficha');
       this.vista.set(null);
       this.error.set(null);
@@ -368,7 +385,9 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
     const motivo = this.motivo().trim();
     const peticion = this.paso() === 'desconciliar'
       ? this.ajusteService.desconciliar(this.pagoBancoId!, this.contexto, { destino: this.destino()!, motivo })
-      : this.ajusteService.eliminarVoluntario(this.pagoVoluntarioId!, this.contexto, motivo);
+      : this.paso() === 'pago-voluntario'
+        ? this.ajusteService.registrarPagoVoluntario(this.pagoBancoId!, this.contexto, motivo)
+        : this.ajusteService.eliminarVoluntario(this.pagoVoluntarioId!, this.contexto, motivo);
 
     peticion.subscribe({
       next: resultado => {
@@ -416,6 +435,8 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
     if (!this.contexto) return;
     const peticion = this.paso() === 'desconciliar' && this.pagoBancoId
       ? this.ajusteService.vistaPreviaDesconciliar(this.pagoBancoId, this.contexto)
+      : this.paso() === 'pago-voluntario' && this.pagoBancoId
+        ? this.ajusteService.vistaPreviaPagoVoluntario(this.pagoBancoId, this.contexto)
       : this.pagoVoluntarioId
         ? this.ajusteService.vistaPreviaEliminarVoluntario(this.pagoVoluntarioId, this.contexto)
         : null;

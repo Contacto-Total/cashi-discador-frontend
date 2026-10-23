@@ -9,7 +9,7 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
 import { ConsolidadoBancoService } from '../services/consolidado-banco.service';
 import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
 
-type Accion = 'ficha' | 'desconciliar' | 'resolver' | 'noCorresponde' | 'restaurar' | 'cambiarPeriodo';
+type Accion = 'ficha' | 'desconciliar' | 'pagoVoluntario' | 'resolver' | 'noCorresponde' | 'restaurar' | 'cambiarPeriodo';
 
 interface OpcionMenu {
   accion: Accion;
@@ -245,7 +245,7 @@ export class PagosBancoClienteWidget implements OnChanges {
   readonly posicionMenu = signal<{ top: number | null; bottom: number | null; right: number }>({ top: null, bottom: null, right: 0 });
 
   readonly ajustePagoId = signal<number | null>(null);
-  readonly ajusteAccion = signal<'ficha' | 'desconciliar'>('ficha');
+  readonly ajusteAccion = signal<'ficha' | 'desconciliar' | 'pago-voluntario'>('ficha');
 
   readonly dialogo = signal<{ accion: Accion; pago: PagoBancoCliente } | null>(null);
   readonly motivo = signal('');
@@ -301,6 +301,14 @@ export class PagosBancoClienteWidget implements OnChanges {
         ayuda: a.desconciliar ? 'Muestra lo que va a cambiar antes de aplicar.' : a.motivoNoDesconciliar,
         peligro: true
       });
+      opciones.push({
+        accion: 'pagoVoluntario',
+        label: 'Registrar como pago voluntario y conciliar...',
+        disponible: a.pagoVoluntario,
+        ayuda: a.pagoVoluntario
+          ? 'Para un pago sin pago del asesor que calce. Sirve aunque el cliente ya no esté en la subcartera.'
+          : 'Solo para pagos sin conciliar.'
+      });
     }
     opciones.push({
       accion: 'resolver',
@@ -333,6 +341,10 @@ export class PagosBancoClienteWidget implements OnChanges {
       case 'ficha':
       case 'desconciliar':
         this.ajusteAccion.set(accion);
+        this.ajustePagoId.set(pago.id);
+        break;
+      case 'pagoVoluntario':
+        this.ajusteAccion.set('pago-voluntario');
         this.ajustePagoId.set(pago.id);
         break;
       case 'resolver':

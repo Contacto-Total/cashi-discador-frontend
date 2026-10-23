@@ -48,6 +48,19 @@ export interface ConsolidadoFila {
   pagosInicioMesSiguiente?: PagoInicioMesSiguiente[];
   resultado: ResultadoCuadre;
   montoRegularizable: number;
+  /** Si no cuadra: el mismo cliente en otro tramo del proveedor en el periodo. */
+  otrosTramos?: OtroTramoCuadre[];
+}
+
+export interface OtroTramoCuadre {
+  subcarteraId: number;
+  subcartera: string;
+  /** Monto con que lo trae el consolidado de ese tramo en el periodo (otra OC del mismo mes). */
+  montoConsolidado: number | null;
+  /** Pagos suyos cargados en ese tramo que cuentan en el periodo. */
+  montoCargado: number | null;
+  /** Hoy el cliente está en ese tramo. */
+  clienteEstaHoy: boolean;
 }
 
 export interface PagoInicioMesSiguiente {
