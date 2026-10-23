@@ -177,6 +177,7 @@ import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '.
         [subcarteraId]="selectedSubPortfolioId"
         (close)="cerrarResumenCliente()"
         (corregirCuota)="abrirCorreccionCuota($event)"
+        (ajustado)="abrirResumenCliente($event)"
       ></app-cliente-resumen-conciliacion-drawer>
 
       <app-pago-pendiente-controles-dialog
