@@ -1074,6 +1074,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
         [carteraId]="resumenCliente()?.carteraId || selectedPortfolioId || selectedPortfolioIdOh"
         [subcarteraId]="resumenCliente()?.subcarteraId || selectedSubPortfolioId || selectedSubPortfolioIdOh"
         (close)="cerrarResumenConciliacion()"
+        (ajustado)="onAjusteResumen()"
       ></app-cliente-resumen-conciliacion-drawer>
 
       <app-pago-pendiente-controles-dialog
@@ -1361,6 +1362,12 @@ export class PagosBancariosPage implements OnInit {
 
   cerrarResumenConciliacion(): void {
     this.resumenDrawerOpen.set(false);
+  }
+
+  /** Un ajuste fino (desconciliar, eliminar pago voluntario) cambió el cliente y puede mover pagos a pendientes. */
+  onAjusteResumen(): void {
+    this.refrescarResumenConciliacion();
+    this.refrescoPendientes.update(valor => valor + 1);
   }
 
   refrescarResumenConciliacion(): void {

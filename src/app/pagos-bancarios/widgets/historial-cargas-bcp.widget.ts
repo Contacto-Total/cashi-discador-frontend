@@ -18,6 +18,8 @@ import { TONO_PILL, TonoCategoria, fechaCorta, infoCategoria, montoSoles } from 
 import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
 import { TablaPaginacionWidget } from './tabla-paginacion.widget';
+import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
+import { AuthService } from '../../core/services/auth.service';
 import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-conciliacion-drawer.widget';
 
 type FiltroEstado = EstadoFilaArchivo | 'TODOS';
@@ -42,7 +44,7 @@ const TIPOS_ARCHIVO: Record<string, string> = {
 @Component({
   selector: 'app-historial-cargas-bcp',
   standalone: true,
-  imports: [CommonModule, FormsModule, A11yModule, BuscadorDocumentoWidget, TablaPaginacionWidget, ClienteResumenConciliacionDrawerWidget],
+  imports: [CommonModule, FormsModule, A11yModule, BuscadorDocumentoWidget, TablaPaginacionWidget, ClienteResumenConciliacionDrawerWidget, AjustePagoBancoDialogWidget],
   template: `
     <div class="space-y-4">
       <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="historial-titulo">
@@ -336,6 +338,16 @@ const TIPOS_ARCHIVO: Record<string, string> = {
                         @if (row.numeroOperacion) {
                           <span class="block text-[11px] text-slate-600 dark:text-slate-400">Op. {{ row.numeroOperacion }}</span>
                         }
+                        @if (esAdmin && row.bcpPagoDetalleId) {
+                          <button
+                            type="button"
+                            (click)="fichaPagoId.set(row.bcpPagoDetalleId)"
+                            [attr.aria-label]="'Abrir ficha del pago bancario ' + row.bcpPagoDetalleId"
+                            class="mt-0.5 block rounded text-[11px] font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-200"
+                          >
+                            Ficha Pb {{ row.bcpPagoDetalleId }}
+                          </button>
+                        }
                       </td>
                       <td class="px-2 py-1">
                         <span class="inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold leading-tight" [class]="pillEstado(row.estado)">{{ etiquetaEstado(row) }}</span>
@@ -368,7 +380,14 @@ const TIPOS_ARCHIVO: Record<string, string> = {
       [carteraId]="selectedPortfolioId || null"
       [subcarteraId]="selectedSubPortfolioId || null"
       (close)="resumenAbierto.set(false)"
+      (ajustado)="abrirResumen($event)"
     ></app-cliente-resumen-conciliacion-drawer>
+
+    <app-ajuste-pago-banco-dialog
+      [pagoBancoId]="fichaPagoId()"
+      [contexto]="hasContext() ? contextoAjuste : null"
+      (cerrado)="onAjusteCerrado($event)"
+    ></app-ajuste-pago-banco-dialog>
   `
 })
 export class HistorialCargasBcpWidget implements OnInit {
@@ -411,6 +430,10 @@ export class HistorialCargasBcpWidget implements OnInit {
   paginaDetalle = signal(1);
   /** Botón que abrió el detalle: recibe el foco al cerrarlo. */
   private origenDetalle: HTMLElement | null = null;
+
+  /** Ajustes finos desde el detalle del archivo: solo administradores. */
+  readonly esAdmin = inject(AuthService).hasAnyRole('ADMIN');
+  fichaPagoId = signal<number | null>(null);
 
   resumenAbierto = signal(false);
   cargandoResumen = signal(false);
@@ -589,6 +612,25 @@ export class HistorialCargasBcpWidget implements OnInit {
         this.detalleError.set('No se pudo cargar el detalle del archivo.');
         this.isLoadingDetalle.set(false);
       }
+    });
+  }
+
+  get contextoAjuste(): { tenantId: number; carteraId: number; subcarteraId: number } {
+    return this.contexto();
+  }
+
+  onAjusteCerrado(evento: { huboCambios: boolean; documento: string | null }): void {
+    this.fichaPagoId.set(null);
+    if (evento.huboCambios) this.recargarDetalle();
+  }
+
+  /** Vuelve a leer el detalle abierto sin cambiar filtros ni página. */
+  private recargarDetalle(): void {
+    const archivo = this.selectedArchivo();
+    if (!archivo || !this.detalleOpen() || !this.hasContext()) return;
+    this.bcpService.obtenerDetalleArchivoCarga(archivo.archivoCargaId, this.contexto()).subscribe({
+      next: detalle => this.detalle.set(detalle || []),
+      error: () => this.detalleError.set('No se pudo actualizar el detalle del archivo.')
     });
   }
 

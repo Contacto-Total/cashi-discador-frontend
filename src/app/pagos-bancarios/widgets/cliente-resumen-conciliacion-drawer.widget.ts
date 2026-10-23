@@ -7,11 +7,13 @@ import { CommonModule } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { AdjuntoResumenConciliacion, CuotaResumenConciliacion, PagoResumenConciliacion, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 import { BcpPagosService } from '../services/bcp-pagos.service';
+import { AuthService } from '../../core/services/auth.service';
+import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
 
 @Component({
   selector: 'app-cliente-resumen-conciliacion-drawer',
   standalone: true,
-  imports: [CommonModule, A11yModule],
+  imports: [CommonModule, A11yModule, AjustePagoBancoDialogWidget],
   template: `
     @if (open) {
       <div
@@ -128,6 +130,12 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                       @if (hasValue(promesa.rutaTipificacion)) {
                         <p class="mb-1.5 truncate text-[10px] text-slate-500 dark:text-slate-400">{{ promesa.rutaTipificacion }}</p>
                       }
+                      @if (permiteAjustes() && pagoVoluntarioSinBanco(promesa); as pago) {
+                        <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[10px] text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+                          <span>Pago voluntario del sistema sin pago del banco enlazado.</span>
+                          <button type="button" (click)="abrirEliminarVoluntario(pago.pagoCuotaId)" class="rounded-md border border-red-600 bg-white px-2 py-0.5 font-bold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-400 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950/30">Eliminar...</button>
+                        </div>
+                      }
 
                       <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
                         <table class="w-full table-fixed text-[10px] leading-tight">
@@ -182,7 +190,11 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                           {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
                                         </span>
                                         @for (id of getPagoBancarioIds(cuota); track id) {
-                                          <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Pb {{ id }}</span>
+                                          @if (permiteAjustes()) {
+                                            <button type="button" (click)="$event.stopPropagation(); abrirFichaPago(id)" [attr.aria-label]="'Abrir ficha del pago bancario ' + id" title="Ficha del pago bancario (ajustes finos)" class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 underline underline-offset-2 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70">Pb {{ id }}</button>
+                                          } @else {
+                                            <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Pb {{ id }}</span>
+                                          }
                                         }
                                         @for (operacion of getOperaciones(cuota); track operacion) {
                                           <span class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Op. {{ operacion }}</span>
@@ -427,6 +439,13 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
         </div>
       }
     }
+
+    <app-ajuste-pago-banco-dialog
+      [pagoBancoId]="fichaPagoId"
+      [pagoVoluntarioId]="voluntarioPagoCuotaId"
+      [contexto]="contextoRecalculo()"
+      (cerrado)="onAjusteCerrado($event)"
+    ></app-ajuste-pago-banco-dialog>
   `
 })
 export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDestroy {
@@ -434,6 +453,7 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   private bcpPagosService = inject(BcpPagosService);
   private sanitizer = inject(DomSanitizer);
   private menuLateral = inject(MenuLateralService);
+  private authService = inject(AuthService);
   private menuPlegado = false;
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
@@ -452,6 +472,12 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
    */
   @Input() permiteCorregir = false;
   @Output() corregirCuota = new EventEmitter<{ promesa: PromesaResumenConciliacion; cuota: CuotaResumenConciliacion }>();
+  /** Un ajuste fino cambió los datos del cliente: la pantalla debe volver a cargar el resumen. */
+  @Output() ajustado = new EventEmitter<string>();
+
+  /** Ajustes finos (ficha del pago bancario, desconciliar, eliminar pago voluntario): solo administradores. */
+  fichaPagoId: number | null = null;
+  voluntarioPagoCuotaId: number | null = null;
 
   detallePromesa: PromesaResumenConciliacion | null = null;
   detalleCuota: CuotaResumenConciliacion | null = null;
@@ -516,7 +542,40 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
     return this.documento || this.resumen?.documento || null;
   }
 
-  private contextoRecalculo(): { tenantId: number; carteraId: number; subcarteraId: number } | null {
+  permiteAjustes(): boolean {
+    return this.authService.hasAnyRole('ADMIN') && !!this.contextoRecalculo();
+  }
+
+  /** Gestión PAGO VOLUNTARIO del sistema cuyo pago no tiene pago del banco: queda suelta y bloquea el próximo enlace. */
+  pagoVoluntarioSinBanco(promesa: PromesaResumenConciliacion): PagoResumenConciliacion | null {
+    const ruta = String(promesa.rutaTipificacion || '').toUpperCase();
+    if (!ruta.includes('PAGO VOLUNTARIO')) return null;
+    const pagos = (promesa.cuotas || []).flatMap(cuota => cuota.pagos || []);
+    if (pagos.length !== 1) return null;
+    const pago = pagos[0];
+    return !pago.verificadoBanco && !pago.pagoBancarioId ? pago : null;
+  }
+
+  abrirFichaPago(pagoId: number): void {
+    this.voluntarioPagoCuotaId = null;
+    this.fichaPagoId = pagoId;
+  }
+
+  abrirEliminarVoluntario(pagoCuotaId: number): void {
+    this.fichaPagoId = null;
+    this.voluntarioPagoCuotaId = pagoCuotaId;
+  }
+
+  onAjusteCerrado(evento: { huboCambios: boolean; documento: string | null }): void {
+    this.fichaPagoId = null;
+    this.voluntarioPagoCuotaId = null;
+    const documento = evento.documento || this.documentoActual();
+    if (evento.huboCambios && documento) {
+      this.ajustado.emit(documento);
+    }
+  }
+
+  contextoRecalculo(): { tenantId: number; carteraId: number; subcarteraId: number } | null {
     const tenantId = Number(this.tenantId ?? this.resumen?.tenantId);
     const carteraId = Number(this.carteraId ?? this.resumen?.carteraId);
     const subcarteraId = Number(this.subcarteraId ?? this.resumen?.subcarteraId);
@@ -551,6 +610,8 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    // El diálogo de ajuste maneja su propio Escape.
+    if (this.fichaPagoId || this.voluntarioPagoCuotaId) return;
     // El visor se abre encima del detalle: se cierra primero.
     if (this.visorVoucherCuota) {
       this.cerrarVisorVoucher();

@@ -175,6 +175,7 @@ import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-concil
       [carteraId]="contexto()?.carteraId ?? null"
       [subcarteraId]="contexto()?.subcarteraId ?? null"
       (close)="resumenAbierto.set(false)"
+      (ajustado)="onAjustado($event)"
     ></app-cliente-resumen-conciliacion-drawer>
   `
 })
@@ -281,6 +282,12 @@ export class ConsolidadoBancoWidget {
 
   onRegularizado(texto: string): void {
     this.mensaje.set(texto);
+    this.cargarCuadre();
+  }
+
+  /** Un ajuste fino cambia lo recibido del cliente: se recargan el resumen y el cuadre. */
+  onAjustado(documento: string): void {
+    this.abrirResumen(documento);
     this.cargarCuadre();
   }
 
