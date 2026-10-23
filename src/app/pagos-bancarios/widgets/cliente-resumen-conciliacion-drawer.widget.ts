@@ -643,6 +643,9 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
       this.cerrarVisorVoucher();
     } else if (this.detalleCuota) {
       this.cerrarDetallePagos();
+    } else if (this.open && this.mode === 'drawer' && !document.querySelector('[role="dialog"][aria-modal="true"]')) {
+      // Como panel lateral también se cierra con Escape, salvo que haya un diálogo abierto encima.
+      this.close.emit();
     }
   }
 

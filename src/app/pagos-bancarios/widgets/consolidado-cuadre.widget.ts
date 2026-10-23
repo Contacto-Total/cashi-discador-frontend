@@ -5,6 +5,7 @@ import { ConsolidadoBancoService } from '../services/consolidado-banco.service';
 import {
   ConsolidadoContexto,
   ConsolidadoFila,
+  OtroTramoCuadre,
   ORDEN_RESULTADOS,
   PagoInicioMesSiguiente,
   RESULTADOS_CUADRE,
@@ -130,6 +131,9 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'OTRO_TRAMO' | 'TODO
                         <span class="whitespace-nowrap rounded border border-amber-200 px-1.5 text-[11px] leading-tight text-amber-800 dark:border-amber-800 dark:text-amber-300" title="Pagos con fecha del mes siguiente que el banco cuenta en este periodo">{{ fila.pagosDeOtroMes }} con fecha del mes siguiente</span>
                       }
                       @for (tramo of fila.otrosTramos || []; track tramo.subcarteraId) {
+                        @if (posibleDuplicado(fila, tramo)) {
+                          <span class="whitespace-nowrap rounded border border-red-300 bg-red-50 px-1.5 text-[11px] font-semibold leading-tight text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200" title="El banco no lo trae en este tramo y el mismo monto está cargado en el otro: el de aquí sobra. Desconcilia este pago como Duplicado.">Posible duplicado: ya cargado en {{ tramo.subcartera }}</span>
+                        }
                         @if (tramo.montoConsolidado != null) {
                           <span class="whitespace-nowrap rounded border border-violet-300 bg-violet-50 px-1.5 text-[11px] leading-tight text-violet-900 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-200" title="El consolidado de ese tramo en el mismo periodo trae a este cliente">En el consolidado de {{ tramo.subcartera }}: {{ monto(tramo.montoConsolidado) }}</span>
                         }
@@ -400,6 +404,15 @@ export class ConsolidadoCuadreWidget implements OnChanges {
             : f.resultado === filtro))
       && coincideDocumento(f.documento, texto));
   });
+
+  /**
+   * El banco no trae al cliente en este tramo y lo recibido aquí es exactamente lo que tiene cargado en otro tramo:
+   * el pago se cargó en los dos y el de aquí sobra.
+   */
+  posibleDuplicado(fila: ConsolidadoFila, tramo: OtroTramoCuadre): boolean {
+    if (fila.resultado !== 'NO_EN_CONSOLIDADO' || tramo.montoCargado == null) return false;
+    return Math.abs(Number(tramo.montoCargado) - Number(fila.montoRecibido || 0)) <= 0.5;
+  }
 
   cambiarOcultarCeros(valor: boolean): void {
     this.ocultarCeros.set(valor);
