@@ -3,12 +3,30 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { FormatService } from '@/shared/services/format.service';
 import { MenuLateralService } from '@/shared/services/menu-lateral.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
+import { Router } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
 import { AdjuntoResumenConciliacion, CuotaResumenConciliacion, PagoResumenConciliacion, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 import { BcpPagosService } from '../services/bcp-pagos.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
+
+/**
+ * URL de Corrección de pagos con el cliente (y opcionalmente la ficha de un pago bancario) ya cargados.
+ * Los ajustes se hacen solo allí: las demás pantallas la abren en otra pestaña para no perder lo que tienen.
+ */
+export function urlCorreccionPagos(
+  router: Router,
+  location: Location,
+  contexto: { tenantId: number; carteraId: number; subcarteraId: number },
+  documento: string | null,
+  pb?: number | null
+): string {
+  const queryParams: Record<string, string | number> = { ...contexto };
+  if (documento) queryParams['documento'] = documento;
+  if (pb) queryParams['pb'] = pb;
+  return location.prepareExternalUrl(router.serializeUrl(router.createUrlTree(['/correccion-pagos'], { queryParams })));
+}
 
 @Component({
   selector: 'app-cliente-resumen-conciliacion-drawer',
@@ -38,6 +56,11 @@ import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
                   }
                 </p>
               </div>
+              @if (!permiteCorregir && contextoRecalculo() && documentoActual()) {
+                <a [href]="enlaceCorreccion()" target="_blank" rel="noopener" class="rounded-lg border border-emerald-600 px-2 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-950/30">
+                  Corregir pagos <span class="sr-only">(se abre en otra pestaña)</span><span aria-hidden="true">↗</span>
+                </a>
+              }
               @if (mode === 'drawer') {
                 <button type="button" (click)="close.emit()" class="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
               }
@@ -130,10 +153,10 @@ import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
                       @if (hasValue(promesa.rutaTipificacion)) {
                         <p class="mb-1.5 truncate text-[10px] text-slate-500 dark:text-slate-400">{{ promesa.rutaTipificacion }}</p>
                       }
-                      @if (permiteAjustes() && pagoVoluntarioSinBanco(promesa); as pago) {
+                      @if ((permiteCorregir ? permiteAjustes() : !!contextoRecalculo()) && pagoVoluntarioSinBanco(promesa); as pago) {
                         <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[10px] text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
                           <span>Pago voluntario del sistema sin pago del banco enlazado.</span>
-                          <button type="button" (click)="abrirEliminarVoluntario(pago.pagoCuotaId)" class="rounded-md border border-red-600 bg-white px-2 py-0.5 font-bold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-400 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950/30">Eliminar...</button>
+                          <button type="button" (click)="abrirEliminarVoluntario(pago.pagoCuotaId)" [attr.aria-label]="permiteCorregir ? 'Eliminar pago voluntario sin banco' : 'Corregir en Corrección de pagos (otra pestaña)'" class="rounded-md border border-red-600 bg-white px-2 py-0.5 font-bold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-400 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950/30">{{ permiteCorregir ? 'Eliminar...' : 'Corregir ↗' }}</button>
                         </div>
                       }
 
@@ -190,8 +213,8 @@ import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
                                           {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
                                         </span>
                                         @for (id of getPagoBancarioIds(cuota); track id) {
-                                          @if (permiteAjustes()) {
-                                            <button type="button" (click)="$event.stopPropagation(); abrirFichaPago(id)" [attr.aria-label]="'Abrir ficha del pago bancario ' + id" title="Ficha del pago bancario (ajustes finos)" class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 underline underline-offset-2 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70">Pb {{ id }}</button>
+                                          @if (permiteCorregir ? permiteAjustes() : !!contextoRecalculo()) {
+                                            <button type="button" (click)="$event.stopPropagation(); abrirFichaPago(id)" [attr.aria-label]="permiteCorregir ? 'Abrir ficha del pago bancario ' + id : 'Abrir el pago bancario ' + id + ' en Corrección de pagos (otra pestaña)'" [title]="permiteCorregir ? 'Ficha del pago bancario (ajustes finos)' : 'Abrir en Corrección de pagos'" class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 underline underline-offset-2 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70">Pb {{ id }}</button>
                                           } @else {
                                             <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Pb {{ id }}</span>
                                           }
@@ -454,6 +477,8 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   private sanitizer = inject(DomSanitizer);
   private menuLateral = inject(MenuLateralService);
   private authService = inject(AuthService);
+  private router = inject(Router);
+  private location = inject(Location);
   private menuPlegado = false;
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
@@ -538,7 +563,7 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
     });
   }
 
-  private documentoActual(): string | null {
+  documentoActual(): string | null {
     return this.documento || this.resumen?.documento || null;
   }
 
@@ -557,13 +582,28 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   }
 
   abrirFichaPago(pagoId: number): void {
+    if (!this.permiteCorregir) {
+      window.open(this.enlaceCorreccion(pagoId), '_blank', 'noopener');
+      return;
+    }
     this.voluntarioPagoCuotaId = null;
     this.fichaPagoId = pagoId;
   }
 
   abrirEliminarVoluntario(pagoCuotaId: number): void {
+    if (!this.permiteCorregir) {
+      window.open(this.enlaceCorreccion(), '_blank', 'noopener');
+      return;
+    }
     this.fichaPagoId = null;
     this.voluntarioPagoCuotaId = pagoCuotaId;
+  }
+
+  /** Corrección de pagos con este cliente cargado; con pb, abre además la ficha de ese pago. */
+  enlaceCorreccion(pb?: number): string {
+    const contexto = this.contextoRecalculo();
+    if (!contexto) return '';
+    return urlCorreccionPagos(this.router, this.location, contexto, this.documentoActual(), pb);
   }
 
   onAjusteCerrado(evento: { huboCambios: boolean; documento: string | null }): void {

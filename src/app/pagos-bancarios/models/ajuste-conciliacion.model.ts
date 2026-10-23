@@ -124,3 +124,66 @@ export interface ResultadoAjuste {
   pagoCumplido?: boolean | null;
   avisoPagoCumplido?: string | null;
 }
+
+/** Pago del banco de un cliente, con lo que tiene enlazado y las acciones que admite. */
+export interface PagoBancoCliente {
+  id: number;
+  fechaBanco: string | null;
+  montoBanco: number | null;
+  banco: string | null;
+  numeroOperacion: string | null;
+  categoria: string | null;
+  procesado: boolean;
+  revisionManual: boolean;
+  periodoBanco: string | null;
+  periodoOrigen: string | null;
+  grupoId: number | null;
+  archivoCargaId: number | null;
+  nombreArchivo: string | null;
+  fechaCarga: string | null;
+  enlaces: EnlacePagoBanco[];
+  acciones: AccionesPagoBanco;
+}
+
+export interface EnlacePagoBanco {
+  pagoCuotaId: number;
+  cuotaId: number;
+  numeroCuota: number | null;
+  gestionId: number;
+  rutaGestion: string | null;
+  agente: string | null;
+  fechaPago: string | null;
+  montoPago: number;
+  pagoVoluntarioSistema: boolean;
+}
+
+export interface AccionesPagoBanco {
+  desconciliar: boolean;
+  motivoNoDesconciliar: string | null;
+  resolver: boolean;
+  noCorresponde: boolean;
+  restaurar: boolean;
+  cambiarPeriodo: boolean;
+}
+
+/** Fila de historico_correccion (GET /pagos/historico-correcciones). */
+export interface HistoricoCorreccion {
+  id: number;
+  supervisorNombre: string | null;
+  fechaCambio: string | null;
+  tipoCambio: string | null;
+  detalleAnterior: string | null;
+  detalleNuevo: string | null;
+  observacion: string | null;
+  gestionPromesaId: number | null;
+  cuotaId: number | null;
+  pagoCuotaId: number | null;
+  bcpPagoDetalleId: number | null;
+}
+
+export interface PaginaHistoricoCorreccion {
+  content: HistoricoCorreccion[];
+  totalElements: number;
+  number: number;
+  last: boolean;
+}

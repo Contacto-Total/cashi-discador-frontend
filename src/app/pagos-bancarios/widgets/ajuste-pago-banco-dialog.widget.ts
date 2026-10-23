@@ -293,6 +293,8 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
   @Input() pagoBancoId: number | null = null;
   @Input() pagoVoluntarioId: number | null = null;
   @Input() contexto: ContextoAjuste | null = null;
+  /** Con 'desconciliar', abre directo en la vista previa de desconciliar (sin pasar por la ficha). */
+  @Input() accionInicial: 'ficha' | 'desconciliar' = 'ficha';
   @Output() cerrado = new EventEmitter<{ huboCambios: boolean; documento: string | null }>();
 
   readonly destinos = DESTINOS;
@@ -317,6 +319,7 @@ export class AjustePagoBancoDialogWidget implements OnChanges {
     if (this.pagoBancoId) {
       this.abierto.set(true);
       this.cargarFicha();
+      if (this.accionInicial === 'desconciliar') this.irADesconciliar();
     } else if (this.pagoVoluntarioId) {
       this.abierto.set(true);
       this.paso.set('eliminar-voluntario');
