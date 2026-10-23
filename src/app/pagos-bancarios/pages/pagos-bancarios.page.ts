@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -1755,6 +1755,15 @@ export class PagosBancariosPage implements OnInit {
   }
 
   private getPrevalidacionOhConDetalle(): PrevalidacionArchivoBcp[] {
+    return this.prevalidacionOhConDetalle();
+  }
+
+  /**
+   * Filas de la prevalidación OH completadas con el detalle del archivo. Se calculan una vez por resultado:
+   * si se rearmaran en cada detección de cambios, la tabla recibiría filas nuevas cada vez y perdería la marca
+   * "Retener para revisión" y la confirmación de alertas (el botón Guardar no se habilitaba).
+   */
+  private readonly prevalidacionOhConDetalle = computed<PrevalidacionArchivoBcp[]>(() => {
     const resultado: any = this.resultadoOh();
     const detalles = resultado?.detalles || [];
     const prevalidacion = this.getPrevalidacionOhOriginal();
@@ -1771,7 +1780,7 @@ export class PagosBancariosPage implements OnInit {
         __prevalidacionIndex: index
       };
     });
-  }
+  });
 
   getPrevalidacionOhOriginal(): PrevalidacionArchivoBcp[] {
     const resultado: any = this.resultadoOh();

@@ -277,6 +277,11 @@ export interface PagoResumenConciliacion {
   verificadoBanco: boolean;
   pagoBancarioId: number | null;
   fechaVerificacion: string | null;
+  /** Fecha que reportó el banco para el pago enlazado (fechaPago es la que registró el asesor). */
+  fechaBanco?: string | null;
+  montoBanco?: number | null;
+  /** yyyyMM en que el banco cuenta el pago; difiere del mes de fechaBanco en pagos de fin de mes. */
+  periodoBanco?: string | null;
   /** Inferido en backend: la cancelación que registró el pago subió voucher. */
   tieneVoucher?: boolean;
 }

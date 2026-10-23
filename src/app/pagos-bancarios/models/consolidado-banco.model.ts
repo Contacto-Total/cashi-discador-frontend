@@ -42,8 +42,20 @@ export interface ConsolidadoFila {
   posiblesDuplicados: number;
   pagosAplicadosDeMas: number;
   pagosFinDeMes: number;
+  /** Pagos con fecha de otro mes que cuentan en este periodo (pagos de fin de mes que llegaron con fecha del mes siguiente). */
+  pagosDeOtroMes?: number;
+  /** Si falta: pagos del cliente de los primeros días del mes siguiente que el banco pudo contar en este periodo. */
+  pagosInicioMesSiguiente?: PagoInicioMesSiguiente[];
   resultado: ResultadoCuadre;
   montoRegularizable: number;
+}
+
+export interface PagoInicioMesSiguiente {
+  id: number;
+  /** yyyy-MM-dd */
+  fechaBanco: string;
+  monto: number;
+  categoria: string | null;
 }
 
 export interface ConsolidadoCuadre {
@@ -76,6 +88,25 @@ export interface RegularizarConsolidadoRequest {
   /** yyyy-MM-dd */
   fechaPago: string;
   observacion: string;
+  /** El cliente tiene pagos de inicio del mes siguiente y el supervisor confirma que son de ese mes. */
+  ignorarPagosInicioMes?: boolean;
+}
+
+export interface CambiarPeriodoPagoRequest {
+  /** yyyy-MM */
+  periodo: string;
+  motivo: string;
+}
+
+export interface PeriodoPagoBancoResponse {
+  exitoso: boolean;
+  mensaje: string;
+  bcpPagoDetalleId?: number | null;
+  periodoBanco?: string | null;
+  periodoOrigen?: string | null;
+  movidosAlPeriodo?: number | null;
+  devueltos?: number | null;
+  clientesAmbiguos?: number | null;
 }
 
 export interface RegularizarConsolidadoResponse {
