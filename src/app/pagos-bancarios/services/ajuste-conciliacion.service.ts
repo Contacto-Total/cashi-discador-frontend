@@ -6,6 +6,8 @@ import {
   ContextoAjuste,
   DesconciliarPagoRequest,
   FichaPagoBanco,
+  PagoBancoCliente,
+  PaginaHistoricoCorreccion,
   ResultadoAjuste,
   VistaPreviaAjuste
 } from '../models/ajuste-conciliacion.model';
@@ -15,6 +17,26 @@ import {
 export class AjusteConciliacionService {
   private http = inject(HttpClient);
   private readonly baseUrl = `${environment.gatewayUrl}/pagos-bcp/ajustes`;
+
+  listarPagosBancoCliente(documento: string, contexto: ContextoAjuste): Observable<PagoBancoCliente[]> {
+    return this.http.get<PagoBancoCliente[]>(
+      `${this.baseUrl}/clientes/${encodeURIComponent(documento)}/pagos-banco`,
+      { params: this.params(contexto) }
+    );
+  }
+
+  /** Documento del cliente de un pago bancario (búsqueda por Pb). */
+  documentoDePago(pagoId: number, contexto: ContextoAjuste): Observable<{ documento: string }> {
+    return this.http.get<{ documento: string }>(`${this.baseUrl}/pagos/${pagoId}/cliente`, { params: this.params(contexto) });
+  }
+
+  historicoCorrecciones(documento: string, contexto: ContextoAjuste, page = 0, size = 20): Observable<PaginaHistoricoCorreccion> {
+    const params = this.params(contexto)
+      .set('documento', documento)
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<PaginaHistoricoCorreccion>(`${environment.gatewayUrl}/pagos/historico-correcciones`, { params });
+  }
 
   obtenerFicha(pagoId: number, contexto: ContextoAjuste): Observable<FichaPagoBanco> {
     return this.http.get<FichaPagoBanco>(`${this.baseUrl}/pagos/${pagoId}/ficha`, { params: this.params(contexto) });
