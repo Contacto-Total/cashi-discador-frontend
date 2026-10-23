@@ -20,7 +20,7 @@ export const CATEGORIAS_PAGO: Record<string, CategoriaPagoInfo> = {
   PARCIAL_EN_ESPERA: { label: 'Parcial en espera', tono: 'espera', resultado: 'Se aplica lo recibido y la cuota queda parcial hasta que llegue el resto.' },
   PAGO_VOLUNTARIO: { label: 'Pago voluntario', tono: 'neutro', resultado: 'El cliente no tiene promesa. Se registra como pago voluntario al guardar.' },
   REQUIERE_REVISION: { label: 'Requiere revisión', tono: 'revision', resultado: 'Se guarda como pendiente hasta que se resuelva.' },
-  OMITIDO_POR_FECHA: { label: 'Omitido por fecha', tono: 'neutro', resultado: 'El pago es anterior al mes en que el cliente entró a la subcartera. No se guarda.' },
+  OMITIDO_POR_FECHA: { label: 'Omitido por fecha', tono: 'neutro', resultado: 'El pago es anterior al mes en que el cliente entró a la subcartera. Al aprobar el archivo no se guarda; si un pago ya guardado queda así al reevaluarse, no cuenta en el cuadre ni en la conciliación.' },
   NO_CORRESPONDE: { label: 'No corresponde', tono: 'neutro', resultado: 'Un supervisor indicó que el pago no corresponde a la gestión de la empresa. Se conserva, pero ya no está pendiente.' },
   CLIENTE_NO_ENCONTRADO: { label: 'Cliente no encontrado', tono: 'neutro', resultado: 'El documento no pertenece a esta subcartera.' },
   PAGO_YA_CONCILIADO_PREVIAMENTE: { label: 'Ya conciliado', tono: 'neutro', resultado: 'Este pago ya fue conciliado antes.' }

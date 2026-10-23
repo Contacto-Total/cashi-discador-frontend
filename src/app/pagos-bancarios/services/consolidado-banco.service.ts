@@ -3,9 +3,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  CambiarPeriodoPagoRequest,
   ConsolidadoCargaResultado,
   ConsolidadoContexto,
   ConsolidadoCuadre,
+  PeriodoPagoBancoResponse,
   RegularizarConsolidadoRequest,
   RegularizarConsolidadoResponse
 } from '../models/consolidado-banco.model';
@@ -47,6 +49,20 @@ export class ConsolidadoBancoService {
       request,
       { params: this.params(contexto) }
     );
+  }
+
+  /** Vuelve a revisar los pagos del límite de mes contra el consolidado activo. */
+  ajustarPeriodos(contexto: ConsolidadoContexto): Observable<PeriodoPagoBancoResponse> {
+    return this.http.post<PeriodoPagoBancoResponse>(`${this.baseUrl}/ajustar-periodos`, null, { params: this.params(contexto) });
+  }
+
+  /** Cambia el mes en que cuenta un pago bancario: el de su fecha o el anterior. */
+  cambiarPeriodoPago(
+    pagoId: number,
+    contexto: ConsolidadoContexto,
+    request: CambiarPeriodoPagoRequest
+  ): Observable<PeriodoPagoBancoResponse> {
+    return this.http.post<PeriodoPagoBancoResponse>(`${this.baseUrl}/pagos/${pagoId}/periodo`, request, { params: this.params(contexto) });
   }
 
   private params(contexto: ConsolidadoContexto): HttpParams {

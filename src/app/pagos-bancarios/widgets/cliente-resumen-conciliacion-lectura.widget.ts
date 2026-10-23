@@ -246,7 +246,11 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                               <span class="shrink-0 font-bold text-amber-600 dark:text-amber-400" title="Sin voucher" aria-label="Sin voucher">✕</span>
                                             }
                                           }
-                                          <span class="truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</span>
+                                          @if (pago.verificadoBanco && pago.fechaBanco) {
+                                            <span class="truncate" title="Fecha que reportó el banco">Banco {{ formatDate(pago.fechaBanco) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoBanco ?? pago.montoPago) }}{{ periodoDistinto(pago) ? ' · cuenta en ' + formatPeriodo(pago.periodoBanco) : '' }}</span>
+                                          } @else {
+                                            <span class="truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</span>
+                                          }
                                         </p>
                                       </div>
                                     }
@@ -379,6 +383,17 @@ export class ClienteResumenConciliacionLecturaWidget implements OnDestroy {
     if (!bytes) return '';
     if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  /** Pago verificado cuyo mes en el banco no es el de su fecha (pago de fin de mes que llegó con fecha del mes siguiente). */
+  periodoDistinto(pago: any): boolean {
+    if (!pago?.periodoBanco || !pago.fechaBanco) return false;
+    return pago.periodoBanco !== String(pago.fechaBanco).slice(0, 7).replace('-', '');
+  }
+
+  formatPeriodo(periodo: string | null | undefined): string {
+    if (!periodo || periodo.length !== 6) return '';
+    return `${periodo.slice(4, 6)}/${periodo.slice(0, 4)}`;
   }
 
   hasPagoVerificado(cuota: any): boolean {

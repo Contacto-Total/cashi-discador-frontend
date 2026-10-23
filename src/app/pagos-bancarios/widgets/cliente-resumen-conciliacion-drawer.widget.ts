@@ -190,7 +190,14 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                                       </span>
                                       <!-- Solo el primer pago; el resto se ve en el detalle -->
                                       <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[9px] text-slate-600 dark:text-slate-400">
-                                        <span class="truncate">{{ formatDate(cuota.pagos[0].fechaPago) }}{{ hasValue(cuota.pagos[0].banco) ? ' · ' + cuota.pagos[0].banco : '' }} · S/ {{ formatMoney(cuota.pagos[0].montoPago) }}</span>
+                                        @if (cuota.pagos[0].verificadoBanco && cuota.pagos[0].fechaBanco) {
+                                          <span class="truncate" title="Fecha que reportó el banco">Banco {{ formatDate(cuota.pagos[0].fechaBanco) }}{{ hasValue(cuota.pagos[0].banco) ? ' · ' + cuota.pagos[0].banco : '' }} · S/ {{ formatMoney(cuota.pagos[0].montoBanco ?? cuota.pagos[0].montoPago) }}</span>
+                                          @if (periodoDistinto(cuota.pagos[0])) {
+                                            <span class="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" title="El banco cuenta este pago en otro mes">Cuenta en {{ formatPeriodo(cuota.pagos[0].periodoBanco) }}</span>
+                                          }
+                                        } @else {
+                                          <span class="truncate">{{ formatDate(cuota.pagos[0].fechaPago) }}{{ hasValue(cuota.pagos[0].banco) ? ' · ' + cuota.pagos[0].banco : '' }} · S/ {{ formatMoney(cuota.pagos[0].montoPago) }}</span>
+                                        }
                                         @if (cuota.pagos.length > 1) {
                                           <span class="shrink-0 whitespace-nowrap font-bold text-slate-700 dark:text-slate-300">+{{ cuota.pagos.length - 1 }} más</span>
                                         }
@@ -306,8 +313,16 @@ import { BcpPagosService } from '../services/bcp-pagos.service';
                         <td class="px-3 py-2">
                           @if (pago.verificadoBanco) {
                             <span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
+                            @if (pago.fechaBanco) {
+                              <p class="mt-0.5 text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                                Banco: {{ formatDate(pago.fechaBanco) }} · S/ {{ formatMoney(pago.montoBanco ?? pago.montoPago) }}
+                                @if (periodoDistinto(pago)) {
+                                  <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Cuenta en {{ formatPeriodo(pago.periodoBanco) }}</span>
+                                }
+                              </p>
+                            }
                             <p class="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
-                              {{ formatDateTime(pago.fechaVerificacion) }}
+                              Conciliado {{ formatDateTime(pago.fechaVerificacion) }}
                               @if (pago.pagoBancarioId) {
                                 · Pago bancario {{ pago.pagoBancarioId }}
                               }
@@ -675,6 +690,17 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   formatMoney(value: number | null | undefined): string {
     if (value === null || value === undefined) return '0.00';
     return Number(value).toFixed(2);
+  }
+
+  /** Pago verificado cuyo mes en el banco no es el de su fecha (pago de fin de mes que llegó con fecha del mes siguiente). */
+  periodoDistinto(pago: PagoResumenConciliacion | null | undefined): boolean {
+    if (!pago?.periodoBanco || !pago.fechaBanco) return false;
+    return pago.periodoBanco !== String(pago.fechaBanco).slice(0, 7).replace('-', '');
+  }
+
+  formatPeriodo(periodo: string | null | undefined): string {
+    if (!periodo || periodo.length !== 6) return '';
+    return `${periodo.slice(4, 6)}/${periodo.slice(0, 4)}`;
   }
 
   formatDate(value: string | null | undefined): string {

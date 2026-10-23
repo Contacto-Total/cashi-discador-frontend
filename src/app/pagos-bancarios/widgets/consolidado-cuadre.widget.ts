@@ -6,6 +6,7 @@ import {
   ConsolidadoContexto,
   ConsolidadoFila,
   ORDEN_RESULTADOS,
+  PagoInicioMesSiguiente,
   RESULTADOS_CUADRE,
   ResultadoCuadre
 } from '../models/consolidado-banco.model';
@@ -31,8 +32,22 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
           <h3 id="cuadre-titulo" class="text-sm font-semibold text-slate-800 dark:text-white">Cuadre por cliente</h3>
           <p class="text-xs text-slate-600 dark:text-slate-400">Banco: el consolidado. Recibido: archivos diarios más lo regularizado.</p>
         </div>
-        <app-buscador-documento inputId="cuadre-buscar" [valor]="busqueda()" (valorChange)="buscar($event)"></app-buscador-documento>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            (click)="ajustarPeriodos()"
+            [disabled]="ajustando()"
+            title="Pagos de los primeros días del mes siguiente que el banco cuenta en este periodo, o al revés"
+            class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            {{ ajustando() ? 'Revisando...' : 'Revisar pagos del límite de mes' }}
+          </button>
+          <app-buscador-documento inputId="cuadre-buscar" [valor]="busqueda()" (valorChange)="buscar($event)"></app-buscador-documento>
+        </div>
       </div>
+      @if (avisoAjuste(); as aviso) {
+        <p role="status" class="border-b border-slate-200 px-4 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:text-slate-300">{{ aviso }}</p>
+      }
 
       <div class="flex flex-wrap gap-1.5 border-b border-slate-200 px-4 py-2 dark:border-slate-700" role="group" aria-label="Filtrar por resultado">
         @for (opcion of opcionesFiltro(); track opcion.valor) {
@@ -101,10 +116,24 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
                       @for (alerta of alertas(fila); track alerta) {
                         <span class="whitespace-nowrap rounded border border-red-200 px-1.5 text-[11px] leading-tight text-red-800 dark:border-red-800 dark:text-red-300">{{ alerta }}</span>
                       }
+                      @if ((fila.pagosDeOtroMes || 0) > 0) {
+                        <span class="whitespace-nowrap rounded border border-amber-200 px-1.5 text-[11px] leading-tight text-amber-800 dark:border-amber-800 dark:text-amber-300" title="Pagos con fecha del mes siguiente que el banco cuenta en este periodo">{{ fila.pagosDeOtroMes }} con fecha del mes siguiente</span>
+                      }
                     </div>
                   </td>
                   <td class="whitespace-nowrap px-3 py-1 text-right">
                     @if (fila.resultado === 'FALTA_EN_SISTEMA') {
+                      @for (pago of fila.pagosInicioMesSiguiente || []; track pago.id) {
+                        <button
+                          type="button"
+                          (click)="abrirCambioPeriodo(fila, pago, $event)"
+                          [attr.aria-label]="'Pasar al periodo el pago del ' + fechaCorta(pago.fechaBanco) + ' por ' + monto(pago.monto) + ' de ' + fila.documento"
+                          title="El banco pudo contar este pago en el periodo del consolidado"
+                          class="mr-1 rounded-md border border-amber-400 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-900 hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200"
+                        >
+                          Pasar {{ fechaCorta(pago.fechaBanco) }} · {{ monto(pago.monto) }}
+                        </button>
+                      }
                       <button
                         type="button"
                         (click)="abrirRegularizar(fila, $event)"
@@ -181,6 +210,21 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
               </div>
             </div>
             <p class="text-xs text-slate-600 dark:text-slate-400">Si conoces la fecha real del pago, úsala: así un archivo diario que llegue después con el mismo pago se detecta como duplicado.</p>
+            @if ((fila.pagosInicioMesSiguiente || []).length > 0) {
+              <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+                <p class="font-semibold">El cliente tiene pagos de los primeros días del mes siguiente:</p>
+                <ul class="mt-1 list-disc pl-4">
+                  @for (pago of fila.pagosInicioMesSiguiente || []; track pago.id) {
+                    <li>{{ fechaCorta(pago.fechaBanco) }} · {{ monto(pago.monto) }}</li>
+                  }
+                </ul>
+                <p class="mt-1">Si el banco los cuenta en este periodo, usa "Pasar" en vez de regularizar: regularizar duplicaría el pago.</p>
+                <label class="mt-2 flex items-start gap-2 font-semibold">
+                  <input type="checkbox" [checked]="confirmarSinMover()" (change)="confirmarSinMover.set($any($event.target).checked)" class="mt-0.5" />
+                  Esos pagos son del mes siguiente; regularizar igual
+                </label>
+              </div>
+            }
             <div>
               <label for="regularizar-observacion" class="block text-sm font-semibold text-slate-800 dark:text-slate-200">
                 Observación <span class="font-normal text-slate-600 dark:text-slate-400">(obligatoria)</span>
@@ -221,13 +265,64 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
         </div>
       </div>
     }
+
+    @if (cambioPeriodo(); as cambio) {
+      <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarCambioPeriodo()">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cambio-periodo-titulo"
+          aria-describedby="cambio-periodo-desc"
+          cdkTrapFocus
+          [cdkTrapFocusAutoCapture]="true"
+          (click)="$event.stopPropagation()"
+          (keydown.escape)="cerrarCambioPeriodo()"
+          class="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-800"
+        >
+          <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+            <h3 id="cambio-periodo-titulo" class="text-base font-semibold text-slate-900 dark:text-white">Pasar pago de {{ cambio.fila.documento }} al periodo {{ periodoLegible() }}</h3>
+            <p id="cambio-periodo-desc" class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              El pago del {{ fechaCorta(cambio.pago.fechaBanco) }} por {{ monto(cambio.pago.monto) }} contará en {{ periodoLegible() }}
+              (cuadre y comisiones). La fecha que mandó el banco no cambia. Falta al cliente: {{ monto(cambio.fila.montoRegularizable) }}.
+            </p>
+          </div>
+          <form class="space-y-3 px-5 py-4" (submit)="confirmarCambioPeriodo($event)">
+            <div>
+              <label for="cambio-periodo-motivo" class="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                Motivo <span class="font-normal text-slate-600 dark:text-slate-400">(obligatorio)</span>
+              </label>
+              <textarea
+                id="cambio-periodo-motivo"
+                rows="3"
+                maxlength="200"
+                required
+                [value]="motivoCambio()"
+                (input)="motivoCambio.set($any($event.target).value)"
+                [attr.aria-invalid]="errorCambio() ? true : null"
+                [attr.aria-describedby]="errorCambio() ? 'cambio-periodo-error' : null"
+                class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              ></textarea>
+            </div>
+            @if (errorCambio(); as texto) {
+              <p id="cambio-periodo-error" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ texto }}</p>
+            }
+            <div class="flex justify-end gap-2 pt-1">
+              <button type="button" (click)="cerrarCambioPeriodo()" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800">Cancelar</button>
+              <button type="submit" [disabled]="guardando()" class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-800">
+                {{ guardando() ? 'Guardando...' : 'Pasar al periodo' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
   `
 })
 export class ConsolidadoCuadreWidget implements OnChanges {
   @Input({ required: true }) filas: ConsolidadoFila[] = [];
   @Input({ required: true }) contexto!: ConsolidadoContexto;
   @Output() documentoClick = new EventEmitter<string>();
-  /** Se emite con el mensaje del backend después de regularizar un cliente. */
+  /** Se emite con el mensaje del backend después de regularizar o cambiar el periodo de pagos: el padre recarga el cuadre. */
   @Output() regularizado = new EventEmitter<string>();
 
   private readonly filasSig = signal<ConsolidadoFila[]>([]);
@@ -242,6 +337,13 @@ export class ConsolidadoCuadreWidget implements OnChanges {
   observacionRegularizar = signal('');
   errorRegularizar = signal<string | null>(null);
   guardando = signal(false);
+  confirmarSinMover = signal(false);
+
+  cambioPeriodo = signal<{ fila: ConsolidadoFila; pago: PagoInicioMesSiguiente } | null>(null);
+  motivoCambio = signal('');
+  errorCambio = signal<string | null>(null);
+  ajustando = signal(false);
+  avisoAjuste = signal<string | null>(null);
   /** Botón que abrió el diálogo: recibe el foco al cerrarlo. */
   private origenDialogo: HTMLElement | null = null;
 
@@ -307,6 +409,7 @@ export class ConsolidadoCuadreWidget implements OnChanges {
     this.fechaRegularizar.set(this.limitesFecha().max);
     this.observacionRegularizar.set('');
     this.errorRegularizar.set(null);
+    this.confirmarSinMover.set(false);
     this.filaRegularizar.set(fila);
   }
 
@@ -344,9 +447,19 @@ export class ConsolidadoCuadreWidget implements OnChanges {
       return;
     }
 
+    if ((fila.pagosInicioMesSiguiente || []).length > 0 && !this.confirmarSinMover()) {
+      this.errorRegularizar.set('Pasa al periodo los pagos de inicio de mes o confirma que son del mes siguiente.');
+      return;
+    }
+
     this.guardando.set(true);
     this.errorRegularizar.set(null);
-    this.consolidadoService.regularizar(fila.documento, this.contexto, { monto, fechaPago: fecha, observacion }).subscribe({
+    this.consolidadoService.regularizar(fila.documento, this.contexto, {
+      monto,
+      fechaPago: fecha,
+      observacion,
+      ignorarPagosInicioMes: this.confirmarSinMover()
+    }).subscribe({
       next: respuesta => {
         this.guardando.set(false);
         if (!respuesta.exitoso) {
@@ -361,6 +474,84 @@ export class ConsolidadoCuadreWidget implements OnChanges {
         this.errorRegularizar.set(err?.error?.mensaje || 'No se pudo regularizar el pago.');
       }
     });
+  }
+
+  // ==================== PERIODO DE LOS PAGOS ====================
+
+  ajustarPeriodos(): void {
+    this.ajustando.set(true);
+    this.avisoAjuste.set(null);
+    this.consolidadoService.ajustarPeriodos(this.contexto).subscribe({
+      next: respuesta => {
+        this.ajustando.set(false);
+        const partes = [respuesta.mensaje];
+        if ((respuesta.clientesAmbiguos || 0) > 0) {
+          partes.push(`${respuesta.clientesAmbiguos} cliente(s) con varias combinaciones posibles: revísalos a mano con "Pasar".`);
+        }
+        this.avisoAjuste.set(partes.join(' '));
+        if ((respuesta.movidosAlPeriodo || 0) + (respuesta.devueltos || 0) > 0) {
+          this.regularizado.emit(respuesta.mensaje);
+        }
+      },
+      error: err => {
+        this.ajustando.set(false);
+        this.avisoAjuste.set(err?.error?.mensaje || 'No se pudo revisar los pagos del límite de mes.');
+      }
+    });
+  }
+
+  abrirCambioPeriodo(fila: ConsolidadoFila, pago: PagoInicioMesSiguiente, evento: Event): void {
+    this.origenDialogo = evento.currentTarget as HTMLElement | null;
+    this.motivoCambio.set(`Pago del ${this.fechaCorta(pago.fechaBanco)} que el consolidado ${this.periodoLegible()} cuenta en ese mes`);
+    this.errorCambio.set(null);
+    this.cambioPeriodo.set({ fila, pago });
+  }
+
+  cerrarCambioPeriodo(): void {
+    if (this.guardando()) return;
+    this.cambioPeriodo.set(null);
+    this.origenDialogo?.focus();
+    this.origenDialogo = null;
+  }
+
+  confirmarCambioPeriodo(evento: Event): void {
+    evento.preventDefault();
+    const cambio = this.cambioPeriodo();
+    if (!cambio) return;
+    const motivo = this.motivoCambio().trim();
+    if (!motivo) {
+      this.errorCambio.set('Escribe el motivo: queda en el histórico de correcciones.');
+      return;
+    }
+    this.guardando.set(true);
+    this.errorCambio.set(null);
+    this.consolidadoService.cambiarPeriodoPago(cambio.pago.id, this.contexto, { periodo: this.contexto.periodo, motivo }).subscribe({
+      next: respuesta => {
+        this.guardando.set(false);
+        if (!respuesta.exitoso) {
+          this.errorCambio.set(respuesta.mensaje);
+          return;
+        }
+        this.cerrarCambioPeriodo();
+        this.regularizado.emit(`${cambio.fila.documento}: ${respuesta.mensaje}`);
+      },
+      error: err => {
+        this.guardando.set(false);
+        this.errorCambio.set(err?.error?.mensaje || 'No se pudo cambiar el periodo del pago.');
+      }
+    });
+  }
+
+  /** yyyy-MM-dd → dd/MM */
+  fechaCorta(fecha: string | null | undefined): string {
+    const m = String(fecha || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}` : String(fecha || '');
+  }
+
+  /** yyyy-MM → MM/yyyy */
+  periodoLegible(): string {
+    const [anio, mes] = (this.periodoSig() || '').split('-');
+    return anio && mes ? `${mes}/${anio}` : this.periodoSig();
   }
 
   infoResultado(resultado: ResultadoCuadre) {
