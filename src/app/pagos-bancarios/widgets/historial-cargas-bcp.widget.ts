@@ -1,5 +1,5 @@
 import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { Tenant } from '../../maintenance/models/tenant.model';
@@ -18,8 +18,7 @@ import { TONO_PILL, TonoCategoria, fechaCorta, infoCategoria, montoSoles } from 
 import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
 import { TablaPaginacionWidget } from './tabla-paginacion.widget';
-import { urlCorreccionPagos } from './cliente-resumen-conciliacion-drawer.widget';
-import { Router } from '@angular/router';
+import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from './correccion-cliente-dialog.widget';
 import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-conciliacion-drawer.widget';
 
 type FiltroEstado = EstadoFilaArchivo | 'TODOS';
@@ -44,7 +43,7 @@ const TIPOS_ARCHIVO: Record<string, string> = {
 @Component({
   selector: 'app-historial-cargas-bcp',
   standalone: true,
-  imports: [CommonModule, FormsModule, A11yModule, BuscadorDocumentoWidget, TablaPaginacionWidget, ClienteResumenConciliacionDrawerWidget],
+  imports: [CommonModule, FormsModule, A11yModule, BuscadorDocumentoWidget, TablaPaginacionWidget, ClienteResumenConciliacionDrawerWidget, CorreccionClienteDialogWidget],
   template: `
     <div class="space-y-4">
       <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="historial-titulo">
@@ -339,14 +338,13 @@ const TIPOS_ARCHIVO: Record<string, string> = {
                           <span class="block text-[11px] text-slate-600 dark:text-slate-400">Op. {{ row.numeroOperacion }}</span>
                         }
                         @if (row.bcpPagoDetalleId) {
-                          <a
-                            [href]="enlaceCorreccion(row.documento, row.bcpPagoDetalleId)"
-                            target="_blank"
-                            rel="noopener"
+                          <button
+                            type="button"
+                            (click)="abrirCorreccion(row.documento, row.bcpPagoDetalleId)"
                             class="mt-0.5 block rounded text-[11px] font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-200"
                           >
-                            Corregir Pb {{ row.bcpPagoDetalleId }} <span class="sr-only">(se abre Corrección de pagos en otra pestaña)</span><span aria-hidden="true">↗</span>
-                          </a>
+                            Corregir Pb {{ row.bcpPagoDetalleId }}
+                          </button>
                         }
                       </td>
                       <td class="px-2 py-1">
@@ -381,7 +379,10 @@ const TIPOS_ARCHIVO: Record<string, string> = {
       [subcarteraId]="selectedSubPortfolioId || null"
       (close)="resumenAbierto.set(false)"
       (ajustado)="abrirResumen($event)"
+      (corregir)="correccion.set($event)"
     ></app-cliente-resumen-conciliacion-drawer>
+
+    <app-correccion-cliente-dialog [solicitud]="correccion()" (cerrado)="onCorreccionCerrada($event)"></app-correccion-cliente-dialog>
   `
 })
 export class HistorialCargasBcpWidget implements OnInit {
@@ -425,8 +426,8 @@ export class HistorialCargasBcpWidget implements OnInit {
   /** Botón que abrió el detalle: recibe el foco al cerrarlo. */
   private origenDetalle: HTMLElement | null = null;
 
-  private readonly router = inject(Router);
-  private readonly location = inject(Location);
+  /** Corrección de pagos abierta en un diálogo encima del historial. */
+  correccion = signal<CorreccionClienteSolicitud | null>(null);
 
   resumenAbierto = signal(false);
   cargandoResumen = signal(false);
@@ -608,9 +609,27 @@ export class HistorialCargasBcpWidget implements OnInit {
     });
   }
 
-  /** Los ajustes del pago se hacen en Corrección de pagos (otra pestaña), con el cliente y la ficha ya abiertos. */
-  enlaceCorreccion(documento: string, pagoId: number): string {
-    return urlCorreccionPagos(this.router, this.location, this.contexto(), documento, pagoId);
+  /** Los ajustes del pago se hacen en Corrección de pagos, abierta en un diálogo con el cliente y la ficha. */
+  abrirCorreccion(documento: string, pagoId: number): void {
+    if (!this.hasContext() || !documento) return;
+    this.correccion.set({ documento, contexto: this.contexto(), pb: pagoId });
+  }
+
+  onCorreccionCerrada(evento: { documento: string; huboCambios: boolean }): void {
+    this.correccion.set(null);
+    if (!evento.huboCambios) return;
+    this.recargarDetalle();
+    if (this.resumenAbierto()) this.abrirResumen(evento.documento);
+  }
+
+  /** Vuelve a leer el detalle abierto sin cambiar filtros ni página. */
+  private recargarDetalle(): void {
+    const archivo = this.selectedArchivo();
+    if (!archivo || !this.detalleOpen() || !this.hasContext()) return;
+    this.bcpService.obtenerDetalleArchivoCarga(archivo.archivoCargaId, this.contexto()).subscribe({
+      next: detalle => this.detalle.set(detalle || []),
+      error: () => this.detalleError.set('No se pudo actualizar el detalle del archivo.')
+    });
   }
 
   cerrarDetalle(): void {
