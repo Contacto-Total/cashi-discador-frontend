@@ -68,7 +68,7 @@ interface OpcionMenu {
                   </td>
                   <td class="whitespace-nowrap px-3 py-2 text-right font-bold tabular-nums text-slate-900 dark:text-white">{{ monto(pago.montoBanco) }}</td>
                   <td class="px-3 py-2">
-                    <span class="inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold" [class]="pill(pago.categoria)">{{ etiqueta(pago.categoria) }}</span>
+                    <span class="inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold" [class]="pill(categoriaVisible(pago))">{{ etiqueta(categoriaVisible(pago)) }}</span>
                     @if (pago.revisionManual) {
                       <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Retenido</span>
                     }
@@ -109,10 +109,14 @@ interface OpcionMenu {
                       Acciones <span aria-hidden="true">▾</span>
                     </button>
                     @if (menuAbierto() === pago.id) {
+                      <!-- fixed: la tabla tiene scroll horizontal y recortaría el menú -->
                       <div
                         [id]="'pbc-menu-' + pago.id"
                         (click)="$event.stopPropagation()"
-                        class="absolute right-3 z-20 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-800"
+                        [style.top.px]="posicionMenu().top"
+                        [style.bottom.px]="posicionMenu().bottom"
+                        [style.right.px]="posicionMenu().right"
+                        class="fixed z-[1150] max-h-[70vh] w-72 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-800"
                       >
                         <ul>
                           @for (opcion of opciones(pago); track opcion.accion) {
@@ -238,6 +242,7 @@ export class PagosBancoClienteWidget implements OnChanges {
   readonly error = signal<string | null>(null);
   readonly mensaje = signal<string | null>(null);
   readonly menuAbierto = signal<number | null>(null);
+  readonly posicionMenu = signal<{ top: number | null; bottom: number | null; right: number }>({ top: null, bottom: null, right: 0 });
 
   readonly ajustePagoId = signal<number | null>(null);
   readonly ajusteAccion = signal<'ficha' | 'desconciliar'>('ficha');
@@ -256,8 +261,10 @@ export class PagosBancoClienteWidget implements OnChanges {
   }
 
   @HostListener('document:click')
+  @HostListener('window:resize')
+  @HostListener('document:wheel')
   cerrarMenu(): void {
-    this.menuAbierto.set(null);
+    if (this.menuAbierto() !== null) this.menuAbierto.set(null);
   }
 
   @HostListener('document:keydown.escape')
@@ -267,7 +274,19 @@ export class PagosBancoClienteWidget implements OnChanges {
 
   alternarMenu(pagoId: number, evento: Event): void {
     evento.stopPropagation();
-    this.menuAbierto.set(this.menuAbierto() === pagoId ? null : pagoId);
+    if (this.menuAbierto() === pagoId) {
+      this.menuAbierto.set(null);
+      return;
+    }
+    // Junto al botón, alineado a su derecha; hacia arriba si abajo no queda espacio.
+    const rect = (evento.currentTarget as HTMLElement).getBoundingClientRect();
+    const abreArriba = window.innerHeight - rect.bottom < 320 && rect.top > window.innerHeight - rect.bottom;
+    this.posicionMenu.set({
+      top: abreArriba ? null : rect.bottom + 4,
+      bottom: abreArriba ? window.innerHeight - rect.top + 4 : null,
+      right: Math.max(8, window.innerWidth - rect.right)
+    });
+    this.menuAbierto.set(pagoId);
   }
 
   opciones(pago: PagoBancoCliente): OpcionMenu[] {
@@ -455,6 +474,12 @@ export class PagosBancoClienteWidget implements OnChanges {
         this.error.set(err?.error?.mensaje || err?.error?.message || 'No se pudieron cargar los pagos del banco.');
       }
     });
+  }
+
+  /** Conciliaciones antiguas guardadas sin categoría: si el pago está conciliado se muestra como tal. */
+  categoriaVisible(pago: PagoBancoCliente): string | null {
+    if (pago.categoria) return pago.categoria;
+    return pago.procesado || pago.enlaces.length > 0 ? 'CONCILIADO' : null;
   }
 
   periodoDistinto(pago: PagoBancoCliente): boolean {
