@@ -29,6 +29,7 @@ import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-arch
 import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
+import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from '../widgets/correccion-cliente-dialog.widget';
 import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
 import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widget';
@@ -36,7 +37,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget, CorreccionClienteDialogWidget],
   template: `
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
     <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 px-6 pb-6 pt-4">
@@ -1075,7 +1076,10 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
         [subcarteraId]="resumenCliente()?.subcarteraId || selectedSubPortfolioId || selectedSubPortfolioIdOh"
         (close)="cerrarResumenConciliacion()"
         (ajustado)="onAjusteResumen()"
+        (corregir)="correccionCliente.set($event)"
       ></app-cliente-resumen-conciliacion-drawer>
+
+      <app-correccion-cliente-dialog [solicitud]="correccionCliente()" (cerrado)="onCorreccionClienteCerrada($event)"></app-correccion-cliente-dialog>
 
       <app-pago-pendiente-controles-dialog
         [pago]="pagoPorResolver()"
@@ -1362,6 +1366,14 @@ export class PagosBancariosPage implements OnInit {
 
   cerrarResumenConciliacion(): void {
     this.resumenDrawerOpen.set(false);
+  }
+
+  /** Corrección de pagos abierta en un diálogo encima de la pantalla (no se pierde la vista previa de la carga). */
+  correccionCliente = signal<CorreccionClienteSolicitud | null>(null);
+
+  onCorreccionClienteCerrada(evento: { documento: string; huboCambios: boolean }): void {
+    this.correccionCliente.set(null);
+    if (evento.huboCambios) this.onAjusteResumen();
   }
 
   /** Un ajuste fino (desconciliar, eliminar pago voluntario) cambió el cliente y puede mover pagos a pendientes. */

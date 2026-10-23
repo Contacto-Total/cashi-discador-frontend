@@ -13,6 +13,7 @@ import { ReportePagosBancariosFiltrosWidget } from './reporte-pagos-bancarios-fi
 import { ArchivoDropzoneWidget } from './archivo-dropzone.widget';
 import { ConsolidadoCuadreWidget } from './consolidado-cuadre.widget';
 import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-conciliacion-drawer.widget';
+import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from './correccion-cliente-dialog.widget';
 
 /**
  * Consolidado mensual del banco: se carga el total pagado por cliente en el mes y se cuadra contra
@@ -26,7 +27,8 @@ import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-concil
     ReportePagosBancariosFiltrosWidget,
     ArchivoDropzoneWidget,
     ConsolidadoCuadreWidget,
-    ClienteResumenConciliacionDrawerWidget
+    ClienteResumenConciliacionDrawerWidget,
+    CorreccionClienteDialogWidget
   ],
   template: `
     <div class="space-y-4">
@@ -176,7 +178,10 @@ import { ClienteResumenConciliacionDrawerWidget } from './cliente-resumen-concil
       [subcarteraId]="contexto()?.subcarteraId ?? null"
       (close)="resumenAbierto.set(false)"
       (ajustado)="onAjustado($event)"
+      (corregir)="correccion.set($event)"
     ></app-cliente-resumen-conciliacion-drawer>
+
+    <app-correccion-cliente-dialog [solicitud]="correccion()" (cerrado)="onCorreccionCerrada($event)"></app-correccion-cliente-dialog>
   `
 })
 export class ConsolidadoBancoWidget {
@@ -283,6 +288,14 @@ export class ConsolidadoBancoWidget {
   onRegularizado(texto: string): void {
     this.mensaje.set(texto);
     this.cargarCuadre();
+  }
+
+  /** Corrección de pagos abierta en un diálogo encima del cuadre. */
+  correccion = signal<CorreccionClienteSolicitud | null>(null);
+
+  onCorreccionCerrada(evento: { documento: string; huboCambios: boolean }): void {
+    this.correccion.set(null);
+    if (evento.huboCambios) this.onAjustado(evento.documento);
   }
 
   /** Un ajuste fino cambia lo recibido del cliente: se recargan el resumen y el cuadre. */

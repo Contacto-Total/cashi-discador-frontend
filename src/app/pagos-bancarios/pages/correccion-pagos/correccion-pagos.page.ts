@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -6,20 +6,15 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
-import { BcpPagosService } from '../../services/bcp-pagos.service';
-import { CuotaResumenConciliacion, PagoBancoPorResolver, PromesaResumenConciliacion, ResumenConciliacionCliente } from '../../models/bcp-archivo.model';
-import { ContextoAjuste, PagoBancoCliente } from '../../models/ajuste-conciliacion.model';
+import { ContextoAjuste } from '../../models/ajuste-conciliacion.model';
 import { AjusteConciliacionService } from '../../services/ajuste-conciliacion.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { PagosBancoClienteWidget } from '../../widgets/pagos-banco-cliente.widget';
-import { HistoricoCorreccionesClienteWidget } from '../../widgets/historico-correcciones-cliente.widget';
-import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-resumen-conciliacion-drawer.widget';
-import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '../../widgets/pago-pendiente-controles-dialog.widget';
+import { CorreccionClienteWidget } from '../../widgets/correccion-cliente.widget';
 
 @Component({
   selector: 'app-correccion-pagos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ClienteResumenConciliacionDrawerWidget, PagoPendienteControlesDialogWidget, PagosBancoClienteWidget, HistoricoCorreccionesClienteWidget],
+  imports: [CommonModule, FormsModule, RouterLink, CorreccionClienteWidget],
   template: `
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
     <div class="relative min-h-screen bg-slate-50 p-4 dark:bg-slate-900">
@@ -132,10 +127,10 @@ import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '.
             <button
               type="button"
               (click)="buscarPagos()"
-              [disabled]="!canBuscar() || isLoadingResumenCliente()"
+              [disabled]="!canBuscar() || buscando()"
               class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              @if (isLoadingResumenCliente()) {
+              @if (buscando()) {
                 <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -155,192 +150,35 @@ import { CorreccionClienteContexto, PagoPendienteControlesDialogWidget } from '.
         }
       </section>
 
-      @if (resumenCliente(); as cliente) {
-        <div class="mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <p class="text-sm text-slate-800 dark:text-slate-100">
-            <span class="font-mono font-bold">{{ cliente.documento }}</span>
-            · {{ cliente.nombreCliente || 'Cliente sin nombre' }}
-            · Carta de no adeudo: <span class="font-semibold">{{ cliente.pagoCumplido ? 'disponible' : 'no disponible' }}</span>
-          </p>
-          @if (avisos().length > 0) {
-            <ul class="mt-2 flex flex-wrap gap-2" aria-label="Pendientes del cliente">
-              @for (aviso of avisos(); track aviso.texto) {
-                <li>
-                  <button type="button" (click)="pestana.set(aviso.pestana)" class="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/40">
-                    <span aria-hidden="true">⚠</span> {{ aviso.texto }}
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-      }
-
-      @if (documentoBusqueda()) {
-        <div role="tablist" aria-label="Datos del cliente" class="mb-3 flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-700">
-          @for (tab of pestanas; track tab.id) {
-            <button
-              type="button"
-              role="tab"
-              [id]="'correccion-tab-' + tab.id"
-              [attr.aria-selected]="pestana() === tab.id"
-              [attr.aria-controls]="'correccion-panel-' + tab.id"
-              (click)="pestana.set(tab.id)"
-              class="-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-              [class]="pestana() === tab.id ? 'border-emerald-600 text-emerald-800 dark:border-emerald-400 dark:text-emerald-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'"
-            >
-              {{ tab.label }}{{ tab.id === 'banco' && pagosBanco().length > 0 ? ' (' + pagosBanco().length + ')' : '' }}
-            </button>
-          }
-        </div>
-      }
-
-      @if (documentoBusqueda()) {
-        <div
-          id="correccion-panel-banco"
-          role="tabpanel"
-          aria-labelledby="correccion-tab-banco"
-          [class.hidden]="pestana() !== 'banco'"
-          class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800"
-        >
-          <app-pagos-banco-cliente
-            [documento]="documentoBusqueda()"
-            [contexto]="contextoAjuste()"
-            [refresco]="refresco()"
-            [esAdmin]="esAdmin"
-            [abrirFichaDe]="pbAbrir()"
-            (resolver)="abrirResolver($event)"
-            (cambio)="cargarResumen($event, false)"
-            (cargados)="pagosBanco.set($event)"
-          ></app-pagos-banco-cliente>
-        </div>
-
-        @if (pestana() === 'historico') {
-          <div id="correccion-panel-historico" role="tabpanel" aria-labelledby="correccion-tab-historico" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <app-historico-correcciones-cliente
-              [documento]="documentoBusqueda()"
-              [contexto]="contextoAjuste()"
-              [refresco]="refresco()"
-            ></app-historico-correcciones-cliente>
-          </div>
-        }
-      }
-
-      <div id="correccion-panel-asesor" [attr.role]="documentoBusqueda() ? 'tabpanel' : null" [attr.aria-labelledby]="documentoBusqueda() ? 'correccion-tab-asesor' : null" [class.hidden]="!!documentoBusqueda() && pestana() !== 'asesor'">
-      @if (resumenCliente()) {
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <p class="text-xs text-slate-600 dark:text-slate-300">
-            Para un pago que no corresponde a ninguna cuota, como un pago voluntario, usa las acciones del cliente.
-          </p>
-          <button
-            type="button"
-            (click)="abrirCorreccionCliente()"
-            class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-800"
-          >
-            Acciones del cliente
-          </button>
-        </div>
-      }
-
-      <app-cliente-resumen-conciliacion-drawer
-        #panelResumen
-        [open]="resumenVisible()"
-        mode="inline"
-        [permiteCorregir]="true"
-        [loading]="isLoadingResumenCliente()"
-        [error]="resumenClienteError()"
-        [documento]="resumenClienteDocumento()"
-        [resumen]="resumenCliente()"
-        [tenantId]="selectedTenantId"
-        [carteraId]="selectedPortfolioId"
-        [subcarteraId]="selectedSubPortfolioId"
-        (close)="cerrarResumenCliente()"
-        (corregirCuota)="abrirCorreccionCuota($event)"
-        (ajustado)="abrirResumenCliente($event)"
-      ></app-cliente-resumen-conciliacion-drawer>
-      </div>
-
-      <app-pago-pendiente-controles-dialog
-        [cliente]="correccion()"
-        [tenantId]="selectedTenantId"
-        [carteraId]="selectedPortfolioId"
-        [subcarteraId]="selectedSubPortfolioId"
-        [cerrarConEscape]="!panelResumen.visorVoucherCuota"
-        (verVouchers)="panelResumen.abrirVisorVoucher($event.promesa, $event.cuota)"
-        (cerrado)="onCorreccionCerrada($event)"
-      ></app-pago-pendiente-controles-dialog>
-
-      <!-- Resolver un pago del banco pendiente desde la pestaña Pagos del banco -->
-      <app-pago-pendiente-controles-dialog
-        [pago]="pagoResolver()"
-        [tenantId]="selectedTenantId"
-        [carteraId]="selectedPortfolioId"
-        [subcarteraId]="selectedSubPortfolioId"
-        (cerrado)="onResolverCerrado($event)"
-      ></app-pago-pendiente-controles-dialog>
+      <app-correccion-cliente
+        [documento]="documentoCliente()"
+        [contexto]="contextoCliente()"
+        [pbAbrir]="pbAbrir()"
+        [recarga]="recarga()"
+      ></app-correccion-cliente>
     </div>
   `
 })
 export class CorreccionPagosPage implements OnInit {
   private readonly tenantService = inject(TenantService);
   private readonly portfolioService = inject(PortfolioService);
-  private readonly bcpPagosService = inject(BcpPagosService);
   private readonly ajusteService = inject(AjusteConciliacionService);
   private readonly route = inject(ActivatedRoute);
-
-  /** Ajustes finos (ficha, desconciliar): solo administradores. */
-  readonly esAdmin = inject(AuthService).hasAnyRole('ADMIN');
-
-  readonly pestanas: { id: 'banco' | 'asesor' | 'historico'; label: string }[] = [
-    { id: 'banco', label: 'Pagos del banco' },
-    { id: 'asesor', label: 'Promesas y pagos del asesor' },
-    { id: 'historico', label: 'Histórico' }
-  ];
-  pestana = signal<'banco' | 'asesor' | 'historico'>('banco');
-  /** Documento del cliente cargado (no el texto del buscador, que puede ser un Pb). */
-  documentoBusqueda = signal<string | null>(null);
-  /** Se suma para que las pestañas vuelvan a cargar. */
-  refresco = signal(0);
-  pagosBanco = signal<PagoBancoCliente[]>([]);
-  /** Pago bancario a abrir en su ficha al cargar (búsqueda por Pb o enlace desde otra pantalla). */
-  pbAbrir = signal<number | null>(null);
-  /** Pago del banco pendiente que se está resolviendo. */
-  pagoResolver = signal<PagoBancoPorResolver | null>(null);
-
-  /** Lo que conviene revisar del cliente, arriba de las pestañas. */
-  readonly avisos = computed<{ texto: string; pestana: 'banco' | 'asesor' }[]>(() => {
-    const avisos: { texto: string; pestana: 'banco' | 'asesor' }[] = [];
-    const pagos = this.pagosBanco();
-    const pendientes = pagos.filter(p => p.categoria === 'REQUIERE_REVISION').length;
-    if (pendientes > 0) {
-      avisos.push({ texto: `${pendientes} ${pendientes === 1 ? 'pago del banco pendiente' : 'pagos del banco pendientes'}`, pestana: 'banco' });
-    }
-    const parciales = pagos.filter(p => p.categoria === 'PARCIAL_EN_ESPERA').length;
-    if (parciales > 0) {
-      avisos.push({ texto: `${parciales} ${parciales === 1 ? 'pago parcial en espera' : 'pagos parciales en espera'}`, pestana: 'banco' });
-    }
-    const voluntariosSinBanco = (this.resumenCliente()?.promesas || []).filter(promesa => {
-      if (!String(promesa.rutaTipificacion || '').toUpperCase().includes('PAGO VOLUNTARIO')) return false;
-      const pagosCuota = (promesa.cuotas || []).flatMap(cuota => cuota.pagos || []);
-      return pagosCuota.length === 1 && !pagosCuota[0].verificadoBanco && !pagosCuota[0].pagoBancarioId;
-    }).length;
-    if (voluntariosSinBanco > 0) {
-      avisos.push({ texto: `${voluntariosSinBanco} ${voluntariosSinBanco === 1 ? 'pago voluntario sin banco' : 'pagos voluntarios sin banco'}`, pestana: 'asesor' });
-    }
-    return avisos;
-  });
+  private readonly esAdmin = inject(AuthService).hasAnyRole('ADMIN');
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
   errorMessage = signal<string | null>(null);
-  resumenDrawerOpen = signal(false);
-  isLoadingResumenCliente = signal(false);
-  resumenClienteError = signal<string | null>(null);
-  resumenClienteDocumento = signal<string | null>(null);
-  resumenCliente = signal<ResumenConciliacionCliente | null>(null);
-  /** Cuota o cliente en corrección. El diálogo está abierto mientras tenga valor. */
-  correccion = signal<CorreccionClienteContexto | null>(null);
+  buscando = signal(false);
+
+  /** Cliente y contexto con los que se buscó: los selectores pueden cambiar sin volver a buscar. */
+  documentoCliente = signal<string | null>(null);
+  contextoCliente = signal<ContextoAjuste | null>(null);
+  /** Pago bancario a abrir en su ficha al cargar (búsqueda por Pb o enlace desde otra pantalla). */
+  pbAbrir = signal<number | null>(null);
+  /** Se suma al volver a buscar el mismo cliente. */
+  recarga = signal(0);
 
   documento = '';
   selectedTenantId = 0;
@@ -353,7 +191,7 @@ export class CorreccionPagosPage implements OnInit {
   }
 
   /**
-   * Otras pantallas abren esta con ?tenantId=&carteraId=&subcarteraId=&documento=&pb= para llegar al cliente
+   * Se puede abrir con ?tenantId=&carteraId=&subcarteraId=&documento=&pb= para llegar al cliente
    * (y a la ficha del pago) sin volver a elegir el contexto.
    */
   private aplicarParametros(): void {
@@ -375,7 +213,7 @@ export class CorreccionPagosPage implements OnInit {
             this.subPortfolios.set(subPortfolios);
             this.selectedSubPortfolioId = subcarteraId;
             this.documento = documento || `Pb ${pb}`;
-            if (pb) this.pbAbrir.set(pb);
+            if (pb && documento) this.pbAbrir.set(pb);
             this.buscarPagos();
           },
           error: () => this.errorMessage.set('No se pudieron cargar las subcarteras.')
@@ -383,10 +221,6 @@ export class CorreccionPagosPage implements OnInit {
       },
       error: () => this.errorMessage.set('No se pudieron cargar las carteras.')
     });
-  }
-
-  contextoAjuste(): ContextoAjuste {
-    return { tenantId: this.selectedTenantId, carteraId: this.selectedPortfolioId, subcarteraId: this.selectedSubPortfolioId };
   }
 
   cargarTenants(): void {
@@ -447,13 +281,9 @@ export class CorreccionPagosPage implements OnInit {
       && this.selectedSubPortfolioId > 0;
   }
 
-  canVerResumen(): boolean {
-    return this.canBuscar();
-  }
-
   noDebtLetterQueryParams(): Record<string, string | number> {
     const params: Record<string, string | number> = {};
-    const documento = this.documento.trim();
+    const documento = this.documentoCliente() || this.documento.trim();
 
     if (documento) params['documento'] = documento;
     if (this.selectedTenantId > 0) params['tenantId'] = this.selectedTenantId;
@@ -463,121 +293,50 @@ export class CorreccionPagosPage implements OnInit {
     return params;
   }
 
-  resumenVisible(): boolean {
-    return this.resumenDrawerOpen() || this.isLoadingResumenCliente() || !!this.resumenClienteError() || !!this.resumenCliente();
-  }
-
   buscarPagos(): void {
     if (!this.canBuscar()) return;
-    // "Pb 4442" o "pb4442": se busca el cliente del pago bancario y se abre su ficha.
-    const pb = /^pb\s*(\d+)$/i.exec(this.documento.trim());
-    if (!pb) {
-      this.abrirResumenCliente();
-      return;
-    }
-    const pagoId = Number(pb[1]);
     this.errorMessage.set(null);
-    this.ajusteService.documentoDePago(pagoId, this.contextoAjuste()).subscribe({
-      next: ({ documento }) => {
-        // El buscador queda con el DNI del cliente encontrado.
-        this.documento = documento;
-        this.pbAbrir.set(this.esAdmin ? pagoId : null);
-        this.pestana.set('banco');
-        this.abrirResumenCliente(documento);
-      },
-      error: err => this.errorMessage.set(err?.error?.mensaje || `No se encontró el pago bancario ${pagoId} en esta subcartera.`)
-    });
-  }
-
-  abrirResolver(pago: PagoBancoPorResolver): void {
-    this.pagoResolver.set(pago);
-  }
-
-  onResolverCerrado(evento: { documento: string; huboCambios: boolean }): void {
-    this.pagoResolver.set(null);
-    this.onCorreccionCerrada(evento);
-  }
-
-  abrirResumenCliente(documentoResumen?: string): void {
-    if (!this.canVerResumen()) return;
-
-    const documento = (documentoResumen || this.documento).trim();
-    if (!documento) return;
-    this.cargarResumen(documento, true);
-  }
-
-  /** Carga el resumen del asesor; con refrescarPestanas también vuelve a leer los pagos del banco y el histórico. */
-  cargarResumen(documento: string, refrescarPestanas: boolean): void {
-    if (this.documentoBusqueda() !== documento) {
-      this.pagosBanco.set([]);
-    }
-    this.documentoBusqueda.set(documento);
-    if (refrescarPestanas) this.refresco.update(valor => valor + 1);
-
-    // Al recargar el mismo cliente se conserva lo que se ve mientras llega el resumen nuevo.
-    if (this.resumenClienteDocumento() !== documento) {
-      this.resumenCliente.set(null);
-    }
-    this.resumenDrawerOpen.set(true);
-    this.isLoadingResumenCliente.set(true);
-    this.resumenClienteError.set(null);
-    this.resumenClienteDocumento.set(documento);
-
-    this.bcpPagosService.obtenerResumenConciliacionCliente(documento, {
+    const contexto: ContextoAjuste = {
       tenantId: this.selectedTenantId,
       carteraId: this.selectedPortfolioId,
       subcarteraId: this.selectedSubPortfolioId
-    }).subscribe({
-      next: (resumen) => {
-        this.resumenCliente.set(resumen);
-        this.isLoadingResumenCliente.set(false);
+    };
+
+    // "Pb 4442" o "pb4442": se busca el cliente del pago bancario y se abre su ficha.
+    const pb = /^pb\s*(\d+)$/i.exec(this.documento.trim());
+    if (!pb) {
+      this.mostrarCliente(this.documento.trim(), contexto);
+      return;
+    }
+    const pagoId = Number(pb[1]);
+    this.buscando.set(true);
+    this.ajusteService.documentoDePago(pagoId, contexto).subscribe({
+      next: ({ documento }) => {
+        this.buscando.set(false);
+        // El buscador queda con el DNI del cliente encontrado.
+        this.documento = documento;
+        this.pbAbrir.set(this.esAdmin ? pagoId : null);
+        this.mostrarCliente(documento, contexto);
       },
-      error: (error) => {
-        console.error('Error cargando resumen de cliente:', error);
-        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo cargar el resumen del cliente.');
-        this.isLoadingResumenCliente.set(false);
+      error: err => {
+        this.buscando.set(false);
+        this.errorMessage.set(err?.error?.mensaje || `No se encontró el pago bancario ${pagoId} en esta subcartera.`);
       }
     });
   }
 
-  cerrarResumenCliente(): void {
-    this.resumenDrawerOpen.set(false);
-  }
-
-  abrirCorreccionCuota(evento: { promesa: PromesaResumenConciliacion; cuota: CuotaResumenConciliacion }): void {
-    const documento = this.documentoDelResumen();
-    if (!documento) return;
-    this.correccion.set({ documento, promesa: evento.promesa, cuota: evento.cuota });
-  }
-
-  abrirCorreccionCliente(): void {
-    const documento = this.documentoDelResumen();
-    if (!documento) return;
-    this.correccion.set({ documento });
-  }
-
-  onCorreccionCerrada(evento: { documento: string; huboCambios: boolean }): void {
-    this.correccion.set(null);
-    if (!evento.huboCambios) return;
-
-    // La corrección puede hacer que un pago bancario pendiente ya calce: se reevalúa antes de refrescar.
-    const refrescar = () => this.abrirResumenCliente(evento.documento);
-    this.bcpPagosService.reevaluarPendientesCliente(evento.documento, {
-      tenantId: this.selectedTenantId,
-      carteraId: this.selectedPortfolioId,
-      subcarteraId: this.selectedSubPortfolioId
-    }).subscribe({ next: refrescar, error: refrescar });
-  }
-
-  private documentoDelResumen(): string {
-    return String(this.resumenCliente()?.documento || this.resumenClienteDocumento() || '').trim();
+  private mostrarCliente(documento: string, contexto: ContextoAjuste): void {
+    const mismo = this.documentoCliente() === documento
+      && this.contextoCliente()?.subcarteraId === contexto.subcarteraId;
+    this.documentoCliente.set(documento);
+    this.contextoCliente.set(contexto);
+    if (mismo) this.recarga.update(valor => valor + 1);
   }
 
   private clearResults(): void {
     this.errorMessage.set(null);
-    this.resumenCliente.set(null);
-    this.resumenClienteError.set(null);
-    this.documentoBusqueda.set(null);
-    this.pagosBanco.set([]);
+    this.documentoCliente.set(null);
+    this.contextoCliente.set(null);
+    this.pbAbrir.set(null);
   }
 }
