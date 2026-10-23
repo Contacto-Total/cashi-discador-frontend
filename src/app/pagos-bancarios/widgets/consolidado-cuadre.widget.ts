@@ -15,7 +15,7 @@ import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
 import { TablaPaginacionWidget } from './tabla-paginacion.widget';
 
-type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
+type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'OTRO_TRAMO' | 'TODOS';
 
 /**
  * Cuadre por cliente del consolidado mensual del banco, con la regularización de faltantes.
@@ -64,9 +64,19 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
         }
       </div>
 
-      @if (filtro() !== 'CON_DIFERENCIA' && filtro() !== 'TODOS') {
-        <p class="border-b border-slate-200 px-4 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">{{ infoResultado($any(filtro())).descripcion }}</p>
-      }
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-1.5 dark:border-slate-700">
+        <p class="text-xs text-slate-600 dark:text-slate-400">
+          @if (filtro() === 'OTRO_TRAMO') {
+            Clientes que no cuadran y aparecen en otro tramo del mismo periodo: en su consolidado, con pagos cargados allí o porque hoy están allí.
+          } @else if (filtro() !== 'CON_DIFERENCIA' && filtro() !== 'TODOS') {
+            {{ infoResultado($any(filtro())).descripcion }}
+          }
+        </p>
+        <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <input type="checkbox" [checked]="ocultarCeros()" (change)="cambiarOcultarCeros($any($event.target).checked)" class="h-4 w-4 rounded border-slate-400 text-blue-600 focus:ring-blue-500" />
+          Ocultar clientes con banco y recibido en 0
+        </label>
+      </div>
 
       @if (filtradas().length === 0) {
         <p class="px-4 py-6 text-center text-sm text-slate-600 dark:text-slate-400">No hay clientes con ese filtro.</p>
@@ -118,6 +128,17 @@ type FiltroResultado = ResultadoCuadre | 'CON_DIFERENCIA' | 'TODOS';
                       }
                       @if ((fila.pagosDeOtroMes || 0) > 0) {
                         <span class="whitespace-nowrap rounded border border-amber-200 px-1.5 text-[11px] leading-tight text-amber-800 dark:border-amber-800 dark:text-amber-300" title="Pagos con fecha del mes siguiente que el banco cuenta en este periodo">{{ fila.pagosDeOtroMes }} con fecha del mes siguiente</span>
+                      }
+                      @for (tramo of fila.otrosTramos || []; track tramo.subcarteraId) {
+                        @if (tramo.montoConsolidado != null) {
+                          <span class="whitespace-nowrap rounded border border-violet-300 bg-violet-50 px-1.5 text-[11px] leading-tight text-violet-900 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-200" title="El consolidado de ese tramo en el mismo periodo trae a este cliente">En el consolidado de {{ tramo.subcartera }}: {{ monto(tramo.montoConsolidado) }}</span>
+                        }
+                        @if (tramo.montoCargado != null) {
+                          <span class="whitespace-nowrap rounded border border-violet-300 bg-violet-50 px-1.5 text-[11px] leading-tight text-violet-900 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-200" title="Pagos del cliente cargados en ese tramo que cuentan en este periodo">Pagos cargados en {{ tramo.subcartera }}: {{ monto(tramo.montoCargado) }}</span>
+                        }
+                        @if (tramo.clienteEstaHoy) {
+                          <span class="whitespace-nowrap rounded border border-slate-300 px-1.5 text-[11px] leading-tight text-slate-700 dark:border-slate-600 dark:text-slate-300">Hoy está en {{ tramo.subcartera }}</span>
+                        }
                       }
                     </div>
                   </td>
@@ -328,6 +349,8 @@ export class ConsolidadoCuadreWidget implements OnChanges {
   private readonly filasSig = signal<ConsolidadoFila[]>([]);
   private readonly periodoSig = signal('');
   filtro = signal<FiltroResultado>('CON_DIFERENCIA');
+  /** Clientes con banco y recibido en 0 (están en el consolidado sin pagos y no tienen pagos): no aportan al cuadre. */
+  ocultarCeros = signal(true);
   busqueda = signal('');
   pagina = signal(1);
 
@@ -347,12 +370,22 @@ export class ConsolidadoCuadreWidget implements OnChanges {
   /** Botón que abrió el diálogo: recibe el foco al cerrarlo. */
   private origenDialogo: HTMLElement | null = null;
 
-  readonly opcionesFiltro = computed(() => {
+  /** Filas que se consideran: sin las que están en cero si se pidió ocultarlas. */
+  private readonly filasVisibles = computed(() => {
     const filas = this.filasSig();
+    return this.ocultarCeros()
+      ? filas.filter(f => Number(f.montoConsolidado || 0) !== 0 || Number(f.montoRecibido || 0) !== 0)
+      : filas;
+  });
+
+  readonly opcionesFiltro = computed(() => {
+    const filas = this.filasVisibles();
     const contar = (r: ResultadoCuadre) => filas.filter(f => f.resultado === r).length;
+    const otroTramo = filas.filter(f => (f.otrosTramos || []).length > 0).length;
     return [
       { valor: 'CON_DIFERENCIA' as FiltroResultado, label: 'Con diferencias', total: filas.filter(f => f.resultado !== 'CUADRA').length },
       ...ORDEN_RESULTADOS.map(r => ({ valor: r as FiltroResultado, label: RESULTADOS_CUADRE[r].label, total: contar(r) })),
+      ...(otroTramo > 0 ? [{ valor: 'OTRO_TRAMO' as FiltroResultado, label: 'En otro tramo', total: otroTramo }] : []),
       { valor: 'TODOS' as FiltroResultado, label: 'Todos', total: filas.length }
     ];
   });
@@ -360,10 +393,18 @@ export class ConsolidadoCuadreWidget implements OnChanges {
   readonly filtradas = computed(() => {
     const filtro = this.filtro();
     const texto = this.busqueda();
-    return this.filasSig().filter(f =>
-      (filtro === 'TODOS' || (filtro === 'CON_DIFERENCIA' ? f.resultado !== 'CUADRA' : f.resultado === filtro))
+    return this.filasVisibles().filter(f =>
+      (filtro === 'TODOS'
+        || (filtro === 'CON_DIFERENCIA' ? f.resultado !== 'CUADRA'
+          : filtro === 'OTRO_TRAMO' ? (f.otrosTramos || []).length > 0
+            : f.resultado === filtro))
       && coincideDocumento(f.documento, texto));
   });
+
+  cambiarOcultarCeros(valor: boolean): void {
+    this.ocultarCeros.set(valor);
+    this.pagina.set(1);
+  }
 
   readonly filasPagina = computed(() => cortarPagina(this.filtradas(), this.pagina()));
 

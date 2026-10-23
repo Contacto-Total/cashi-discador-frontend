@@ -30,6 +30,7 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
 import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from '../widgets/correccion-cliente-dialog.widget';
+import { HistorialCambiosWidget } from '../widgets/historial-cambios.widget';
 import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
 import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widget';
@@ -37,7 +38,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget, CorreccionClienteDialogWidget],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget, CorreccionClienteDialogWidget, HistorialCambiosWidget],
   template: `
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
     <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 px-6 pb-6 pt-4">
@@ -1017,7 +1018,25 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
       }
 
       @if (activeTab() === 'historial') {
-        <app-historial-cargas-bcp></app-historial-cargas-bcp>
+        <div role="tablist" aria-label="Tipo de historial" class="mb-3 flex gap-1 border-b border-slate-200 dark:border-slate-700">
+          @for (vista of vistasHistorial; track vista.id) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="vistaHistorial() === vista.id"
+              (click)="vistaHistorial.set(vista.id)"
+              class="-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              [class]="vistaHistorial() === vista.id ? 'border-blue-600 text-blue-800 dark:border-blue-400 dark:text-blue-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'"
+            >
+              {{ vista.label }}
+            </button>
+          }
+        </div>
+        @if (vistaHistorial() === 'cargas') {
+          <app-historial-cargas-bcp></app-historial-cargas-bcp>
+        } @else {
+          <app-historial-cambios></app-historial-cambios>
+        }
       }
 
       @if (activeTab() === 'consolidado') {
@@ -1367,6 +1386,13 @@ export class PagosBancariosPage implements OnInit {
   cerrarResumenConciliacion(): void {
     this.resumenDrawerOpen.set(false);
   }
+
+  /** Historial: cargas de archivos o cambios hechos por los usuarios. */
+  readonly vistasHistorial: { id: 'cargas' | 'cambios'; label: string }[] = [
+    { id: 'cargas', label: 'Cargas de archivos' },
+    { id: 'cambios', label: 'Historial de cambios' }
+  ];
+  vistaHistorial = signal<'cargas' | 'cambios'>('cargas');
 
   /** Corrección de pagos abierta en un diálogo encima de la pantalla (no se pierde la vista previa de la carga). */
   correccionCliente = signal<CorreccionClienteSolicitud | null>(null);

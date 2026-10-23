@@ -164,6 +164,8 @@ export interface AccionesPagoBanco {
   noCorresponde: boolean;
   restaurar: boolean;
   cambiarPeriodo: boolean;
+  /** Registrarlo como pago voluntario del sistema y conciliarlo (administrador). */
+  pagoVoluntario: boolean;
 }
 
 /** Fila de historico_correccion (GET /pagos/historico-correcciones). */
@@ -186,4 +188,72 @@ export interface PaginaHistoricoCorreccion {
   totalElements: number;
   number: number;
   last: boolean;
+}
+
+/** Texto de cada tipo de cambio del histórico de correcciones. */
+export const ETIQUETAS_TIPO_CAMBIO: Record<string, string> = {
+  MODIFICACION_PAGO_CUOTA: 'Pago del asesor modificado',
+  ELIMINACION_PAGO_CUOTA: 'Pago del asesor eliminado',
+  CREACION_PAGO_CUOTA_CANCELACION: 'Pago creado en una cuota',
+  AMPLIACION_FECHA_CUOTA: 'Vencimiento ampliado',
+  REGULARIZACION_FECHA_CUOTA_CANCELACION: 'Vencimiento ampliado con pago',
+  CREACION_PROMESA_SISTEMA_PAGO_BANCO: 'Promesa del sistema creada',
+  PAGO_VOLUNTARIO_SISTEMA: 'Pago voluntario registrado',
+  REGULARIZACION_PAGO_CUOTA_PAGADA: 'Fecha de pago regularizada',
+  AJUSTE_PAGO_PARCIAL_BANCO: 'Pago parcial del banco',
+  COMPLEMENTO_PAGO_PARTIDO_BANCO: 'Complemento de pago parcial',
+  PAGO_NO_CORRESPONDE: 'Pago marcado No corresponde',
+  PAGO_NO_CORRESPONDE_REVERTIDO: 'Pago vuelto a pendientes',
+  RECALCULO_PAGO_CUMPLIDO: 'Carta de no adeudo recalculada',
+  REGULARIZACION_CONSOLIDADO_BANCO: 'Regularizado desde el consolidado',
+  CAMBIO_PERIODO_BANCO: 'Mes del pago cambiado',
+  DESCONCILIACION_PAGO_BANCO: 'Pago desconciliado',
+  ELIMINACION_PAGO_VOLUNTARIO_SISTEMA: 'Pago voluntario eliminado',
+  ENLACE_MANUAL_PAGO_BANCO: 'Pago enlazado a mano',
+  CAMBIO_SUBCARTERA_PAGO_BANCO: 'Pago movido de subcartera',
+  ANULACION_CARGA_BANCO: 'Carga anulada'
+};
+
+/** Historial de cambios de todas las carteras (GET /pagos-bcp/ajustes/historico-cambios). */
+export interface FiltroHistorialCambios {
+  desde: string;
+  hasta: string;
+  tenantId?: number | null;
+  carteraId?: number | null;
+  subcarteraId?: number | null;
+  usuarioId?: number | null;
+  tipoCambio?: string | null;
+  documento?: string | null;
+  pagina: number;
+  tamano: number;
+}
+
+export interface CambioHistorial {
+  id: number;
+  fecha: string | null;
+  tipoCambio: string | null;
+  usuarioId: number | null;
+  usuario: string | null;
+  documento: string | null;
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+  proveedor: string | null;
+  cartera: string | null;
+  subcartera: string | null;
+  observacion: string | null;
+  detalleAnterior: string | null;
+  detalleNuevo: string | null;
+  bcpPagoDetalleId: number | null;
+  pagoCuotaId: number | null;
+  gestionPromesaId: number | null;
+  cuotaId: number | null;
+}
+
+export interface HistorialCambios {
+  contenido: CambioHistorial[];
+  total: number;
+  pagina: number;
+  tamano: number;
+  usuarios: { id: number; nombre: string; cambios: number }[];
 }
