@@ -44,12 +44,12 @@
     } @else if (!actual()) {
       <div class="flex flex-col items-center gap-1 px-4 py-10 text-center text-[.875rem] text-muted-foreground">
         <span class="font-semibold text-foreground">No tienes carteras con reporte Power BI</span>
-        <span>Los reportes publicados son los de Tramo 3, Tramo 5 y Castigo.</span>
+        <span>Los reportes publicados son los de Tramo 3, Tramo 5, Castigo y Tramo Propio.</span>
       </div>
     } @else {
       <div class="mt-5 mb-3 flex flex-none flex-wrap items-center gap-3">
         <div class="mr-auto flex min-w-0 items-center gap-2.5">
-          <span class="overflow-hidden text-[1rem] font-bold text-ellipsis whitespace-nowrap">{{ actual()?.cartera | nombrePropio }}</span>
+          <span class="overflow-hidden text-[1rem] font-bold text-ellipsis whitespace-nowrap">{{ actual()?.subcartera | nombrePropio }}</span>
           <span class="flex-none rounded-full bg-(--ok-bg) px-[.5625rem] py-[.1875rem] text-[.75rem] font-semibold text-(--ok) shadow-[inset_0_0_0_1px_var(--ok-ln)]">Publicado</span>
         </div>
         <a appBoton="secundario" appBotonAlto="chico" class="flex-none no-underline!" target="_blank" rel="noopener noreferrer" [href]="enlace()">
@@ -62,7 +62,7 @@
 
       <!-- El reporte publicado conserva sus propios colores en ambos temas. -->
       <div #visor class="relative min-h-[28rem] flex-1 overflow-hidden rounded-[.625rem] border border-border bg-[#eaeaea]">
-        <iframe class="absolute inset-0 block size-full border-0" [src]="reporte()" [title]="'Reporte Power BI ' + (actual()?.cartera ?? '')"
+        <iframe class="absolute inset-0 block size-full border-0" [src]="reporte()" [title]="'Reporte Power BI ' + (actual()?.subcartera ?? '')"
                 allowfullscreen referrerpolicy="strict-origin-when-cross-origin" (load)="cargandoReporte.set(false)"></iframe>
         <div class="pointer-events-none absolute inset-0 grid place-items-center bg-[rgb(234_234_234/.78)] text-[#323130] transition-opacity duration-200"
              [ngClass]="cargandoReporte() ? 'opacity-100' : 'opacity-0'" aria-hidden="true">

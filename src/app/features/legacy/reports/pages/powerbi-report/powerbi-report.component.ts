@@ -12,30 +12,34 @@ import { TarjetaDirective } from '../../../../../shared/ui/tarjeta.directive';
 import { NombrePropioPipe } from '../../../../../shared/ui/nombre-propio.pipe';
 
 /**
- * Enlace público de cada reporte, por código de cliente y de cartera (los ids cambian entre ambientes).
- * Todas las subcarteras de una cartera abren el mismo reporte. Una cartera que no esté aquí no aparece.
+ * Enlace público de cada reporte, por código de cliente, cartera y subcartera: los de la tabla dinámica
+ * (foh_tr3_tr3…), porque los ids cambian entre ambientes. Cada reporte va en una sola subcartera; las demás,
+ * aunque el catálogo las marque activas, no aparecen. El orden de esta lista es el de la pantalla.
  */
 const ENLACES: Record<string, string> = {
-  FOH_TR3: 'https://app.powerbi.com/view?r=eyJrIjoiOTNkNDYxOGEtNGQ1MS00MmQ0LTgwMjAtNmVkYzE4NjRhYTQzIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
-  FOH_TR5: 'https://app.powerbi.com/view?r=eyJrIjoiYjAxNjIxYWUtNGQwYy00ZjMzLWJiNTQtMDcxNmQ4NTdmNjI2IiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
-  FOH_CAS: 'https://app.powerbi.com/view?r=eyJrIjoiMTAxY2MzNTgtMjVjMi00Mjg3LWE2NTYtMmI5OGU0N2QxM2YxIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9'
+  FOH_TR3_TR3: 'https://app.powerbi.com/view?r=eyJrIjoiOTNkNDYxOGEtNGQ1MS00MmQ0LTgwMjAtNmVkYzE4NjRhYTQzIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
+  FOH_TR5_TR5: 'https://app.powerbi.com/view?r=eyJrIjoiYjAxNjIxYWUtNGQwYy00ZjMzLWJiNTQtMDcxNmQ4NTdmNjI2IiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
+  FOH_CAS_CST: 'https://app.powerbi.com/view?r=eyJrIjoiMTAxY2MzNTgtMjVjMi00Mjg3LWE2NTYtMmI5OGU0N2QxM2YxIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
+  FOH_NSO_TPR: 'https://app.powerbi.com/view?r=eyJrIjoiOGM1Nzg0OGQtNjI5ZS00MTAzLWJlODUtNGEyZWRmNzVmZWU2IiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9&disablecdnExpiration=1782867941'
 };
+const ORDEN = Object.keys(ENLACES);
 
-const clave = (cliente: string | undefined, cartera: string | undefined) => `${cliente ?? ''}_${cartera ?? ''}`.trim().toUpperCase();
+const clave = (...codigos: (string | undefined)[]) => codigos.map(c => (c ?? '').trim()).join('_').toUpperCase();
 
-/** Una subcartera con su cliente, su cartera y el reporte que le toca. */
+/** Una subcartera con su cliente, su cartera y su reporte. */
 interface Ambito {
   cliente: string;
   cartera: string;
   subId: number;
   subcartera: string;
+  clave: string;
   enlace: string;
 }
 
 /**
- * Reporte Power BI: el reporte publicado de la cartera elegida (Tramo 3, Tramo 5 o Castigo), cargado en la
- * pantalla. Se elige como en la ficha del cliente: cliente, cartera y subcartera arriba, o la subcartera en el
- * panel lateral. Cambiar de subcartera dentro de la misma cartera no vuelve a cargar el reporte.
+ * Reporte Power BI: el reporte publicado de la subcartera elegida (Tramo 3, Tramo 5, Castigo o Tramo Propio),
+ * cargado en la pantalla. Se elige como en la ficha del cliente: cliente, cartera y subcartera arriba, o la
+ * subcartera en el panel lateral.
  */
 @Component({
   selector: 'app-powerbi-report',
@@ -79,7 +83,7 @@ export class PowerbiReportComponent implements OnInit {
     this.cargarAmbito();
   }
 
-  /** Subcarteras activas de las carteras con reporte (la marca de la cartera no se mira: hay carteras en uso marcadas como inactivas). */
+  /** Subcarteras activas con reporte (la marca de la cartera no se mira: hay carteras en uso marcadas como inactivas). */
   cargarAmbito(): void {
     this.cargando.set(true);
     this.error.set(null);
@@ -93,12 +97,14 @@ export class PowerbiReportComponent implements OnInit {
     ).subscribe({
       next: ({ activos, porCliente, subs }) => {
         const ambito: Ambito[] = [];
-        activos.forEach((c, i) => (porCliente[i] ?? []).forEach(p => {
-          const enlace = ENLACES[clave(c.tenantCode, p.portfolioCode)];
-          if (!enlace) return;
-          subs.filter(s => s.portfolioId === p.id && activo(s.isActive))
-            .forEach(s => ambito.push({ cliente: c.tenantName, cartera: p.portfolioName, subId: s.id, subcartera: s.subPortfolioName, enlace }));
-        }));
+        activos.forEach((c, i) => (porCliente[i] ?? []).forEach(p => subs
+          .filter(s => s.portfolioId === p.id && activo(s.isActive))
+          .forEach(s => {
+            const codigo = clave(c.tenantCode, p.portfolioCode, s.subPortfolioCode);
+            const enlace = ENLACES[codigo];
+            if (enlace) ambito.push({ cliente: c.tenantName, cartera: p.portfolioName, subId: s.id, subcartera: s.subPortfolioName, clave: codigo, enlace });
+          })));
+        ambito.sort((a, b) => ORDEN.indexOf(a.clave) - ORDEN.indexOf(b.clave));
         this.ambito.set(ambito);
         this.cargando.set(false);
         if (ambito.length) this.elegirSub(ambito[0].subId);
