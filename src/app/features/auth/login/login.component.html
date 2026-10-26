@@ -385,8 +385,8 @@
         </span>
       </div>
 
-      <div *ngIf="errorMessage" class="error-message">
-        <lucide-angular name="alert-circle" [size]="20"></lucide-angular>
+      <div *ngIf="errorMessage" class="error-message" [class.aviso-inhabilitado]="inhabilitado" role="alert">
+        <lucide-angular [name]="inhabilitado ? 'info' : 'alert-circle'" [size]="20"></lucide-angular>
         <span>{{ errorMessage }}</span>
       </div>
 

@@ -24,6 +24,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   loginForm!: FormGroup;
   loading = false;
   errorMessage = '';
+  /** RR.HH. lo inhabilitó (descanso, licencia, vacaciones): es un aviso, no un error. */
+  inhabilitado = false;
   hidePassword = true;
   passwordFocused = false;
   usernameFocused = false;
@@ -844,6 +846,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.loading = true;
     this.errorMessage = '';
+    this.inhabilitado = false;
 
     const { username, password } = this.loginForm.value;
 
@@ -857,6 +860,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       error: (error) => {
         this.loading = false;
         this.errorMessage = error.error?.message || 'Invalid username or password';
+        this.inhabilitado = error.error?.inhabilitado === true;
         console.error('Login error:', error);
       }
     });
