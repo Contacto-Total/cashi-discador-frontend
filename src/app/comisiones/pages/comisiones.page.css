@@ -521,6 +521,7 @@
 .cmx-vbtn { border: 0; background: none; color: var(--cmx-blue); font-weight: 600; cursor: pointer; padding: 0; font-size: .76rem; display: inline-flex; align-items: center; gap: 5px; }
 .cmx-vbtn:hover { text-decoration: underline; }
 .cmx-src { font-family: var(--cmx-mono); font-size: .66rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--cmx-soft-2); border: 1px solid var(--cmx-line); color: var(--cmx-ink-2); }
+.cmx-src.is-warn { background: var(--cmx-amber-soft); border-color: var(--cmx-amber-line); color: var(--cmx-amber); margin-left: 4px; white-space: nowrap; }
 
 /* ---------- Modales ---------- */
 .cmx-modal-scrim { display: flex; align-items: center; justify-content: center; padding: 16px; }
