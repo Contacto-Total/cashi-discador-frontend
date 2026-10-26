@@ -61,6 +61,9 @@ export interface Campaign {
   filtroTipoTelefono?: string;
   maxTelefonosPorCliente?: number;
 
+  // Clientes según sus deudas en la cartera: UNO = una sola, VARIOS = más de una, vacío = todos
+  filtroProductos?: 'UNO' | 'VARIOS' | null;
+
   // Particionado por bloques: intercala contactos de distintos rangos en rondas
   particionadoPorBloques?: boolean;
 

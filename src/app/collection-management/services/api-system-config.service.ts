@@ -438,6 +438,12 @@ export class ApiSystemConfigService {
     return base && base.origen === 'ASESOR' ? base.accion ?? null : null;
   }
 
+  /** Grupo de la tipificación base de una opción (CONTACTO DIRECTO, CONTACTO INDIRECTO, NO CONTACTADO). */
+  grupoBase(idTipificacionBase?: number | null): string | null {
+    if (idTipificacionBase == null) return null;
+    return this.tipificacionesBase().find(b => b.id === idTipificacionBase)?.nivel1 ?? null;
+  }
+
   /**
    * Obtiene la campaña activa principal
    */

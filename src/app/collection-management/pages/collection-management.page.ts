@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, finalize, firstValueFrom, of, Subscription } from 'rxjs';
+import { catchError, finalize, firstValueFrom, forkJoin, map, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
@@ -99,6 +99,17 @@ type EvaluacionConvenio =
   | { tipo: 'NO_ES_CONVENIO' }
   | { tipo: 'OTRO_ESTADO' }
   | { tipo: 'MOSTRAR'; convenio: UltimoConvenio };
+
+/** Tipificación lista de una o varias deudas, todavía sin grabar (cliente con varias deudas) */
+interface BorradorDeuda {
+  tipo: 'gestion' | 'cronograma';
+  requests: any[];
+  cuentas: string[];
+  resumenProductos: string;
+  resumen: string;
+  generaCarta: boolean;
+  etiquetas: [string, string];
+}
 
 @Component({
   selector: 'app-collection-management',
@@ -688,7 +699,7 @@ type EvaluacionConvenio =
             <!-- Alerta de Promesa de Pago Activa - Solo cuando hay cuotas realmente pendientes -->
             @if (hasActivePromiseWithPending()) {
               <div class="animate-[slideInDown_0.3s_ease-out]">
-                @for (schedule of activePaymentSchedules(); track schedule.id) {
+                @for (schedule of promesasActivasDeLaCuenta(); track schedule.id) {
                   <div [class]="hasScheduleEnEvaluacion(schedule)
                     ? 'bg-gradient-to-r from-purple-500 via-violet-500 to-purple-600 dark:from-purple-600 dark:via-violet-600 dark:to-purple-700 text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-purple-400 dark:border-purple-500'
                     : 'bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-gray-900 dark:text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-amber-400 dark:border-amber-500'">
@@ -891,7 +902,7 @@ type EvaluacionConvenio =
                         >
                           <option value="">Seleccionar...</option>
                           @for (option of level; track option.id) {
-                            <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
+                            <option [value]="option.id" [disabled]="opcionSoloUnProducto(option)">[{{ option.codigo }}] {{ option.label }}{{ opcionSoloUnProducto(option) ? ' (un solo producto)' : '' }}</option>
                           }
                         </select>
                       </div>
@@ -918,6 +929,41 @@ type EvaluacionConvenio =
                 </div>
                 @if (errors().tipoGestion) {
                   <div class="text-red-500 text-xs mt-1">Seleccione una clasificación</div>
+                }
+              </div>
+            }
+
+            <!-- Cliente con varias deudas: productos a los que va esta tipificación (contacto directo) -->
+            @if (mostrarProductosTipificacion()) {
+              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-purple-200 dark:border-purple-800 p-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">Productos de esta tipificación</div>
+                  <label class="flex items-center gap-1.5 text-xs font-bold text-purple-800 dark:text-purple-300 cursor-pointer">
+                    <input type="checkbox" class="accent-blue-600" [checked]="todasMarcadas()" (change)="marcarTodas($any($event.target).checked)">
+                    Todos
+                  </label>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (p of productosCliente(); track p.cuenta) {
+                    <div [class]="'flex items-start gap-2 px-3 py-1.5 rounded-md border text-xs ' + clasesProducto(p)">
+                      <input type="checkbox" class="accent-blue-600 mt-0.5" [checked]="cuentasMarcadas().includes(p.cuenta)" [disabled]="p.tipificada"
+                             (change)="marcarCuenta(p.cuenta, $any($event.target).checked)" [attr.aria-label]="'Incluir ' + p.producto + ' en esta tipificación'">
+                      <button type="button" class="flex flex-col items-start gap-0.5 text-left disabled:cursor-not-allowed" [disabled]="p.tipificada" (click)="seleccionarCuenta(p.cuenta)">
+                        <span class="font-bold">{{ p.producto }}</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400">{{ etiquetaCuenta() }} {{ p.cuenta }}</span>
+                        <span [class]="p.tipificada ? 'text-[10px] font-bold text-green-700 dark:text-green-400' : 'text-[10px] font-bold text-amber-700 dark:text-amber-400'">{{ p.tipificada ? 'Listo' : 'Pendiente' }}</span>
+                        @if (p.tipificada) {
+                          <span class="text-[10px] text-slate-600 dark:text-slate-300 max-w-[16rem] truncate" [title]="resumenDeCuenta(p.cuenta)">{{ resumenDeCuenta(p.cuenta) }}</span>
+                        }
+                      </button>
+                      @if (p.tipificada) {
+                        <button type="button" class="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline self-center" (click)="rehacerCuenta(p.cuenta)">Rehacer</button>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (cuentasMarcadas().length > 1) {
+                  <p class="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-2 mb-0">La misma tipificación se guarda para los productos marcados. Promesa de pago y fraccionamiento van por un solo producto.</p>
                 }
               </div>
             }
@@ -1546,7 +1592,7 @@ type EvaluacionConvenio =
                 @if (saving()) {
                   Guardando...
                 } @else {
-                  Guardar Gestión
+                  {{ textoBotonGuardar() }}
                 }
               </button>
               <!-- Botón Cancelar oculto para forzar que el agente siempre guarde una tipificación -->
@@ -1577,8 +1623,15 @@ type EvaluacionConvenio =
              <!-- Resumen Rápido Deuda -->
              <div [class]="'p-2 ' + purchaseSummaryClass()">
                <div class="text-center">
-                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ primaryAmountField().label }}</div>
-                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(primaryAmountField().value) }}</div>
+                 @if (esMultiproducto()) {
+                   <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ primaryAmountField().label }} · {{ productosCliente().length }} productos</div>
+                   @for (total of totalesPorMoneda(); track total; let primero = $first) {
+                     <div [class]="primero ? 'text-xl font-black' : 'text-sm font-black'" [ngClass]="purchaseTextClass()">{{ total }}</div>
+                   }
+                 } @else {
+                   <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ primaryAmountField().label }}</div>
+                   <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(primaryAmountField().value) }}</div>
+                 }
                  @if (clientHeaderFields().length > 0) {
                     <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
                       @for (field of clientHeaderFields(); track field.field) {
@@ -1597,6 +1650,17 @@ type EvaluacionConvenio =
 
             <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
             <div class="p-2 flex-1 overflow-y-auto">
+              @if (esMultiproducto()) {
+                <div class="mb-2">
+                  <label for="selector-producto" class="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">Producto</label>
+                  <select id="selector-producto" [ngModel]="cuentaSeleccionada()" (ngModelChange)="seleccionarCuenta($event)"
+                          class="w-full p-1.5 border rounded text-xs font-bold focus:outline-none focus:ring-1 focus:ring-red-400 border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">
+                    @for (p of productosCliente(); track p.cuenta) {
+                      <option [value]="p.cuenta">{{ p.producto }} · {{ etiquetaCuenta() }} {{ p.cuenta }} · {{ p.montoTexto }}{{ p.tipificada ? ' · Listo' : '' }}</option>
+                    }
+                  </select>
+                </div>
+              }
               @if (clientAmountFields().length > 0) {
                 <div class="space-y-1.5">
                   @for (field of clientAmountFields(); track field.field; let i = $index) {
@@ -1798,7 +1862,10 @@ type EvaluacionConvenio =
                             <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
                             <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
                             <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
-                              <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                              <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="(gestion.producto ? gestion.producto + ' · ' : '') + gestion.tipificacionCompleta">
+                                @if (gestion.producto) {
+                                  <span class="font-semibold text-slate-600 dark:text-slate-300">{{ gestion.producto }} ·</span>
+                                }
                                 {{ gestion.tipificacionCompleta }}
                               </span>
                             </td>
@@ -2157,6 +2224,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     hasSchedule: boolean;
     grupoPromesaUuid?: string;
     schedule: any;
+    producto?: string;
   }>>([]);
 
   // Filtro de historial de gestiones por tipo de contacto
@@ -2795,7 +2863,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Computed para obtener las cuotas pendientes de la ÚLTIMA promesa activa
   // IMPORTANTE: Solo incluye cuotas que pueden ser canceladas (fecha de pago >= hoy)
   pendingInstallmentsForCancellation = computed(() => {
-    const schedules = this.activePaymentSchedules();
+    const schedules = this.promesasActivasDeLaCuenta();
     if (schedules.length === 0) return [];
 
     // Solo la última promesa (la más reciente, ya viene ordenada DESC del backend)
@@ -3097,6 +3165,330 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       .map(c => ({ codigo: c.codigo, etiqueta: c.nombre, valor: this.valorCampoCliente(datos[c.codigo.toLowerCase()] ?? datos[c.codigo], c.tipoDato) }));
   });
 
+  // ==================== CLIENTE CON VARIAS DEUDAS ====================
+  // Si la carga de la subcartera trae una fila por deuda (identificador de deuda enlazado en
+  // Config. Cabeceras) y el cliente tiene más de una, el panel derecho muestra la deuda elegida y,
+  // en contacto directo, la gestión se guarda por deuda. Con una sola fila la ficha es la de siempre.
+  cuentasCliente = signal<Record<string, any>[]>([]);
+  campoCuenta = signal<string | null>(null);
+  campoProducto = signal<string | null>(null);
+  campoMoneda = signal<string | null>(null);
+  cuentaSeleccionada = signal<string | null>(null);
+  /** Deudas marcadas para la tipificación en curso */
+  cuentasMarcadas = signal<string[]>([]);
+  /**
+   * Tipificaciones listas de esta llamada, todavía sin guardar: se graban todas juntas con el último
+   * «Guardar Gestión», cuando ya no queda ninguna deuda sin tipificar.
+   */
+  borradores = signal<BorradorDeuda[]>([]);
+  /** Deudas que ya tienen su tipificación lista en esta llamada */
+  cuentasTipificadas = computed(() => this.borradores().flatMap(b => b.cuentas));
+  private grupoGestionUuid: string | null = null;
+  private datosBaseCliente: Record<string, any> = {};
+
+  esMultiproducto = computed(() => !!this.campoCuenta() && this.cuentasCliente().length > 1);
+
+  /** Nombre de la columna de la deuda para mostrar junto a su valor: «CJ 0047026883» */
+  etiquetaCuenta = computed(() => (this.campoCuenta() || '').toUpperCase());
+
+  /** Columna del monto principal (el primero de los montos configurados), para resumir cada deuda */
+  private campoMontoPrincipal = computed(() => {
+    const visibles = this.montoCabeceras()
+      .filter(c => c.esVisibleMonto === 1 && (c.formatoVisualizacion || 'MONEDA') === 'MONEDA')
+      .sort((a, b) => (a.ordenMonto || 0) - (b.ordenMonto || 0));
+    return visibles[0]?.codigo?.toLowerCase() ?? null;
+  });
+
+  productosCliente = computed(() => {
+    const campoCuenta = this.campoCuenta();
+    if (!campoCuenta) return [];
+    const campoProducto = this.campoProducto();
+    const campoMoneda = this.campoMoneda();
+    const campoMonto = this.campoMontoPrincipal();
+    const tipificadas = this.cuentasTipificadas();
+    return this.cuentasCliente().map(fila => {
+      const cuenta = String(fila[campoCuenta] ?? '');
+      const moneda = campoMoneda ? String(fila[campoMoneda] ?? '').trim().toUpperCase() : '';
+      const monto = campoMonto ? Number(fila[campoMonto]) : NaN;
+      return {
+        cuenta,
+        producto: campoProducto ? String(fila[campoProducto] ?? '') : '',
+        moneda,
+        montoTexto: isNaN(monto) ? '' : this.formatearMontoEnMoneda(monto, moneda),
+        tipificada: tipificadas.includes(cuenta)
+      };
+    });
+  });
+
+  /** Total del monto principal por moneda: «S/ 242,000.49», «US$ 229.07» */
+  totalesPorMoneda = computed(() => {
+    const campoMonto = this.campoMontoPrincipal();
+    const campoMoneda = this.campoMoneda();
+    if (!campoMonto) return [];
+    const totales = new Map<string, number>();
+    for (const fila of this.cuentasCliente()) {
+      const moneda = campoMoneda ? String(fila[campoMoneda] ?? '').trim().toUpperCase() : '';
+      const monto = Number(fila[campoMonto]);
+      if (!isNaN(monto)) totales.set(moneda, (totales.get(moneda) ?? 0) + monto);
+    }
+    return [...totales.entries()].map(([moneda, total]) => this.formatearMontoEnMoneda(total, moneda));
+  });
+
+  /** El tipo de contacto elegido es de contacto directo: sus opciones mapean a esa tipificación base */
+  esContactoDirecto = computed(() => {
+    const nivel1 = this.selectedClassifications()[0];
+    if (!nivel1) return false;
+    this.apiSystemConfigService.tipificacionesBase();
+    return this.managementClassifications()
+      .filter((c: any) => String(c.parentId) === String(nivel1))
+      .some((c: any) => this.apiSystemConfigService.grupoBase(c.idTipificacionBase) === 'CONTACTO DIRECTO');
+  });
+
+  /** Elegir productos en el centro: cliente con varias deudas y contacto directo */
+  mostrarProductosTipificacion = computed(() => this.esMultiproducto() && this.esContactoDirecto());
+
+  todasMarcadas = computed(() => {
+    const pendientes = this.productosCliente().filter(p => !p.tipificada);
+    return pendientes.length > 0 && pendientes.every(p => this.cuentasMarcadas().includes(p.cuenta));
+  });
+
+  /** Promesas activas que cuentan para la deuda elegida (todas, si el cliente tiene una sola fila) */
+  promesasActivasDeLaCuenta = computed(() => {
+    const todas = this.activePaymentSchedules();
+    if (!this.esMultiproducto()) return todas;
+    const cuenta = this.cuentaSeleccionada();
+    return todas.filter((s: any) => !s.cuenta || s.cuenta === cuenta);
+  });
+
+  private formatearMontoEnMoneda(valor: number, moneda: string): string {
+    const simbolo = ['USD', 'US$', 'DOLARES', 'DÓLARES', 'DOLAR', 'DÓLAR'].includes(moneda) ? 'US$' : 'S/';
+    return `${simbolo} ${this.fmt.number(valor, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  private cargarCuentasCliente(documento: string | null | undefined) {
+    this.cuentasCliente.set([]);
+    this.campoCuenta.set(null);
+    this.campoProducto.set(null);
+    this.campoMoneda.set(null);
+    this.cuentaSeleccionada.set(null);
+    this.cuentasMarcadas.set([]);
+    this.borradores.set([]);
+    this.grupoGestionUuid = null;
+    this.datosBaseCliente = { ...this.rawClientData() };
+    const tenantId = this.selectedTenantId;
+    const portfolioId = this.selectedPortfolioId;
+    const subPortfolioId = this.selectedSubPortfolioId;
+    if (!documento || !tenantId || !portfolioId || !subPortfolioId) return;
+
+    this.managementService.getCuentasCliente(tenantId, portfolioId, subPortfolioId, String(documento)).pipe(
+      catchError(() => of(null))
+    ).subscribe(respuesta => {
+      // Si mientras tanto se abrió otro cliente, la respuesta es de ese otro
+      if (!respuesta || subPortfolioId !== this.selectedSubPortfolioId) return;
+      const filas = respuesta.cuentas || [];
+      if (!respuesta.campoCuenta || filas.length < 2) return;
+      this.campoCuenta.set(respuesta.campoCuenta);
+      this.campoProducto.set(respuesta.campoProducto ?? null);
+      this.campoMoneda.set(respuesta.campoMoneda ?? null);
+      this.cuentasCliente.set(filas);
+      this.grupoGestionUuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${documento}`;
+      this.seleccionarCuenta(String(filas[0][respuesta.campoCuenta] ?? ''));
+    });
+  }
+
+  /** Muestra la deuda: sus columnas reemplazan a las de la primera fila en montos, cronograma y moneda */
+  private mostrarCuenta(cuenta: string) {
+    const campoCuenta = this.campoCuenta();
+    const fila = campoCuenta ? this.cuentasCliente().find(f => String(f[campoCuenta] ?? '') === cuenta) : null;
+    if (!fila) return;
+    this.cuentaSeleccionada.set(cuenta);
+    this.rawClientData.set({ ...this.datosBaseCliente, ...fila });
+    const documento = this.customerData()?.numero_documento;
+    if (documento) this.loadPromesaVencidaGracia(documento);
+  }
+
+  /** Elige una deuda: se muestra y queda como la única marcada para tipificar */
+  seleccionarCuenta(cuenta: string) {
+    this.mostrarCuenta(cuenta);
+    if (!this.productosCliente().find(p => p.cuenta === cuenta)?.tipificada) {
+      this.cuentasMarcadas.set([cuenta]);
+    }
+  }
+
+  marcarCuenta(cuenta: string, marcada: boolean) {
+    const actuales = this.cuentasMarcadas();
+    const nuevas = marcada ? [...new Set([...actuales, cuenta])] : actuales.filter(c => c !== cuenta);
+    if (!nuevas.length) return;
+    this.cuentasMarcadas.set(nuevas);
+    // La deuda a la vista es siempre una de las marcadas (de ella salen los montos del cronograma)
+    if (marcada) this.mostrarCuenta(cuenta);
+    else if (!nuevas.includes(this.cuentaSeleccionada() ?? '')) this.mostrarCuenta(nuevas[0]);
+  }
+
+  marcarTodas(marcar: boolean) {
+    const pendientes = this.productosCliente().filter(p => !p.tipificada).map(p => p.cuenta);
+    if (marcar) {
+      this.cuentasMarcadas.set(pendientes);
+    } else {
+      const actual = this.cuentaSeleccionada();
+      this.cuentasMarcadas.set(actual && pendientes.includes(actual) ? [actual] : pendientes.slice(0, 1));
+    }
+  }
+
+  clasesProducto(p: { cuenta: string; tipificada: boolean }): string {
+    if (p.tipificada) return 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-300';
+    return this.cuentasMarcadas().includes(p.cuenta)
+      ? 'border-blue-400 bg-blue-50 text-blue-800 dark:border-blue-600 dark:bg-blue-950/30 dark:text-blue-200'
+      : 'border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200';
+  }
+
+  /** Promesa de pago, fraccionamiento o cancelación: van por una sola deuda */
+  private esOpcionDeAcuerdo(opcion: any): boolean {
+    const accion = this.apiSystemConfigService.accionBase(opcion?.idTipificacionBase);
+    return accion === 'PROMESA' || accion === 'PAGO' || opcion?.allowsInstallmentSelection === true
+      || String(opcion?.codigo || '').toUpperCase() === 'PP';
+  }
+
+  opcionSoloUnProducto(opcion: any): boolean {
+    return this.mostrarProductosTipificacion() && this.cuentasMarcadas().length > 1 && this.esOpcionDeAcuerdo(opcion);
+  }
+
+  /**
+   * A qué deudas va el guardado. Sin varias deudas: un registro, como siempre. Sin contacto directo
+   * o con todas las deudas marcadas (y sin acuerdo): un registro sin cuenta, que vale para todas.
+   * Si no, un registro por deuda marcada. null si así no se puede guardar.
+   */
+  private deudasDelGuardado(): { registros: ({ cuenta: string; producto: string; moneda: string } | null)[]; cuentas: string[] } | null {
+    if (!this.esMultiproducto()) return { registros: [null], cuentas: [] };
+    const productos = this.productosCliente();
+    if (!this.esContactoDirecto()) {
+      if (this.borradores().length) {
+        alert('⚠️ Hay productos con su tipificación lista de contacto efectivo. Vuelva a ese tipo de contacto para terminarlos, o use «Rehacer».');
+        return null;
+      }
+      return { registros: [null], cuentas: productos.map(p => p.cuenta) };
+    }
+    const marcadas = productos.filter(p => !p.tipificada && this.cuentasMarcadas().includes(p.cuenta));
+    if (!marcadas.length) {
+      alert('⚠️ Marque el producto que está tipificando.');
+      return null;
+    }
+    const esAcuerdo = this.isCancellationTypification()
+      || !!this.dynamicFieldsSchema()?.fields?.some((f: any) => f.type === 'payment_schedule');
+    if (esAcuerdo && (marcadas.length > 1 || marcadas[0].cuenta !== this.cuentaSeleccionada())) {
+      alert('⚠️ La promesa de pago y el fraccionamiento van por un solo producto: deje marcado solo el que negoció.');
+      return null;
+    }
+    const todas = !esAcuerdo && marcadas.length === productos.length;
+    return {
+      registros: todas ? [null] : marcadas.map(p => ({ cuenta: p.cuenta, producto: p.producto, moneda: p.moneda })),
+      cuentas: marcadas.map(p => p.cuenta)
+    };
+  }
+
+  private nombresDeCuentas(cuentas: string[]): string {
+    return this.productosCliente().filter(p => cuentas.includes(p.cuenta)).map(p => p.producto).join(', ');
+  }
+
+  /** Lo que quedó listo para una deuda: «PROMESA DE PAGO · S/ 1,501.16 · 1 cuota» */
+  resumenDeCuenta(cuenta: string): string {
+    return this.borradores().find(b => b.cuentas.includes(cuenta))?.resumen ?? '';
+  }
+
+  /** Descarta lo listo de esa deuda (y de las que se tipificaron junto con ella) para tipificarla de nuevo */
+  rehacerCuenta(cuenta: string) {
+    this.borradores.update(lista => lista.filter(b => !b.cuentas.includes(cuenta)));
+    this.seleccionarCuenta(cuenta);
+  }
+
+  /** En contacto directo con varias deudas, el botón guarda recién cuando la selección completa todas */
+  textoBotonGuardar = computed(() => {
+    if (!this.mostrarProductosTipificacion()) return 'Guardar Gestión';
+    const pendientes = this.productosCliente().filter(p => !p.tipificada);
+    const marcadas = pendientes.filter(p => this.cuentasMarcadas().includes(p.cuenta));
+    if (marcadas.length < pendientes.length) return 'Listo, siguiente producto';
+    const registros = this.borradores().reduce((n, b) => n + b.requests.length, 0)
+      + (marcadas.length === this.productosCliente().length ? 1 : marcadas.length);
+    return registros > 1 ? `Guardar Gestión (${registros} registros)` : 'Guardar Gestión';
+  });
+
+  /**
+   * Deja lista la tipificación de las deudas marcadas. Si todavía quedan deudas sin tipificar, la ficha
+   * pasa a la siguiente sin grabar nada; si era la última, graba todas las tipificaciones de la llamada.
+   */
+  private agregarBorrador(borrador: BorradorDeuda) {
+    this.borradores.update(lista => [...lista, borrador]);
+    const pendiente = this.productosCliente().find(p => !p.tipificada);
+    if (pendiente) {
+      this.saving.set(false);
+      this.managementForm.observaciones = '';
+      const nivel1 = this.selectedClassifications()[0];
+      if (nivel1) this.onClassificationLevelChange(0, nivel1);
+      this.seleccionarCuenta(pendiente.cuenta);
+      return;
+    }
+    this.guardarBorradores();
+  }
+
+  /**
+   * Graba las tipificaciones listas una tras otra. Si una falla, las que ya se grabaron salen de la lista
+   * y las demás quedan listas para volver a intentar.
+   */
+  private async guardarBorradores() {
+    const grabadas: { borrador: BorradorDeuda; respuestas: any[] }[] = [];
+    for (const borrador of [...this.borradores()]) {
+      try {
+        const respuestas: any[] = [];
+        for (const request of borrador.requests) {
+          respuestas.push(borrador.tipo === 'cronograma'
+            ? await firstValueFrom(this.managementService.createPaymentSchedule(request))
+            : await firstValueFrom(this.managementService.createManagement(request)));
+        }
+        grabadas.push({ borrador, respuestas });
+        this.borradores.update(lista => lista.filter(b => b !== borrador));
+      } catch (error: any) {
+        console.error('Error guardando la tipificación de', borrador.cuentas, error);
+        this.saving.set(false);
+        const detalle = error?.status === 400 && error?.error?.message ? `\n\n${error.error.message}` : '';
+        alert(`⚠️ No se pudo guardar la tipificación de ${borrador.resumenProductos}.${detalle}\n\n`
+          + (grabadas.length ? `Ya se guardaron: ${grabadas.map(g => g.borrador.resumenProductos).join(', ')}. ` : '')
+          + 'Lo que falta sigue listo: corrija y vuelva a guardar.');
+        return;
+      }
+    }
+
+    const primera = grabadas[0]?.respuestas[0];
+    if (primera?.id && this.callStartTime && this.callActive()) {
+      this.registerCallToBackend(primera.id);
+    }
+    const promesas = grabadas.filter(g => g.borrador.tipo === 'cronograma');
+    if (promesas.some(g => g.respuestas[0]?.estadoPago === 'EN_EVALUACION')) {
+      alert('✅ Promesa de pago creada.\n\n⚠️ Alguna promesa quedó pendiente de aprobación por supervisor debido a excepción en descuento.');
+    }
+    const [contacto, gestion] = grabadas[grabadas.length - 1]?.borrador.etiquetas ?? ['', '-'];
+    const cartas = promesas
+      .filter(g => g.borrador.generaCarta && g.respuestas[0]?.id && g.respuestas[0]?.estadoPago === 'PENDIENTE')
+      .map(g => ({ id: g.respuestas[0].id as number, sufijo: g.borrador.cuentas[0] }));
+    const siguienteCarta = (i: number) => {
+      if (i >= cartas.length) {
+        this.onSaveSuccess(contacto, gestion);
+        return;
+      }
+      this.mostrarModalGenerarCarta(cartas[i].id, contacto, gestion, () => siguienteCarta(i + 1), cartas[i].sufijo);
+    };
+    siguienteCarta(0);
+  }
+
+  private camposDeuda(registro: { cuenta: string; producto: string; moneda: string } | null) {
+    if (!this.esMultiproducto()) return {};
+    return {
+      cuenta: registro?.cuenta ?? null,
+      producto: registro?.producto ?? null,
+      moneda: registro?.moneda ?? null,
+      grupoGestionUuid: this.grupoGestionUuid
+    };
+  }
+
   /** Una fecha guardada como AAAA-MM-DD se muestra DD/MM/AAAA sin pasar por Date, que la correría un día. */
   private valorCampoCliente(valor: unknown, tipo: string): string {
     if (valor === null || valor === undefined || valor === '') return '-';
@@ -3144,13 +3536,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   // Computed: true si hay al menos una promesa con cuotas realmente pendientes (no solo vencidas)
   hasActivePromiseWithPending = computed(() => {
-    const schedules = this.activePaymentSchedules();
+    const schedules = this.promesasActivasDeLaCuenta();
     return schedules && schedules.some((s: any) => s.cuotasPendientes > 0);
   });
 
   // Computed: true si alguna promesa activa tiene cuotas EN_EVALUACION
   hasEvaluacionPromise = computed(() => {
-    const schedules = this.activePaymentSchedules();
+    const schedules = this.promesasActivasDeLaCuenta();
     return schedules && schedules.some((s: any) =>
       s.installments?.some((c: any) => c.status === 'EN_EVALUACION')
     );
@@ -3900,6 +4292,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
+    this.cargarCuentasCliente(client.documento);
 
     // SIEMPRE usar client.id (ini_*.id) - es consistente entre llamada activa y gestión manual
     const customerId = client.id || 0;
@@ -4396,6 +4789,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
+    this.cargarCuentasCliente(clienteDetalle.documento);
 
     // FALLBACK: usar clienteDetalle.idCliente (NO es ini_*.id, puede causar inconsistencias)
     const customerId = clienteDetalle.idCliente || 0;
@@ -4504,6 +4898,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             id: schedule.id,
             managementId: schedule.id,
             grupoPromesaUuid: schedule.scheduleId?.scheduleId,
+            cuenta: schedule.cuenta ?? null,
+            producto: schedule.producto ?? null,
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
             fechaGestion: schedule.startDate,
@@ -4562,7 +4958,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     this.managementService.verificarPromesaVencidaGracia(
-      documento, this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId
+      documento, this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
+      this.esMultiproducto() ? this.cuentaSeleccionada() : null
     ).pipe(
       catchError((error) => {
         console.warn('⚠️ Error verificando período de gracia de promesa vencida:', error);
@@ -4634,7 +5031,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             estadoPagoDisplay: this.formatEstadoPagoDisplay(m.estadoPago),
             hasSchedule: m.typificationRequiresSchedule || false,
             grupoPromesaUuid: m.grupoPromesaUuid,
-            schedule: null as any
+            schedule: null as any,
+            producto: m.producto ? `${m.producto}${m.cuenta ? ' ' + m.cuenta : ''}` : undefined
           };
         });
 
@@ -5506,7 +5904,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (isPromesaPago) {
       // Verificar si el cliente tiene promesas activas
-      const activeSchedules = this.activePaymentSchedules();
+      const activeSchedules = this.promesasActivasDeLaCuenta();
       const schedulesWithPending = activeSchedules.filter(schedule => schedule.cuotasPendientes > 0);
 
       if (schedulesWithPending.length > 0) {
@@ -6464,6 +6862,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
+    // Cliente con varias deudas: a qué deudas va este guardado
+    const deudasDelGuardado = this.deudasDelGuardado();
+    if (!deudasDelGuardado) {
+      return;
+    }
+
     this.saving.set(true);
 
     let contactClassification: any;
@@ -6533,7 +6937,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // ⚠️ VALIDACIÓN: No permitir registrar nueva promesa si hay cuotas pendientes
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
-      const activeSchedules = this.activePaymentSchedules();
+      const activeSchedules = this.promesasActivasDeLaCuenta();
       const hasPendingInstallments = activeSchedules.some(schedule => schedule.cuotasPendientes > 0);
 
       if (hasPendingInstallments) {
@@ -6611,6 +7015,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         montoOriginalPromesa: this.continuidadData()?.montoOriginal,
         montoPagadoPrevio: this.continuidadData()?.montoPagado,
         telefonoContacto: phoneNumber,
+        ...this.camposDeuda(deudasDelGuardado.registros[0]),
         // Excepción de primera cuota
         esExcepcionPrimeraCuota: esExcepcionPrimeraCuota,
         diasPrimeraCuota: diasPrimeraCuota,
@@ -6638,6 +7043,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);
       console.log('[SAVE] porcentajeAutoAprobacion from paymentScheduleData:', paymentScheduleData.porcentajeAutoAprobacion);
       console.log('[SAVE] porcentajeAutoAprobacion in request:', scheduleRequest.porcentajeAutoAprobacion);
+
+      if (this.mostrarProductosTipificacion()) {
+        this.agregarBorrador({
+          tipo: 'cronograma',
+          requests: [scheduleRequest],
+          cuentas: deudasDelGuardado.cuentas,
+          resumenProductos: this.nombresDeCuentas(deudasDelGuardado.cuentas),
+          resumen: `${managementClassification?.label || ''} · ${this.formatCurrency(paymentScheduleData.montoTotal)} · `
+            + `${paymentScheduleData.numeroCuotas} ${paymentScheduleData.numeroCuotas === 1 ? 'cuota' : 'cuotas'}`,
+          generaCarta: paymentScheduleData.generaCartaAcuerdo === true,
+          etiquetas: [contactClassification?.label || '', managementClassification?.label || '-']
+        });
+        return;
+      }
 
       this.managementService.createPaymentSchedule(scheduleRequest).subscribe({
         next: (records) => {
@@ -6734,7 +7153,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         userAgent: navigator.userAgent
       };
 
-      this.managementService.createManagement(request).subscribe({
+      const requestsPorDeuda = deudasDelGuardado.registros.map(r => ({ ...request, ...this.camposDeuda(r) }));
+      if (this.mostrarProductosTipificacion()) {
+        if (this.isCancellationTypification()) {
+          this.saving.set(false);
+          alert('⚠️ La cancelación con varios productos todavía no está disponible.');
+          return;
+        }
+        this.agregarBorrador({
+          tipo: 'gestion',
+          requests: requestsPorDeuda,
+          cuentas: deudasDelGuardado.cuentas,
+          resumenProductos: this.nombresDeCuentas(deudasDelGuardado.cuentas),
+          resumen: managementClassification?.label || level1?.label || '',
+          generaCarta: false,
+          etiquetas: [contactClassification?.label || '', managementClassification?.label || '-']
+        });
+        return;
+      }
+      const guardado$ = requestsPorDeuda.length > 1
+        ? forkJoin(requestsPorDeuda.map(r => this.managementService.createManagement(r))).pipe(map(respuestas => respuestas[0]))
+        : this.managementService.createManagement(requestsPorDeuda[0]);
+      guardado$.subscribe({
         next: (response) => {
           if (this.callStartTime && this.callActive()) {
             this.registerCallToBackend(response.id);
@@ -7473,6 +7913,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
+    this.cargarCuentasCliente(customer.documentNumber);
 
     // Mapear CustomerResource a CustomerData (datos básicos iniciales)
     this.customerData.set({
@@ -8122,7 +8563,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   /**
    * Muestra el modal de confirmación para generar Carta de Acuerdo después de guardar promesa
    */
-  private mostrarModalGenerarCarta(idGestion: number, contactLabel: string, managementLabel: string): void {
+  private mostrarModalGenerarCarta(idGestion: number, contactLabel: string, managementLabel: string,
+                                   alTerminar?: () => void, sufijoArchivo?: string): void {
+    const terminar = alTerminar ?? (() => this.onSaveSuccess(contactLabel, managementLabel));
     const documentoCliente = this.customerData()?.numero_documento || '';
     const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
       width: 'auto',
@@ -8134,10 +8577,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'generate') {
         // Generar carta y luego finalizar
-        this.generarCartaYFinalizar(idGestion, contactLabel, managementLabel);
+        this.generarCartaYFinalizar(idGestion, terminar, sufijoArchivo);
       } else {
         // Usuario eligió "Ahora no", solo finalizar
-        this.onSaveSuccess(contactLabel, managementLabel);
+        terminar();
       }
     });
   }
@@ -8145,11 +8588,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   /**
    * Genera la carta de acuerdo y luego finaliza la gestión
    */
-  private generarCartaYFinalizar(idGestion: number, contactLabel: string, managementLabel: string): void {
+  private generarCartaYFinalizar(idGestion: number, terminar: () => void, sufijoArchivo?: string): void {
     const user = this.authService.getCurrentUser();
     if (!user) {
       alert('⚠️ No se puede generar la carta: usuario no encontrado');
-      this.onSaveSuccess(contactLabel, managementLabel);
+      terminar();
       return;
     }
 
@@ -8158,15 +8601,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
       next: (blob) => {
         const docCliente = this.customerData()?.numero_documento || idGestion;
-        this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${docCliente}.pdf`);
+        this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${docCliente}${sufijoArchivo ? '_' + sufijoArchivo : ''}.pdf`);
         console.log('✅ Carta de Acuerdo generada exitosamente');
         alert('✅ Carta de Acuerdo generada exitosamente');
-        this.onSaveSuccess(contactLabel, managementLabel);
+        terminar();
       },
       error: (error) => {
         console.error('❌ Error generando carta:', error);
         alert('⚠️ Error al generar la Carta de Acuerdo. La gestión se guardó correctamente.');
-        this.onSaveSuccess(contactLabel, managementLabel);
+        terminar();
       }
     });
   }
