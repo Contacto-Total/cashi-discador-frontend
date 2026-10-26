@@ -533,6 +533,13 @@ export class AsistenciaService {
     return this.http.post<Inhabilitacion>(`${this.url}/personal/inhabilitaciones`, cuerpo);
   }
 
+  /** Varios asesores con el mismo rango (toda una subcartera): siempre descanso. Los que no se pudieron vuelven con su motivo. */
+  inhabilitarVarios(cuerpo: { idsUsuarios: number[]; desde: string; hasta: string; comentario: string | null }):
+      Observable<{ registradas: number; fallidas: { idUsuario: number; error: string }[] }> {
+    return this.http.post<{ registradas: number; fallidas: { idUsuario: number; error: string }[] }>(
+      `${this.url}/personal/inhabilitaciones/varios`, cuerpo);
+  }
+
   adjuntarSustento(id: number, archivo: File): Observable<void> {
     const cuerpo = new FormData();
     cuerpo.append('archivo', archivo);
