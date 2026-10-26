@@ -3,7 +3,7 @@ import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
 import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { DiaDetalle, GRUPO_INFO, METRICA_INFO, MOTIVO_INFO, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
+import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -255,7 +255,10 @@ const B = 28;
                                       <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
                                       <td class="n">{{ pg.idGestion }}</td>
                                       <td class="n">{{ pg.montoAplicado | appNumber:'1.2-2' }}</td>
-                                      <td [class.na]="pg.motivoExclusion">{{ pg.motivoExclusion ? 'No suma: ' + motivo(pg) : 'Suma' }}</td>
+                                      <td [class.na]="pg.motivoExclusion" [attr.title]="detalleCuadre(pg)">
+                                        {{ pg.motivoExclusion ? 'No suma: ' + motivo(pg) : 'Suma' }}
+                                        @if (esParcial(pg)) { <span class="cmx-src is-warn" [title]="TITULO_PARCIAL">parcial en espera</span> }
+                                      </td>
                                     </tr>
                                   }
                                 </tbody>
@@ -293,7 +296,10 @@ const B = 28;
                                     </td>
                                     <td><span class="cmx-src">{{ origen(pg) }}</span></td>
                                     @if (p.esSupervisor) { <td>{{ pg.nombreAsesor }}</td> }
-                                    <td>{{ pg.nombreCliente || '—' }}</td>
+                                    <td>
+                                      {{ pg.nombreCliente || '—' }}
+                                      @if (esParcial(pg)) { <span class="cmx-src is-warn" [title]="TITULO_PARCIAL">parcial en espera</span> }
+                                    </td>
                                     <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
                                     <td class="n">{{ pg.idGestion }}</td>
                                     <td class="n">{{ pg.numeroCuota }}</td>
@@ -414,7 +420,7 @@ const B = 28;
                         <td class="n" [attr.title]="pg.baja30Fuente">{{ pg.baja30 != null ? (pg.baja30 | appNumber:'1.2-2') : '—' }}</td>
                         <td class="n" style="text-align:left">{{ pg.fechaContencion ? diaMes(pg.fechaContencion) : '—' }}</td>
                       }
-                      <td>{{ motivo(pg) }}</td>
+                      <td [attr.title]="detalleCuadre(pg)">{{ motivo(pg) }}</td>
                     </tr>
                   }
                 </tbody>
@@ -669,6 +675,18 @@ export class SustentoTabComponent {
 
   motivo(pg: PagoSustento): string {
     return pg.motivoExclusion ? MOTIVO_INFO[pg.motivoExclusion] ?? pg.motivoExclusion : '';
+  }
+
+  readonly TITULO_PARCIAL = 'Llegó menos de lo registrado; su grupo sigue abierto. Suma, pero hay que revisarlo';
+
+  /** Por qué el cliente no cuadra con el consolidado (título de la celda); null si cuadra o no se revisó */
+  detalleCuadre(pg: PagoSustento): string | null {
+    return pg.resultadoCuadre && pg.resultadoCuadre !== 'CUADRA' ? CUADRE_INFO[pg.resultadoCuadre] ?? pg.resultadoCuadre : null;
+  }
+
+  /** Pago que llegó incompleto y espera el resto: suma, con observación */
+  esParcial(pg: { categoriaPago?: string | null }): boolean {
+    return pg.categoriaPago === PARCIAL_EN_ESPERA;
   }
 
   elegir(clave: number | 'sup'): void {

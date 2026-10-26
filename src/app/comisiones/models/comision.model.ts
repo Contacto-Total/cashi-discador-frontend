@@ -157,6 +157,10 @@ export interface PeriodoComision {
   cambiosPendientes: boolean;
   /** Pagos conciliados del mes aprobados después del último recálculo */
   pagosNuevos: number;
+  /** Cuándo se subió el consolidado mensual del banco del mes; null = todavía no se sube */
+  consolidadoFechaCarga?: string | null;
+  /** El último recálculo revisó el cuadre con ese consolidado */
+  consolidadoAplicado?: boolean;
   /** Días hábiles del mes (lunes a viernes, sin feriados) */
   diasHabiles: number;
   totalComisiones: number;
@@ -350,11 +354,15 @@ export interface DetalleComision {
   metaAsesor: number | null;
   porcentajeAcumulado: number | null;
   comisionAlcanzada: number;
+  /** Categoría del pago del banco; PARCIAL_EN_ESPERA suma y se muestra como observación */
+  categoriaPago?: string | null;
 }
 
 /** Por qué un pago no suma. Los de contención cuentan igual para la meta de pagos del asesor. */
 export type MotivoExclusion =
   | 'PAGO_SISTEMA'
+  | 'GESTION_ANULADA'
+  | 'NO_CUADRA'
   | 'SUPERVISOR_NO_ASIGNA'
   | 'USUARIO_EXCLUIDO'
   | 'AGENTE_NO_PARTICIPANTE'
@@ -388,6 +396,10 @@ export interface PagoSustento {
   baja30Fuente: string | null;
   /** null = suma */
   motivoExclusion: MotivoExclusion | null;
+  /** Categoría del pago del banco; PARCIAL_EN_ESPERA suma y se muestra como observación */
+  categoriaPago?: string | null;
+  /** Cómo salió el cliente en el cuadre contra el consolidado; null = el mes no tenía consolidado */
+  resultadoCuadre?: string | null;
   /** Solo Tramo Propio: cartera del cliente según su periodo de compra; null = de ninguna */
   cartera?: GrupoComision | null;
 }

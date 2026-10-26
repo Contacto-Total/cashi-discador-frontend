@@ -83,6 +83,8 @@ export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: stri
 /** Por qué un pago no suma, como se muestra */
 export const MOTIVO_INFO: Record<MotivoExclusion, string> = {
   PAGO_SISTEMA: 'Pago voluntario (registrado por el supervisor)',
+  GESTION_ANULADA: 'Gestión anulada',
+  NO_CUADRA: 'Cliente no cuadra en el consolidado',
   SUPERVISOR_NO_ASIGNA: 'El supervisor no lo asignó al asesor',
   USUARIO_EXCLUIDO: 'Usuario excluido',
   AGENTE_NO_PARTICIPANTE: 'La gestión es de alguien que no participa',
@@ -93,6 +95,17 @@ export const MOTIVO_INFO: Record<MotivoExclusion, string> = {
   SIN_BAJA30: 'Cliente sin baja 30',
   PDP_MENOR_BAJA30: 'PDP menor a la baja 30'
 };
+
+/** Por qué un cliente no cuadra contra el consolidado mensual del banco (ver BcpConsolidadoService) */
+export const CUADRE_INFO: Record<string, string> = {
+  FALTA_EN_SISTEMA: 'Falta en sistema: el banco reporta más de lo que llegó en los archivos diarios',
+  SOBRA_EN_SISTEMA: 'Sobra en sistema: llegó más de lo que reporta el banco',
+  PENDIENTE_CONCILIAR: 'Pendiente de conciliar: llegó todo, pero una parte aún no se aplica a una cuota',
+  NO_EN_CONSOLIDADO: 'No está en el consolidado: el banco no reporta pagos de este cliente'
+};
+
+/** Categoría del banco de un pago que llegó incompleto: suma, con observación */
+export const PARCIAL_EN_ESPERA = 'PARCIAL_EN_ESPERA';
 
 /** Cartera de Tramo Propio como se muestra; vacío en GENERAL */
 export const GRUPO_INFO: Record<GrupoComision, string> = {

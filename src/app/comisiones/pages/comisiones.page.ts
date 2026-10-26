@@ -103,11 +103,11 @@ interface OpcionSubcartera {
                   }
                 }
                 @if (r.periodo.estado === 'EN_CURSO') {
-                  <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(r)">
+                  <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="pedirRecalcular(r)">
                     <cmx-icon name="refresh" [size]="15" /> {{ recalculando() ? 'Recalculando…' : 'Recalcular' }}
                   </button>
                   @if (r.periodo.fechaCalculo) {
-                    <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="confirmandoCierre.set(true)">
+                    <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="confirmandoRecalculo.set(false); confirmandoCierre.set(true)">
                       <cmx-icon name="lock" [size]="15" /> Cerrar periodo
                     </button>
                   }
@@ -180,6 +180,10 @@ interface OpcionSubcartera {
                 } @else {
                   Ya hay pagos del banco hasta el último día del mes.
                 }
+                @if (sinConsolidado()) {
+                  Todavía no se sube el consolidado mensual de {{ codigo() }}: el cuadre no se aplicó. Si cierras ahora, el
+                  Historial dirá «Cerrado sin consolidado mensual».
+                }
               </span>
               <span class="cmx-banner-actions">
                 <button type="button" class="cmx-btn cmx-btn-sec" (click)="confirmandoCierre.set(false)">Cancelar</button>
@@ -190,9 +194,24 @@ interface OpcionSubcartera {
                   </button>
                 } @else {
                   <button type="button" class="cmx-btn cmx-btn-dark" [disabled]="procesando()" (click)="cerrar(r, false)">
-                    {{ procesando() ? 'Cerrando…' : faltanDias() ? 'Cerrar de todas formas' : 'Cerrar periodo' }}
+                    {{ procesando() ? 'Cerrando…' : sinConsolidado() ? 'Cerrar sin consolidado' : faltanDias() ? 'Cerrar de todas formas' : 'Cerrar periodo' }}
                   </button>
                 }
+              </span>
+            </div>
+          } @else if (confirmandoRecalculo() && reporte(); as r) {
+            <div class="cmx-banner cmx-enter" role="alertdialog" aria-labelledby="cmx-recalculo-t">
+              <span class="cmx-banner-ic">!</span>
+              <span class="cmx-banner-tx">
+                <b id="cmx-recalculo-t">¿Recalcular {{ codigo() }} sin el consolidado mensual?</b>
+                Todavía no se sube el consolidado mensual del banco de {{ codigo() }}: el recálculo no revisa qué clientes
+                cuadran y los montos quedan provisionales. Cuando llegue, vuelve a recalcular.
+              </span>
+              <span class="cmx-banner-actions">
+                <button type="button" class="cmx-btn cmx-btn-sec" (click)="confirmandoRecalculo.set(false)">Cancelar</button>
+                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="confirmandoRecalculo.set(false); recalcular(r)">
+                  <cmx-icon name="refresh" [size]="15" /> Recalcular sin consolidado
+                </button>
               </span>
             </div>
           } @else if (estado() === 'CERRADO' && reporte()) {
@@ -213,7 +232,7 @@ interface OpcionSubcartera {
               <span class="cmx-banner-tx"><b>{{ codigo() }} está configurado pero todavía no se recalcula.</b>
                 Pulsa Recalcular para tomar los pagos conciliados del mes y calcular las comisiones.</span>
               <span class="cmx-banner-actions">
-                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(reporte()!)"><cmx-icon name="refresh" [size]="15" /> Recalcular</button>
+                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="pedirRecalcular(reporte()!)"><cmx-icon name="refresh" [size]="15" /> Recalcular</button>
               </span>
             </div>
           } @else if (estado() === 'ABIERTO' && pendientes()) {
@@ -222,7 +241,7 @@ interface OpcionSubcartera {
               <span class="cmx-banner-tx">Hay <b>{{ pendientes() }}</b> desde el último recálculo
                 ({{ reporte()!.periodo.fechaCalculo | appDateTime }}). Los resultados todavía no los incluyen.</span>
               <span class="cmx-banner-actions">
-                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="recalcular(reporte()!)"><cmx-icon name="refresh" [size]="15" /> Recalcular</button>
+                <button type="button" class="cmx-btn cmx-btn-act" [disabled]="procesando()" (click)="pedirRecalcular(reporte()!)"><cmx-icon name="refresh" [size]="15" /> Recalcular</button>
               </span>
             </div>
           } @else if (estado() === 'ABIERTO' && !esMesActual()) {
@@ -231,6 +250,13 @@ interface OpcionSubcartera {
               <span class="cmx-banner-tx"><b>{{ codigo() }} sigue abierto.</b>
                 @if (vista()?.pagos?.ultimaFechaBanco; as u) { Hay pagos del banco hasta el {{ diaMes(u) }}. }
                 Mientras siga abierto, un pago de ese mes que se apruebe tarde entra en el siguiente recálculo.</span>
+            </div>
+          }
+          @if (estado() === 'ABIERTO' && sinConsolidado() && !confirmandoRecalculo() && !confirmandoCierre()) {
+            <div class="cmx-banner cmx-enter">
+              <span class="cmx-banner-ic">!</span>
+              <span class="cmx-banner-tx"><b>Aún no llega el consolidado mensual de {{ codigo() }}.</b> Los montos son provisionales:
+                todavía no se revisa qué clientes cuadran con el banco. Cuando se suba en Pagos bancarios → Consolidado mensual, recalcula.</span>
             </div>
           }
           @for (a of advertencias(); track $index) {
@@ -254,6 +280,7 @@ interface OpcionSubcartera {
                       @if (pe.fechaCalculo) {
                         Último recálculo <b>{{ pe.fechaCalculo | appDateTime }}</b>@if (pe.recalculadoPorNombre) { · {{ pe.recalculadoPorNombre }} }
                         @if (pe.pagosHasta) { · con pagos hasta el {{ diaMes(pe.pagosHasta) }} }
+                        @if (pe.consolidadoAplicado && pe.consolidadoFechaCarga) { · cuadre con el consolidado del {{ diaMes(pe.consolidadoFechaCarga.slice(0, 10)) }} }
                       } @else { Configurado · falta el primer recálculo }
                     }
                   }
@@ -408,6 +435,8 @@ export class ComisionesPage implements OnInit {
   readonly advertencias = signal<string[]>([]);
 
   readonly confirmandoCierre = signal(false);
+  /** Recalcular sin consolidado mensual pide confirmación, como el cierre */
+  readonly confirmandoRecalculo = signal(false);
   readonly procesando = signal(false);
   readonly recalculando = signal(false);
   readonly descargando = signal(false);
@@ -446,7 +475,16 @@ export class ComisionesPage implements OnInit {
     if (p.cambiosPendientes) {
       partes.push('cambios de configuración');
     }
+    if (p.consolidadoFechaCarga && !p.consolidadoAplicado) {
+      partes.push(`el consolidado mensual del ${diaMes(p.consolidadoFechaCarga.slice(0, 10))}`);
+    }
     return partes.join(' y ');
+  });
+
+  /** El mes todavía no tiene consolidado mensual del banco: se calcula sin cuadre */
+  readonly sinConsolidado = computed(() => {
+    const p = this.reporte()?.periodo;
+    return !!p && !p.consolidadoFechaCarga;
   });
 
   readonly diasDelMes = computed(() => new Date(this.anio(), this.mes(), 0).getDate());
@@ -625,6 +663,16 @@ export class ComisionesPage implements OnInit {
 
   // ==================== ACCIONES ====================
 
+  /** Sin consolidado mensual primero confirma: el recálculo no revisa el cuadre */
+  pedirRecalcular(r: ReportePeriodo): void {
+    if (this.sinConsolidado()) {
+      this.confirmandoCierre.set(false);
+      this.confirmandoRecalculo.set(true);
+      return;
+    }
+    this.recalcular(r);
+  }
+
   /** Select de los pagos conciliados del mes y cálculo (el cálculo es manual) */
   recalcular(r: ReportePeriodo): void {
     this.procesando.set(true);
@@ -736,6 +784,7 @@ export class ComisionesPage implements OnInit {
       this.error.set(null);
       this.advertencias.set([]);
       this.confirmandoCierre.set(false);
+      this.confirmandoRecalculo.set(false);
     }
     this.service.obtenerVista(id, this.anio(), this.mes(), this.grupo()).subscribe({
       next: v => {
