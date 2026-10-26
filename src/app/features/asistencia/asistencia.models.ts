@@ -684,8 +684,9 @@ export interface VacacionesAsesor {
  */
 export interface Inhabilitacion {
   id: number;
-  origen: 'INHABILITACION' | 'VACACIONES';
-  idUsuario: number;
+  /** CALENDARIO: un día «Sin asignación» de toda una subcartera; no tiene asesor. */
+  origen: 'INHABILITACION' | 'VACACIONES' | 'CALENDARIO';
+  idUsuario: number | null;
   nombre: string;
   usuario: string;
   subcartera: string | null;
@@ -693,7 +694,7 @@ export interface Inhabilitacion {
   desde: string;
   hasta: string;
   /** Sin sustento es DESCANSO; con sustento, LICENCIA. */
-  motivo: 'DESCANSO' | 'LICENCIA' | 'VACACIONES';
+  motivo: 'DESCANSO' | 'LICENCIA' | 'VACACIONES' | 'SIN_ASIGNACION';
   estado: 'PROGRAMADA' | 'VIGENTE' | 'TERMINADA' | 'REVOCADA';
   /** La justificación de la licencia: su certificado se ve como el de cualquier solicitud. */
   idJustificacion: number | null;
