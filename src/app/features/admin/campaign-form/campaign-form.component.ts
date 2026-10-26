@@ -151,6 +151,12 @@ export class CampaignFormComponent implements OnInit {
   ];
   selectedTiposTelefono: string[] = [];
   maxTelefonosPorCliente: number = 1;
+  filtroProductos: '' | 'UNO' | 'VARIOS' = '';
+  readonly opcionesProductos = [
+    { valor: '' as const, texto: 'Todos' },
+    { valor: 'UNO' as const, texto: 'Con un producto' },
+    { valor: 'VARIOS' as const, texto: 'Con varios productos' }
+  ];
 
   // Seguimiento de promesas.
   seguimientoPromesaVigente = false;
@@ -172,6 +178,8 @@ export class CampaignFormComponent implements OnInit {
   selectedRangosAntiguedad: string[] = [];
   /** El filtro solo aplica si la subcartera tiene enlazados los días de mora: la rutina de campañas los lee de esa columna. */
   tieneDiasMora = false;
+  /** La subcartera trae una fila por deuda (tiene enlazado «Identificador de deuda»): ofrece «Productos por cliente» */
+  tieneVariasDeudas = false;
 
   // Grupo dirigido de la campaña. null = todos los asesores de la subcartera.
   grupos: GrupoAsesor[] = [];
@@ -237,6 +245,7 @@ export class CampaignFormComponent implements OnInit {
       this.campaignOrderFields.set(draft.orderFields || []);
       this.syncOrderableFilterFields();
       this.maxTelefonosPorCliente = this.campaign.maxTelefonosPorCliente ?? 1;
+      this.filtroProductos = this.campaign.filtroProductos ?? '';
       this.startDateString = this.campaign.startDate ? this.toDateTimeLocal(this.campaign.startDate) : this.startDateString;
       this.endDateString = this.campaign.endDate ? this.toDateTimeLocal(this.campaign.endDate) : this.endDateString;
       this.selectedRangosAntiguedad = this.campaign.filtroRangoAntiguedad?.split(',').map(value => value.trim()) || [];
@@ -323,6 +332,8 @@ export class CampaignFormComponent implements OnInit {
     this.filterableFields = [];
     this.selectedRangosAntiguedad = [];
     this.tieneDiasMora = false;
+    this.tieneVariasDeudas = false;
+    this.filtroProductos = '';
     this.grupos = [];
     this.selectedGrupoId = null;
     if (this.selectedSubPortfolioId > 0) {
@@ -567,6 +578,10 @@ export class CampaignFormComponent implements OnInit {
         this.tieneDiasMora = fields.some(f => f.fieldCode?.toLowerCase() === 'dias_mora');
         if (!this.tieneDiasMora) {
           this.selectedRangosAntiguedad = [];
+        }
+        this.tieneVariasDeudas = fields.some(f => f.fieldCode?.toLowerCase() === 'identificador_de_deuda');
+        if (!this.tieneVariasDeudas) {
+          this.filtroProductos = '';
         }
         console.log('Campos filtrables cargados:', fields);
       },
@@ -1087,6 +1102,7 @@ export class CampaignFormComponent implements OnInit {
         console.log('✅ Campaign loaded:', campaign);
         this.campaign = campaign;
         this.maxTelefonosPorCliente = campaign.maxTelefonosPorCliente ?? 1;
+        this.filtroProductos = campaign.filtroProductos ?? '';
 
         // Convertir fechas para datetime-local
         if (campaign.startDate) {
@@ -1222,6 +1238,7 @@ export class CampaignFormComponent implements OnInit {
         ? this.selectedTiposTelefono.join(',')
         : undefined;
       this.campaign.maxTelefonosPorCliente = this.maxTelefonosPorCliente;
+      this.campaign.filtroProductos = this.tieneVariasDeudas ? (this.filtroProductos || null) : null;
       this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
       // El campo está oculto temporalmente; el backend anterior recibe siempre cero.
       this.campaign.retryInterval = 0;
