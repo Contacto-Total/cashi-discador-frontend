@@ -640,12 +640,13 @@
                   <div class="text-[10.5px] text-slate-400 dark:text-slate-600">{{ pct(a.cumplimiento) }}</div>
                 </td>
                 <td class="px-3 py-2 whitespace-nowrap">
+                  <div class="flex items-center gap-1.5">
                   <!--
                     Sin revisar va vacío, con un guion tenue. Un chip que diga "sin revisar"
                     en cada fila serían cientos repitiendo lo mismo y taparían a los pocos
                     que sí lo están, que es lo que se viene a buscar acá.
                   -->
-                  <span *ngIf="!a.revisadoPor" class="text-slate-300 dark:text-slate-700">—</span>
+                  <span *ngIf="!a.revisadoPor && !borradorDe(a)" class="text-slate-300 dark:text-slate-700">—</span>
 
                   <span *ngIf="a.revisadoPor"
                         [title]="'Revisado por ' + a.revisadoPor + ' el ' + a.revisadoEn
@@ -663,6 +664,22 @@
                     {{ a.revisadoPor }}
                     <span *ngIf="a.revisionAjustes" class="tabular-nums opacity-80">{{ a.revisionAjustes }}</span>
                   </span>
+
+                  <!--
+                    Borrador: lo que este supervisor dejó sin guardar. Convive con la etiqueta
+                    de arriba —una revisión guardada antes y otra a medias ahora—. Punteado y
+                    gris para no confundirse con el ámbar de "revisado con ajustes".
+                  -->
+                  <span *ngIf="borradorDe(a) as b"
+                        [title]="tituloBorrador(b)"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold
+                               bg-white dark:bg-white/5 text-slate-800 dark:text-slate-200
+                               border border-dashed border-slate-500 dark:border-slate-500">
+                    <lucide-angular [img]="Pencil" [size]="11"></lucide-angular>
+                    Borrador
+                    <span class="font-normal text-slate-600 dark:text-slate-400 tabular-nums">· {{ cambiosBorrador(b) }}</span>
+                  </span>
+                  </div>
                 </td>
 
                 <td class="px-3 py-2">

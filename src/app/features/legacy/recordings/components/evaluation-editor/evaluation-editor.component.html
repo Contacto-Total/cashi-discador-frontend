@@ -306,6 +306,34 @@
       </div>
 
       <!--
+        Borrador retomado. Va antes que todo lo demás porque explica por qué la ficha
+        abre con cambios hechos: sin esto parecería que la nota cambió sola.
+        Borde punteado y gris, no ámbar: el ámbar ya significa "revisión con ajustes".
+      -->
+      <div *ngIf="borradorRetomado && cantidadCambios"
+           class="rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-dashed border-slate-400 dark:border-slate-600
+                  px-4 py-3 mb-4 flex items-center gap-3 flex-wrap">
+        <span class="flex-shrink-0 w-8 h-8 rounded-full grid place-items-center
+                     bg-slate-200 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300">
+          <lucide-angular [img]="Pencil" [size]="14"></lucide-angular>
+        </span>
+        <p class="flex-1 min-w-[220px] text-[12.5px] leading-[1.45] text-slate-700 dark:text-slate-300">
+          <b class="font-semibold text-slate-900 dark:text-white">Retomaste tu borrador.</b>
+          Lo dejaste {{ cuandoBorrador }} con
+          {{ cantidadCambios }} {{ cantidadCambios === 1 ? 'cambio' : 'cambios' }}.
+          Solo lo ves tú hasta que guardes.
+        </p>
+        <button type="button" (click)="descartarBorrador()"
+                class="h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium
+                       bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300
+                       ring-1 ring-slate-200 dark:ring-white/10 hover:bg-slate-100 dark:hover:bg-white/10
+                       transition-colors cursor-pointer">
+          <lucide-angular [img]="RotateCcw" [size]="12"></lucide-angular>
+          Descartar borrador
+        </button>
+      </div>
+
+      <!--
         Quién revisó este audio y cuándo. Va arriba de todo porque cambia cómo se lee el
         resto: no es lo mismo mirar una nota que salió del speech que una que ya pasó por
         un supervisor.
@@ -507,13 +535,18 @@
     -->
     <footer *ngIf="ficha && ficha.editable && !isLoading"
             class="flex items-center justify-between gap-3 px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200 dark:border-white/[0.06]">
-      <span [class]="'text-[12.5px] transition-colors duration-200 '
-                     + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500')">
-        {{ cantidadCambios
-           ? cantidadCambios + (cantidadCambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
-             + (sinMotivo.length ? ' · falta escribir el motivo' : '')
-           : 'Sin cambios' }}
-      </span>
+      <div class="flex flex-col gap-0.5">
+        <span [class]="'text-[12.5px] transition-colors duration-200 '
+                       + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500')">
+          {{ cantidadCambios
+             ? cantidadCambios + (cantidadCambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
+               + (sinMotivo.length ? ' · falta escribir el motivo' : '')
+             : 'Sin cambios' }}
+        </span>
+        <span *ngIf="cantidadCambios" class="text-[11.5px] text-slate-600 dark:text-slate-400">
+          Si cierras la ficha, tus cambios quedan como borrador.
+        </span>
+      </div>
 
       <div class="flex items-center gap-2">
       <button

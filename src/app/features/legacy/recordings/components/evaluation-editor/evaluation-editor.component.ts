@@ -1,14 +1,15 @@
-import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule, X, FileText, Save, Check, RotateCcw,
   Play, Pause, RotateCw, Download, AudioLines, TriangleAlert,
-  FileSpreadsheet, LoaderCircle
+  FileSpreadsheet, LoaderCircle, Pencil
 } from 'lucide-angular';
 
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
+import { EvaluationDraft, EvaluationDraftService } from '../../services/evaluation-draft.service';
 import { HistoricalRecordingsService } from '../../services/historical-recordings.service';
 import { RecordingDownloadService } from '../../services/recording-download.service';
 import { RecordingEvaluationReportService } from '../../services/recording-evaluation-report.service';
@@ -94,6 +95,7 @@ export class EvaluationEditorComponent implements OnDestroy {
   readonly TriangleAlert = TriangleAlert;
   readonly FileSpreadsheet = FileSpreadsheet;
   readonly LoaderCircle = LoaderCircle;
+  readonly Pencil = Pencil;
 
   readonly ETIQUETA_SECCION: Record<string, string> = {
     PRESENTACION: 'Presentación',
@@ -118,6 +120,8 @@ export class EvaluationEditorComponent implements OnDestroy {
   @Input() modo: MonitoringMode = 'legacy';
 
   @Input() set idx(valor: number | null) {
+    // Cambiar de audio con la ficha abierta es otra forma de cerrarla.
+    this.guardarBorrador(false);
     this._idx = valor;
     if (valor !== null) {
       this.cargar(valor);
@@ -177,8 +181,12 @@ export class EvaluationEditorComponent implements OnDestroy {
   descargandoExcel = false;
   descargandoAudio = false;
 
+  /** El borrador que se restauró al abrir, para el aviso de arriba. Null si se empezó de cero. */
+  borradorRetomado: EvaluationDraft | null = null;
+
   constructor(
     private monitoreo: QualityMonitoringService,
+    private borradores: EvaluationDraftService,
     private historicas: HistoricalRecordingsService,
     private descargas: RecordingDownloadService,
     private reportes: RecordingEvaluationReportService,
@@ -198,7 +206,15 @@ export class EvaluationEditorComponent implements OnDestroy {
    * sobre la ficha equivocada.
    */
   ngOnDestroy(): void {
+    // Salir de la pantalla sin pasar por cerrar() —cambio de ruta— tampoco pierde nada.
+    this.guardarBorrador(false);
     this.player.cerrar();
+  }
+
+  /** Cerrar la pestaña o recargar con la ficha abierta deja el borrador igual. */
+  @HostListener('window:beforeunload')
+  alSalirDelNavegador(): void {
+    this.guardarBorrador(false);
   }
 
   // ------------------------------------------------------------------ carga
@@ -206,6 +222,9 @@ export class EvaluationEditorComponent implements OnDestroy {
   private cargar(idx: number): void {
     this.isLoading = true;
     this.ficha = null;
+    this.valores = {};
+    this.motivos = {};
+    this.borradorRetomado = null;
     this.transcripcion = null;
     this.mostrarTranscripcion = false;
     // Antes de pedir nada: si venía sonando el audio de la ficha anterior, se corta ya.
@@ -219,6 +238,7 @@ export class EvaluationEditorComponent implements OnDestroy {
         for (const c of data.criterios) {
           this.valores[c.campo] = c.valor;
         }
+        this.restaurarBorrador(data);
         this.recalcularBloques();
         this.isLoading = false;
 
@@ -237,9 +257,111 @@ export class EvaluationEditorComponent implements OnDestroy {
     });
   }
 
+  /**
+   * Cerrar ya no tira lo que se hizo: si hay cambios, quedan como borrador y la grilla
+   * lo marca. Se retoma al volver a abrir el audio.
+   */
   cerrar(): void {
+    this.guardarBorrador(true);
     this.player.cerrar();
     this.cerrado.emit();
+  }
+
+  // ------------------------------------------------------------------ borrador
+
+  /**
+   * Deja los cambios sin guardar como borrador, o borra el borrador si ya no hay cambios
+   * —el supervisor deshizo todo antes de cerrar—.
+   */
+  private guardarBorrador(avisar: boolean): void {
+    if (!this.ficha?.editable || this._idx === null || this.isSaving) {
+      return;
+    }
+    const valores: Record<string, number> = {};
+    const motivos: Record<string, string> = {};
+    const base: Record<string, number | null> = {};
+    for (const c of this.ficha.criterios) {
+      const valor = this.valores[c.campo];
+      if (valor !== null && valor !== undefined && valor !== c.valor) {
+        valores[c.campo] = valor;
+        motivos[c.campo] = this.motivos[c.campo] ?? '';
+        base[c.campo] = c.valor;
+      }
+    }
+    const n = Object.keys(valores).length;
+    if (!n) {
+      this.borradores.borrar(this.modo, this._idx);
+      return;
+    }
+    this.borradores.guardar(this.modo, this._idx, {
+      valores, motivos, base, guardadoEn: new Date().toISOString()
+    });
+    if (avisar) {
+      this.toast.info(`Revisión guardada como borrador · ${n} ${n === 1 ? 'cambio' : 'cambios'}`);
+    }
+  }
+
+  /**
+   * Vuelve a poner lo que quedó en el borrador de este audio.
+   *
+   * Solo restaura un criterio si el backend sigue diciendo lo mismo que cuando se empezó:
+   * si otro supervisor lo guardó en el medio, ese cambio se descarta y se avisa.
+   */
+  private restaurarBorrador(data: EvaluationDetail): void {
+    const borrador = data.editable ? this.borradores.obtener(this.modo, data.idx) : null;
+    if (!borrador) {
+      return;
+    }
+    let aplicados = 0;
+    let vencidos = 0;
+    for (const [campo, valor] of Object.entries(borrador.valores)) {
+      const actual = data.criterios.find(c => c.campo === campo);
+      if (actual && actual.valor === borrador.base[campo] && actual.valor !== valor) {
+        this.valores[campo] = valor;
+        this.motivos[campo] = borrador.motivos[campo] ?? '';
+        aplicados++;
+      } else {
+        vencidos++;
+      }
+    }
+    if (vencidos) {
+      this.toast.warning(aplicados
+        ? 'Parte de tu borrador no se restauró: esos criterios se guardaron después por otra revisión'
+        : 'Tu borrador ya no aplica: la evaluación se guardó después por otra revisión');
+    }
+    if (aplicados) {
+      this.borradorRetomado = borrador;
+    } else {
+      this.borradores.borrar(this.modo, data.idx);
+    }
+  }
+
+  /** Tira el borrador y deja la ficha como está guardada. */
+  descartarBorrador(): void {
+    if (!this.ficha || this._idx === null) {
+      return;
+    }
+    this.borradores.borrar(this.modo, this._idx);
+    for (const c of this.ficha.criterios) {
+      this.valores[c.campo] = c.valor;
+    }
+    this.motivos = {};
+    this.borradorRetomado = null;
+    this.recalcularBloques();
+    this.toast.info('Borrador descartado');
+  }
+
+  /** «hoy a las 10:42» o «el 21/10 a las 10:42». */
+  get cuandoBorrador(): string {
+    if (!this.borradorRetomado) {
+      return '';
+    }
+    const f = new Date(this.borradorRetomado.guardadoEn);
+    const hora = f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const hoy = new Date().toDateString() === f.toDateString();
+    return hoy
+      ? `hoy a las ${hora}`
+      : `el ${f.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })} a las ${hora}`;
   }
 
   // ------------------------------------------------------------------ edición
@@ -349,6 +471,9 @@ export class EvaluationEditorComponent implements OnDestroy {
         }
         this.recalcularBloques();
         this.isSaving = false;
+        // Guardado o marcado como revisado: el borrador ya cumplió.
+        this.borradores.borrar(this.modo, data.idx);
+        this.borradorRetomado = null;
         this.toast.success(huboCambios ? 'Evaluación corregida' : 'Audio marcado como revisado');
         this.guardado.emit();
       },

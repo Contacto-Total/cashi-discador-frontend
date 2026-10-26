@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule, Search, Eye, TrendingUp, TrendingDown,
-  Minus, User, ArrowLeft, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown
+  Minus, User, ArrowLeft, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Pencil
 } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
+import { EvaluationDraft, EvaluationDraftService } from '../../services/evaluation-draft.service';
 import { EvaluationEditorComponent } from '../evaluation-editor/evaluation-editor.component';
 import {
   MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringMode,
@@ -214,6 +215,7 @@ export class QualityMonitorComponent implements OnInit {
   readonly ArrowUpDown = ArrowUpDown;
   readonly ChevronLeft = ChevronLeft;
   readonly ChevronRight = ChevronRight;
+  readonly Pencil = Pencil;
   readonly etiquetaTipificacion = etiquetaTipificacion;
 
   /** El orden en que se dibujan las tres barras de una celda. */
@@ -398,7 +400,8 @@ export class QualityMonitorComponent implements OnInit {
     private monitoreo: QualityMonitoringService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
-    private toast: ToastService
+    private toast: ToastService,
+    private borradores: EvaluationDraftService
   ) {}
 
   /** Lo único que distingue a un monitoreo del otro. */
@@ -919,6 +922,25 @@ export class QualityMonitorComponent implements OnInit {
 
   cerrarEvaluacion(): void {
     this.evaluacionAbierta = null;
+  }
+
+  // ------------------------------------------------------------------ borradores
+
+  /** El borrador de este supervisor para ese audio, o null. Lo pinta la columna Revisión. */
+  borradorDe(audio: MonitoringAudio): EvaluationDraft | null {
+    return this.borradores.obtener(this.modo, audio.idx);
+  }
+
+  /** «Borrador · 2 cambios», y en el tooltip cuándo se dejó. */
+  cambiosBorrador(b: EvaluationDraft): string {
+    const n = Object.keys(b.valores).length;
+    return `${n} ${n === 1 ? 'cambio' : 'cambios'}`;
+  }
+
+  tituloBorrador(b: EvaluationDraft): string {
+    const f = new Date(b.guardadoEn);
+    return `Revisión sin guardar · la dejaste el ${f.toLocaleDateString('es-PE')} a las `
+      + f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
   }
 
   /**
