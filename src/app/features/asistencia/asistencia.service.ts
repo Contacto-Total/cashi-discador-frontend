@@ -29,6 +29,7 @@ import {
   DatosPersonal,
   UsuarioLibre,
   VacacionesAsesor,
+  Inhabilitacion,
   PlanEquipoPedido,
   PlanSemana,
   PoliticaAsistencia,
@@ -510,6 +511,36 @@ export class AsistenciaService {
 
   anularVacaciones(id: number, motivo: string): Observable<void> {
     return this.http.post<void>(`${this.url}/personal/vacaciones/${id}/anular`, { motivo });
+  }
+
+  inhabilitaciones(idSubcartera: number | null): Observable<Inhabilitacion[]> {
+    const params = idSubcartera ? new HttpParams().set('idSubcartera', idSubcartera) : undefined;
+    return this.http.get<Inhabilitacion[]>(`${this.url}/personal/inhabilitaciones`, { params });
+  }
+
+  /** Con archivo es una licencia: el sustento viaja con ella. Fechas «yyyy-MM-ddTHH:mm». */
+  inhabilitar(datos: { idUsuario: number; desde: string; hasta: string; comentario: string | null; archivo: File | null }): Observable<Inhabilitacion> {
+    const cuerpo = new FormData();
+    cuerpo.append('idUsuario', String(datos.idUsuario));
+    cuerpo.append('desde', datos.desde);
+    cuerpo.append('hasta', datos.hasta);
+    if (datos.comentario) {
+      cuerpo.append('comentario', datos.comentario);
+    }
+    if (datos.archivo) {
+      cuerpo.append('archivo', datos.archivo);
+    }
+    return this.http.post<Inhabilitacion>(`${this.url}/personal/inhabilitaciones`, cuerpo);
+  }
+
+  adjuntarSustento(id: number, archivo: File): Observable<void> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo);
+    return this.http.post<void>(`${this.url}/personal/inhabilitaciones/${id}/sustento`, cuerpo);
+  }
+
+  revocarInhabilitacion(id: number, motivo: string): Observable<void> {
+    return this.http.post<void>(`${this.url}/personal/inhabilitaciones/${id}/revocar`, { motivo });
   }
 
   cierre(id: number): Observable<CierreSemana> {
