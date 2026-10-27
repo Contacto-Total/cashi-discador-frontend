@@ -76,6 +76,20 @@ export class ClientSearchService {
   }
 
   /**
+   * Busca un cliente por el identificador de una de sus deudas (en Interbank, el CJ),
+   * en las subcarteras del usuario que traen una fila por deuda.
+   */
+  findClientGlobalByCuenta(cuenta: string): Observable<GlobalSearchResult[]> {
+    const params = new HttpParams().set('cuenta', cuenta);
+    return this.http.get<GlobalSearchResult[]>(`${this.apiUrl}/global-cuenta`, { params });
+  }
+
+  /** Nombre del identificador de deuda en las subcarteras del usuario; vacío si no tiene ninguna. */
+  getIdentificadorDeuda(): Observable<{ nombres: string[] }> {
+    return this.http.get<{ nombres: string[] }>(`${this.apiUrl}/identificador-deuda`);
+  }
+
+  /**
    * Busca clientes globalmente por nombre completo, nombres o apellidos.
    */
   findClientsGlobalByName(q: string, page: number = 0, size: number = 20): Observable<GlobalNameSearchResponse> {

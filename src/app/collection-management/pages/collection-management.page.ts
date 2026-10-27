@@ -939,14 +939,14 @@ interface BorradorDeuda {
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">Productos de esta tipificación</div>
                   <label class="flex items-center gap-1.5 text-xs font-bold text-purple-800 dark:text-purple-300 cursor-pointer">
-                    <input type="checkbox" class="accent-blue-600" [checked]="todasMarcadas()" (change)="marcarTodas($any($event.target).checked)">
+                    <input type="checkbox" class="accent-blue-600" [checked]="todasMarcadas()" [disabled]="acuerdoElegido()" (change)="marcarTodas($any($event.target).checked)">
                     Todos
                   </label>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   @for (p of productosCliente(); track p.cuenta) {
                     <div [class]="'flex items-start gap-2 px-3 py-1.5 rounded-md border text-xs ' + clasesProducto(p)">
-                      <input type="checkbox" class="accent-blue-600 mt-0.5" [checked]="cuentasMarcadas().includes(p.cuenta)" [disabled]="p.tipificada"
+                      <input type="checkbox" class="accent-blue-600 mt-0.5" [checked]="cuentasMarcadas().includes(p.cuenta)" [disabled]="p.tipificada || acuerdoElegido()"
                              (change)="marcarCuenta(p.cuenta, $any($event.target).checked)" [attr.aria-label]="'Incluir ' + p.producto + ' en esta tipificación'">
                       <button type="button" class="flex flex-col items-start gap-0.5 text-left disabled:cursor-not-allowed" [disabled]="p.tipificada" (click)="seleccionarCuenta(p.cuenta)">
                         <span class="font-bold">{{ p.producto }}</span>
@@ -962,7 +962,9 @@ interface BorradorDeuda {
                     </div>
                   }
                 </div>
-                @if (cuentasMarcadas().length > 1) {
+                @if (acuerdoElegido()) {
+                  <p class="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-2 mb-0">El acuerdo va por un solo producto. Para negociar otro, elíjalo arriba o en Producto.</p>
+                } @else if (cuentasMarcadas().length > 1) {
                   <p class="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-2 mb-0">La misma tipificación se guarda para los productos marcados. Promesa de pago y fraccionamiento van por un solo producto.</p>
                 }
               </div>
@@ -1575,6 +1577,8 @@ interface BorradorDeuda {
                 [externalUpdates]="externalFieldUpdates()"
                 [selectedClassification]="selectedClassification()"
                 [customerAmounts]="finalPaymentAmounts()"
+                [simboloMoneda]="simboloMoneda()"
+                [deuda]="cuentaSeleccionada()"
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
@@ -3316,6 +3320,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   marcarCuenta(cuenta: string, marcada: boolean) {
+    if (marcada && this.acuerdoElegido()) return;
     const actuales = this.cuentasMarcadas();
     const nuevas = marcada ? [...new Set([...actuales, cuenta])] : actuales.filter(c => c !== cuenta);
     if (!nuevas.length) return;
@@ -3326,6 +3331,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   marcarTodas(marcar: boolean) {
+    if (marcar && this.acuerdoElegido()) return;
     const pendientes = this.productosCliente().filter(p => !p.tipificada).map(p => p.cuenta);
     if (marcar) {
       this.cuentasMarcadas.set(pendientes);
@@ -3352,6 +3358,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   opcionSoloUnProducto(opcion: any): boolean {
     return this.mostrarProductosTipificacion() && this.cuentasMarcadas().length > 1 && this.esOpcionDeAcuerdo(opcion);
   }
+
+  /** Hay un acuerdo elegido: se negocia un solo producto, el que está a la vista */
+  acuerdoElegido = computed(() => {
+    if (this.isCancellationTypification()) return true;
+    if (this.dynamicFieldsSchema()?.fields?.some((f: any) => f.type === 'payment_schedule')) return true;
+    const elegidas = this.selectedClassifications().filter(Boolean).map(String);
+    return this.managementClassifications().some((c: any) => elegidas.includes(String(c.id)) && this.esOpcionDeAcuerdo(c));
+  });
 
   /**
    * A qué deudas va el guardado. Sin varias deudas: un registro, como siempre. Sin contacto directo
