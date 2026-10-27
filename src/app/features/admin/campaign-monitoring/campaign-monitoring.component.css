@@ -1782,6 +1782,16 @@ body.light-theme .agente-tiempo {
   color: #93b0da;
 }
 
+/* Vuelta configurada que el discador no llegó a hacer */
+.campana-completada-segmentos i.pendiente {
+  background: #2f5fa3;
+  opacity: 0.45;
+}
+
+.campana-completada-etiquetas span.pendiente {
+  opacity: 0.55;
+}
+
 .campana-completada-manual {
   background: #232c40;
   border-color: #46536e;
@@ -1811,6 +1821,11 @@ body.light-theme .campana-completada-texto p {
 
 body.light-theme .campana-completada-etiquetas {
   color: #64748b;
+}
+
+body.light-theme .campana-completada-segmentos i.pendiente {
+  background: #bfdbfe;
+  opacity: 1;
 }
 
 body.light-theme .campana-completada-manual {
