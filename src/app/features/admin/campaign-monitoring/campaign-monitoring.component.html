@@ -48,7 +48,7 @@
     </span>
     <div class="campana-completada-texto">
       <ng-container *ngIf="vueltasCumplidas; else detenidaManual">
-        <strong>Campaña completada · {{ (autoDialerStats?.vueltasMaximas ?? 0) === 1 ? 'se cumplió' : 'se cumplieron' }} {{ textoVueltas }}</strong>
+        <strong>Campaña completada · {{ tituloVueltasCumplidas }}</strong>
         <p>No quedan contactos con intentos disponibles. El discador la cerró automáticamente.</p>
       </ng-container>
       <ng-template #detenidaManual>
@@ -58,10 +58,10 @@
     </div>
     <div class="campana-completada-vueltas" *ngIf="vueltasCumplidas && segmentosVueltas.length > 0">
       <div class="campana-completada-segmentos">
-        <i *ngFor="let v of segmentosVueltas"></i>
+        <i *ngFor="let v of segmentosVueltas" [class.pendiente]="!v.hecha"></i>
       </div>
       <div class="campana-completada-etiquetas">
-        <span *ngFor="let v of segmentosVueltas; let ultima = last">V{{ v }}{{ ultima ? ' ✓' : '' }}</span>
+        <span *ngFor="let v of segmentosVueltas" [class.pendiente]="!v.hecha">V{{ v.vuelta }}{{ v.vuelta === vueltasRealizadas ? ' ✓' : '' }}</span>
       </div>
     </div>
   </div>

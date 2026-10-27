@@ -326,10 +326,34 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     return total === 1 ? 'su única vuelta' : `sus ${total} vueltas`;
   }
 
-  /** Un segmento por vuelta para la barra del aviso. */
-  get segmentosVueltas(): number[] {
-    const total = this.autoDialerStats?.vueltasMaximas ?? 0;
-    return Array.from({ length: Math.min(Math.max(total, 0), 20) }, (_, i) => i + 1);
+  /**
+   * Vueltas que de verdad hizo el discador. Con la campaña cerrada, la vuelta que devuelve
+   * sp_estadisticas_campana es la última realizada (cuenta solo llamadas del discador, no
+   * rellamadas). Si el SP no respondió, se cae a las configuradas.
+   */
+  get vueltasRealizadas(): number {
+    const delSp = this.autoDialerStats?.vueltaActual ?? 0;
+    return delSp > 0 ? delSp : (this.autoDialerStats?.vueltasMaximas ?? 0);
+  }
+
+  /** Título del aviso: "se cumplieron sus 3 vueltas" o "se hicieron 2 de 3 vueltas". */
+  get tituloVueltasCumplidas(): string {
+    const hechas = this.vueltasRealizadas;
+    const maximas = this.autoDialerStats?.vueltasMaximas ?? 0;
+    if (hechas >= maximas) {
+      return `${maximas === 1 ? 'se cumplió' : 'se cumplieron'} ${this.textoVueltas}`;
+    }
+    return `${hechas === 1 ? 'se hizo' : 'se hicieron'} ${hechas} de ${maximas} ${maximas === 1 ? 'vuelta' : 'vueltas'}`;
+  }
+
+  /** Un segmento por vuelta configurada; los que no se llegaron a hacer quedan vacíos. */
+  get segmentosVueltas(): { vuelta: number; hecha: boolean }[] {
+    const hechas = this.vueltasRealizadas;
+    const total = Math.max(this.autoDialerStats?.vueltasMaximas ?? 0, hechas);
+    return Array.from({ length: Math.min(Math.max(total, 0), 20) }, (_, i) => ({
+      vuelta: i + 1,
+      hecha: i + 1 <= hechas
+    }));
   }
 
   /**
