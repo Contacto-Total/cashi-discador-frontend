@@ -8697,7 +8697,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       'telefono_laboral': 'Laboral',
       'telefono_domicilio': 'Domicilio',
       'telefono_referencia_1': 'Referencia 1',
-      'telefono_referencia_2': 'Referencia 2'
+      'telefono_referencia_2': 'Referencia 2',
+      'telefono_adicional_1': 'Adicional 1',
+      'telefono_adicional_2': 'Adicional 2',
+      'telefono_adicional_3': 'Adicional 3',
+      'telefono_adicional_4': 'Adicional 4',
+      'telefono_adicional_5': 'Adicional 5'
     };
     return labels[subtipo] || subtipo || 'Teléfono';
   }

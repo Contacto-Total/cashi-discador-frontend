@@ -1635,7 +1635,12 @@ export class CustomerViewComponent implements OnInit {
     const phonePriority: { [key: string]: number } = {
       'telefono_principal': 1,
       'telefono_secundario': 2,
-      'telefono_trabajo': 3
+      'telefono_trabajo': 3,
+      'telefono_adicional_1': 4,
+      'telefono_adicional_2': 5,
+      'telefono_adicional_3': 6,
+      'telefono_adicional_4': 7,
+      'telefono_adicional_5': 8
     };
 
     return phones.sort((a, b) => {
@@ -1665,6 +1670,11 @@ export class CustomerViewComponent implements OnInit {
       'telefono_trabajo': 'Teléfono de Trabajo',
       'telefono_referencia_1': 'Teléfono Referencia 1',
       'telefono_referencia_2': 'Teléfono Referencia 2',
+      'telefono_adicional_1': 'Teléfono Adicional 1',
+      'telefono_adicional_2': 'Teléfono Adicional 2',
+      'telefono_adicional_3': 'Teléfono Adicional 3',
+      'telefono_adicional_4': 'Teléfono Adicional 4',
+      'telefono_adicional_5': 'Teléfono Adicional 5',
       'email': 'Correo Electrónico'
     };
 
