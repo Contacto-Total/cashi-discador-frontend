@@ -26,6 +26,9 @@ export interface PaymentSchedule {
   scheduleType: string; // "FINANCIERA" o "CONFIANZA"
   negotiatedAmount: number | null;
   installments: Installment[];
+  /** Deuda de la promesa (identificador de deuda); vacío = vale para todas las deudas del cliente */
+  cuenta?: string | null;
+  producto?: string | null;
   // Computed properties from backend
   paidAmount?: number;
   pendingAmount?: number;

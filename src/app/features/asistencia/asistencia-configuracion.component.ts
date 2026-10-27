@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { forkJoin, of, switchMap } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
+import { AsistenciaInhabilitacionesComponent } from './asistencia-inhabilitaciones.component';
 import { AsistenciaService } from './asistencia.service';
 import {
   DiaBase, DiaCalendario, Horario, HorarioBase, ImportacionFeriados, PersonalAsistencia, PoliticaAsistencia, TipoDia,
@@ -74,7 +75,7 @@ function textoHorario(dias: DiaBase[]): string {
 @Component({
   selector: 'app-asistencia-configuracion',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AsistenciaInhabilitacionesComponent],
   styles: [`
     :host { display: block; }
     .aparecer { animation: aparecer .18s ease-out }
@@ -253,7 +254,7 @@ function textoHorario(dias: DiaBase[]): string {
         <div>
           <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Administración</h1>
           <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Reglas, horario base, vacaciones y calendario
+            Reglas, horario base, vacaciones, inhabilitaciones y calendario
           </p>
         </div>
         <button type="button" [class]="estilos.botonSecundario" (click)="volver.emit()">
@@ -402,6 +403,11 @@ function textoHorario(dias: DiaBase[]): string {
         <p class="pie-personal">Los días de vacaciones no cuentan falta, tardanza ni marcas. Si toda la semana es de vacaciones, el asesor no sale en el reporte de esa semana.</p>
       </div>
     </div>
+    }
+
+    <!-- INHABILITACIONES: quién no puede ingresar a Cashi (descanso, licencia; también se ven las vacaciones). -->
+    @if (seccion() === 'inhabilitaciones') {
+      <app-asistencia-inhabilitaciones [idSubcartera]="idSubcartera()" />
     }
 
     <!-- CALENDARIO -->
@@ -967,9 +973,10 @@ export class AsistenciaConfiguracionComponent {
   protected readonly SECCIONES = [
     { clave: 'reglas', texto: 'Reglas y horario base' },
     { clave: 'vacaciones', texto: 'Vacaciones' },
+    { clave: 'inhabilitaciones', texto: 'Inhabilitaciones' },
     { clave: 'calendario', texto: 'Calendario' }
   ] as const;
-  readonly seccion = signal<'reglas' | 'vacaciones' | 'calendario'>('reglas');
+  readonly seccion = signal<'reglas' | 'vacaciones' | 'inhabilitaciones' | 'calendario'>('reglas');
   protected readonly CABECERAS = CABECERAS;
 
   /** Las pastillas del historial y del calendario, con los tonos de Cashi. */

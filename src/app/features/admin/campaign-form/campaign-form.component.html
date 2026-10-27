@@ -666,6 +666,21 @@
       </div>
     </div>
 
+    <div class="phone-selection-panel" *ngIf="tieneVariasDeudas">
+      <div>
+        <h3>Productos por cliente</h3>
+        <p>Según cuántas deudas tiene el cliente en la cartera.</p>
+      </div>
+      <div class="phone-count-options" role="radiogroup" aria-label="Productos por cliente">
+        <label *ngFor="let opcion of opcionesProductos" class="phone-count-option"
+               [class.selected]="filtroProductos === opcion.valor">
+          <input type="radio" name="filtroProductos" [checked]="filtroProductos === opcion.valor"
+                 (change)="filtroProductos = opcion.valor">
+          <span>{{ opcion.texto }}</span>
+        </label>
+      </div>
+    </div>
+
     </fieldset>
 
     <!-- Botones de Acción -->

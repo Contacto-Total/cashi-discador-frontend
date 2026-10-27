@@ -1123,6 +1123,24 @@ body.light-theme .login-card .toggle-password mat-icon,
   box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
 }
 
+/* Inhabilitado por RR.HH.: no es un error del asesor, es un aviso. */
+.error-message.aviso-inhabilitado {
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0.07) 100%);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fde68a;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
+}
+
+body.light-theme .error-message.aviso-inhabilitado,
+:root.light .error-message.aviso-inhabilitado {
+  background: #fef6e0;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
 @keyframes errorSlide {
   from {
     opacity: 0;

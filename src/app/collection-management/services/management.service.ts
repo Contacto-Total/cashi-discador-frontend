@@ -29,6 +29,12 @@ export interface RegistroGestionV2 {
   observaciones?: string;
   /** JSON con los valores de los campos adicionales sin columna propia */
   camposAdicionales?: string | null;
+  /** Deuda de la gestión (identificador de deuda); vacío = todas las deudas del cliente */
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
+  /** Igual en todos los registros que el asesor guardó en una misma llamada */
+  grupoGestionUuid?: string | null;
   metodoContacto?: string;
   canalContacto?: string;
   estadoGestion?: string;
@@ -86,6 +92,9 @@ export interface ManagementResource {
   totalCuotas?: number;       // Número total de cuotas
   fechaPrimeraCuota?: string; // Fecha de la primera cuota (YYYY-MM-DD)
   grupoPromesaUuid?: string;  // UUID del grupo de promesa
+  /** Deuda de la gestión; vacío = todas las deudas del cliente */
+  cuenta?: string;
+  producto?: string;
 }
 
 export interface CallDetailResource {
@@ -184,6 +193,12 @@ export interface CreateManagementRequest {
   observations?: string;
   /** JSON con los valores de los campos adicionales sin columna propia */
   camposAdicionales?: string | null;
+  /** Deuda de la gestión (identificador de deuda); vacío = todas las deudas del cliente */
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
+  /** Igual en todos los registros que el asesor guardó en una misma llamada */
+  grupoGestionUuid?: string | null;
 
   // Campos adicionales para registro completo
   // metodoContacto: QUIÉN/QUÉ originó la gestión
@@ -236,6 +251,12 @@ export interface PaymentScheduleRequest {
   idTipificacion: number;
   observaciones?: string;
   camposAdicionales?: string | null;  // JSON con los valores de los campos adicionales
+  /** Deuda de la gestión (identificador de deuda); vacío = todas las deudas del cliente */
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
+  /** Igual en todos los registros que el asesor guardó en una misma llamada */
+  grupoGestionUuid?: string | null;
   metodoContacto?: string;  // GESTION_MANUAL, GESTION_PROGRESIVO, etc.
   canalContacto?: string;   // LLAMADA_SALIENTE, LLAMADA_ENTRANTE, SMS, etc.
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
@@ -298,6 +319,14 @@ export interface ReprogramarPromesaRequest {
   solicitadoPorUsuarioId: number;
   solicitadoPorNombre?: string | null;
   forzarSupervision?: boolean; // default backend: false
+}
+
+/** Deudas del cliente en la tabla de su subcartera (una fila por deuda) */
+export interface CuentasClienteResponse {
+  campoCuenta?: string | null;
+  campoProducto?: string | null;
+  campoMoneda?: string | null;
+  cuentas: Record<string, any>[];
 }
 
 @Injectable({
@@ -400,7 +429,9 @@ export class ManagementService {
           typificationRequiresSchedule: !!r.grupoPromesaUuid,
           totalCuotas: r.totalCuotas || undefined,
           fechaPrimeraCuota: r.fechaPrimeraCuota || undefined,
-          grupoPromesaUuid: r.grupoPromesaUuid || undefined
+          grupoPromesaUuid: r.grupoPromesaUuid || undefined,
+          cuenta: r.cuenta || undefined,
+          producto: r.producto || undefined
         } as ManagementResource;
       }))
     );
@@ -450,9 +481,11 @@ export class ManagementService {
     documento: string,
     tenantId: number,
     carteraId: number,
-    subcarteraId: number
+    subcarteraId: number,
+    cuenta?: string | null
   ): Observable<PromesaVencidaGraciaResponse> {
-    const params = { tenantId: tenantId.toString(), carteraId: carteraId.toString(), subcarteraId: subcarteraId.toString() };
+    const params: Record<string, string> = { tenantId: tenantId.toString(), carteraId: carteraId.toString(), subcarteraId: subcarteraId.toString() };
+    if (cuenta) params['cuenta'] = cuenta;
     return this.http.get<PromesaVencidaGraciaResponse>(
       `${this.baseUrl}/payment-schedule/documento/${documento}/vencida-en-gracia`,
       { params }
@@ -481,6 +514,8 @@ export class ManagementService {
         scheduleId: {
           scheduleId: record.grupoPromesaUuid || record.uuid
         },
+        cuenta: record.cuenta ?? null,
+        producto: record.producto ?? null,
         customerId: String(record.idCliente),
         managementId: String(record.id),
         totalAmount: totalAmount,
@@ -620,6 +655,16 @@ export class ManagementService {
   }
 
   /**
+   * Deudas del cliente cuando la carga de su subcartera trae una fila por deuda. Viene con las
+   * columnas del identificador, el producto y la moneda; la lista queda vacía si la subcartera
+   * no tiene enlazado el identificador de deuda.
+   */
+  getCuentasCliente(tenantId: number, portfolioId: number, subPortfolioId: number, documento: string): Observable<CuentasClienteResponse> {
+    const params = { tenantId: String(tenantId), portfolioId: String(portfolioId), subPortfolioId: String(subPortfolioId), documento };
+    return this.http.get<CuentasClienteResponse>(`${environment.apiUrl}/client-search/cuentas`, { params });
+  }
+
+  /**
    * Obtiene las cabeceras de montos (campos numéricos decimales) para una subcartera
    * Esto permite mostrar los nombres visuales de los campos de monto
    */
@@ -668,6 +713,10 @@ export class ManagementService {
       tipificacion: { id: finalTypificationId },
       observaciones: request.observations || '',
       camposAdicionales: request.camposAdicionales ?? null,
+      cuenta: request.cuenta ?? null,
+      producto: request.producto ?? null,
+      moneda: request.moneda ?? null,
+      grupoGestionUuid: request.grupoGestionUuid ?? null,
       // Campos de contacto
       telefonoContacto: request.phone || undefined,
       canalContacto: request.canalContacto || undefined,

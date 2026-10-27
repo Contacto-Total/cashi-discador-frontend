@@ -363,7 +363,7 @@ export interface CierreSemana {
  * solicitud, regla, feriado o cierre— con su valor anterior, el nuevo, el
  * motivo y quién lo hizo.
  */
-export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE' | 'VACACIONES' | 'PERSONAL';
+export type TipoCambio = 'MARCACION' | 'RECUPERACION' | 'SOLICITUD' | 'REGLA' | 'FERIADO' | 'CIERRE' | 'INGRESO_CESE' | 'VACACIONES' | 'PERSONAL' | 'INHABILITACION';
 
 export interface CambioAsistencia {
   /** «M-12» para una marca corregida, «A-7» para el resto. */
@@ -675,6 +675,33 @@ export interface VacacionesAsesor {
   registradoPor: string | null;
   /** false si toca una semana cerrada: ya no se puede anular. */
   editable: boolean;
+}
+
+/**
+ * Configuración › Inhabilitaciones: un rango en que el asesor no puede
+ * ingresar a Cashi. Las vacaciones salen en la misma lista porque también
+ * bloquean el ingreso, pero se anulan en su pestaña.
+ */
+export interface Inhabilitacion {
+  id: number;
+  /** CALENDARIO: un día «Sin asignación» de toda una subcartera; no tiene asesor. */
+  origen: 'INHABILITACION' | 'VACACIONES' | 'CALENDARIO';
+  idUsuario: number | null;
+  nombre: string;
+  usuario: string;
+  subcartera: string | null;
+  /** «2026-10-26T11:30:00», hora de Lima. */
+  desde: string;
+  hasta: string;
+  /** Sin sustento es DESCANSO; con sustento, LICENCIA. */
+  motivo: 'DESCANSO' | 'LICENCIA' | 'VACACIONES' | 'SIN_ASIGNACION';
+  estado: 'PROGRAMADA' | 'VIGENTE' | 'TERMINADA' | 'REVOCADA';
+  /** La justificación de la licencia: su certificado se ve como el de cualquier solicitud. */
+  idJustificacion: number | null;
+  sustento: string | null;
+  comentario: string | null;
+  registradoPor: string | null;
+  revocable: boolean;
 }
 
 export interface DeudaPlan {
