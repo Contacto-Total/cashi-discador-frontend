@@ -79,7 +79,7 @@ export interface AmountOption {
                 >
                 @if (superaLimite) {
                   <p class="text-xs text-red-600 font-bold mt-1">
-                    La promesa de pago supera la DEUDA TOTAL en más del  {{ selectedPorcentajeMaximoPromesa() }}%. Máximo permitido: S/ {{ limitePermitidoValor.toFixed(2) }} <!--Actualizar code-->
+                    La promesa de pago supera la DEUDA TOTAL en más del  {{ selectedPorcentajeMaximoPromesa() }}%. Máximo permitido: {{ simboloMoneda() }} {{ limitePermitidoValor.toFixed(2) }} <!--Actualizar code-->
                   </p>
                 }
 
@@ -315,6 +315,10 @@ export interface AmountOption {
 export class PaymentScheduleComponent implements OnInit {
   // Signal inputs for reactivity
   availableAmounts = input<AmountOption[]>([]);
+  /** Símbolo de la moneda de los montos */
+  simboloMoneda = input<string>('S/');
+  /** Deuda a la que van los montos: si cambia, la selección se reinicia aunque los campos sean los mismos */
+  deuda = input<string | null>(null);
   @Input() maxInstallments: number = 6;  // Default, será sobrescrito por la opción seleccionada
   @Input() minInstallments: number = 1;  // Default, será sobrescrito por la opción seleccionada
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
@@ -432,7 +436,7 @@ export class PaymentScheduleComponent implements OnInit {
     effect(() => {
       const amounts = this.availableAmounts();
       // Crear una key basada en los fields disponibles para detectar cambios
-      const currentKey = amounts.map(a => a.field).sort().join(',');
+      const currentKey = amounts.map(a => a.field).sort().join(',') + '|' + (this.deuda() ?? '');
 
       if (this.previousAmountsKey && this.previousAmountsKey !== currentKey) {
         console.log('[PaymentSchedule] Amounts changed, resetting selection. Old:', this.previousAmountsKey, 'New:', currentKey);
@@ -447,6 +451,8 @@ export class PaymentScheduleComponent implements OnInit {
         this.customAmountValue = 0;
         this.montoBase.set(undefined);
         this.selectedBaseField.set('');
+        // El cronograma anterior deja de valer para quien lo recibió
+        this.scheduleChange.emit(null);
 
         // Si solo hay una opción (como en CONTINUIDAD), auto-seleccionarla
         if (amounts.length === 1 && amounts[0].value > 0) {
@@ -850,7 +856,8 @@ export class PaymentScheduleComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return this.fmt.currency(value);
+    const numero = this.fmt.number(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return numero ? `${this.simboloMoneda()} ${numero}` : '';
   }
 
   /**

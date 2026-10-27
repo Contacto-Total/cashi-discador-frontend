@@ -206,6 +206,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'payment_schedule') {
                 <app-payment-schedule
                   [availableAmounts]="paymentAmountOptions()"
+                  [simboloMoneda]="simboloMoneda()"
+                  [deuda]="deuda()"
                   [maxInstallments]="6"
                   (scheduleChange)="onPaymentScheduleChange(field.id, $event)"
                   (customAmountSelected)="onCustomAmountSelected($event)"
@@ -389,6 +391,9 @@ export class DynamicFieldRendererComponent {
   externalUpdates = input<DynamicFieldData>({});
   selectedClassification = input<ManagementClassification | null>(null);
   customerAmounts = input<AmountOption[]>([]); // Amounts from customer's debt data
+  simboloMoneda = input<string>('S/');
+  /** Deuda de los montos (cliente con varias deudas) */
+  deuda = input<string | null>(null);
 
   // Field data with two-way binding
   fieldData = signal<DynamicFieldData>({});

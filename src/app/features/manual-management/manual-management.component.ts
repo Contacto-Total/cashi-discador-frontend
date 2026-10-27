@@ -22,7 +22,9 @@ import { AgentState } from '../../core/models/agent-status.model';
 export class ManualManagementComponent implements OnInit {
   // Búsqueda
   searchValue = signal('');
-  searchType = signal<'documento' | 'telefono' | 'nombre'>('documento');
+  searchType = signal<'documento' | 'telefono' | 'nombre' | 'cuenta'>('documento');
+  /** Nombre del identificador de deuda en las subcarteras del usuario (en Interbank, CJ); vacío si no tiene ninguna */
+  etiquetaCuenta = signal('');
   searching = signal(false);
   searchError = signal('');
   hasSearched = signal(false);
@@ -43,6 +45,12 @@ export class ManualManagementComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // La búsqueda por identificador de deuda solo se ofrece a quien tiene subcarteras de una fila por deuda
+    this.clientSearchService.getIdentificadorDeuda().subscribe({
+      next: (respuesta) => this.etiquetaCuenta.set((respuesta?.nombres || []).join(' / ')),
+      error: () => this.etiquetaCuenta.set('')
+    });
+
     // Llegada desde "Llamadas agendadas": el cliente viene en la URL y se busca solo.
     // Sin esto la supervisora tenía que copiar el documento a mano desde la cita.
     const q = this.route.snapshot.queryParamMap;
@@ -81,7 +89,7 @@ export class ManualManagementComponent implements OnInit {
     this.searchError.set('');
   }
 
-  setSearchType(type: 'documento' | 'telefono' | 'nombre'): void {
+  setSearchType(type: 'documento' | 'telefono' | 'nombre' | 'cuenta'): void {
     this.searchType.set(type);
     this.searchValue.set('');
     this.foundResults.set([]);
@@ -112,6 +120,11 @@ export class ManualManagementComponent implements OnInit {
       return;
     }
 
+    if (this.searchType() === 'cuenta' && value.length < 4) {
+      this.searchError.set(`Ingresa el ${this.etiquetaCuenta()} completo`);
+      return;
+    }
+
     this.searching.set(true);
     this.searchError.set('');
     this.foundResults.set([]);
@@ -124,7 +137,9 @@ export class ManualManagementComponent implements OnInit {
 
     const obs = this.searchType() === 'documento'
       ? this.clientSearchService.findClientGlobal(value).pipe(map(result => [result]))
-      : this.clientSearchService.findClientGlobalByPhone(value);
+      : this.searchType() === 'cuenta'
+        ? this.clientSearchService.findClientGlobalByCuenta(value)
+        : this.clientSearchService.findClientGlobalByPhone(value);
 
     obs.subscribe({
       next: (results: GlobalSearchResult[]) => {
@@ -135,9 +150,7 @@ export class ManualManagementComponent implements OnInit {
       error: (err) => {
         this.searching.set(false);
         if (err.status === 404) {
-          this.searchError.set(this.searchType() === 'documento'
-            ? 'Cliente no encontrado con ese documento'
-            : 'Cliente no encontrado con ese número de teléfono');
+          this.searchError.set(this.getNotFoundMessage());
         } else {
           this.searchError.set('Error al buscar el cliente');
         }
@@ -217,13 +230,21 @@ export class ManualManagementComponent implements OnInit {
   getSearchPlaceholder(): string {
     if (this.searchType() === 'documento') return 'Ingresa el documento del cliente (DNI/Cédula)';
     if (this.searchType() === 'telefono') return 'Ingresa el número de teléfono';
+    if (this.searchType() === 'cuenta') return `Ingresa el ${this.etiquetaCuenta()} (código del producto)`;
     return 'Ingresa nombre, apellido o nombre completo';
   }
 
   getEmptySearchMessage(): string {
     if (this.searchType() === 'documento') return 'Ingresa un documento para buscar';
     if (this.searchType() === 'telefono') return 'Ingresa un número de teléfono para buscar';
+    if (this.searchType() === 'cuenta') return `Ingresa un ${this.etiquetaCuenta()} para buscar`;
     return 'Ingresa un nombre o apellido para buscar';
+  }
+
+  getNotFoundMessage(): string {
+    if (this.searchType() === 'documento') return 'Cliente no encontrado con ese documento';
+    if (this.searchType() === 'cuenta') return `Cliente no encontrado con ese ${this.etiquetaCuenta()}`;
+    return 'Cliente no encontrado con ese número de teléfono';
   }
 
   private resetNamePagination(): void {
