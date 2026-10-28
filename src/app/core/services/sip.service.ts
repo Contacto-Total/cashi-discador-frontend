@@ -2,6 +2,8 @@ import { Injectable, EventEmitter, inject } from '@angular/core';
 import JsSIP from 'jssip';
 import { WebsocketService } from './websocket.service';
 import { AudioDeviceService } from './audio-device.service';
+import { AudioTelemetryService, EventoAudio } from './audio-telemetry.service';
+import { distinctUntilChanged, skip } from 'rxjs';
 
 export enum CallState {
   IDLE = 'IDLE',
@@ -50,7 +52,12 @@ export class SipService {
 
   private websocketService = inject(WebsocketService);
   private audioDeviceService = inject(AudioDeviceService);
+  private audioTelemetry = inject(AudioTelemetryService);
   private currentExtension: string | null = null;
+
+  // Apertura de micrófono en curso: los que piden micrófono a la vez esperan a la misma
+  private micSwitch: Promise<MediaStream> | null = null;
+  private devicechangeTimer: any = null;
 
   constructor() {
     // Enable JsSIP debug (disable in production)
@@ -63,6 +70,20 @@ export class SipService {
     // Create audio element for ringtone (incoming calls only)
     this.ringtoneAudio = new Audio('assets/sounds/ringtone.mp3');
     this.ringtoneAudio.loop = true;
+
+    // El micrófono se abre al registrar y se reutiliza en todas las llamadas. Si el headset
+    // se desconecta o vuelve, o el asesor lo cambia en /settings, se reemplaza sin recargar.
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.addEventListener('devicechange', () => this.onDevicesChanged());
+    }
+    this.audioDeviceService.getSelectedInputId().pipe(skip(1), distinctUntilChanged()).subscribe(() => {
+      if (this.localStream) {
+        this.switchMicrophone('MIC_CAMBIADO', 'cambio en configuración')
+          .catch(err => this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(err)));
+      }
+    });
+    this.audioDeviceService.getSelectedOutputId().pipe(skip(1), distinctUntilChanged())
+      .subscribe(() => this.applyOutputDevice());
   }
 
   /**
@@ -372,25 +393,11 @@ export class SipService {
         // Start the UA
         this.ua.start();
 
-        // Get microphone access with selected device (don't block registration on this)
+        // Get microphone access with selected device (don't block registration on this).
+        // Si el headset preferido no está, toma el predeterminado: antes el getUserMedia con
+        // deviceId exact fallaba, localStream quedaba null y el auto-answer fallaba en silencio.
         try {
-          const inputDeviceId = this.audioDeviceService.getCurrentInputDeviceId();
-          const audioConstraints: MediaTrackConstraints = {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          };
-
-          // Add deviceId constraint if not using default
-          if (inputDeviceId && inputDeviceId !== 'default') {
-            audioConstraints.deviceId = { exact: inputDeviceId };
-          }
-
-          this.localStream = await navigator.mediaDevices.getUserMedia({
-            audio: audioConstraints,
-            video: false
-          });
-          console.log('🎤 Microphone access granted, device:', inputDeviceId || 'default');
+          await this.switchMicrophone(null, 'registro');
 
           // Set output device on remote audio element
           const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
@@ -410,6 +417,7 @@ export class SipService {
         } catch (error) {
           console.warn('⚠️ Microphone access denied (will retry when making a call):', error);
           // Don't emit error or reject - microphone can be requested later
+          this.reportarAudio('MIC_NO_DISPONIBLE', null, 'al registrar: ' + this.describirError(error));
         }
 
       } catch (error: any) {
@@ -430,9 +438,7 @@ export class SipService {
       throw new Error('Not registered to FreeSWITCH');
     }
 
-    if (!this.localStream) {
-      throw new Error('Microphone not available');
-    }
+    const micStream = await this.micParaLlamada('saliente');
 
     try {
       console.log('📞 Making call to:', destination);
@@ -445,7 +451,7 @@ export class SipService {
           audio: true,
           video: false
         },
-        mediaStream: this.localStream,
+        mediaStream: micStream,
         pcConfig: {
           iceServers: [
             // Multiple STUN servers for faster failover
@@ -495,9 +501,7 @@ export class SipService {
       throw new Error('No incoming call to answer');
     }
 
-    if (!this.localStream) {
-      throw new Error('Microphone not available');
-    }
+    const micStream = await this.micParaLlamada('entrante');
 
     try {
       console.log('📲 Answering call');
@@ -507,7 +511,7 @@ export class SipService {
           audio: true,
           video: false
         },
-        mediaStream: this.localStream,
+        mediaStream: micStream,
         pcConfig: {
           iceServers: [
             // Multiple STUN servers for faster failover
@@ -572,6 +576,156 @@ export class SipService {
 
   isMuted(): boolean {
     return this.currentSession?.isMuted().audio || false;
+  }
+
+  // ========== MICRÓFONO: recuperación y cambio en caliente ==========
+
+  /**
+   * Micrófono vivo para contestar o llamar. Si el de la sesión murió (headset desconectado)
+   * o nunca se abrió, se abre otro aquí mismo en vez de fallar la llamada.
+   */
+  private async micParaLlamada(direccion: 'entrante' | 'saliente'): Promise<MediaStream> {
+    const track = this.localStream?.getAudioTracks()[0];
+    if (this.localStream && track?.readyState === 'live') {
+      return this.localStream;
+    }
+    try {
+      return await this.switchMicrophone('MIC_RECUPERADO', `sin micrófono vivo al iniciar llamada ${direccion}`);
+    } catch (error) {
+      console.error('❌ No hay micrófono para la llamada:', error);
+      this.reportarAudio('SIN_MIC_AL_CONTESTAR', null, `${direccion}: ${this.describirError(error)}`);
+      throw new Error('Microphone not available');
+    }
+  }
+
+  /**
+   * Abre el micrófono (el preferido o, si no está, el predeterminado) y lo pone en lugar
+   * del actual. Con llamada en curso se cambia con replaceTrack: no renegocia SIP ni corta.
+   */
+  private switchMicrophone(evento: EventoAudio | null, motivo: string): Promise<MediaStream> {
+    if (this.micSwitch) {
+      return this.micSwitch;
+    }
+    this.micSwitch = (async () => {
+      try {
+        const { stream, dispositivo, alternativo } = await this.audioDeviceService.acquireMicrophone();
+        const track = stream.getAudioTracks()[0];
+        track?.addEventListener('ended', () => this.onMicTrackEnded(track));
+
+        const anterior = this.localStream;
+        this.localStream = stream;
+        if (track) {
+          await this.replaceSessionTrack(track);
+        }
+        // stop() no dispara 'ended', así que esto no se confunde con una desconexión
+        anterior?.getTracks().forEach(t => t.stop());
+
+        console.log(`🎤 Micrófono en uso: ${dispositivo} (${motivo})`);
+        if (evento) {
+          this.reportarAudio(evento, dispositivo,
+            motivo + (alternativo ? ' - el preferido no está, se usa el predeterminado' : ''));
+        }
+        return stream;
+      } finally {
+        this.micSwitch = null;
+      }
+    })();
+    return this.micSwitch;
+  }
+
+  private async replaceSessionTrack(track: MediaStreamTrack): Promise<void> {
+    const pc: RTCPeerConnection | undefined = this.currentSession?.connection;
+    if (!pc || pc.signalingState === 'closed') {
+      return;
+    }
+    const sender = pc.getSenders().find(s => s.track?.kind === 'audio')
+      ?? pc.getTransceivers().find(t => t.receiver.track?.kind === 'audio')?.sender;
+    if (!sender) {
+      return;
+    }
+    try {
+      // JsSIP silencia con track.enabled sobre el sender: la pista nueva respeta el mute
+      track.enabled = !this.isMuted();
+      await sender.replaceTrack(track);
+      console.log('🔁 Micrófono reemplazado en la llamada en curso');
+    } catch (error) {
+      console.error('❌ No se pudo reemplazar el micrófono en la llamada:', error);
+    }
+  }
+
+  private onMicTrackEnded(track: MediaStreamTrack): void {
+    if (this.localStream?.getAudioTracks()[0] !== track) {
+      return;
+    }
+    console.warn('🎤 El micrófono dejó de funcionar:', track.label);
+    this.reportarAudio('MIC_PERDIDO', track.label, 'la pista terminó (dispositivo desconectado)');
+    this.switchMicrophone('MIC_RECUPERADO', 'reemplazo tras pérdida')
+      .catch(err => this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(err)));
+  }
+
+  /** Al conectar/desconectar llegan varios devicechange seguidos: se revisa una sola vez. */
+  private onDevicesChanged(): void {
+    clearTimeout(this.devicechangeTimer);
+    this.devicechangeTimer = setTimeout(() => this.revisarDispositivos(), 800);
+  }
+
+  private async revisarDispositivos(): Promise<void> {
+    if (!this.ua) {
+      return;
+    }
+    this.applyOutputDevice();
+
+    try {
+      const track = this.localStream?.getAudioTracks()[0];
+      if (!track || track.readyState !== 'live') {
+        await this.switchMicrophone('MIC_RECUPERADO', 'dispositivo conectado');
+        return;
+      }
+      // La pista sigue viva: se cambia solo si el que corresponde es otro (volvió el
+      // headset preferido, o Windows cambió el predeterminado al conectar uno)
+      const preferido = await this.audioDeviceService.resolveInputDevice();
+      const groupObjetivo = preferido ? preferido.groupId : await this.audioDeviceService.defaultInputGroupId();
+      const groupActual = track.getSettings().groupId;
+      if (groupObjetivo && groupActual && groupObjetivo !== groupActual) {
+        await this.switchMicrophone(
+          preferido ? 'MIC_RECUPERADO' : 'MIC_CAMBIADO',
+          preferido ? 'volvió el micrófono preferido' : 'cambió el predeterminado del sistema');
+      }
+    } catch (error) {
+      this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(error));
+    }
+  }
+
+  /** Parlante: el preferido si está conectado, si no el predeterminado ('' en setSinkId). */
+  private async applyOutputDevice(): Promise<void> {
+    const audio = this.remoteAudio as any;
+    if (!audio || !('setSinkId' in audio)) {
+      return;
+    }
+    try {
+      const deviceId = await this.audioDeviceService.resolveOutputDeviceId();
+      const sinkId = deviceId === 'default' ? '' : deviceId;
+      if (audio.sinkId !== sinkId) {
+        await audio.setSinkId(sinkId);
+        console.log('🔊 Salida de audio:', deviceId);
+      }
+    } catch (error) {
+      console.warn('⚠️ No se pudo cambiar la salida de audio:', error);
+    }
+  }
+
+  private reportarAudio(evento: EventoAudio, dispositivo: string | null, detalle: string | null): void {
+    this.audioTelemetry.reportar({
+      evento,
+      dispositivo,
+      detalle,
+      enLlamada: !!this.currentSession,
+      callUuid: this.currentPredictiveCallUuid
+    });
+  }
+
+  private describirError(error: any): string {
+    return `${error?.name || 'Error'}: ${error?.message || error}`;
   }
 
   /**
@@ -810,15 +964,24 @@ export class SipService {
       });
 
       // ========== CRITICAL: Monitor ICE CONNECTION state ==========
+      // Se reporta para separar cortes de red de cortes de headset
+      let iceCaidoDesde: number | null = null;
       pc.addEventListener('iceconnectionstatechange', () => {
         console.log(`🔌 ICE Connection State: ${pc.iceConnectionState}`);
 
         if (pc.iceConnectionState === 'connected') {
           console.log('✅ ICE CONNECTION ESTABLISHED - Audio should flow now!');
+          if (iceCaidoDesde !== null) {
+            this.reportarAudio('ICE_RECONECTADO', null, `${callType}, caído ${Date.now() - iceCaidoDesde} ms`);
+            iceCaidoDesde = null;
+          }
         } else if (pc.iceConnectionState === 'failed') {
           console.error('❌ ICE CONNECTION FAILED - No audio will flow!');
+          this.reportarAudio('ICE_FALLIDO', null, callType);
         } else if (pc.iceConnectionState === 'disconnected') {
           console.warn('⚠️ ICE CONNECTION DISCONNECTED');
+          iceCaidoDesde = Date.now();
+          this.reportarAudio('ICE_DESCONECTADO', null, callType);
         }
       });
 
