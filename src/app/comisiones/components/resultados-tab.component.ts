@@ -3,7 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ParticipanteComision, ReportePeriodo } from '../models/comision.model';
 import {
-  GRUPO_INFO, METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, partesComision, siguienteTramo, tramosDe
+  GRUPO_INFO, METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, partesComision, siguienteTramo, tramosDe, truncar2
 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -31,12 +31,12 @@ import { CmxIconComponent } from './cmx-icon.component';
       <div class="cmx-kpi">
         <div class="cmx-kpi-l">{{ metrica().logrado }} total</div>
         <div class="cmx-kpi-v"><small>S/</small>{{ totalAsesores() | appNumber:'1.2-2' }}</div>
-        <div class="cmx-kpi-d">{{ porcentajeTotal() | appNumber:'1.1-1' }} % de la meta · lo que mide el supervisor</div>
+        <div class="cmx-kpi-d">{{ truncar2(porcentajeTotal()) | appNumber:'1.2-2' }} % de la meta · lo que mide el supervisor</div>
       </div>
       <div class="cmx-kpi">
         <div class="cmx-kpi-l">Meta por asesor</div>
         <div class="cmx-kpi-v"><small>S/</small>{{ metaPorAsesor() | appNumber:'1.2-2' }}</div>
-        <div class="cmx-kpi-d">Meta ÷ {{ divisor() }}@if (conMetaPropia()) { · {{ conMetaPropia() }} con meta propia o ingreso }</div>
+        <div class="cmx-kpi-d">@if (conMetaPropia()) { {{ conMetaPropia() }} con meta propia o ingreso } @else { La misma para todos los asesores }</div>
       </div>
       <div class="cmx-kpi">
         <div class="cmx-kpi-l">A pagar</div>
@@ -93,7 +93,7 @@ import { CmxIconComponent } from './cmx-icon.component';
                       <span class="cmx-mk" [style.left.%]="b.barra.marcador" [style.--i]="i"></span>
                     </div>
                     <div class="cmx-cap">
-                      <b>{{ a.porcentajeCumplimiento ?? 0 | appNumber:'1.1-1' }} %</b>
+                      <b>{{ truncar2(a.porcentajeCumplimiento) | appNumber:'1.2-2' }} %</b>
                       @if (b.siguiente; as s) {
                         <span class="cmx-gap-t">Faltan S/ {{ s.falta | appNumber:'1.0-0' }} para {{ s.desde }} %</span>
                       } @else {
@@ -164,7 +164,7 @@ import { CmxIconComponent } from './cmx-icon.component';
                       <span class="cmx-mk" [style.left.%]="b.barra.marcador"></span>
                     </div>
                     <div class="cmx-cap">
-                      <b>{{ s.porcentajeCumplimiento ?? 0 | appNumber:'1.1-1' }} %</b>
+                      <b>{{ truncar2(s.porcentajeCumplimiento) | appNumber:'1.2-2' }} %</b>
                       @if (b.siguiente; as sig) {
                         <span class="cmx-gap-t">Faltan S/ {{ sig.falta | appNumber:'1.0-0' }} para {{ sig.desde }} %</span>
                       } @else {
@@ -229,7 +229,8 @@ export class ResultadosTabComponent {
   readonly conMetaPropia = computed(() => this.asesores().filter(a => a.metaManual != null || !!a.fechaIngreso).length);
   readonly grupoInfo = GRUPO_INFO;
   readonly diaMes = diaMes;
-  readonly divisor = computed(() => Math.max(this.asesores().length - this.conMetaPropia(), 1));
+  readonly truncar2 = truncar2;
+  readonly divisor = computed(() => this.reporte().periodo.divisorMeta ?? Math.max(this.asesores().length - this.conMetaPropia(), 1));
   readonly metaPorAsesor = computed(() => this.reporte().periodo.metaDelMes / this.divisor());
   readonly porcentajeTotal = computed(() => {
     const meta = this.reporte().periodo.metaDelMes;

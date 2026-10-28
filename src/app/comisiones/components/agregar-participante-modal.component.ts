@@ -8,7 +8,7 @@ import { CmxIconComponent } from './cmx-icon.component';
 
 /**
  * Agregar a alguien que ingresa con el mes en curso. Se elige su fecha de ingreso y su meta
- * individual sale sola: meta de un asesor de mes completo × días hábiles que trabaja (desde el
+ * individual sale sola: meta del mes ÷ divisor del período × días hábiles que trabaja (desde el
  * ingreso, inclusive) ÷ días hábiles del mes. La meta del mes y la de los demás no cambian.
  * No recalcula: entra en el próximo recálculo.
  */
@@ -55,7 +55,7 @@ import { CmxIconComponent } from './cmx-icon.component';
               <div class="cr"><span>Días hábiles que trabajará</span><b>{{ c.dias }} de {{ c.diasMes }}</b></div>
               <div class="cx">Del {{ diaMes(fecha()) }} al {{ diaMes(ultimoDia()) }}: lunes a viernes, sin feriados</div>
               <div class="cr"><span>Meta individual</span><b>S/ {{ c.meta | appNumber:'1.2-2' }}</b></div>
-              <div class="cx">Meta de un asesor de mes completo S/ {{ c.metaBase | appNumber:'1.2-2' }} × {{ c.dias }} / {{ c.diasMes }} días hábiles</div>
+              <div class="cx">Meta por asesor S/ {{ c.metaBase | appNumber:'1.2-2' }} × {{ c.dias }} / {{ c.diasMes }} días hábiles</div>
               @for (m of c.metas; track m.nombre) {
                 <div class="cr"><span>{{ m.nombre }}</span><b>{{ m.llegar | appNumber:'1.0-0' }}</b></div>
                 <div class="cx">{{ m.dia }} por día × {{ c.dias }} días hábiles</div>
@@ -133,7 +133,7 @@ export class AgregarParticipanteModalComponent implements OnInit {
     const diasMes = p.diasHabiles;
     const mesCompleto = this.reporte().participantes
       .filter(x => x.rol === 'ASESOR' && x.metaManual == null && x.fechaIngreso == null).length;
-    const metaBase = p.metaDelMes / Math.max(mesCompleto, 1);
+    const metaBase = p.metaDelMes / (p.divisorMeta ?? Math.max(mesCompleto, 1));
     const dias = this.dias();
     const metas = p.tipoMetrica === 'CONTENCION'
       ? (p.metasCantidad ?? []).filter(m => m.tipo !== 'META' && m.cantidadDia != null).map(m => ({
