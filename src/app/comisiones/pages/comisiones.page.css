@@ -620,6 +620,9 @@
 .cmx-brk-r .a { font-family: var(--cmx-mono); font-weight: 600; }
 .cmx-brk-r:not(.ok) .a { color: var(--cmx-ink-4); }
 .cmx-brk-r.tot { background: var(--cmx-brand-tint); border-bottom: 0; }
+.cmx-brk-sel { margin-left: auto; }
+.cmx-brk-sel button + button { border-left: 1px solid var(--cmx-line-2); }
+.cmx-brk-sel button[aria-pressed="true"] { background: var(--cmx-blue); }
 .cmx-brk-r.tot .a { color: var(--cmx-brand-ink); }
 .cmx-mcrow { display: grid; grid-template-columns: minmax(0, 1.5fr) 70px minmax(110px, .7fr) minmax(90px, .6fr) minmax(110px, .7fr); gap: 8px 12px; align-items: center; padding: 9px 2px; border-bottom: 1px dashed var(--cmx-line); font-size: .8rem; }
 .cmx-mc-fixed.is-span3 { grid-column: span 3; }
