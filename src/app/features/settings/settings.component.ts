@@ -8,21 +8,69 @@ import { ThemeService, Theme } from '../../shared/services/theme.service';
 import { AudioDeviceService, AudioDevice, AudioLevelData, DispositivoEnUso } from '../../core/services/audio-device.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PruebaLlamadaComponent } from './prueba-llamada/prueba-llamada.component';
+import { ESTILOS } from '../asistencia/asistencia.estilos';
+
+type Seccion = 'appearance' | 'font' | 'audio';
+
+// Mismo sistema visual que el módulo de asistencia (asistencia.estilos.ts)
+const PASTILLA = {
+  neutra: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400',
+  azul: 'bg-[#eef2ff] text-[#3730a3] dark:bg-indigo-950/50 dark:text-indigo-300',
+  roja: 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300',
+  ambar: 'bg-[#fef6e0] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300'
+} as const;
 
 @Component({
   selector: 'app-settings',
   standalone: true,
+  // Toma la tipografía y los ajustes del módulo de asistencia (styles.css, «MÓDULO DE ASISTENCIA»)
+  host: { class: 'cashi-asistencia' },
   imports: [CommonModule, FormsModule, LucideAngularModule, PruebaLlamadaComponent],
   templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.css']
+  styles: [`
+    :host { display: block; min-height: 100%; }
+    .aparecer { animation: aparecer .18s ease-out }
+    @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
+    /* El select nativo pierde su flecha con appearance: none; se dibuja una */
+    .select-flecha {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238491a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 14px;
+    }
+  `]
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-  // Active section for sidebar navigation
-  activeSection: 'appearance' | 'font' | 'audio' = 'font';
+  readonly estilos = ESTILOS;
+  readonly pastillaNeutra = PASTILLA.neutra;
+  readonly pastillaAzul = PASTILLA.azul;
+  readonly pastillaRoja = PASTILLA.roja;
+  readonly pastillaAmbar = PASTILLA.ambar;
+  readonly avisoUso = 'flex items-start gap-2 rounded-lg px-3 py-2 text-[12px] leading-[1.45]';
+  readonly avisoVerde = 'bg-[#e8f5ec] text-[#166534] dark:bg-green-950/50 dark:text-green-300';
+  readonly avisoAmbar = 'bg-[#fef6e0] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300';
+  readonly selectFlecha = 'select-flecha truncate !pr-9 cursor-pointer disabled:cursor-default disabled:opacity-60';
+
+  readonly temas: { clave: Theme; texto: string; marco: string; lateral: string; cabecera: string; linea: string }[] = [
+    { clave: 'light', texto: 'Claro', marco: 'border-[#e6e9ee] bg-white', lateral: 'bg-[#f1f3f6]', cabecera: 'bg-[#e6e9ee]', linea: 'bg-[#e6e9ee]' },
+    { clave: 'dark', texto: 'Oscuro', marco: 'border-slate-700 bg-slate-900', lateral: 'bg-slate-800', cabecera: 'bg-slate-700', linea: 'bg-slate-700' }
+  ];
+
+  // Active section (pestañas)
+  activeSection: Seccion = 'font';
 
   // Solo ADMIN puede ver la pestaña de apariencia
   get isAdmin(): boolean {
     return this.authService.getCurrentUser()?.role === 'ADMIN';
+  }
+
+  get secciones(): { clave: Seccion; texto: string; icono: string }[] {
+    return [
+      ...(this.isAdmin ? [{ clave: 'appearance' as const, texto: 'Apariencia', icono: 'palette' }] : []),
+      { clave: 'font', texto: 'Tamaño de texto', icono: 'type' },
+      { clave: 'audio', texto: 'Audio', icono: 'headphones' }
+    ];
   }
 
   // Font size - applied (saved)

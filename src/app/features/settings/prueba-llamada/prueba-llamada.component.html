@@ -1,104 +1,123 @@
-<div class="prueba-card" [class.activa]="enCurso">
-  <div class="prueba-header">
-    <div class="prueba-icon">
-      <lucide-angular name="phone-call" [size]="24"></lucide-angular>
+<div [class]="estilos.tarjeta + ' gap-3.5 !py-4 transition-[border-color,box-shadow] ' + (enCurso ? '!border-[#16a34a] shadow-[0_0_0_3px_rgba(22,163,74,0.12)]' : '')">
+  <div class="flex items-center gap-2.5">
+    <span [class]="estilos.icono">
+      <lucide-angular name="phone-call" [size]="15" class="block"></lucide-angular>
+    </span>
+    <div class="min-w-0 flex-1">
+      <h3 [class]="estilos.rotulo">Prueba de llamada</h3>
+      <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">Verifica tu audio con el servidor. No genera gesti&oacute;n.</p>
     </div>
-    <div class="prueba-title-group">
-      <h3 class="prueba-title">Prueba de llamada</h3>
-      <span class="prueba-subtitle">Verifica tu audio con el servidor. No genera gesti&oacute;n.</span>
-    </div>
-    <div class="prueba-limite">
-      <lucide-angular name="timer" [size]="14"></lucide-angular>
-      <span>M&aacute;x. {{ duracionMax }} s</span>
-    </div>
+    <span [class]="estilos.pastilla + ' gap-1 bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400'">
+      <lucide-angular name="timer" [size]="12" class="block"></lucide-angular>
+      M&aacute;x. {{ duracionMax }} s
+    </span>
   </div>
 
   <!-- Por qué no se puede probar -->
-  <div class="prueba-aviso bloqueo" *ngIf="motivoBloqueo as motivo">
-    <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
-    <span>{{ motivo }}</span>
-    <button type="button" class="aviso-link" *ngIf="!verificando && estadoReintentable" (click)="verificarEstado()">Verificar de nuevo</button>
-  </div>
+  @if (motivoBloqueo; as motivo) {
+    <div [class]="aviso + ' ' + avisoAmbar" role="status">
+      <lucide-angular name="alert-triangle" [size]="14" class="mt-px block shrink-0"></lucide-angular>
+      <span class="flex-1">{{ motivo }}</span>
+      @if (!verificando && estadoReintentable) {
+        <button type="button" class="shrink-0 font-bold underline underline-offset-2" (click)="verificarEstado()">Verificar de nuevo</button>
+      }
+    </div>
+  }
 
   <!-- Llamada en curso -->
-  <div class="prueba-en-curso" *ngIf="enCurso">
-    <div class="en-curso-info">
-      <span class="en-curso-dot" [class.conectado]="fase === 'en-llamada'"></span>
-      <span class="en-curso-texto">{{ textoFase }}</span>
-      <span class="en-curso-tiempo" *ngIf="fase === 'en-llamada'">Se corta en {{ segundosRestantes }} s</span>
+  @if (enCurso) {
+    <div class="flex flex-col gap-3 rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-4 py-3.5 dark:border-slate-700 dark:bg-slate-800">
+      <div class="flex items-center gap-2">
+        <span class="h-2 w-2 animate-pulse rounded-full" [class]="fase === 'en-llamada' ? 'bg-[#16a34a]' : 'bg-[#f59e0b]'"></span>
+        <strong class="flex-1 text-[13.5px] font-bold">{{ textoFase }}</strong>
+        @if (fase === 'en-llamada') {
+          <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">Se corta en <strong class="font-bold !text-[#0f172a] dark:!text-slate-100">{{ segundosRestantes }} s</strong></span>
+        }
+      </div>
+
+      @if (fase === 'en-llamada') {
+        <div class="h-1.5 overflow-hidden rounded-full bg-[#e6e9ee] dark:bg-slate-700">
+          <div class="h-full rounded-full transition-[width] duration-1000 ease-linear"
+               [class]="segundosRestantes <= 5 ? 'bg-[#dc2626]' : 'bg-[#16a34a]'"
+               [style.width.%]="progreso"></div>
+        </div>
+      }
+
+      @if (enCurso === 'ECO_RETRASO' && fase === 'en-llamada') {
+        <p class="!m-0 text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+          Habla unos segundos y qu&eacute;date en silencio: debes escuchar tu voz a los 5 segundos.
+        </p>
+      }
+      @if (enCurso === 'ECO' && fase === 'en-llamada') {
+        <p class="!m-0 text-[12px] leading-[1.5] text-[#5f6c80] dark:text-slate-400">
+          Habla: debes escucharte al instante. Si tu voz llega cortada o con retraso, hay un problema de conexi&oacute;n.
+        </p>
+      }
+
+      <button type="button" (click)="colgar()"
+              class="inline-flex h-[34px] items-center gap-1.5 self-start rounded-lg border border-[#b91c1c] bg-[#dc2626] px-3.5 text-[13px] font-semibold !text-white transition-colors hover:bg-[#b91c1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#dc2626] focus-visible:ring-offset-2">
+        <lucide-angular name="phone-off" [size]="14" class="block"></lucide-angular>
+        Colgar
+      </button>
     </div>
-    <div class="en-curso-barra" *ngIf="fase === 'en-llamada'">
-      <div class="en-curso-progreso" [style.width.%]="progreso" [class.final]="segundosRestantes <= 5"></div>
-    </div>
-    <p class="en-curso-ayuda" *ngIf="enCurso === 'ECO_RETRASO' && fase === 'en-llamada'">
-      Habla unos segundos y qu&eacute;date en silencio: debes escuchar tu voz a los 5 segundos.
-    </p>
-    <p class="en-curso-ayuda" *ngIf="enCurso === 'ECO' && fase === 'en-llamada'">
-      Habla: debes escucharte al instante. Si tu voz llega cortada o con retraso, hay un problema de conexi&oacute;n.
-    </p>
-    <button type="button" class="colgar-btn" (click)="colgar()">
-      <lucide-angular name="phone-off" [size]="16"></lucide-angular>
-      <span>Colgar</span>
-    </button>
-  </div>
+  }
 
   <!-- Resultado -->
-  <div class="prueba-aviso" *ngIf="resultado && !enCurso" [class.ok]="resultado.tipo === 'ok'" [class.error]="resultado.tipo === 'error'">
-    <lucide-angular [name]="resultado.tipo === 'ok' ? 'check-circle' : 'x-circle'" [size]="16"></lucide-angular>
-    <span>{{ resultado.mensaje }}</span>
-  </div>
+  @if (resultado && !enCurso) {
+    <div [class]="aviso + ' ' + (resultado.tipo === 'ok' ? avisoVerde : avisoRojo)" role="status">
+      <lucide-angular [name]="resultado.tipo === 'ok' ? 'check-circle' : 'x-circle'" [size]="14" class="mt-px block shrink-0"></lucide-angular>
+      <span>{{ resultado.mensaje }}</span>
+    </div>
+  }
 
   <!-- Opciones -->
-  <div class="prueba-opciones" *ngIf="!enCurso">
-    <button type="button" class="opcion" (click)="iniciar('ECO_RETRASO')" [disabled]="!!motivoBloqueo">
-      <div class="opcion-icon eco-retraso">
-        <lucide-angular name="repeat" [size]="18"></lucide-angular>
-      </div>
-      <div class="opcion-texto">
-        <span class="opcion-titulo">Eco con retraso</span>
-        <span class="opcion-desc">Hablas y a los 5 s escuchas tu voz. Prueba micr&oacute;fono y altavoz.</span>
-      </div>
-      <lucide-angular name="chevron-right" [size]="16" class="opcion-flecha"></lucide-angular>
-    </button>
+  @if (!enCurso) {
+    <div class="grid gap-2.5 min-[860px]:grid-cols-2">
+      <button type="button" [class]="opcion" (click)="iniciar('ECO_RETRASO')" [disabled]="!!motivoBloqueo">
+        <span [class]="estilos.icono + ' !bg-[#e8f5ec] !text-[#166534] dark:!bg-green-950/50 dark:!text-green-300'">
+          <lucide-angular name="repeat" [size]="15" class="block"></lucide-angular>
+        </span>
+        <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span class="text-[13px] font-bold">Eco con retraso</span>
+          <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Hablas y a los 5 s escuchas tu voz. Prueba micr&oacute;fono y altavoz.</span>
+        </span>
+        <lucide-angular name="chevron-right" [size]="15" class="block shrink-0 text-[#8491a3]"></lucide-angular>
+      </button>
 
-    <button type="button" class="opcion" (click)="iniciar('ECO')" [disabled]="!!motivoBloqueo">
-      <div class="opcion-icon eco">
-        <lucide-angular name="audio-lines" [size]="18"></lucide-angular>
-      </div>
-      <div class="opcion-texto">
-        <span class="opcion-titulo">Eco inmediato</span>
-        <span class="opcion-desc">Te escuchas al instante. Sirve para notar cortes o retraso de la conexi&oacute;n.</span>
-      </div>
-      <lucide-angular name="chevron-right" [size]="16" class="opcion-flecha"></lucide-angular>
-    </button>
-
-    <div class="opcion opcion-numero" [class.deshabilitada]="!!motivoBloqueo">
-      <div class="opcion-icon numero">
-        <lucide-angular name="smartphone" [size]="18"></lucide-angular>
-      </div>
-      <div class="opcion-texto">
-        <span class="opcion-titulo">Llamar a un n&uacute;mero</span>
-        <span class="opcion-desc">Llamada real por el operador (se graba). Celular de 9 d&iacute;gitos o fijo de Lima de 7.</span>
-        <form class="numero-form" (ngSubmit)="iniciar('NUMERO')">
-          <input
-            type="tel"
-            class="numero-input"
-            name="numero"
-            [(ngModel)]="numero"
-            (ngModelChange)="numeroInvalido = false"
-            [class.invalido]="numeroInvalido"
-            [disabled]="!!motivoBloqueo"
-            maxlength="12"
-            placeholder="999 999 999"
-            autocomplete="off"
-          />
-          <button type="submit" class="numero-btn" [disabled]="!!motivoBloqueo || !numero.trim()">
-            <lucide-angular name="phone" [size]="16"></lucide-angular>
-            <span>Llamar</span>
-          </button>
-        </form>
-        <span class="numero-error" *ngIf="numeroInvalido">N&uacute;mero no v&aacute;lido: celular de 9 d&iacute;gitos que empiece con 9, o fijo de 7 d&iacute;gitos.</span>
-      </div>
+      <button type="button" [class]="opcion" (click)="iniciar('ECO')" [disabled]="!!motivoBloqueo">
+        <span [class]="estilos.icono + ' !bg-[#eef2ff] !text-[#3730a3] dark:!bg-indigo-950/50 dark:!text-indigo-300'">
+          <lucide-angular name="audio-lines" [size]="15" class="block"></lucide-angular>
+        </span>
+        <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span class="text-[13px] font-bold">Eco inmediato</span>
+          <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">Te escuchas al instante. Sirve para notar cortes o retraso de la conexi&oacute;n.</span>
+        </span>
+        <lucide-angular name="chevron-right" [size]="15" class="block shrink-0 text-[#8491a3]"></lucide-angular>
+      </button>
     </div>
-  </div>
+
+    <form class="flex flex-col gap-1.5 rounded-[10px] border border-[#e6e9ee] px-3.5 py-3 dark:border-slate-700"
+          [class.opacity-50]="!!motivoBloqueo" (ngSubmit)="iniciar('NUMERO')">
+      <label for="prueba-numero" [class]="estilos.etiqueta">Llamar a un n&uacute;mero</label>
+      <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">
+        Llamada real por el operador: se graba y tiene costo. Celular de 9 d&iacute;gitos o fijo de Lima de 7.
+      </p>
+      <div class="mt-1 flex gap-2">
+        <input id="prueba-numero" type="tel" name="numero" inputmode="numeric" autocomplete="off" maxlength="12"
+               placeholder="999 999 999"
+               [class]="estilos.campo + ' flex-1 tabular-nums ' + (numeroInvalido ? '!border-[#dc2626]' : '')"
+               [(ngModel)]="numero" (ngModelChange)="numeroInvalido = false"
+               [disabled]="!!motivoBloqueo" [attr.aria-invalid]="numeroInvalido" />
+        <button type="submit" [class]="estilos.botonPrimario" [disabled]="!!motivoBloqueo || !numero.trim()">
+          <lucide-angular name="phone" [size]="14" class="block"></lucide-angular>
+          Llamar
+        </button>
+      </div>
+      @if (numeroInvalido) {
+        <span class="text-[12px] font-semibold text-[#b91c1c] dark:text-red-300">
+          N&uacute;mero no v&aacute;lido: celular de 9 d&iacute;gitos que empiece con 9, o fijo de 7 d&iacute;gitos.
+        </span>
+      }
+    </form>
+  }
 </div>
