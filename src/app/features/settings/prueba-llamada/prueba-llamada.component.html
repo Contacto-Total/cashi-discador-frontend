@@ -1,0 +1,104 @@
+<div class="prueba-card" [class.activa]="enCurso">
+  <div class="prueba-header">
+    <div class="prueba-icon">
+      <lucide-angular name="phone-call" [size]="24"></lucide-angular>
+    </div>
+    <div class="prueba-title-group">
+      <h3 class="prueba-title">Prueba de llamada</h3>
+      <span class="prueba-subtitle">Verifica tu audio con el servidor. No genera gesti&oacute;n.</span>
+    </div>
+    <div class="prueba-limite">
+      <lucide-angular name="timer" [size]="14"></lucide-angular>
+      <span>M&aacute;x. {{ duracionMax }} s</span>
+    </div>
+  </div>
+
+  <!-- Por qué no se puede probar -->
+  <div class="prueba-aviso bloqueo" *ngIf="motivoBloqueo as motivo">
+    <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+    <span>{{ motivo }}</span>
+    <button type="button" class="aviso-link" *ngIf="!verificando && estadoReintentable" (click)="verificarEstado()">Verificar de nuevo</button>
+  </div>
+
+  <!-- Llamada en curso -->
+  <div class="prueba-en-curso" *ngIf="enCurso">
+    <div class="en-curso-info">
+      <span class="en-curso-dot" [class.conectado]="fase === 'en-llamada'"></span>
+      <span class="en-curso-texto">{{ textoFase }}</span>
+      <span class="en-curso-tiempo" *ngIf="fase === 'en-llamada'">Se corta en {{ segundosRestantes }} s</span>
+    </div>
+    <div class="en-curso-barra" *ngIf="fase === 'en-llamada'">
+      <div class="en-curso-progreso" [style.width.%]="progreso" [class.final]="segundosRestantes <= 5"></div>
+    </div>
+    <p class="en-curso-ayuda" *ngIf="enCurso === 'ECO_RETRASO' && fase === 'en-llamada'">
+      Habla unos segundos y qu&eacute;date en silencio: debes escuchar tu voz a los 5 segundos.
+    </p>
+    <p class="en-curso-ayuda" *ngIf="enCurso === 'ECO' && fase === 'en-llamada'">
+      Habla: debes escucharte al instante. Si tu voz llega cortada o con retraso, hay un problema de conexi&oacute;n.
+    </p>
+    <button type="button" class="colgar-btn" (click)="colgar()">
+      <lucide-angular name="phone-off" [size]="16"></lucide-angular>
+      <span>Colgar</span>
+    </button>
+  </div>
+
+  <!-- Resultado -->
+  <div class="prueba-aviso" *ngIf="resultado && !enCurso" [class.ok]="resultado.tipo === 'ok'" [class.error]="resultado.tipo === 'error'">
+    <lucide-angular [name]="resultado.tipo === 'ok' ? 'check-circle' : 'x-circle'" [size]="16"></lucide-angular>
+    <span>{{ resultado.mensaje }}</span>
+  </div>
+
+  <!-- Opciones -->
+  <div class="prueba-opciones" *ngIf="!enCurso">
+    <button type="button" class="opcion" (click)="iniciar('ECO_RETRASO')" [disabled]="!!motivoBloqueo">
+      <div class="opcion-icon eco-retraso">
+        <lucide-angular name="repeat" [size]="18"></lucide-angular>
+      </div>
+      <div class="opcion-texto">
+        <span class="opcion-titulo">Eco con retraso</span>
+        <span class="opcion-desc">Hablas y a los 5 s escuchas tu voz. Prueba micr&oacute;fono y altavoz.</span>
+      </div>
+      <lucide-angular name="chevron-right" [size]="16" class="opcion-flecha"></lucide-angular>
+    </button>
+
+    <button type="button" class="opcion" (click)="iniciar('ECO')" [disabled]="!!motivoBloqueo">
+      <div class="opcion-icon eco">
+        <lucide-angular name="audio-lines" [size]="18"></lucide-angular>
+      </div>
+      <div class="opcion-texto">
+        <span class="opcion-titulo">Eco inmediato</span>
+        <span class="opcion-desc">Te escuchas al instante. Sirve para notar cortes o retraso de la conexi&oacute;n.</span>
+      </div>
+      <lucide-angular name="chevron-right" [size]="16" class="opcion-flecha"></lucide-angular>
+    </button>
+
+    <div class="opcion opcion-numero" [class.deshabilitada]="!!motivoBloqueo">
+      <div class="opcion-icon numero">
+        <lucide-angular name="smartphone" [size]="18"></lucide-angular>
+      </div>
+      <div class="opcion-texto">
+        <span class="opcion-titulo">Llamar a un n&uacute;mero</span>
+        <span class="opcion-desc">Llamada real por el operador (se graba). Celular de 9 d&iacute;gitos o fijo de Lima de 7.</span>
+        <form class="numero-form" (ngSubmit)="iniciar('NUMERO')">
+          <input
+            type="tel"
+            class="numero-input"
+            name="numero"
+            [(ngModel)]="numero"
+            (ngModelChange)="numeroInvalido = false"
+            [class.invalido]="numeroInvalido"
+            [disabled]="!!motivoBloqueo"
+            maxlength="12"
+            placeholder="999 999 999"
+            autocomplete="off"
+          />
+          <button type="submit" class="numero-btn" [disabled]="!!motivoBloqueo || !numero.trim()">
+            <lucide-angular name="phone" [size]="16"></lucide-angular>
+            <span>Llamar</span>
+          </button>
+        </form>
+        <span class="numero-error" *ngIf="numeroInvalido">N&uacute;mero no v&aacute;lido: celular de 9 d&iacute;gitos que empiece con 9, o fijo de 7 d&iacute;gitos.</span>
+      </div>
+    </div>
+  </div>
+</div>

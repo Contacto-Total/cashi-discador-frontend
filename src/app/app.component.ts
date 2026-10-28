@@ -499,6 +499,13 @@ export class AppComponent implements OnInit, OnDestroy {
       this.callStatusSubscription = this.sipService.onCallStatus.subscribe((state) => {
         console.log(`📡 [App] Estado de llamada: ${state}`);
 
+        // Llamada de prueba de /settings: no navega a tipificación ni toca el estado del
+        // asesor (el fin de llamada podía devolverlo a DISPONIBLE)
+        if (this.sipService.isPruebaActiva()) {
+          console.log('🧪 [App] Ignorando evento de llamada de prueba');
+          return;
+        }
+
         // Ignorar ACTIVE durante rellamada (no navegar ni cambiar estado)
         if (state === CallState.ACTIVE && this.sipService.isRellamadaActive()) {
           console.log('📞 [App] Ignorando ACTIVE de rellamada');

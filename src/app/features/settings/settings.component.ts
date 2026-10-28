@@ -7,11 +7,12 @@ import { FontSizeService } from '../../core/services/font-size.service';
 import { ThemeService, Theme } from '../../shared/services/theme.service';
 import { AudioDeviceService, AudioDevice, AudioLevelData, DispositivoEnUso } from '../../core/services/audio-device.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PruebaLlamadaComponent } from './prueba-llamada/prueba-llamada.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, PruebaLlamadaComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css']
 })

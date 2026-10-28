@@ -32,6 +32,8 @@ export class SipService {
   private autoAnswerEnabled: boolean = false;  // For admin supervision mode
   private blockIncomingCalls: boolean = false;  // Block incoming calls during ACW/tipification
   private _isRellamadaActive: boolean = false;  // Flag: rellamada en progreso (ignore call events in app.component)
+  private _pruebaActiva: boolean = false;  // Llamada de prueba de /settings (ver llamarPrueba)
+  private bloqueoAntesDePrueba: boolean = false;
   public lastHangupCause: string = '';  // Último motivo de cuelgue SIP
 
   public onCallStatus = new EventEmitter<CallState>();
@@ -333,7 +335,15 @@ export class SipService {
             // esa no viene del discador y rechazarla es rechazar su propia marcacion.
             const esLlamadaPropia = this.esperandoLlamadaPropia();
 
-            if (this.blockIncomingCalls && esLlamadaPropia) {
+            if (this._pruebaActiva) {
+              console.warn('🚫 REJECTING incoming call - llamada de prueba en curso');
+              this.currentPredictiveCallUuid = null;
+              session.terminate({
+                status_code: 486,
+                reason_phrase: 'Busy Here - Test Call'
+              });
+              return;
+            } else if (this.blockIncomingCalls && esLlamadaPropia) {
               console.log('\u260e\ufe0f Entrantes bloqueadas, pero esta es la llamada que pidio el asesor a', this.currentOutgoingNumber, '- se acepta');
             } else if (this.blockIncomingCalls) {
               console.warn('🚫 REJECTING incoming call - agent is tipifying (ACW period)');
@@ -436,35 +446,7 @@ export class SipService {
       this.currentCallState = CallState.CONNECTING;
       this.onCallStatus.emit(this.currentCallState);
 
-      const options = {
-        mediaConstraints: {
-          audio: true,
-          video: false
-        },
-        mediaStream: micStream,
-        pcConfig: {
-          iceServers: [
-            // Multiple STUN servers for faster failover
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun.cloudflare.com:3478' }
-          ],
-          iceTransportPolicy: 'all',
-          rtcpMuxPolicy: 'require',
-          iceCandidatePoolSize: 0  // Disable pre-gathering for faster startup
-        },
-        // Offer constraints to ensure audio negotiation
-        rtcOfferConstraints: {
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: false
-        }
-      };
-
-      const session = this.ua.call(`sip:${destination}@${this.ua._configuration.uri.host}`, options);
-      this.currentSession = session;
-      this.setupSessionHandlers(session);
-      this.setupICEGatheringMonitor(session, 'outgoing');
-      this.setupSDPOptimization(session);
+      this.iniciarSesionSaliente(destination, micStream);
 
       // Guardar número de destino y emitir evento
       this.currentCallIncoming = false;
@@ -481,6 +463,91 @@ export class SipService {
       this.onError.emit(error.message || 'Failed to make call');
       throw error;
     }
+  }
+
+  /**
+   * Llamada de prueba desde /settings (eco del servidor o un número real).
+   *
+   * Sale directo del navegador a FreeSWITCH, sin pasar por /calls/make: no crea registro de
+   * llamada ni gestión, y el backend no le cambia el estado al asesor. Mientras dura:
+   * - app.component no navega a tipificación ni devuelve al asesor a DISPONIBLE;
+   * - se rechaza cualquier entrante (respaldo: la pantalla solo la permite fuera de DISPONIBLE,
+   *   así que el discador no debería mandarle nada).
+   * No marca currentOutgoingNumber: eso abriría la excepción de "llamada propia" del candado.
+   */
+  async llamarPrueba(destino: string): Promise<void> {
+    if (!this.ua || !this.ua.isRegistered()) {
+      throw new Error('El softphone no está conectado');
+    }
+    if (this.currentSession || this._pruebaActiva) {
+      throw new Error('Ya hay una llamada en curso');
+    }
+
+    this._pruebaActiva = true;
+    this.bloqueoAntesDePrueba = this.blockIncomingCalls;
+    this.blockIncomingCallsMode(true);
+
+    try {
+      const micStream = await this.micParaLlamada('saliente');
+      console.log('🧪 Llamada de prueba a:', destino);
+
+      this.currentCallState = CallState.CONNECTING;
+      this.onCallStatus.emit(this.currentCallState);
+
+      this.currentCallIncoming = false;
+      this.currentPredictiveCallUuid = null;
+      this.iniciarSesionSaliente(destino, micStream);
+    } catch (error) {
+      this.terminarModoPrueba();
+      this.currentCallState = CallState.IDLE;
+      this.onCallStatus.emit(this.currentCallState);
+      throw error;
+    }
+  }
+
+  isPruebaActiva(): boolean {
+    return this._pruebaActiva;
+  }
+
+  private terminarModoPrueba(): void {
+    if (!this._pruebaActiva) {
+      return;
+    }
+    this._pruebaActiva = false;
+    this.blockIncomingCallsMode(this.bloqueoAntesDePrueba);
+    console.log('🧪 Llamada de prueba terminada');
+  }
+
+  private iniciarSesionSaliente(destination: string, micStream: MediaStream): void {
+    const options = {
+      mediaConstraints: {
+        audio: true,
+        video: false
+      },
+      mediaStream: micStream,
+      pcConfig: {
+        iceServers: [
+          // Multiple STUN servers for faster failover
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' }
+        ],
+        iceTransportPolicy: 'all',
+        rtcpMuxPolicy: 'require',
+        iceCandidatePoolSize: 0  // Disable pre-gathering for faster startup
+      },
+      // Offer constraints to ensure audio negotiation
+      rtcOfferConstraints: {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false
+      }
+    };
+
+    const session = this.ua.call(`sip:${destination}@${this.ua._configuration.uri.host}`, options);
+    this.currentSession = session;
+    this.setupSessionHandlers(session);
+    this.setupICEGatheringMonitor(session, 'outgoing');
+    this.setupSDPOptimization(session);
   }
 
   /**
@@ -1174,6 +1241,7 @@ export class SipService {
 
       this.currentSession = null;
       this.currentPredictiveCallUuid = null;
+      this.terminarModoPrueba();
 
       setTimeout(() => {
         // Solo emitir IDLE si no hay una nueva llamada activa
@@ -1201,7 +1269,11 @@ export class SipService {
 
       this.currentSession = null;
       this.currentPredictiveCallUuid = null;
-      this.onError.emit(`Call failed: ${data.cause}`);
+      // La pantalla de prueba muestra su propio resultado: sin el modal de error global
+      if (!this._pruebaActiva) {
+        this.onError.emit(`Call failed: ${data.cause}`);
+      }
+      this.terminarModoPrueba();
 
       setTimeout(() => {
         // Solo emitir IDLE si no hay una nueva llamada activa

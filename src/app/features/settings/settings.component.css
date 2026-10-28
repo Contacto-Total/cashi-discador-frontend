@@ -756,6 +756,10 @@
   margin-bottom: 16px;
 }
 
+.prueba-llamada-wrapper {
+  margin-top: 16px;
+}
+
 /* Dispositivo que el softphone está usando ahora */
 .device-in-use {
   display: flex;
