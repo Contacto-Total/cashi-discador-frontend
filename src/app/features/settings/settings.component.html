@@ -1,355 +1,253 @@
-<div class="settings-layout">
-  <!-- Sidebar -->
-  <aside class="settings-sidebar">
-    <div class="sidebar-header">
-      <lucide-angular name="settings" [size]="24" class="sidebar-icon"></lucide-angular>
-      <span>Configuraci&oacute;n</span>
-    </div>
+<div class="min-h-full bg-[#f6f7f9] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
 
-    <nav class="sidebar-nav">
-      <button
-        *ngIf="isAdmin"
-        class="nav-item"
-        [class.active]="activeSection === 'appearance'"
-        (click)="activeSection = 'appearance'"
-      >
-        <div class="nav-icon" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">
-          <lucide-angular name="palette" [size]="16"></lucide-angular>
-        </div>
-        <span>Apariencia</span>
-      </button>
+  <div class="border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
+    <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Configuraci&oacute;n</h1>
+    <p class="!mb-0 mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
+      Tus dispositivos de audio, el tama&ntilde;o del texto y la apariencia
+    </p>
+  </div>
 
-      <button
-        class="nav-item"
-        [class.active]="activeSection === 'font'"
-        (click)="activeSection = 'font'"
-      >
-        <div class="nav-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
-          <lucide-angular name="type" [size]="16"></lucide-angular>
-        </div>
-        <span>Tama&ntilde;o de Texto</span>
-      </button>
-
-      <button
-        class="nav-item"
-        [class.active]="activeSection === 'audio'"
-        (click)="activeSection = 'audio'"
-      >
-        <div class="nav-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
-          <lucide-angular name="headphones" [size]="16"></lucide-angular>
-        </div>
-        <span>Audio</span>
-      </button>
+  <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
+    <nav [class]="estilos.segmentos" role="tablist" aria-label="Secciones de configuraci&oacute;n">
+      @for (s of secciones; track s.clave) {
+        <button type="button" role="tab" [attr.aria-selected]="activeSection === s.clave"
+                [class]="estilos.tab + ' ' + (activeSection === s.clave ? estilos.tabActiva : estilos.tabApagada)"
+                (click)="activeSection = s.clave">
+          <lucide-angular [name]="s.icono" [size]="14" class="block"></lucide-angular>
+          {{ s.texto }}
+        </button>
+      }
     </nav>
-  </aside>
+  </div>
 
-  <!-- Content -->
-  <main class="settings-content">
-    <!-- Appearance Section -->
-    <div class="content-section" *ngIf="activeSection === 'appearance' && isAdmin">
-      <h2 class="section-title">Apariencia</h2>
-      <p class="section-description">Personaliza el aspecto visual de la aplicaci&oacute;n</p>
+  <div class="max-w-[920px] px-7 pb-12 pt-5">
 
-      <div class="setting-card">
-        <div class="setting-row">
-          <div class="setting-info">
-            <lucide-angular [name]="isDarkMode ? 'moon' : 'sun'" [size]="20" class="setting-icon"></lucide-angular>
-            <div>
-              <span class="setting-label">Modo Oscuro</span>
-              <span class="setting-hint">Reduce el brillo de la pantalla</span>
+    <!-- ==================== AUDIO ==================== -->
+    @if (activeSection === 'audio') {
+      <div class="aparecer flex flex-col gap-4">
+        <div class="grid gap-4 min-[860px]:grid-cols-2">
+
+          <!-- Micrófono -->
+          <div [class]="estilos.tarjeta + ' gap-3.5 !py-4'">
+            <div class="flex items-center gap-2.5">
+              <span [class]="estilos.icono">
+                <lucide-angular name="mic" [size]="15" class="block"></lucide-angular>
+              </span>
+              <h3 [class]="estilos.rotulo + ' flex-1'">Micr&oacute;fono</h3>
+              <span [class]="estilos.pastilla + ' ' + (isMicMonitoring ? pastillaRoja : (selectedInputId !== 'default' ? pastillaAzul : pastillaNeutra))">
+                {{ isMicMonitoring ? 'Escuchando' : (selectedInputId !== 'default' ? 'Personalizado' : 'Del sistema') }}
+              </span>
             </div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" [checked]="isDarkMode" (change)="toggleTheme()">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
 
-      <div class="theme-preview">
-        <div class="preview-card light-preview" [class.selected]="!isDarkMode" (click)="setTheme('light')">
-          <div class="preview-window">
-            <div class="preview-header"></div>
-            <div class="preview-sidebar"></div>
-            <div class="preview-content">
-              <div class="preview-line"></div>
-              <div class="preview-line short"></div>
+            <div class="flex flex-col gap-1.5">
+              <label for="cfg-mic" [class]="estilos.etiqueta">Dispositivo de entrada</label>
+              <select id="cfg-mic" [class]="estilos.campo + ' ' + selectFlecha"
+                      [(ngModel)]="selectedInputId" (ngModelChange)="onInputDeviceSelect($event)"
+                      [disabled]="isMicMonitoring">
+                <option value="default">Usar dispositivo del sistema</option>
+                @for (device of inputDevices; track device.deviceId) {
+                  <option [value]="device.deviceId">{{ device.label }}</option>
+                }
+              </select>
             </div>
-          </div>
-          <span>Claro</span>
-        </div>
-        <div class="preview-card dark-preview" [class.selected]="isDarkMode" (click)="setTheme('dark')">
-          <div class="preview-window">
-            <div class="preview-header"></div>
-            <div class="preview-sidebar"></div>
-            <div class="preview-content">
-              <div class="preview-line"></div>
-              <div class="preview-line short"></div>
-            </div>
-          </div>
-          <span>Oscuro</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Font Size Section -->
-    <div class="content-section" *ngIf="activeSection === 'font'">
-      <h2 class="section-title">Tama&ntilde;o de Texto</h2>
-      <p class="section-description">Ajusta el tama&ntilde;o de la fuente para mejorar la legibilidad</p>
-
-      <div class="setting-card">
-        <div class="font-control">
-          <div class="font-header">
-            <span class="font-current">{{ previewFontSize }}px</span>
-            <span class="font-range">{{ minFontSize }}px - {{ maxFontSize }}px</span>
-          </div>
-
-          <div class="slider-row">
-            <button class="size-btn" (click)="decreaseFontSize()" [disabled]="previewFontSize <= minFontSize">
-              <span class="btn-label-small">A</span>
-            </button>
-            <input
-              type="range"
-              class="font-slider"
-              [min]="minFontSize"
-              [max]="maxFontSize"
-              [value]="previewFontSize"
-              (input)="onFontSizeChange($event)"
-            />
-            <button class="size-btn" (click)="increaseFontSize()" [disabled]="previewFontSize >= maxFontSize">
-              <span class="btn-label-large">A</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="preview-box">
-          <span class="preview-label">Vista previa</span>
-          <p class="preview-text" [style.font-size.px]="previewFontSize">{{ previewText }}</p>
-          <p class="preview-small" [style.font-size.px]="previewFontSize * 0.85">Texto secundario m&aacute;s peque&ntilde;o.</p>
-        </div>
-
-        <div class="action-row">
-          <button class="btn-secondary" (click)="resetFontSize()" [disabled]="isDefaultFontSize()">
-            <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
-            Restablecer
-          </button>
-          <button class="btn-primary" (click)="applyFontSize()" [disabled]="!hasChanges()">
-            <lucide-angular name="check" [size]="14"></lucide-angular>
-            Aplicar
-          </button>
-        </div>
-
-        <div class="change-notice" *ngIf="hasChanges()">
-          <lucide-angular name="info" [size]="14"></lucide-angular>
-          <span>Tienes cambios sin guardar</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Audio Section -->
-    <div class="content-section audio-section" *ngIf="activeSection === 'audio'">
-      <!-- Header with animated waves -->
-      <div class="audio-header">
-        <div class="audio-header-content">
-          <div class="audio-header-icon">
-            <lucide-angular name="headphones" [size]="32"></lucide-angular>
-          </div>
-          <div class="audio-header-text">
-            <h2 class="section-title">Configuraci&oacute;n de Audio</h2>
-            <p class="section-description">Personaliza tus dispositivos de entrada y salida para las llamadas</p>
-          </div>
-        </div>
-        <div class="audio-wave-container">
-          <div class="audio-wave"></div>
-          <div class="audio-wave"></div>
-          <div class="audio-wave"></div>
-          <div class="audio-wave"></div>
-          <div class="audio-wave"></div>
-        </div>
-      </div>
-
-      <!-- Audio Devices Grid -->
-      <div class="audio-devices-grid">
-        <!-- Microphone Card -->
-        <div class="audio-device-card mic-card" [class.monitoring]="isMicMonitoring">
-          <div class="device-card-header">
-            <div class="device-icon-wrapper mic-icon" [class.active]="isMicMonitoring">
-              <lucide-angular name="mic" [size]="24"></lucide-angular>
-              <div class="icon-pulse" *ngIf="isMicMonitoring"></div>
-            </div>
-            <div class="device-title-group">
-              <h3 class="device-title">Micr&oacute;fono</h3>
-              <span class="device-subtitle">Entrada de audio</span>
-            </div>
-            <div class="device-status" [class.active]="isMicMonitoring" [class.recording]="isMicMonitoring">
-              <span class="status-dot"></span>
-              <span class="status-text">{{ isMicMonitoring ? 'Escuchando...' : (selectedInputId !== 'default' ? 'Personalizado' : 'Por defecto') }}</span>
-            </div>
-          </div>
-
-          <div class="device-selector-wrapper">
-            <div class="select-icon">
-              <lucide-angular name="settings-2" [size]="16"></lucide-angular>
-            </div>
-            <select
-              class="device-select-premium"
-              [(ngModel)]="selectedInputId"
-              (ngModelChange)="onInputDeviceSelect($event)"
-              [disabled]="isMicMonitoring"
-            >
-              <option value="default">Usar dispositivo del sistema</option>
-              <option *ngFor="let device of inputDevices" [value]="device.deviceId">
-                {{ device.label }}
-              </option>
-            </select>
-          </div>
-
-          <div class="device-in-use" *ngIf="activeInput" [class.fallback]="activeInput.alternativo">
-            <lucide-angular [name]="activeInput.alternativo ? 'alert-triangle' : 'check-circle'" [size]="14"></lucide-angular>
-            <span>
-              <ng-container *ngIf="activeInput.alternativo">El elegido no est&aacute; conectado. </ng-container>
-              En uso: <strong>{{ activeInput.label }}</strong>
-            </span>
-          </div>
-
-          <!-- Audio Level Visualizer -->
-          <div class="audio-visualizer" [class.active]="isMicMonitoring">
-            <div class="visualizer-bars">
-              <div
-                *ngFor="let bar of audioLevel.bars; let i = index"
-                class="visualizer-bar"
-                [style.height.%]="isMicMonitoring ? (bar > 5 ? bar : 5) : 5"
-                [class.low]="bar < 30"
-                [class.medium]="bar >= 30 && bar < 60"
-                [class.high]="bar >= 60"
-              ></div>
-            </div>
-            <div class="visualizer-info" *ngIf="isMicMonitoring">
-              <div class="level-indicator">
-                <span class="level-label">Nivel</span>
-                <span class="level-value" [class.low]="audioLevel.level < 30" [class.medium]="audioLevel.level >= 30 && audioLevel.level < 60" [class.high]="audioLevel.level >= 60">
-                  {{ audioLevel.level }}%
+            @if (activeInput; as uso) {
+              <div [class]="avisoUso + ' ' + (uso.alternativo ? avisoAmbar : avisoVerde)">
+                <lucide-angular [name]="uso.alternativo ? 'alert-triangle' : 'check-circle'" [size]="14" class="mt-px block shrink-0"></lucide-angular>
+                <span>
+                  @if (uso.alternativo) {El elegido no est&aacute; conectado. }
+                  En uso: <strong class="font-bold">{{ uso.label }}</strong>
                 </span>
               </div>
-              <div class="peak-indicator">
-                <span class="peak-label">Pico</span>
-                <span class="peak-value">{{ audioLevel.peakLevel }}%</span>
+            }
+
+            <!-- Nivel del micrófono -->
+            <div class="flex h-[72px] flex-col justify-center gap-2 rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-3.5 dark:border-slate-700 dark:bg-slate-800">
+              @if (isMicMonitoring) {
+                <div class="flex h-7 items-end gap-[3px]" role="img" [attr.aria-label]="'Nivel del micrófono ' + audioLevel.level + '%'">
+                  @for (bar of audioLevel.bars; track $index) {
+                    <i class="flex-1 rounded-[2px] transition-[height] duration-75"
+                       [class]="bar >= 60 ? 'bg-[#dc2626]' : (bar >= 30 ? 'bg-[#f59e0b]' : 'bg-[#16a34a]')"
+                       [style.height.%]="bar > 8 ? bar : 8"></i>
+                  }
+                </div>
+                <div class="flex justify-between text-[11.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                  <span>Nivel <strong class="font-bold !text-[#0f172a] dark:!text-slate-100">{{ audioLevel.level }}%</strong></span>
+                  <span>Pico <strong class="font-bold !text-[#0f172a] dark:!text-slate-100">{{ audioLevel.peakLevel }}%</strong></span>
+                </div>
+              } @else {
+                <p class="!m-0 flex items-center justify-center gap-2 text-[12px] text-[#5f6c80] dark:text-slate-400">
+                  <lucide-angular name="audio-lines" [size]="15" class="block"></lucide-angular>
+                  @if (micTestResult === 'error') {
+                    <span class="font-semibold !text-[#b91c1c] dark:!text-red-300">No se pudo abrir el micr&oacute;fono</span>
+                  } @else {
+                    Pulsa &laquo;Probar micr&oacute;fono&raquo; y habla para ver el nivel
+                  }
+                </p>
+              }
+            </div>
+
+            <button type="button" [class]="estilos.botonSecundario + ' justify-center'"
+                    (click)="toggleMicrophoneMonitoring()" [disabled]="isTestingMic">
+              <lucide-angular [name]="isTestingMic ? 'loader-2' : (isMicMonitoring ? 'square' : 'play')" [size]="14"
+                              class="block" [class.animate-spin]="isTestingMic"></lucide-angular>
+              {{ isTestingMic ? 'Iniciando...' : (isMicMonitoring ? 'Detener prueba' : 'Probar micr&oacute;fono') }}
+            </button>
+          </div>
+
+          <!-- Altavoz -->
+          <div [class]="estilos.tarjeta + ' gap-3.5 !py-4'">
+            <div class="flex items-center gap-2.5">
+              <span [class]="estilos.icono">
+                <lucide-angular name="volume-2" [size]="15" class="block"></lucide-angular>
+              </span>
+              <h3 [class]="estilos.rotulo + ' flex-1'">Altavoz</h3>
+              <span [class]="estilos.pastilla + ' ' + (selectedOutputId !== 'default' ? pastillaAzul : pastillaNeutra)">
+                {{ selectedOutputId !== 'default' ? 'Personalizado' : 'Del sistema' }}
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label for="cfg-altavoz" [class]="estilos.etiqueta">Dispositivo de salida</label>
+              <select id="cfg-altavoz" [class]="estilos.campo + ' ' + selectFlecha"
+                      [(ngModel)]="selectedOutputId" (ngModelChange)="onOutputDeviceSelect($event)">
+                <option value="default">Usar dispositivo del sistema</option>
+                @for (device of outputDevices; track device.deviceId) {
+                  <option [value]="device.deviceId">{{ device.label }}</option>
+                }
+              </select>
+            </div>
+
+            @if (activeOutput; as uso) {
+              <div [class]="avisoUso + ' ' + (uso.alternativo ? avisoAmbar : avisoVerde)">
+                <lucide-angular [name]="uso.alternativo ? 'alert-triangle' : 'check-circle'" [size]="14" class="mt-px block shrink-0"></lucide-angular>
+                <span>
+                  @if (uso.alternativo) {El elegido no est&aacute; conectado. }
+                  En uso: <strong class="font-bold">{{ uso.label }}</strong>
+                </span>
               </div>
-            </div>
-            <div class="visualizer-placeholder" *ngIf="!isMicMonitoring">
-              <lucide-angular name="audio-waveform" [size]="20"></lucide-angular>
-              <span>Haz clic en "Probar" para ver el nivel de audio</span>
-            </div>
-          </div>
+            }
 
-          <!-- Test Button -->
-          <button
-            class="test-btn-premium mic-test"
-            (click)="toggleMicrophoneMonitoring()"
-            [disabled]="isTestingMic"
-            [class.testing]="isTestingMic"
-            [class.monitoring]="isMicMonitoring"
-            [class.error]="micTestResult === 'error'"
-          >
-            <div class="test-btn-icon">
-              <lucide-angular
-                [name]="isTestingMic ? 'loader-2' : (isMicMonitoring ? 'square' : (micTestResult === 'error' ? 'x-circle' : 'play'))"
-                [size]="18"
-                [class.spin]="isTestingMic"
-              ></lucide-angular>
-            </div>
-            <span class="test-btn-text">
-              {{ isTestingMic ? 'Iniciando...' : (isMicMonitoring ? 'Detener prueba' : (micTestResult === 'error' ? 'Error - Reintentar' : 'Probar micr&oacute;fono')) }}
-            </span>
-            <div class="test-btn-arrow" *ngIf="!isTestingMic && !isMicMonitoring && !micTestResult">
-              <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
-            </div>
-          </button>
+            <p class="!m-0 flex-1 rounded-[10px] bg-[#f4f6f9] px-3.5 py-3 text-[12px] leading-[1.55] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">
+              La prueba reproduce un tono corto. Para escuchar c&oacute;mo te llega una llamada real usa la
+              <strong class="font-bold">Prueba de llamada</strong> de abajo.
+            </p>
+
+            <button type="button" [class]="estilos.botonSecundario + ' justify-center'"
+                    (click)="testSpeaker()" [disabled]="isTestingSpeaker">
+              <lucide-angular [name]="isTestingSpeaker ? 'loader-2' : (speakerTestResult === 'success' ? 'check-circle' : (speakerTestResult === 'error' ? 'x-circle' : 'play'))"
+                              [size]="14" class="block" [class.animate-spin]="isTestingSpeaker"></lucide-angular>
+              {{ isTestingSpeaker ? 'Reproduciendo...' : (speakerTestResult === 'success' ? 'Sonido reproducido' : (speakerTestResult === 'error' ? 'Error en la prueba' : 'Probar altavoz')) }}
+            </button>
+          </div>
         </div>
 
-        <!-- Speaker Card -->
-        <div class="audio-device-card speaker-card">
-          <div class="device-card-header">
-            <div class="device-icon-wrapper speaker-icon">
-              <lucide-angular name="volume-2" [size]="24"></lucide-angular>
-              <div class="icon-pulse"></div>
-            </div>
-            <div class="device-title-group">
-              <h3 class="device-title">Altavoz</h3>
-              <span class="device-subtitle">Salida de audio</span>
-            </div>
-            <div class="device-status" [class.active]="selectedOutputId !== 'default'">
-              <span class="status-dot"></span>
-              <span class="status-text">{{ selectedOutputId !== 'default' ? 'Personalizado' : 'Por defecto' }}</span>
-            </div>
-          </div>
-
-          <div class="device-selector-wrapper">
-            <div class="select-icon">
-              <lucide-angular name="settings-2" [size]="16"></lucide-angular>
-            </div>
-            <select
-              class="device-select-premium"
-              [(ngModel)]="selectedOutputId"
-              (ngModelChange)="onOutputDeviceSelect($event)"
-            >
-              <option value="default">Usar dispositivo del sistema</option>
-              <option *ngFor="let device of outputDevices" [value]="device.deviceId">
-                {{ device.label }}
-              </option>
-            </select>
-          </div>
-
-          <div class="device-in-use" *ngIf="activeOutput" [class.fallback]="activeOutput.alternativo">
-            <lucide-angular [name]="activeOutput.alternativo ? 'alert-triangle' : 'check-circle'" [size]="14"></lucide-angular>
-            <span>
-              <ng-container *ngIf="activeOutput.alternativo">El elegido no est&aacute; conectado. </ng-container>
-              En uso: <strong>{{ activeOutput.label }}</strong>
-            </span>
-          </div>
-
-          <button
-            class="test-btn-premium speaker-test"
-            (click)="testSpeaker()"
-            [disabled]="isTestingSpeaker"
-            [class.testing]="isTestingSpeaker"
-            [class.success]="speakerTestResult === 'success'"
-            [class.error]="speakerTestResult === 'error'"
-          >
-            <div class="test-btn-icon">
-              <lucide-angular
-                [name]="isTestingSpeaker ? 'loader-2' : (speakerTestResult === 'success' ? 'check-circle' : (speakerTestResult === 'error' ? 'x-circle' : 'play'))"
-                [size]="18"
-                [class.spin]="isTestingSpeaker"
-              ></lucide-angular>
-            </div>
-            <span class="test-btn-text">
-              {{ isTestingSpeaker ? 'Reproduciendo sonido...' : (speakerTestResult === 'success' ? 'Sonido reproducido' : (speakerTestResult === 'error' ? 'Error en la prueba' : 'Probar altavoz')) }}
-            </span>
-            <div class="test-btn-arrow" *ngIf="!isTestingSpeaker && !speakerTestResult">
-              <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Prueba de llamada (eco del servidor o número real) -->
-      <div class="prueba-llamada-wrapper">
+        <!-- Prueba de llamada (eco del servidor o número real) -->
         <app-prueba-llamada></app-prueba-llamada>
-      </div>
 
-      <!-- Actions Footer -->
-      <div class="audio-footer">
-        <button class="refresh-devices-btn" (click)="refreshAudioDevices()">
-          <lucide-angular name="refresh-cw" [size]="16"></lucide-angular>
-          <span>Actualizar dispositivos</span>
-        </button>
-
-        <div class="audio-info-badge">
-          <lucide-angular name="zap" [size]="14"></lucide-angular>
-          <span>Los cambios se aplican al instante, incluso con una llamada en curso</span>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <button type="button" [class]="estilos.botonSecundario" (click)="refreshAudioDevices()">
+            <lucide-angular name="refresh-cw" [size]="14" class="block"></lucide-angular>
+            Actualizar dispositivos
+          </button>
+          <p class="!m-0 flex items-center gap-1.5 text-[11.5px] text-[#5f6c80] dark:text-slate-400">
+            <lucide-angular name="zap" [size]="13" class="block"></lucide-angular>
+            Los cambios se aplican al instante, incluso con una llamada en curso
+          </p>
         </div>
       </div>
-    </div>
-  </main>
+    }
+
+    <!-- ==================== TAMAÑO DE TEXTO ==================== -->
+    @if (activeSection === 'font') {
+      <div class="aparecer">
+        <div [class]="estilos.tarjeta + ' gap-4 !py-4'">
+          <div class="flex items-center gap-2.5">
+            <span [class]="estilos.icono">
+              <lucide-angular name="type" [size]="15" class="block"></lucide-angular>
+            </span>
+            <h3 [class]="estilos.rotulo + ' flex-1'">Tama&ntilde;o de texto</h3>
+            @if (hasChanges()) {
+              <span [class]="estilos.pastilla + ' ' + pastillaAmbar">Sin aplicar</span>
+            }
+          </div>
+
+          <div class="flex items-baseline justify-between">
+            <div [class]="estilos.cifra">{{ previewFontSize }}<small [class]="estilos.unidad">px</small></div>
+            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">De {{ minFontSize }} a {{ maxFontSize }} px</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button type="button" [class]="estilos.botonIcono + ' text-[12px] font-bold'" (click)="decreaseFontSize()"
+                    [disabled]="previewFontSize <= minFontSize" aria-label="Reducir">A</button>
+            <input type="range" class="h-1.5 flex-1 cursor-pointer accent-[#0f172a] dark:accent-white"
+                   [min]="minFontSize" [max]="maxFontSize" [value]="previewFontSize"
+                   (input)="onFontSizeChange($event)" aria-label="Tamaño de texto" />
+            <button type="button" [class]="estilos.botonIcono + ' text-[16px] font-bold'" (click)="increaseFontSize()"
+                    [disabled]="previewFontSize >= maxFontSize" aria-label="Aumentar">A</button>
+          </div>
+
+          <div class="rounded-[10px] border border-[#e6e9ee] bg-[#f4f6f9] px-4 py-3.5 dark:border-slate-700 dark:bg-slate-800">
+            <span [class]="estilos.etiqueta">Vista previa</span>
+            <p class="!mb-1 !mt-2 leading-normal" [style.font-size.px]="previewFontSize">{{ previewText }}</p>
+            <p class="!m-0 leading-normal text-[#5f6c80] dark:text-slate-400" [style.font-size.px]="previewFontSize * 0.85">
+              Texto secundario m&aacute;s peque&ntilde;o.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" [class]="estilos.botonSecundario" (click)="resetFontSize()" [disabled]="isDefaultFontSize()">
+              <lucide-angular name="rotate-ccw" [size]="14" class="block"></lucide-angular>
+              Restablecer
+            </button>
+            <button type="button" [class]="estilos.botonPrimario" (click)="applyFontSize()" [disabled]="!hasChanges()">
+              <lucide-angular name="check" [size]="14" class="block"></lucide-angular>
+              Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ==================== APARIENCIA (solo ADMIN) ==================== -->
+    @if (activeSection === 'appearance' && isAdmin) {
+      <div class="aparecer">
+        <div [class]="estilos.tarjeta + ' gap-4 !py-4'">
+          <div class="flex items-center gap-2.5">
+            <span [class]="estilos.icono">
+              <lucide-angular [name]="isDarkMode ? 'moon' : 'sun'" [size]="15" class="block"></lucide-angular>
+            </span>
+            <div class="flex-1">
+              <h3 [class]="estilos.rotulo">Modo oscuro</h3>
+              <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">Reduce el brillo de la pantalla</p>
+            </div>
+            <button type="button" role="switch" [attr.aria-checked]="isDarkMode" aria-label="Modo oscuro"
+                    class="relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2"
+                    [class]="isDarkMode ? 'bg-white' : 'bg-[#cbd2dc]'"
+                    (click)="toggleTheme()">
+              <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full shadow transition-transform"
+                    [class]="isDarkMode ? 'translate-x-5 bg-[#0f172a]' : 'translate-x-0 bg-white'"></span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            @for (t of temas; track t.clave) {
+              <button type="button" [class]="estilos.opcion + ' !items-stretch !gap-2 ' + ((t.clave === 'dark') === isDarkMode ? estilos.opcionElegida : '')"
+                      (click)="setTheme(t.clave)">
+                <div class="flex h-[70px] overflow-hidden rounded-md border" [class]="t.marco">
+                  <div class="w-1/4" [class]="t.lateral"></div>
+                  <div class="flex flex-1 flex-col gap-1.5 p-2">
+                    <div class="h-2 rounded-sm" [class]="t.cabecera"></div>
+                    <div class="h-1.5 w-4/5 rounded-sm" [class]="t.linea"></div>
+                    <div class="h-1.5 w-1/2 rounded-sm" [class]="t.linea"></div>
+                  </div>
+                </div>
+                <span class="text-[13px] font-semibold">{{ t.texto }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
 </div>

@@ -7,6 +7,7 @@ import { SipService, CallState } from '../../../core/services/sip.service';
 import { AgentStatusService } from '../../../core/services/agent-status.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AgentState } from '../../../core/models/agent-status.model';
+import { ESTILOS } from '../../asistencia/asistencia.estilos';
 
 type TipoPrueba = 'ECO_RETRASO' | 'ECO' | 'NUMERO';
 type Fase = 'conectando' | 'timbrando' | 'en-llamada';
@@ -38,10 +39,16 @@ const NUMERO_VALIDO = /^(9\d{8}|[2-7]\d{6})$/;
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './prueba-llamada.component.html',
-  styleUrls: ['./prueba-llamada.component.css']
+  styles: [':host { display: block; }']
 })
 export class PruebaLlamadaComponent implements OnInit, OnDestroy {
   readonly duracionMax = DURACION_MAX_SEGUNDOS;
+  readonly estilos = ESTILOS;
+  readonly aviso = 'flex items-start gap-2 rounded-lg px-3 py-2 text-[12px] leading-[1.45]';
+  readonly avisoVerde = 'bg-[#e8f5ec] text-[#166534] dark:bg-green-950/50 dark:text-green-300';
+  readonly avisoAmbar = 'bg-[#fef6e0] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300';
+  readonly avisoRojo = 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300';
+  readonly opcion = 'flex items-center gap-3 rounded-[10px] border border-[#e6e9ee] bg-white px-3.5 py-3 text-left !text-[#0f172a] transition-colors hover:border-[#8491a3] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#e6e9ee] disabled:hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:!text-slate-100 dark:hover:bg-slate-800';
 
   estadoAgente: AgentState | null = null;
   estadoVerificado = false;
