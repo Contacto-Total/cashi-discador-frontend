@@ -98,24 +98,38 @@
 
     <form class="flex flex-col gap-1.5 rounded-[10px] border border-[#e6e9ee] px-3.5 py-3 dark:border-slate-700"
           [class.opacity-50]="!!motivoBloqueo" (ngSubmit)="iniciar('NUMERO')">
-      <label for="prueba-numero" [class]="estilos.etiqueta">Llamar a un n&uacute;mero</label>
+      <div class="flex items-center justify-between gap-2">
+        <label for="prueba-numero" [class]="estilos.etiqueta">Llamar a un n&uacute;mero</label>
+        @if (cupo) {
+          <span [class]="estilos.pastilla + ' tabular-nums ' + (sinCupo ? avisoRojo : 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400')"
+                title="Llamadas a n&uacute;mero real permitidas en la &uacute;ltima hora">
+            {{ cupo.restantes }} de {{ cupo.maximo }} esta hora
+          </span>
+        }
+      </div>
       <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">
         Llamada real por el operador: se graba y tiene costo. Celular de 9 d&iacute;gitos o fijo de Lima de 7.
+        M&aacute;ximo {{ cupo?.maximo ?? 4 }} llamadas por hora.
       </p>
       <div class="mt-1 flex gap-2">
         <input id="prueba-numero" type="tel" name="numero" inputmode="numeric" autocomplete="off" maxlength="12"
                placeholder="999 999 999"
                [class]="estilos.campo + ' flex-1 tabular-nums ' + (numeroInvalido ? '!border-[#dc2626]' : '')"
                [(ngModel)]="numero" (ngModelChange)="numeroInvalido = false"
-               [disabled]="!!motivoBloqueo" [attr.aria-invalid]="numeroInvalido" />
-        <button type="submit" [class]="estilos.botonPrimario" [disabled]="!!motivoBloqueo || !numero.trim()">
-          <lucide-angular name="phone" [size]="14" class="block"></lucide-angular>
+               [disabled]="!!motivoBloqueo || sinCupo" [attr.aria-invalid]="numeroInvalido" />
+        <button type="submit" [class]="estilos.botonPrimario" [disabled]="!!motivoBloqueo || sinCupo || solicitando || !numero.trim()">
+          <lucide-angular [name]="solicitando ? 'loader-2' : 'phone'" [size]="14" class="block" [class.animate-spin]="solicitando"></lucide-angular>
           Llamar
         </button>
       </div>
       @if (numeroInvalido) {
         <span class="text-[12px] font-semibold text-[#b91c1c] dark:text-red-300">
           N&uacute;mero no v&aacute;lido: celular de 9 d&iacute;gitos que empiece con 9, o fijo de 7 d&iacute;gitos.
+        </span>
+      }
+      @if (sinCupo && horaLibera) {
+        <span class="text-[12px] font-semibold text-[#b91c1c] dark:text-red-300">
+          Llegaste al l&iacute;mite de {{ cupo?.maximo }} llamadas por hora. Podr&aacute;s volver a llamar a las {{ horaLibera }}.
         </span>
       }
     </form>
