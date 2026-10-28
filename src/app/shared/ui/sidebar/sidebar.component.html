@@ -105,13 +105,6 @@
             </a>
           </li>
           <li>
-            <a routerLink="/admin/control-intensidad" [class]="FILA" [ngClass]="activa('/admin/control-intensidad') ? FILA_ACTIVA : FILA_REPOSO"
-               appTip="Control de intensidad" [appTipActivo]="plegado" (click)="alNavegar()">
-              <lucide-angular name="gauge" [size]="19.2" [strokeWidth]="activa('/admin/control-intensidad') ? 2.3 : 2" [ngClass]="'flex-none ' + (activa('/admin/control-intensidad') ? ICONO_ACTIVO : ICONO_REPOSO)"></lucide-angular>
-              <span [class]="TEXTO">Control de intensidad</span>
-            </a>
-          </li>
-          <li>
             <a routerLink="/settings" [class]="FILA" [ngClass]="activa('/settings') ? FILA_ACTIVA : FILA_REPOSO"
                appTip="Configuración" [appTipActivo]="plegado" (click)="alNavegar()">
               <lucide-angular name="settings-2" [size]="19.2" [strokeWidth]="activa('/settings') ? 2.3 : 2" [ngClass]="'flex-none ' + (activa('/settings') ? ICONO_ACTIVO : ICONO_REPOSO)"></lucide-angular>
