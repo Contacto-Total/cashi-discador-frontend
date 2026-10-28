@@ -35,6 +35,13 @@ export interface MicrofonoObtenido {
   alternativo: boolean;
 }
 
+/** Lo que el softphone está usando de verdad, para mostrarlo en /settings */
+export interface DispositivoEnUso {
+  label: string;
+  /** El elegido no está conectado y se usa el del sistema (o ninguno) */
+  alternativo: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -43,6 +50,9 @@ export class AudioDeviceService {
   private outputDevices$ = new BehaviorSubject<AudioDevice[]>([]);
   private selectedInputId$ = new BehaviorSubject<string>('default');
   private selectedOutputId$ = new BehaviorSubject<string>('default');
+  // null = el softphone no está registrado
+  private activeInput$ = new BehaviorSubject<DispositivoEnUso | null>(null);
+  private activeOutput$ = new BehaviorSubject<DispositivoEnUso | null>(null);
 
   // Audio level monitoring
   private audioLevel$ = new BehaviorSubject<AudioLevelData>({
@@ -208,6 +218,24 @@ export class AudioDeviceService {
     return encontrado?.deviceId ?? 'default';
   }
 
+  getActiveInput(): Observable<DispositivoEnUso | null> {
+    return this.activeInput$.asObservable();
+  }
+
+  getActiveOutput(): Observable<DispositivoEnUso | null> {
+    return this.activeOutput$.asObservable();
+  }
+
+  /** Lo llama el softphone cada vez que cambia el micrófono que está usando */
+  setActiveInput(dispositivo: DispositivoEnUso | null): void {
+    this.activeInput$.next(dispositivo);
+  }
+
+  /** Lo llama el softphone cada vez que cambia el parlante que está usando */
+  setActiveOutput(dispositivo: DispositivoEnUso | null): void {
+    this.activeOutput$.next(dispositivo);
+  }
+
   /** groupId del micrófono predeterminado del sistema, para saber si Windows lo cambió */
   async defaultInputGroupId(): Promise<string | null> {
     const inputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
@@ -242,8 +270,10 @@ export class AudioDeviceService {
         devices = await navigator.mediaDevices.enumerateDevices();
       }
 
+      // La entrada 'default' del navegador ya está en el selector como "Usar dispositivo del
+      // sistema"; repetida, el select tenía dos opciones con el mismo value
       const inputs: AudioDevice[] = devices
-        .filter(d => d.kind === 'audioinput')
+        .filter(d => d.kind === 'audioinput' && d.deviceId !== 'default')
         .map(d => ({
           deviceId: d.deviceId,
           label: d.label || `Microphone ${d.deviceId.slice(0, 8)}`,
@@ -251,12 +281,15 @@ export class AudioDeviceService {
         }));
 
       const outputs: AudioDevice[] = devices
-        .filter(d => d.kind === 'audiooutput')
+        .filter(d => d.kind === 'audiooutput' && d.deviceId !== 'default')
         .map(d => ({
           deviceId: d.deviceId,
           label: d.label || `Speaker ${d.deviceId.slice(0, 8)}`,
           kind: 'audiooutput' as const
         }));
+
+      this.adoptarIdNuevo(inputs, this.selectedInputId$, STORAGE_KEY_INPUT, STORAGE_KEY_INPUT_LABEL);
+      this.adoptarIdNuevo(outputs, this.selectedOutputId$, STORAGE_KEY_OUTPUT, STORAGE_KEY_OUTPUT_LABEL);
 
       // El preferido desconectado se sigue mostrando para que la lista no quede en blanco
       // y el asesor vea que su headset no está
@@ -297,6 +330,23 @@ export class AudioDeviceService {
   }
 
   /**
+   * Headset reconectado con otro deviceId (pasa con algunos USB): la preferencia pasa al id
+   * nuevo. Sin esto el selector de /settings quedaba en blanco aunque el headset estuviera.
+   */
+  private adoptarIdNuevo(list: AudioDevice[], selected$: BehaviorSubject<string>,
+                         storageKey: string, labelKey: string): void {
+    const preferidoId = selected$.value;
+    if (preferidoId === 'default' || list.some(d => d.deviceId === preferidoId)) return;
+    const label = localStorage.getItem(labelKey);
+    const nuevo = label ? list.find(d => d.label === label) : undefined;
+    if (nuevo) {
+      console.log('🎧 Dispositivo preferido reconectado con otro id:', label);
+      localStorage.setItem(storageKey, nuevo.deviceId);
+      selected$.next(nuevo.deviceId);
+    }
+  }
+
+  /**
    * Antes se cambiaba la preferencia a 'default' cuando el headset no estaba, y al
    * reconectarlo ya nadie sabía que era el preferido. Ahora la preferencia se conserva.
    */
@@ -304,8 +354,6 @@ export class AudioDeviceService {
                                    kind: 'audioinput' | 'audiooutput'): void {
     if (preferidoId === 'default' || list.some(d => d.deviceId === preferidoId)) return;
     const label = localStorage.getItem(labelKey);
-    // Reconectado con otro deviceId: la lista ya lo trae con su nombre
-    if (label && list.some(d => d.label === label)) return;
     list.push({ deviceId: preferidoId, label: `${label || 'Dispositivo guardado'} (desconectado)`, kind, desconectado: true });
   }
 

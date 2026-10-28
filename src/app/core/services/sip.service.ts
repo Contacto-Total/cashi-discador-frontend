@@ -58,6 +58,8 @@ export class SipService {
   // Apertura de micrófono en curso: los que piden micrófono a la vez esperan a la misma
   private micSwitch: Promise<MediaStream> | null = null;
   private devicechangeTimer: any = null;
+  // El parlante elegido se desconectó y el audio sale por el del sistema
+  private salidaPerdida = false;
 
   constructor() {
     // Enable JsSIP debug (disable in production)
@@ -78,7 +80,7 @@ export class SipService {
     }
     this.audioDeviceService.getSelectedInputId().pipe(skip(1), distinctUntilChanged()).subscribe(() => {
       if (this.localStream) {
-        this.switchMicrophone('MIC_CAMBIADO', 'cambio en configuración')
+        this.aplicarMicrofonoPreferido('configuracion')
           .catch(err => this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(err)));
       }
     });
@@ -398,27 +400,15 @@ export class SipService {
         // deviceId exact fallaba, localStream quedaba null y el auto-answer fallaba en silencio.
         try {
           await this.switchMicrophone(null, 'registro');
-
-          // Set output device on remote audio element
-          const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
-          if (outputDeviceId && outputDeviceId !== 'default' && this.remoteAudio) {
-            try {
-              if ('setSinkId' in this.remoteAudio) {
-                await (this.remoteAudio as any).setSinkId(outputDeviceId);
-                console.log('🔊 Audio output device set to:', outputDeviceId);
-              }
-            } catch (sinkError) {
-              console.warn('⚠️ Could not set audio output device (will use system default):', sinkError);
-              // Recreate audio element to prevent corrupted state (Bluetooth devices)
-              this.remoteAudio = new Audio();
-              this.remoteAudio.autoplay = true;
-            }
-          }
         } catch (error) {
           console.warn('⚠️ Microphone access denied (will retry when making a call):', error);
           // Don't emit error or reject - microphone can be requested later
           this.reportarAudio('MIC_NO_DISPONIBLE', null, 'al registrar: ' + this.describirError(error));
+          this.audioDeviceService.setActiveInput({ label: 'Ningún micrófono disponible', alternativo: true });
         }
+
+        // Set output device on remote audio element (el preferido, o el del sistema si no está)
+        await this.applyOutputDevice();
 
       } catch (error: any) {
         console.error('❌ Failed to initialize SIP client:', error);
@@ -594,6 +584,7 @@ export class SipService {
     } catch (error) {
       console.error('❌ No hay micrófono para la llamada:', error);
       this.reportarAudio('SIN_MIC_AL_CONTESTAR', null, `${direccion}: ${this.describirError(error)}`);
+      this.audioDeviceService.setActiveInput({ label: 'Ningún micrófono disponible', alternativo: true });
       throw new Error('Microphone not available');
     }
   }
@@ -621,6 +612,7 @@ export class SipService {
         anterior?.getTracks().forEach(t => t.stop());
 
         console.log(`🎤 Micrófono en uso: ${dispositivo} (${motivo})`);
+        this.audioDeviceService.setActiveInput({ label: dispositivo, alternativo });
         if (evento) {
           this.reportarAudio(evento, dispositivo,
             motivo + (alternativo ? ' - el preferido no está, se usa el predeterminado' : ''));
@@ -659,8 +651,10 @@ export class SipService {
     }
     console.warn('🎤 El micrófono dejó de funcionar:', track.label);
     this.reportarAudio('MIC_PERDIDO', track.label, 'la pista terminó (dispositivo desconectado)');
-    this.switchMicrophone('MIC_RECUPERADO', 'reemplazo tras pérdida')
-      .catch(err => this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(err)));
+    this.switchMicrophone('MIC_RECUPERADO', 'reemplazo tras pérdida').catch(err => {
+      this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(err));
+      this.audioDeviceService.setActiveInput({ label: 'Ningún micrófono disponible', alternativo: true });
+    });
   }
 
   /** Al conectar/desconectar llegan varios devicechange seguidos: se revisa una sola vez. */
@@ -676,39 +670,78 @@ export class SipService {
     this.applyOutputDevice();
 
     try {
-      const track = this.localStream?.getAudioTracks()[0];
-      if (!track || track.readyState !== 'live') {
-        await this.switchMicrophone('MIC_RECUPERADO', 'dispositivo conectado');
-        return;
-      }
-      // La pista sigue viva: se cambia solo si el que corresponde es otro (volvió el
-      // headset preferido, o Windows cambió el predeterminado al conectar uno)
-      const preferido = await this.audioDeviceService.resolveInputDevice();
-      const groupObjetivo = preferido ? preferido.groupId : await this.audioDeviceService.defaultInputGroupId();
-      const groupActual = track.getSettings().groupId;
-      if (groupObjetivo && groupActual && groupObjetivo !== groupActual) {
-        await this.switchMicrophone(
-          preferido ? 'MIC_RECUPERADO' : 'MIC_CAMBIADO',
-          preferido ? 'volvió el micrófono preferido' : 'cambió el predeterminado del sistema');
-      }
+      await this.aplicarMicrofonoPreferido('dispositivos');
     } catch (error) {
       this.reportarAudio('MIC_NO_DISPONIBLE', null, this.describirError(error));
+      this.audioDeviceService.setActiveInput({ label: 'Ningún micrófono disponible', alternativo: true });
     }
   }
 
-  /** Parlante: el preferido si está conectado, si no el predeterminado ('' en setSinkId). */
+  /**
+   * Pone el micrófono que corresponde (el preferido, o el del sistema si no está) solo si
+   * no es el que ya está en uso. Se compara por groupId: es el mismo para el dispositivo
+   * físico aunque se haya elegido por otra entrada de la lista.
+   */
+  private async aplicarMicrofonoPreferido(origen: 'dispositivos' | 'configuracion'): Promise<void> {
+    const track = this.localStream?.getAudioTracks()[0];
+    if (!track || track.readyState !== 'live') {
+      await this.switchMicrophone('MIC_RECUPERADO', 'dispositivo conectado');
+      return;
+    }
+    const preferido = await this.audioDeviceService.resolveInputDevice();
+    const groupObjetivo = preferido ? preferido.groupId : await this.audioDeviceService.defaultInputGroupId();
+    const groupActual = track.getSettings().groupId;
+    if (!groupObjetivo || !groupActual || groupObjetivo === groupActual) {
+      return;
+    }
+    if (origen === 'configuracion') {
+      await this.switchMicrophone('MIC_CAMBIADO', 'cambio en configuración');
+    } else if (preferido) {
+      await this.switchMicrophone('MIC_RECUPERADO', 'volvió el micrófono preferido');
+    } else {
+      await this.switchMicrophone('MIC_CAMBIADO', 'cambió el predeterminado del sistema');
+    }
+  }
+
+  /**
+   * Parlante: el preferido si está conectado, si no el del sistema ('' en setSinkId).
+   * Al volver el headset, la llamada vuelve a sonar por él.
+   */
   private async applyOutputDevice(): Promise<void> {
     const audio = this.remoteAudio as any;
-    if (!audio || !('setSinkId' in audio)) {
+    if (!this.ua || !audio || !('setSinkId' in audio)) {
       return;
     }
     try {
+      const outputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audiooutput');
+
+      // Si el parlante en uso se desconectó, el elemento conserva su sinkId. Se pasa
+      // explícitamente al del sistema: si no, al volver el headset el sinkId "ya coincide"
+      // con el preferido y nunca se vuelve a aplicar.
+      const actual: string = audio.sinkId || '';
+      if (actual && !outputs.some(d => d.deviceId === actual)) {
+        console.warn('🔊 El parlante en uso se desconectó, pasa al del sistema');
+        await audio.setSinkId('');
+        this.salidaPerdida = true;
+        this.reportarAudio('SALIDA_PERDIDA', null, 'el parlante en uso se desconectó');
+      }
+
       const deviceId = await this.audioDeviceService.resolveOutputDeviceId();
-      const sinkId = deviceId === 'default' ? '' : deviceId;
-      if (audio.sinkId !== sinkId) {
-        await audio.setSinkId(sinkId);
+      const destino = deviceId === 'default' ? '' : deviceId;
+      if (audio.sinkId !== destino) {
+        await audio.setSinkId(destino);
         console.log('🔊 Salida de audio:', deviceId);
       }
+
+      const label = outputs.find(d => d.deviceId === (destino || 'default'))?.label || 'Dispositivo del sistema';
+      if (destino && this.salidaPerdida) {
+        this.salidaPerdida = false;
+        this.reportarAudio('SALIDA_RECUPERADA', label, 'volvió el parlante preferido');
+      }
+      this.audioDeviceService.setActiveOutput({
+        label,
+        alternativo: this.audioDeviceService.getCurrentOutputDeviceId() !== 'default' && !destino
+      });
     } catch (error) {
       console.warn('⚠️ No se pudo cambiar la salida de audio:', error);
     }
@@ -853,7 +886,8 @@ export class SipService {
 
         if (this.remoteAudio && event.streams[0]) {
           // Set output device before playing
-          const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+          // El preferido si está conectado: antes se pedía aunque no estuviera, fallaba y se recreaba el elemento
+          const outputDeviceId = await this.audioDeviceService.resolveOutputDeviceId();
           let sinkFailed = false;
           if (outputDeviceId && outputDeviceId !== 'default' && 'setSinkId' in this.remoteAudio) {
             try {
@@ -904,7 +938,7 @@ export class SipService {
           const remoteStream = new MediaStream(receivers.map(r => r.track).filter(t => t !== null));
           if (remoteStream.getTracks().length > 0) {
             // Set output device before playing
-            const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+            const outputDeviceId = await this.audioDeviceService.resolveOutputDeviceId();
             let sinkFailed = false;
             if (outputDeviceId && outputDeviceId !== 'default' && 'setSinkId' in this.remoteAudio) {
               try {
@@ -1219,6 +1253,8 @@ export class SipService {
         this.localStream.getTracks().forEach(track => track.stop());
         this.localStream = null;
       }
+      this.audioDeviceService.setActiveInput(null);
+      this.audioDeviceService.setActiveOutput(null);
 
     } catch (error: any) {
       console.error('❌ Failed to unregister:', error);
