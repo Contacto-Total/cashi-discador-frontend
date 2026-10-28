@@ -122,7 +122,10 @@ export class PeripheralHealthService implements OnDestroy {
         // 3. Check if selected mic still exists
         if (mics.length > 0) {
           const savedMicId = localStorage.getItem('cashi_audio_input_device');
-          if (savedMicId && savedMicId !== 'default' && !mics.some(m => m.deviceId === savedMicId)) {
+          const savedMicLabel = localStorage.getItem('cashi_audio_input_label');
+          // Por nombre también: algunos headsets USB vuelven con otro deviceId
+          if (savedMicId && savedMicId !== 'default'
+              && !mics.some(m => m.deviceId === savedMicId || (!!savedMicLabel && m.label === savedMicLabel))) {
             problems.push({
               type: 'MIC_DISCONNECTED',
               message: 'Tu micrófono se desconectó',

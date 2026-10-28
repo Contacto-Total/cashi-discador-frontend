@@ -5,6 +5,8 @@ export interface AudioDevice {
   deviceId: string;
   label: string;
   kind: 'audioinput' | 'audiooutput';
+  /** El preferido guardado, que no está conectado ahora */
+  desconectado?: boolean;
 }
 
 export interface AudioLevelData {
@@ -16,6 +18,22 @@ export interface AudioLevelData {
 
 const STORAGE_KEY_INPUT = 'cashi_audio_input_device';
 const STORAGE_KEY_OUTPUT = 'cashi_audio_output_device';
+// El nombre sirve para reconocer el headset si al reconectarlo cambia de deviceId
+const STORAGE_KEY_INPUT_LABEL = 'cashi_audio_input_label';
+const STORAGE_KEY_OUTPUT_LABEL = 'cashi_audio_output_label';
+
+const MIC_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true
+};
+
+export interface MicrofonoObtenido {
+  stream: MediaStream;
+  dispositivo: string;
+  /** No se pudo abrir el preferido y se tomó el predeterminado del sistema */
+  alternativo: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -112,24 +130,99 @@ export class AudioDeviceService {
    * Set the input device (microphone)
    */
   setInputDevice(deviceId: string): void {
-    this.selectedInputId$.next(deviceId);
     localStorage.setItem(STORAGE_KEY_INPUT, deviceId);
-    console.log('🎤 Input device set and saved to localStorage:', deviceId);
-    // Verify it was saved
-    const verified = localStorage.getItem(STORAGE_KEY_INPUT);
-    console.log('🎤 Verified localStorage value:', verified);
+    const device = this.inputDevices$.value.find(d => d.deviceId === deviceId);
+    const label = device?.label;
+    // Si es el preferido desconectado se conserva el nombre guardado para reconocerlo al volver
+    if (!device?.desconectado) {
+      if (label && deviceId !== 'default') {
+        localStorage.setItem(STORAGE_KEY_INPUT_LABEL, label);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_INPUT_LABEL);
+      }
+    }
+    this.selectedInputId$.next(deviceId);
+    console.log('🎤 Input device set and saved to localStorage:', deviceId, label);
   }
 
   /**
    * Set the output device (speaker)
    */
   setOutputDevice(deviceId: string): void {
-    this.selectedOutputId$.next(deviceId);
     localStorage.setItem(STORAGE_KEY_OUTPUT, deviceId);
-    console.log('🔊 Output device set and saved to localStorage:', deviceId);
-    // Verify it was saved
-    const verified = localStorage.getItem(STORAGE_KEY_OUTPUT);
-    console.log('🔊 Verified localStorage value:', verified);
+    const device = this.outputDevices$.value.find(d => d.deviceId === deviceId);
+    const label = device?.label;
+    if (!device?.desconectado) {
+      if (label && deviceId !== 'default') {
+        localStorage.setItem(STORAGE_KEY_OUTPUT_LABEL, label);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_OUTPUT_LABEL);
+      }
+    }
+    this.selectedOutputId$.next(deviceId);
+    console.log('🔊 Output device set and saved to localStorage:', deviceId, label);
+  }
+
+  /**
+   * Abre el micrófono para el softphone. Orden: el preferido por deviceId, el preferido
+   * por nombre (algunos headsets USB cambian de deviceId al reconectarse) y, si no está
+   * conectado, el predeterminado del sistema. La preferencia NO se toca: cuando el
+   * headset vuelva, el softphone lo retoma.
+   */
+  async acquireMicrophone(): Promise<MicrofonoObtenido> {
+    const objetivo = await this.resolveInputDevice();
+
+    if (objetivo) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { ...MIC_CONSTRAINTS, deviceId: { exact: objetivo.deviceId } },
+          video: false
+        });
+        return { stream, dispositivo: this.trackLabel(stream, objetivo.label), alternativo: false };
+      } catch (error) {
+        console.warn('⚠️ No se pudo abrir el micrófono preferido, se usa el predeterminado:', error);
+      }
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { ...MIC_CONSTRAINTS }, video: false });
+    return {
+      stream,
+      dispositivo: this.trackLabel(stream, 'Predeterminado'),
+      alternativo: this.selectedInputId$.value !== 'default'
+    };
+  }
+
+  /**
+   * El micrófono preferido si está conectado (por deviceId o por nombre).
+   * null = la preferencia es 'default' o el preferido no está: va el predeterminado del sistema.
+   */
+  async resolveInputDevice(): Promise<MediaDeviceInfo | null> {
+    const inputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    return this.findPreferred(inputs, this.selectedInputId$.value, localStorage.getItem(STORAGE_KEY_INPUT_LABEL));
+  }
+
+  /** El parlante preferido si está conectado; si no, 'default'. */
+  async resolveOutputDeviceId(): Promise<string> {
+    const outputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audiooutput');
+    const encontrado = this.findPreferred(outputs, this.selectedOutputId$.value, localStorage.getItem(STORAGE_KEY_OUTPUT_LABEL));
+    return encontrado?.deviceId ?? 'default';
+  }
+
+  /** groupId del micrófono predeterminado del sistema, para saber si Windows lo cambió */
+  async defaultInputGroupId(): Promise<string | null> {
+    const inputs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    return (inputs.find(d => d.deviceId === 'default') ?? inputs[0])?.groupId ?? null;
+  }
+
+  private findPreferred(devices: MediaDeviceInfo[], preferidoId: string, preferidoLabel: string | null): MediaDeviceInfo | null {
+    if (!preferidoId || preferidoId === 'default') return null;
+    return devices.find(d => d.deviceId === preferidoId)
+      ?? (preferidoLabel ? devices.find(d => d.label === preferidoLabel) : undefined)
+      ?? null;
+  }
+
+  private trackLabel(stream: MediaStream, alterno: string): string {
+    return stream.getAudioTracks()[0]?.label || alterno;
   }
 
   /**
@@ -137,17 +230,17 @@ export class AudioDeviceService {
    */
   async refreshDevices(): Promise<void> {
     try {
-      // Request permission first (needed to get device labels)
-      await navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-          // Stop all tracks immediately - we just needed permission
-          stream.getTracks().forEach(track => track.stop());
-        })
-        .catch(() => {
-          console.warn('⚠️ Could not get audio permission for device enumeration');
-        });
+      let devices = await navigator.mediaDevices.enumerateDevices();
 
-      const devices = await navigator.mediaDevices.enumerateDevices();
+      // Sin permiso los dispositivos vienen sin nombre: solo entonces se abre el micrófono.
+      // Abrirlo en cada devicechange hacía que los headsets Bluetooth cambiaran de perfil
+      // (y eso dispara otro devicechange) en plena llamada.
+      if (devices.some(d => d.kind === 'audioinput' && !d.label)) {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => stream.getTracks().forEach(track => track.stop()))
+          .catch(() => console.warn('⚠️ Could not get audio permission for device enumeration'));
+        devices = await navigator.mediaDevices.enumerateDevices();
+      }
 
       const inputs: AudioDevice[] = devices
         .filter(d => d.kind === 'audioinput')
@@ -165,6 +258,11 @@ export class AudioDeviceService {
           kind: 'audiooutput' as const
         }));
 
+      // El preferido desconectado se sigue mostrando para que la lista no quede en blanco
+      // y el asesor vea que su headset no está
+      this.addDisconnectedPreferred(inputs, this.selectedInputId$.value, STORAGE_KEY_INPUT_LABEL, 'audioinput');
+      this.addDisconnectedPreferred(outputs, this.selectedOutputId$.value, STORAGE_KEY_OUTPUT_LABEL, 'audiooutput');
+
       this.inputDevices$.next(inputs);
       this.outputDevices$.next(outputs);
 
@@ -172,9 +270,6 @@ export class AudioDeviceService {
         inputs: inputs.length,
         outputs: outputs.length
       });
-
-      // Validate that saved devices still exist
-      this.validateSavedDevices(inputs, outputs);
 
     } catch (error) {
       console.error('❌ Failed to enumerate audio devices:', error);
@@ -202,38 +297,16 @@ export class AudioDeviceService {
   }
 
   /**
-   * Validate that saved devices still exist, reset to default if not
+   * Antes se cambiaba la preferencia a 'default' cuando el headset no estaba, y al
+   * reconectarlo ya nadie sabía que era el preferido. Ahora la preferencia se conserva.
    */
-  private validateSavedDevices(inputs: AudioDevice[], outputs: AudioDevice[]): void {
-    const currentInputId = this.selectedInputId$.value;
-    const currentOutputId = this.selectedOutputId$.value;
-
-    console.log('🔧 [AudioDevice] Validating saved devices:', {
-      currentInputId,
-      currentOutputId,
-      availableInputIds: inputs.map(d => d.deviceId),
-      availableOutputIds: outputs.map(d => d.deviceId)
-    });
-
-    // Check if saved input device still exists
-    if (currentInputId !== 'default' && !inputs.some(d => d.deviceId === currentInputId)) {
-      console.warn('⚠️ Saved input device no longer exists, resetting to default');
-      console.warn('   Saved ID:', currentInputId);
-      console.warn('   Available IDs:', inputs.map(d => d.deviceId));
-      this.setInputDevice('default');
-    } else {
-      console.log('✅ Input device validated:', currentInputId);
-    }
-
-    // Check if saved output device still exists
-    if (currentOutputId !== 'default' && !outputs.some(d => d.deviceId === currentOutputId)) {
-      console.warn('⚠️ Saved output device no longer exists, resetting to default');
-      console.warn('   Saved ID:', currentOutputId);
-      console.warn('   Available IDs:', outputs.map(d => d.deviceId));
-      this.setOutputDevice('default');
-    } else {
-      console.log('✅ Output device validated:', currentOutputId);
-    }
+  private addDisconnectedPreferred(list: AudioDevice[], preferidoId: string, labelKey: string,
+                                   kind: 'audioinput' | 'audiooutput'): void {
+    if (preferidoId === 'default' || list.some(d => d.deviceId === preferidoId)) return;
+    const label = localStorage.getItem(labelKey);
+    // Reconectado con otro deviceId: la lista ya lo trae con su nombre
+    if (label && list.some(d => d.label === label)) return;
+    list.push({ deviceId: preferidoId, label: `${label || 'Dispositivo guardado'} (desconectado)`, kind, desconectado: true });
   }
 
   /**
