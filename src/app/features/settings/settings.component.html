@@ -204,6 +204,14 @@
             </select>
           </div>
 
+          <div class="device-in-use" *ngIf="activeInput" [class.fallback]="activeInput.alternativo">
+            <lucide-angular [name]="activeInput.alternativo ? 'alert-triangle' : 'check-circle'" [size]="14"></lucide-angular>
+            <span>
+              <ng-container *ngIf="activeInput.alternativo">El elegido no est&aacute; conectado. </ng-container>
+              En uso: <strong>{{ activeInput.label }}</strong>
+            </span>
+          </div>
+
           <!-- Audio Level Visualizer -->
           <div class="audio-visualizer" [class.active]="isMicMonitoring">
             <div class="visualizer-bars">
@@ -292,6 +300,14 @@
             </select>
           </div>
 
+          <div class="device-in-use" *ngIf="activeOutput" [class.fallback]="activeOutput.alternativo">
+            <lucide-angular [name]="activeOutput.alternativo ? 'alert-triangle' : 'check-circle'" [size]="14"></lucide-angular>
+            <span>
+              <ng-container *ngIf="activeOutput.alternativo">El elegido no est&aacute; conectado. </ng-container>
+              En uso: <strong>{{ activeOutput.label }}</strong>
+            </span>
+          </div>
+
           <button
             class="test-btn-premium speaker-test"
             (click)="testSpeaker()"
@@ -326,7 +342,7 @@
 
         <div class="audio-info-badge">
           <lucide-angular name="zap" [size]="14"></lucide-angular>
-          <span>Los cambios se aplican instant&aacute;neamente en la pr&oacute;xima llamada</span>
+          <span>Los cambios se aplican al instante, incluso con una llamada en curso</span>
         </div>
       </div>
     </div>

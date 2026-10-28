@@ -756,6 +756,33 @@
   margin-bottom: 16px;
 }
 
+/* Dispositivo que el softphone está usando ahora */
+.device-in-use {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -6px 0 16px;
+  padding: 8px 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #10b981;
+}
+
+.device-in-use lucide-angular {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.device-in-use strong {
+  font-weight: 600;
+}
+
+.device-in-use.fallback {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
 .select-icon {
   position: absolute;
   left: 14px;

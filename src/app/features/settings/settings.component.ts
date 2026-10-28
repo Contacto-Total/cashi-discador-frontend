@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { FontSizeService } from '../../core/services/font-size.service';
 import { ThemeService, Theme } from '../../shared/services/theme.service';
-import { AudioDeviceService, AudioDevice, AudioLevelData } from '../../core/services/audio-device.service';
+import { AudioDeviceService, AudioDevice, AudioLevelData, DispositivoEnUso } from '../../core/services/audio-device.service';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -47,6 +47,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   outputDevices: AudioDevice[] = [];
   selectedInputId: string = 'default';
   selectedOutputId: string = 'default';
+  // Lo que el softphone está usando ahora (null = no registrado)
+  activeInput: DispositivoEnUso | null = null;
+  activeOutput: DispositivoEnUso | null = null;
   isTestingMic: boolean = false;
   isTestingSpeaker: boolean = false;
   micTestResult: 'success' | 'error' | null = null;
@@ -103,6 +106,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
       }),
       this.audioDeviceService.getSelectedOutputId().subscribe(id => {
         this.selectedOutputId = id;
+      }),
+      this.audioDeviceService.getActiveInput().subscribe(d => {
+        this.activeInput = d;
+      }),
+      this.audioDeviceService.getActiveOutput().subscribe(d => {
+        this.activeOutput = d;
       }),
       // Subscribe to audio level for real-time visualization
       this.audioDeviceService.getAudioLevel().subscribe(level => {
