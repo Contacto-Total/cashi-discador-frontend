@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { SipService, CallState } from '../../../core/services/sip.service';
-import { AgentStatusService } from '../../../core/services/agent-status.service';
+import { AgentStatusService, CupoPruebaLlamada } from '../../../core/services/agent-status.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AgentState } from '../../../core/models/agent-status.model';
 import { ESTILOS } from '../../asistencia/asistencia.estilos';
@@ -61,8 +61,12 @@ export class PruebaLlamadaComponent implements OnInit, OnDestroy {
 
   numero = '';
   numeroInvalido = false;
+  // Llamadas a número real: 4 por hora, las cuenta el backend (PruebaLlamadaService)
+  cupo: CupoPruebaLlamada | null = null;
+  solicitando = false;
 
   private subs: Subscription[] = [];
+  private cupoTimeout?: ReturnType<typeof setTimeout>;
   private callSub?: Subscription;
   private contador?: ReturnType<typeof setInterval>;
   private timbradoTimeout?: ReturnType<typeof setTimeout>;
@@ -78,6 +82,7 @@ export class PruebaLlamadaComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.verificarEstado();
+    this.cargarCupo();
 
     // Si el asesor cambia de estado en otra parte (cabecera, otra pestaña) se refleja aquí,
     // y si pasa a DISPONIBLE con la prueba en curso, se corta.
@@ -96,6 +101,7 @@ export class PruebaLlamadaComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destruido = true;
+    clearTimeout(this.cupoTimeout);
     this.subs.forEach(s => s.unsubscribe());
     if (this.enCurso) {
       this.colgarPrueba();
@@ -145,6 +151,35 @@ export class PruebaLlamadaComponent implements OnInit, OnDestroy {
     return (this.segundosRestantes / DURACION_MAX_SEGUNDOS) * 100;
   }
 
+  get sinCupo(): boolean {
+    return !!this.cupo && this.cupo.restantes <= 0;
+  }
+
+  /** Hora (de Lima) en que se libera el próximo intento */
+  get horaLibera(): string {
+    if (!this.cupo?.liberaEn) return '';
+    return new Date(this.cupo.liberaEn).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  cargarCupo(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user?.id) return;
+    this.agentStatusService.getCupoPruebaLlamada(user.id).subscribe({
+      next: c => this.aplicarCupo(c),
+      error: () => this.cupo = null
+    });
+  }
+
+  private aplicarCupo(c: CupoPruebaLlamada): void {
+    this.cupo = c;
+    // Al cumplirse la hora se libera un intento: se vuelve a consultar para habilitar el botón
+    clearTimeout(this.cupoTimeout);
+    if (c.liberaEn) {
+      const espera = Math.max(1000, c.liberaEn - Date.now() + 1000);
+      this.cupoTimeout = setTimeout(() => this.cargarCupo(), espera);
+    }
+  }
+
   verificarEstado(): void {
     const user = this.authService.getCurrentUser();
     if (!user?.id) return;
@@ -163,6 +198,16 @@ export class PruebaLlamadaComponent implements OnInit, OnDestroy {
   }
 
   async iniciar(tipo: TipoPrueba): Promise<void> {
+    if (this.solicitando || this.enCurso) return;
+    this.solicitando = true;
+    try {
+      await this.iniciarPrueba(tipo);
+    } finally {
+      this.solicitando = false;
+    }
+  }
+
+  private async iniciarPrueba(tipo: TipoPrueba): Promise<void> {
     this.resultado = null;
     this.numeroInvalido = false;
 
@@ -190,6 +235,22 @@ export class PruebaLlamadaComponent implements OnInit, OnDestroy {
     }
     if (this.motivoBloqueo) {
       return;
+    }
+
+    // Llamada real: el backend cuenta el intento y la rechaza si ya hubo 4 en la última hora.
+    // Si no se puede validar, no se llama.
+    if (tipo === 'NUMERO' && user?.id) {
+      try {
+        this.aplicarCupo(await firstValueFrom(this.agentStatusService.registrarPruebaLlamada(user.id, destino)));
+      } catch (error: any) {
+        if (error?.status === 429 && error.error) {
+          // El aviso con la hora en que se libera lo muestra el formulario
+          this.aplicarCupo(error.error as CupoPruebaLlamada);
+        } else {
+          this.resultado = { tipo: 'error', mensaje: 'No se pudo validar el límite de llamadas. Vuelve a intentarlo.' };
+        }
+        return;
+      }
     }
 
     this.enCurso = tipo;

@@ -172,4 +172,28 @@ export class AgentStatusService {
       })
     );
   }
+
+  /**
+   * Cuántas pruebas de llamada a un número real le quedan al asesor (4 por hora)
+   */
+  getCupoPruebaLlamada(idUsuario: number): Observable<CupoPruebaLlamada> {
+    return this.http.get<CupoPruebaLlamada>(`${this.apiUrl}/${idUsuario}/prueba-llamada/cupo`);
+  }
+
+  /**
+   * Pide permiso para una prueba de llamada a un número real y cuenta el intento.
+   * Sin cupo el backend responde 429 con el mismo cuerpo.
+   */
+  registrarPruebaLlamada(idUsuario: number, numero: string): Observable<CupoPruebaLlamada> {
+    return this.http.post<CupoPruebaLlamada>(`${this.apiUrl}/${idUsuario}/prueba-llamada/numero`, { numero });
+  }
+}
+
+export interface CupoPruebaLlamada {
+  permitido: boolean;
+  usados: number;
+  restantes: number;
+  maximo: number;
+  /** Epoch ms en que se libera el próximo intento; null si quedan */
+  liberaEn: number | null;
 }
