@@ -94,11 +94,11 @@ interface OpcionSubcartera {
               @if (reporte(); as r) {
                 @if (r.periodo.fechaCalculo) {
                   <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcel(r)">
-                    <cmx-icon name="download" [size]="15" /> {{ descargando() ? 'Generando…' : 'Excel' }}
+                    <cmx-icon name="download" [size]="15" /> {{ descargando() ? 'Generando…' : 'Excel de comisiones' }}
                   </button>
-                  @if (tieneLtd(r)) {
-                    <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcelLtd(r)">
-                      <cmx-icon name="download" [size]="15" /> Excel LTD
+                  @if (tieneBonos(r)) {
+                    <button type="button" class="cmx-btn cmx-btn-sec" [disabled]="descargando()" (click)="descargarExcelBonos(r)">
+                      <cmx-icon name="download" [size]="15" /> Excel de bonos
                     </button>
                   }
                 }
@@ -733,26 +733,26 @@ export class ComisionesPage implements OnInit {
       },
       error: e => {
         this.descargando.set(false);
-        this.toast.error(mensajeError(e, 'No se pudo generar el Excel.'));
+        this.toast.error(mensajeError(e, 'No se pudo generar el Excel de comisiones.'));
       }
     });
   }
 
-  /** El período tiene algún bono LTD activo */
-  tieneLtd(r: ReportePeriodo): boolean {
-    return (r.periodo.bonos ?? []).some(b => b.tipo === 'LTD' && b.activo !== false);
+  /** El período tiene algún bono activo (LTD, sobrecumplimiento o PKM) */
+  tieneBonos(r: ReportePeriodo): boolean {
+    return (r.periodo.bonos ?? []).some(b => b.activo !== false);
   }
 
-  descargarExcelLtd(r: ReportePeriodo): void {
+  descargarExcelBonos(r: ReportePeriodo): void {
     this.descargando.set(true);
-    this.service.exportarExcelLtd(r.periodo.id).subscribe({
+    this.service.exportarExcelBonos(r.periodo.id).subscribe({
       next: blob => {
         this.descargando.set(false);
-        descargar(blob, nombreArchivo('Bono_LTD', nombreConGrupo(r.periodo.nombreSubcartera, r.periodo.grupo), this.codigo()));
+        descargar(blob, nombreArchivo('Bonos', nombreConGrupo(r.periodo.nombreSubcartera, r.periodo.grupo), this.codigo()));
       },
       error: e => {
         this.descargando.set(false);
-        this.toast.error(mensajeError(e, 'No se pudo generar el Excel LTD.'));
+        this.toast.error(mensajeError(e, 'No se pudo generar el Excel de bonos.'));
       }
     });
   }
