@@ -4,7 +4,7 @@ import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
 import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe, truncar2 } from '../comisiones.util';
+import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, MESES, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe, truncar2 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -154,6 +154,11 @@ class Paginado<T> {
                   <rect [attr.x]="pe.x" [attr.y]="g.t" [attr.width]="pe.w" [attr.height]="g.alto" fill="url(#cmx-hatch)" />
                   <text class="cmx-ch-axis" [attr.x]="pe.x + pe.w / 2" [attr.y]="g.base - 8" text-anchor="middle">{{ p.esSupervisor && porCapital() ? 'sin nuevos contenidos' : 'aún sin pagos' }}</text>
                 }
+                @for (z of g.fuera; track z.titulo) {
+                  <rect class="cmx-ch-zona" [attr.x]="z.x" [attr.y]="g.t" [attr.width]="z.w" [attr.height]="g.alto" />
+                  <line class="cmx-ch-corte" [attr.x1]="z.corte" [attr.x2]="z.corte" [attr.y1]="g.t" [attr.y2]="g.base" />
+                  <text class="cmx-ch-zona-t" [attr.x]="z.x + z.w / 2" [attr.y]="g.t + 12" text-anchor="middle">{{ z.titulo }}</text>
+                }
                 @if (g.lineas.length) {
                   <text class="cmx-ch-label is-title" [attr.x]="g.xFin + 6" [attr.y]="g.yTitulo">Metas comisionales</text>
                 }
@@ -165,7 +170,7 @@ class Paginado<T> {
                   <text class="cmx-ch-axis" [attr.x]="g.l - 6" [attr.y]="e.y + 3" text-anchor="end">{{ e.v }} %</text>
                 }
                 @for (e of g.ejeX; track e.d) {
-                  <text class="cmx-ch-axis" [attr.x]="e.x" [attr.y]="g.h - 9" text-anchor="middle">{{ e.t }}</text>
+                  <text class="cmx-ch-axis" [class.is-fuera]="e.fuera" [attr.x]="e.x" [attr.y]="g.h - 9" text-anchor="middle">{{ e.t }}</text>
                 }
                 <line class="cmx-ch-grid" [attr.x1]="g.l" [attr.x2]="g.xFin" [attr.y1]="g.base" [attr.y2]="g.base" />
                 @if (g.linea) {
@@ -192,6 +197,7 @@ class Paginado<T> {
                   } @else {
                     <span>{{ pt.pagos }} {{ pt.pagos === 1 ? 'pago' : 'pagos' }} · S/ {{ d.monto | appNumber:'1.2-2' }}</span>
                   }
+                  @if (pt.fuera) { <span class="is-soft">{{ pt.fuera }}</span> }
                   <span>Acumulado S/ {{ d.acumulado | appNumber:'1.2-2' }} · {{ truncar2(d.porcentaje) | appNumber:'1.2-2' }} %</span>
                 </div>
               }
@@ -688,9 +694,20 @@ export class SustentoTabComponent {
       ...punto,
       contenidos: d.pagos.filter(pg => (d.sumas.get(pg.conciliacionId) ?? 0) > 0).length,
       pagado: d.pagos.reduce((total, pg) => total + (pg.recaudo ?? 0), 0),
-      pagos: (d.pagosSustento ?? d.pagos).length
+      pagos: (d.pagosSustento ?? d.pagos).length,
+      fuera: this.fueraDelMes(d.fecha)
     };
   });
+
+  /** "Fecha de octubre: el banco lo cuenta en setiembre" si la fecha no es del mes del período */
+  private fueraDelMes(fecha: string): string | null {
+    const v = this.vista();
+    const mes = Number(fecha.slice(5, 7));
+    if (Number(fecha.slice(0, 4)) === v.anio && mes === v.mes) {
+      return null;
+    }
+    return `Fecha de ${MESES[mes - 1].toLowerCase()}: el banco lo cuenta en ${MESES[v.mes - 1].toLowerCase()}`;
+  }
 
   /** Elige el día con datos más cercano al cursor */
   apuntar(evento: PointerEvent): void {
@@ -722,10 +739,18 @@ export class SustentoTabComponent {
     // El último pago puede tener fecha banco del mes siguiente: entonces el mes ya no tiene días pendientes
     const mesIso = `${v.anio}-${String(v.mes).padStart(2, '0')}`;
     const ultimo = ultimaFecha?.startsWith(mesIso) ? Number(ultimaFecha.slice(8, 10)) : 0;
+    // Día de cada fecha contado desde el 1 del mes: 02/10 en setiembre es el día 32, no el 2. Los pagos que el
+    // banco cuenta en el mes con fecha de otro mes alargan el eje hacia ese lado.
+    const inicioMes = Date.UTC(v.anio, v.mes - 1, 1);
+    const diaDe = (fecha: string) =>
+      Math.round((Date.UTC(Number(fecha.slice(0, 4)), Number(fecha.slice(5, 7)) - 1, Number(fecha.slice(8, 10))) - inicioMes) / 864e5) + 1;
+    const posiciones = dias.map(d => diaDe(d.fecha));
+    const primero = Math.min(1, ...posiciones);
+    const ultimoEje = Math.max(diasMes, ...posiciones);
     const niveles = p.tramos.filter(t => t.porcentajeDesde > 0);
     const porcentajeContenidos = p.esSupervisor && this.porCapital() ? dias.at(-1)?.porcentaje ?? 0 : 0;
     const maxP = Math.max(p.porcentaje ?? 0, porcentajeContenidos, 110, niveles.length ? niveles[niveles.length - 1].porcentajeDesde + 10 : 0) * 1.06;
-    const x = (d: number) => L + (d - 1) / (diasMes - 1) * (W - L - R);
+    const x = (d: number) => L + (d - primero) / (ultimoEje - primero) * (W - L - R);
     const y = (pct: number) => T + (1 - pct / maxP) * (H - T - B);
     const base = y(0);
 
@@ -739,9 +764,9 @@ export class SustentoTabComponent {
     const puntos: [number, number][] = [];
     const porDia: { x: number; y: number; dia: DiaDetalle }[] = [];
     if (dias.length && p.meta) {
-      puntos.push([x(Number(dias[0].fecha.slice(8, 10))), base]);
-      for (const d of dias) {
-        const punto = { x: x(Number(d.fecha.slice(8, 10))), y: y(d.acumulado / p.meta * 100), dia: d };
+      puntos.push([x(posiciones[0]), base]);
+      for (const [i, d] of dias.entries()) {
+        const punto = { x: x(posiciones[i]), y: y(d.acumulado / p.meta * 100), dia: d };
         puntos.push([punto.x, punto.y]);
         porDia.push(punto);
       }
@@ -750,13 +775,34 @@ export class SustentoTabComponent {
     const fin = puntos.length ? { x: puntos[puntos.length - 1][0], y: puntos[puntos.length - 1][1] } : { x: 0, y: 0 };
 
     const mesActual = ultimo > 0 && ultimo < diasMes;
+    const corto = (fecha: string) => MESES[Number(fecha.slice(5, 7)) - 1].slice(0, 3).toUpperCase() + '.';
+    const fuera: { x: number; w: number; corte: number; titulo: string }[] = [];
+    const ejeFuera: { d: number; x: number; t: string; fuera: boolean }[] = [];
+    if (primero < 1) {
+      const corte = x(0.5);
+      fuera.push({ x: L, w: corte - L, corte, titulo: corto(dias[0].fecha) });
+      ejeFuera.push({ d: primero, x: x(primero), t: diaMes(dias[0].fecha), fuera: true });
+    }
+    if (ultimoEje > diasMes) {
+      const corte = x(diasMes + 0.5);
+      const ultimaFuera = dias[dias.length - 1].fecha;
+      fuera.push({ x: corte, w: W - R - corte, corte, titulo: corto(ultimaFuera) });
+      ejeFuera.push({ d: ultimoEje, x: x(ultimoEje), t: diaMes(ultimaFuera), fuera: true });
+    }
     return {
       w: W, h: H, l: L, t: T, base, alto: H - T - B, xFin: W - R,
       lineas,
       yTitulo: Math.max(Math.min(...lineas.map(l => l.yEtiqueta)) - 12, 10),
       porDia,
       ejeY: [0, 50, 100].map(val => ({ v: val, y: y(val) })),
-      ejeX: [1, 8, 15, 22, diasMes].map(d => ({ d, x: x(d), t: String(d).padStart(2, '0') + '/' + String(v.mes).padStart(2, '0') })),
+      ejeX: [
+        // Si una fecha de fuera queda pegada a una del mes (01/10 junto al 30/09), se muestra solo la de fuera
+        ...[1, 8, 15, 22, diasMes]
+          .filter(d => ejeFuera.every(e => Math.abs(e.x - x(d)) >= 34))
+          .map(d => ({ d, x: x(d), t: String(d).padStart(2, '0') + '/' + String(v.mes).padStart(2, '0'), fuera: false })),
+        ...ejeFuera
+      ],
+      fuera,
       pendiente: mesActual ? { x: x(ultimo + 0.5), w: x(diasMes) - x(ultimo + 0.5) } : null,
       linea: puntos.length ? linea : '',
       area: puntos.length ? linea + ' L' + fin.x.toFixed(1) + ' ' + base.toFixed(1) + ' Z' : '',
