@@ -73,7 +73,7 @@ class Paginado<T> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-template #paginador let-pg>
-      @if (pg.total() > pg.tamanos[0]) {
+      @if (pg.total()) {
         <div class="cmx-pager">
           <label>Mostrar
             <select [value]="pg.tamano()" (change)="pg.cambiarTamano($any($event.target).value)">
@@ -222,26 +222,36 @@ class Paginado<T> {
               </div>
             </div>
           </div>
-          @if (p.desglose.length) {
+          @if (mostrarDesglose() && p.desglose.length) {
+            @let bonos = vistaDesglose() === 'BONO';
             <div class="cmx-brk">
               <div class="cmx-block-head" style="border-bottom:1px solid var(--cmx-line)">
                 <span class="cmx-block-title">Cómo se arma lo que cobra</span>
-                <span class="cmx-block-desc">{{ tituloDesglose(p) }}</span>
+                <span class="cmx-block-desc">{{ bonos ? 'aparte de la comisión' : tituloDesglose(p) }}</span>
+                <span class="cmx-segctl cmx-brk-sel" role="group" aria-label="Qué parte ver">
+                  <button type="button" [attr.aria-pressed]="!bonos" (click)="vistaDesglose.set('COMISION')">Comisiones · S/ {{ p.comision | appNumber:'1.2-2' }}</button>
+                  <button type="button" [attr.aria-pressed]="bonos" (click)="vistaDesglose.set('BONO')">Bonos · S/ {{ p.bonos | appNumber:'1.2-2' }}</button>
+                </span>
               </div>
               @for (l of p.desglose; track $index) {
-                <div class="cmx-brk-r" [class.ok]="l.cumple">
-                  <span class="ic" aria-hidden="true">{{ l.cumple ? '✓' : '·' }}</span>
-                  <span class="k">
-                    <b>{{ l.nombre }}@if (l.tipo === 'BONO') { <span class="cmx-tag cmx-tag-b">bono</span> }</b>
-                    <span>{{ l.detalle }}</span>
-                  </span>
-                  <span class="a">{{ l.cumple ? 'S/ ' + (l.monto | appNumber:'1.2-2') : '—' }}</span>
-                </div>
+                @if ((l.tipo === 'BONO') === bonos) {
+                  <div class="cmx-brk-r" [class.ok]="l.cumple">
+                    <span class="ic" aria-hidden="true">{{ l.cumple ? '✓' : '·' }}</span>
+                    <span class="k">
+                      <b>{{ l.nombre }}</b>
+                      <span>{{ l.detalle }}</span>
+                    </span>
+                    <span class="a">{{ l.cumple ? 'S/ ' + (l.monto | appNumber:'1.2-2') : '—' }}</span>
+                  </div>
+                }
+              }
+              @if (bonos && !tieneBonos(p)) {
+                <div class="cmx-brk-r"><span class="ic"></span><span class="k"><span>No tiene bonos configurados en este periodo.</span></span><span class="a"></span></div>
               }
               <div class="cmx-brk-r tot ok">
                 <span class="ic"></span>
-                <span class="k"><b>Total a pagar</b><span>Comisión S/ {{ p.comision | appNumber:'1.2-2' }} + bonos S/ {{ p.bonos | appNumber:'1.2-2' }}</span></span>
-                <span class="a">S/ {{ p.comision + p.bonos | appNumber:'1.2-2' }}</span>
+                <span class="k"><b>{{ bonos ? 'Total de bonos' : 'Total de comisión' }}</b></span>
+                <span class="a">S/ {{ (bonos ? p.bonos : p.comision) | appNumber:'1.2-2' }}</span>
               </div>
             </div>
           }
@@ -271,7 +281,7 @@ class Paginado<T> {
                 </tr>
               </thead>
               <tbody>
-                @for (d of dias(); track d.fecha) {
+                @for (d of paginaDias.filas(); track d.fecha) {
                   <tr [class.is-open]="abiertos().has(d.fecha)">
                     <td class="n" style="text-align:left">{{ diaMes(d.fecha) }}@if (d.etiqueta) { <span class="cmx-tag">{{ d.etiqueta }}</span> }</td>
                     <td class="n">{{ d.monto | appNumber:'1.2-2' }}</td>
@@ -409,6 +419,7 @@ class Paginado<T> {
               </tbody>
             </table>
           </div>
+          <ng-container *ngTemplateOutlet="paginador; context: { $implicit: paginaDias }" />
         </section>
 
         @if (p.esSupervisor && porCapital()) {
@@ -519,6 +530,8 @@ export class SustentoTabComponent {
   readonly fuenteDetalle = input<(idPeriodo: number) => Observable<DetalleComision[]>>();
   /** De dónde salen los pagos que no suman; por defecto, todos los del período (módulo de comisiones) */
   readonly fuentePagos = input<(idPeriodo: number) => Observable<PagoSustento[]>>();
+  /** Cómo se arma lo que cobra: en Mis comisiones no se muestra */
+  readonly mostrarDesglose = input(true);
   /** Persona elegida: id de usuario del asesor o 'sup' */
   readonly seleccion = model<number | 'sup' | null>(null);
 
@@ -533,6 +546,8 @@ export class SustentoTabComponent {
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
   readonly abiertos = signal<Set<string>>(new Set());
+  /** Parte del desglose a la vista */
+  readonly vistaDesglose = signal<'COMISION' | 'BONO'>('COMISION');
 
   readonly metrica = computed(() => METRICA_INFO[this.reporte().periodo.tipoMetrica]);
   /** Contención: suma el capital asignado del cliente, no lo pagado */
@@ -599,10 +614,11 @@ export class SustentoTabComponent {
     if (lineas.some(l => l.tipo === 'META')) {
       partes.push('metas de cantidad');
     }
-    if (lineas.some(l => l.tipo === 'BONO')) {
-      partes.push('bonos');
-    }
     return partes.join(' + ');
+  }
+
+  tieneBonos(p: Persona): boolean {
+    return p.desglose.some(l => l.tipo === 'BONO');
   }
 
   /** Equipo del supervisor en RECAUDO (en Mis comisiones se cuenta en el detalle) */
@@ -653,6 +669,7 @@ export class SustentoTabComponent {
     return agruparPorDia(p.filas, p.meta, p.tramos);
   });
 
+  readonly paginaDias = new Paginado(this.dias);
   readonly paginaContenidos = new Paginado(this.contenidos);
   readonly paginaNoSuman = new Paginado(this.noSuman);
 
@@ -773,6 +790,7 @@ export class SustentoTabComponent {
       this.contenidosDisponibles.set(false);
       this.abiertos.set(new Set());
       this.activo.set(null);
+      this.paginaDias.reiniciar();
       this.paginaContenidos.reiniciar();
       this.paginaNoSuman.reiniciar();
     }
@@ -824,6 +842,7 @@ export class SustentoTabComponent {
     this.seleccion.set(clave);
     this.abiertos.set(new Set());
     this.activo.set(null);
+    this.paginaDias.reiniciar();
     this.paginaContenidos.reiniciar();
     this.paginaNoSuman.reiniciar();
   }
