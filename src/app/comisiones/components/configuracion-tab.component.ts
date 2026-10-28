@@ -146,6 +146,15 @@ let secuencia = 0;
               @if (grupo()) { Cada persona va en <b>una sola</b> cartera: quien ya está en la otra aparece bloqueado. }
             </p>
 
+            <div class="cmx-divisor">
+              <label for="cmx-divisor">Dividir la meta entre</label>
+              <span class="cmx-money is-short">
+                <input id="cmx-divisor" type="number" min="0.01" step="0.5" [value]="divisor()" [disabled]="soloLectura()"
+                       (input)="cambiarDivisor($any($event.target).value)" />
+              </span>
+              <span class="cmx-divisor-r">= S/ {{ metaPorAsesor() | appNumber:'1.2-2' }} por asesor</span>
+            </div>
+
             @if (cargandoCandidatos()) {
               <div style="display:grid;gap:8px">@for (i of [1, 2, 3]; track i) { <div class="cmx-skel" style="height:34px"></div> }</div>
             } @else if (!candidatos().length) {
@@ -180,7 +189,7 @@ let secuencia = 0;
                         </button>
                       }
                     } @else {
-                      <span class="cmx-prow-st">S/ {{ metaPorAsesor() | appNumber:'1.2-2' }} · meta ÷ {{ divisor() }}</span>
+                      <span class="cmx-prow-st">S/ {{ metaPorAsesor() | appNumber:'1.2-2' }}</span>
                       @if (!soloLectura()) {
                         <button type="button" class="cmx-btn cmx-btn-link" (click)="ponerMetaPropia(u.idUsuario)">Meta propia</button>
                       }
@@ -192,8 +201,9 @@ let secuencia = 0;
               }
             }
             <p class="cmx-hint">
-              La meta del mes se divide entre los <b>{{ divisor() }}</b> asesores de mes completo: <b>S/ {{ metaPorAsesor() | appNumber:'1.2-2' }}</b>
-              cada uno. Quien ingresa a mitad de mes («Agregar participante» en Resultados) o tiene meta propia no mueve esa división.
+              Cada asesor tiene la meta del mes entre <b>{{ divisor() }}</b>: <b>S/ {{ metaPorAsesor() | appNumber:'1.2-2' }}</b>.
+              Una meta propia cambia solo a ese asesor. Quien ingresa a mitad de mes («Agregar participante» en Resultados)
+              recibe esa meta por sus días hábiles entre los días hábiles del mes.
             </p>
           </div>
         </section>
@@ -369,6 +379,8 @@ export class ConfiguracionTabComponent {
   readonly idSupervisor = signal<number | null>(null);
   /** En Tramo Propio, la meta de la cartera escrita a mano */
   readonly metaAjustada = signal<number | null>(null);
+  /** Entre cuánto se divide la meta, escrito o guardado; null = todavía no se tocó y sigue a los asesores marcados */
+  readonly divisorEscrito = signal<number | null>(null);
   readonly nivelesAsesor = signal<Nivel[]>([]);
   readonly nivelesSupervisor = signal<Nivel[]>([]);
   readonly escalaAcumulativa = signal(false);
@@ -398,10 +410,10 @@ export class ConfiguracionTabComponent {
   readonly metaDelMes = computed(() => this.grupo() ? this.metaAjustada() : this.metaAjustada() ?? this.vista().metaInterna);
   /** Candidatos que se pueden elegir (sin los que ya están en la otra cartera) */
   readonly disponibles = computed(() => this.candidatos().filter(u => !u.participaEn || this.asesores().has(u.idUsuario)).length);
-  /** Dividen la meta del mes los asesores de mes completo (sin meta propia ni ingreso a mitad de mes) */
-  readonly divisor = computed(() => Math.max(
-    [...this.asesores().entries()].filter(([id, m]) => m == null && !this.ingresos().has(id)).length, 1));
-  readonly metaPorAsesor = computed(() => (this.metaDelMes() ?? 0) / this.divisor());
+  /** Entre cuánto se divide la meta del mes; sin escribirlo, los asesores marcados (sin los que ingresan a mitad de mes) */
+  readonly divisor = computed(() => this.divisorEscrito()
+    ?? Math.max([...this.asesores().keys()].filter(id => !this.ingresos().has(id)).length, 1));
+  readonly metaPorAsesor = computed(() => this.divisor() > 0 ? (this.metaDelMes() ?? 0) / this.divisor() : 0);
   readonly conMetaPropiaOIngreso = computed(() =>
     [...this.asesores().entries()].filter(([id, m]) => m != null || this.ingresos().has(id)).length);
   readonly nombreSupervisor = computed(() => {
@@ -437,6 +449,7 @@ export class ConfiguracionTabComponent {
       })),
       idSupervisor: this.idSupervisor(),
       metaAjustada: this.metaAjustada(),
+      divisorMeta: this.divisor(),
       escalas: [
         ...this.aEscala('ASESOR', this.nivelesAsesor()),
         ...this.aEscala('SUPERVISOR', this.nivelesSupervisor())
@@ -462,6 +475,10 @@ export class ConfiguracionTabComponent {
     }
     if ([...this.asesores().values()].some(m => m != null && !(m > 0))) {
       f.push('Cada meta propia debe ser mayor a 0.');
+    }
+    const divisor = this.divisor();
+    if (!(divisor > 0) || divisor > 9999.99 || Math.abs(divisor * 100 - Math.round(divisor * 100)) > 1e-6) {
+      f.push('Escribe entre cuánto se divide la meta: mayor a 0 y con 2 decimales como máximo.');
     }
     if (!this.nivelesAsesor().length) {
       f.push('La escala del asesor está vacía: nadie comisiona. Agrega al menos un nivel.');
@@ -532,13 +549,18 @@ export class ConfiguracionTabComponent {
     return diasHabilesDesde(v.anio, v.mes, Number(fecha.slice(8, 10)), v.feriados);
   }
 
-  /** Meta de quien ingresó: meta de un asesor de mes completo × sus días ÷ días hábiles del mes */
+  /** Meta de quien ingresó: meta del mes ÷ divisor × sus días ÷ días hábiles del mes */
   metaIngreso(fecha: string): number {
     const diasMes = this.vista().diasHabiles;
     return diasMes ? this.metaPorAsesor() * this.diasDe(fecha) / diasMes : 0;
   }
 
   // ==================== EDICIÓN ====================
+
+  cambiarDivisor(valor: string): void {
+    const n = Number(valor);
+    this.divisorEscrito.set(valor !== '' && Number.isFinite(n) ? n : 0);
+  }
 
   cambiarMetaGrupo(valor: string): void {
     const n = valor === '' ? null : Number(valor);
@@ -618,6 +640,7 @@ export class ConfiguracionTabComponent {
         this.nivelesSupervisor.set(this.aNiveles(p.escalas, 'SUPERVISOR'));
         this.escalaAcumulativa.set(!!p.escalaAcumulativa);
         this.metas.set(metasParaEditar(p.metasCantidad));
+        this.divisorEscrito.set(p.divisorMeta ?? null);
         this.bonosCopiados.set((p.bonos ?? []).map(b => ({ ...b, id: null })));
         this.copiadoDe.set(codigoPeriodo(anio, mes));
       },
@@ -671,6 +694,7 @@ export class ConfiguracionTabComponent {
       .map(x => [x.idUsuario, x.fechaIngreso!.slice(0, 10)])));
     this.idSupervisor.set(participantes.find(x => x.rol === 'SUPERVISOR')?.idUsuario ?? null);
     this.metaAjustada.set(p?.metaAjustada ?? null);
+    this.divisorEscrito.set(p?.divisorMeta ?? null);
     this.nivelesAsesor.set(this.aNiveles(p?.escalas ?? [], 'ASESOR'));
     this.nivelesSupervisor.set(this.aNiveles(p?.escalas ?? [], 'SUPERVISOR'));
     this.escalaAcumulativa.set(!!p?.escalaAcumulativa);
