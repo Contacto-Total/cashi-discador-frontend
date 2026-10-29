@@ -1430,6 +1430,12 @@ export class CampaignFormComponent implements OnInit {
 
   closePreviewModal(): void {
     if (this.draftCampaignId) {
+      // Si el resumen sigue calculando, se corta en la base para no bloquear la subcartera.
+      if (this.previewLoading) {
+        this.campaignService.cancelarPreviewImportacionSP(this.draftCampaignId).subscribe({
+          error: (err) => console.error('Error cancelando preview:', err)
+        });
+      }
       this.campaignService.deleteCampaign(this.draftCampaignId).subscribe({
         next: () => console.log('Draft campaña borrada'),
         error: (err) => console.error('Error borrando draft:', err)

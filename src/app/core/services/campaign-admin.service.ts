@@ -544,6 +544,12 @@ export class CampaignAdminService {
   // -------------------------------------------------------
 
   // metodo para el preview
+  /** Cancela en el backend el preview en curso de la campaña draft (al cerrar el modal). */
+  cancelarPreviewImportacionSP(campaignId: number): Observable<any> {
+    return this.http.delete(`${environment.gatewayUrl}/admin/campaigns/preview-import-sp/${campaignId}`,
+      { headers: this.getHeaders() });
+  }
+
   previewImportacionSP(campaignId: number, tenantId: number, portfolioId: number, subPortfolioId: number,
     tipoFiltroEstado: string, filtroRangoAntiguedad?: string, filtroTipoTelefono?: string): Observable<ImportPreview> {
       return this.http.post<any>(
