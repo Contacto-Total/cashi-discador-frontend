@@ -362,6 +362,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard, menuAccesoGuard]
   },
   {
+    path: 'admin/control-intensidad',
+    loadComponent: () => import('./features/control-intensidad/control-intensidad.component').then(m => m.ControlIntensidadComponent),
+    canActivate: [authGuard, adminGuard, menuAccesoGuard]
+  },
+  {
     path: 'admin/maintenance/menu-config',
     loadComponent: () => import('./maintenance/components/menu-configuration/menu-configuration.component').then(m => m.MenuConfigurationComponent),
     canActivate: [authGuard, menuAccesoGuard]
