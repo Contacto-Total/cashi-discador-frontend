@@ -145,9 +145,9 @@ export class ComisionesService {
     return this.http.get(`${this.baseUrl}/periodos/${id}/excel`, { responseType: 'blob' });
   }
 
-  /** Bono LTD: resumen por participante, detalle por PDP y cuotas */
-  exportarExcelLtd(id: number): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/periodos/${id}/excel-ltd`, { responseType: 'blob' });
+  /** Bonos: LTD, sobrecumplimiento y PKM con su total y los bonos asignados; con LTD, el detalle por PDP y las cuotas */
+  exportarExcelBonos(id: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/periodos/${id}/excel-bonos`, { responseType: 'blob' });
   }
 
   /** Todos los pagos conciliados del período, sumen o no */

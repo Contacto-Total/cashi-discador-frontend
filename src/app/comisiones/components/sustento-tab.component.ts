@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, Signal, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
 import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe } from '../comisiones.util';
+import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, MESES, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe, truncar2 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -31,6 +32,36 @@ const R = 118;
 const T = 16;
 const B = 28;
 
+/** Paginado en pantalla de una lista que ya llegó completa */
+class Paginado<T> {
+  readonly tamanos = [10, 15, 20];
+  readonly tamano = signal(10);
+  private readonly pedida = signal(1);
+  readonly total = computed(() => this.lista().length);
+  readonly paginas = computed(() => Math.max(1, Math.ceil(this.total() / this.tamano())));
+  /** La lista puede achicarse en un recálculo: la página no pasa de la última */
+  readonly pagina = computed(() => Math.min(this.pedida(), this.paginas()));
+  readonly desde = computed(() => this.total() ? (this.pagina() - 1) * this.tamano() + 1 : 0);
+  readonly hasta = computed(() => Math.min(this.pagina() * this.tamano(), this.total()));
+  readonly filas = computed(() => this.lista().slice(this.desde() - 1, this.hasta()));
+
+  constructor(private readonly lista: Signal<T[]>) {
+  }
+
+  cambiarTamano(valor: string): void {
+    this.tamano.set(Number(valor));
+    this.pedida.set(1);
+  }
+
+  mover(paso: number): void {
+    this.pedida.set(Math.min(Math.max(this.pagina() + paso, 1), this.paginas()));
+  }
+
+  reiniciar(): void {
+    this.pedida.set(1);
+  }
+}
+
 /**
  * Sustento del período por persona. En CONTENCION, el supervisor ve todos los clientes contenidos del mes
  * por fecha de contención; los asesores conservan el detalle de sus pagos por fecha de banco.
@@ -38,9 +69,25 @@ const B = 28;
 @Component({
   selector: 'cmx-sustento-tab',
   standalone: true,
-  imports: [AppNumberPipe, CmxIconComponent],
+  imports: [AppNumberPipe, CmxIconComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <ng-template #paginador let-pg>
+      @if (pg.total()) {
+        <div class="cmx-pager">
+          <label>Mostrar
+            <select [value]="pg.tamano()" (change)="pg.cambiarTamano($any($event.target).value)">
+              @for (t of pg.tamanos; track t) { <option [value]="t" [selected]="t === pg.tamano()">{{ t }}</option> }
+            </select>
+            por página</label>
+          <span class="cmx-pager-sp"></span>
+          <span class="cmx-pager-info">{{ pg.desde() }}–{{ pg.hasta() }} de {{ pg.total() }} · página {{ pg.pagina() }} de {{ pg.paginas() }}</span>
+          <button type="button" class="cmx-dbtn" [disabled]="pg.pagina() === 1" (click)="pg.mover(-1)">‹ Anterior</button>
+          <button type="button" class="cmx-dbtn" [disabled]="pg.pagina() === pg.paginas()" (click)="pg.mover(1)">Siguiente ›</button>
+        </div>
+      }
+    </ng-template>
+
     @if (cargando() && !filas().length) {
       <div style="display:grid;gap:12px">
         <div class="cmx-skel" style="height:34px;max-width:520px"></div>
@@ -87,15 +134,17 @@ const B = 28;
                   }
                 }
               } @else {
-                {{ metrica().logrado }} acumulado contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
+                {{ metrica().acumulado }} contra su meta individual (S/ {{ p.meta | appNumber:'1.2-2' }}{{ p.metaPropia ? ', meta propia' : '' }}{{ p.ingreso ? ', ' + p.ingreso : '' }})
               }
             </span>
           </div>
-          <div class="cmx-legend"><span><i></i>{{ metrica().logrado }} acumulado por {{ p.esSupervisor && porCapital() ? 'fecha de contención' : 'fecha banco' }}</span></div>
+          <div class="cmx-legend"><span><i></i>{{ metrica().acumulado }} por {{ p.esSupervisor && porCapital() ? 'fecha de contención' : 'fecha banco' }}</span></div>
           <div style="padding:6px 14px 8px">
             @if (grafico(); as g) {
+              <div class="cmx-ch-wrap">
               <svg class="cmx-chart" [attr.viewBox]="'0 0 ' + g.w + ' ' + g.h" role="img"
-                   [attr.aria-label]="'Avance de ' + p.nombre + ' sobre su meta por ' + (p.esSupervisor && porCapital() ? 'fecha de contención' : 'fecha banco')">
+                   [attr.aria-label]="'Avance de ' + p.nombre + ' sobre su meta por ' + (p.esSupervisor && porCapital() ? 'fecha de contención' : 'fecha banco')"
+                   (pointermove)="apuntar($event)" (pointerdown)="apuntar($event)" (pointerleave)="activo.set(null)">
                 <defs>
                   <pattern id="cmx-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                     <rect width="6" height="6" fill="#F8FAFC" /><line x1="0" y1="0" x2="0" y2="6" stroke="#E2E8F0" stroke-width="3" />
@@ -105,6 +154,14 @@ const B = 28;
                   <rect [attr.x]="pe.x" [attr.y]="g.t" [attr.width]="pe.w" [attr.height]="g.alto" fill="url(#cmx-hatch)" />
                   <text class="cmx-ch-axis" [attr.x]="pe.x + pe.w / 2" [attr.y]="g.base - 8" text-anchor="middle">{{ p.esSupervisor && porCapital() ? 'sin nuevos contenidos' : 'aún sin pagos' }}</text>
                 }
+                @for (z of g.fuera; track z.titulo) {
+                  <rect class="cmx-ch-zona" [attr.x]="z.x" [attr.y]="g.t" [attr.width]="z.w" [attr.height]="g.alto" />
+                  <line class="cmx-ch-corte" [attr.x1]="z.corte" [attr.x2]="z.corte" [attr.y1]="g.t" [attr.y2]="g.base" />
+                  <text class="cmx-ch-zona-t" [attr.x]="z.x + z.w / 2" [attr.y]="g.t + 12" text-anchor="middle">{{ z.titulo }}</text>
+                }
+                @if (g.lineas.length) {
+                  <text class="cmx-ch-label is-title" [attr.x]="g.xFin + 6" [attr.y]="g.yTitulo">Metas comisionales</text>
+                }
                 @for (l of g.lineas; track l.desde) {
                   <line class="cmx-ch-tramo" [class.is-hit]="l.hit" [attr.x1]="g.l" [attr.x2]="g.xFin" [attr.y1]="l.y" [attr.y2]="l.y" />
                   <text class="cmx-ch-label" [class.is-hit]="l.hit" [attr.x]="g.xFin + 6" [attr.y]="l.yEtiqueta + 3.5">{{ l.desde }} % · S/ {{ l.monto | appNumber:'1.0-0' }}</text>
@@ -113,7 +170,7 @@ const B = 28;
                   <text class="cmx-ch-axis" [attr.x]="g.l - 6" [attr.y]="e.y + 3" text-anchor="end">{{ e.v }} %</text>
                 }
                 @for (e of g.ejeX; track e.d) {
-                  <text class="cmx-ch-axis" [attr.x]="e.x" [attr.y]="g.h - 9" text-anchor="middle">{{ e.t }}</text>
+                  <text class="cmx-ch-axis" [class.is-fuera]="e.fuera" [attr.x]="e.x" [attr.y]="g.h - 9" text-anchor="middle">{{ e.t }}</text>
                 }
                 <line class="cmx-ch-grid" [attr.x1]="g.l" [attr.x2]="g.xFin" [attr.y1]="g.base" [attr.y2]="g.base" />
                 @if (g.linea) {
@@ -121,13 +178,36 @@ const B = 28;
                   <path class="cmx-ch-line" [attr.d]="g.linea" />
                   <circle class="cmx-ch-dot" [attr.cx]="g.fin.x" [attr.cy]="g.fin.y" r="4" />
                 }
+                @if (punto(); as pt) {
+                  <line class="cmx-ch-guide" [attr.x1]="pt.x" [attr.x2]="pt.x" [attr.y1]="g.t" [attr.y2]="g.base" />
+                  <circle class="cmx-ch-hdot" [attr.cx]="pt.x" [attr.cy]="pt.y" r="4.5" />
+                }
               </svg>
+              @if (punto(); as pt) {
+                @let d = pt.dia;
+                <div class="cmx-ch-tip" role="status" [class.is-left]="pt.x > g.w * .6" [class.is-below]="pt.y < g.h * .35"
+                     [style.left.%]="pt.x / g.w * 100" [style.top.%]="pt.y / g.h * 100">
+                  <b>{{ diaMes(d.fecha) }}</b>
+                  @if (d.clientes) {
+                    <span>{{ d.clientes.length }} {{ d.clientes.length === 1 ? 'cliente contenido' : 'clientes contenidos' }} · capital S/ {{ d.monto | appNumber:'1.2-2' }}</span>
+                    @if (d.etiqueta) { <span class="is-soft">{{ d.etiqueta }}</span> }
+                  } @else if (porCapital()) {
+                    <span>{{ pt.contenidos }} {{ pt.contenidos === 1 ? 'cliente contenido' : 'clientes contenidos' }} · capital S/ {{ d.monto | appNumber:'1.2-2' }}</span>
+                    <span class="is-soft">Ese día pagaron S/ {{ pt.pagado | appNumber:'1.2-2' }} ({{ d.pagos.length }} {{ d.pagos.length === 1 ? 'pago' : 'pagos' }})</span>
+                  } @else {
+                    <span>{{ pt.pagos }} {{ pt.pagos === 1 ? 'pago' : 'pagos' }} · S/ {{ d.monto | appNumber:'1.2-2' }}</span>
+                  }
+                  @if (pt.fuera) { <span class="is-soft">{{ pt.fuera }}</span> }
+                  <span>Acumulado S/ {{ d.acumulado | appNumber:'1.2-2' }} · {{ truncar2(d.porcentaje) | appNumber:'1.2-2' }} %</span>
+                </div>
+              }
+              </div>
             }
           </div>
           <div class="cmx-reads">
             <div>
               <div class="cmx-reads-l">Lleva</div>
-              <div class="cmx-reads-v">{{ p.porcentaje ?? 0 | appNumber:'1.1-1' }} %</div>
+              <div class="cmx-reads-v">{{ truncar2(p.porcentaje) | appNumber:'1.2-2' }} %</div>
               <div class="cmx-reads-d">S/ {{ p.logrado | appNumber:'1.2-2' }} de S/ {{ p.meta | appNumber:'1.2-2' }}</div>
             </div>
             <div>
@@ -148,26 +228,36 @@ const B = 28;
               </div>
             </div>
           </div>
-          @if (p.desglose.length) {
+          @if (mostrarDesglose() && p.desglose.length) {
+            @let bonos = vistaDesglose() === 'BONO';
             <div class="cmx-brk">
               <div class="cmx-block-head" style="border-bottom:1px solid var(--cmx-line)">
                 <span class="cmx-block-title">Cómo se arma lo que cobra</span>
-                <span class="cmx-block-desc">{{ tituloDesglose(p) }}</span>
+                <span class="cmx-block-desc">{{ bonos ? 'aparte de la comisión' : tituloDesglose(p) }}</span>
+                <span class="cmx-segctl cmx-brk-sel" role="group" aria-label="Qué parte ver">
+                  <button type="button" [attr.aria-pressed]="!bonos" (click)="vistaDesglose.set('COMISION')">Comisiones · S/ {{ p.comision | appNumber:'1.2-2' }}</button>
+                  <button type="button" [attr.aria-pressed]="bonos" (click)="vistaDesglose.set('BONO')">Bonos · S/ {{ p.bonos | appNumber:'1.2-2' }}</button>
+                </span>
               </div>
               @for (l of p.desglose; track $index) {
-                <div class="cmx-brk-r" [class.ok]="l.cumple">
-                  <span class="ic" aria-hidden="true">{{ l.cumple ? '✓' : '·' }}</span>
-                  <span class="k">
-                    <b>{{ l.nombre }}@if (l.tipo === 'BONO') { <span class="cmx-tag cmx-tag-b">bono</span> }</b>
-                    <span>{{ l.detalle }}</span>
-                  </span>
-                  <span class="a">{{ l.cumple ? 'S/ ' + (l.monto | appNumber:'1.2-2') : '—' }}</span>
-                </div>
+                @if ((l.tipo === 'BONO') === bonos) {
+                  <div class="cmx-brk-r" [class.ok]="l.cumple">
+                    <span class="ic" aria-hidden="true">{{ l.cumple ? '✓' : '·' }}</span>
+                    <span class="k">
+                      <b>{{ l.nombre }}</b>
+                      <span>{{ l.detalle }}</span>
+                    </span>
+                    <span class="a">{{ l.cumple ? 'S/ ' + (l.monto | appNumber:'1.2-2') : '—' }}</span>
+                  </div>
+                }
+              }
+              @if (bonos && !tieneBonos(p)) {
+                <div class="cmx-brk-r"><span class="ic"></span><span class="k"><span>No tiene bonos configurados en este periodo.</span></span><span class="a"></span></div>
               }
               <div class="cmx-brk-r tot ok">
                 <span class="ic"></span>
-                <span class="k"><b>Total a pagar</b><span>Comisión S/ {{ p.comision | appNumber:'1.2-2' }} + bonos S/ {{ p.bonos | appNumber:'1.2-2' }}</span></span>
-                <span class="a">S/ {{ p.comision + p.bonos | appNumber:'1.2-2' }}</span>
+                <span class="k"><b>{{ bonos ? 'Total de bonos' : 'Total de comisión' }}</b></span>
+                <span class="a">S/ {{ (bonos ? p.bonos : p.comision) | appNumber:'1.2-2' }}</span>
               </div>
             </div>
           }
@@ -197,12 +287,12 @@ const B = 28;
                 </tr>
               </thead>
               <tbody>
-                @for (d of dias(); track d.fecha) {
+                @for (d of paginaDias.filas(); track d.fecha) {
                   <tr [class.is-open]="abiertos().has(d.fecha)">
                     <td class="n" style="text-align:left">{{ diaMes(d.fecha) }}@if (d.etiqueta) { <span class="cmx-tag">{{ d.etiqueta }}</span> }</td>
                     <td class="n">{{ d.monto | appNumber:'1.2-2' }}</td>
                     <td class="n">{{ d.acumulado | appNumber:'1.2-2' }}</td>
-                    <td class="n">{{ d.porcentaje ?? 0 | appNumber:'1.1-1' }} %</td>
+                    <td class="n">{{ truncar2(d.porcentaje) | appNumber:'1.2-2' }} %</td>
                     <td [class.is-good]="d.sube">
                       @if (d.nivel && d.nivel.montoComision) { {{ d.sube ? '▲ ' : '' }}{{ d.nivel.porcentajeDesde }} % · S/ {{ d.nivel.montoComision | appNumber:'1.0-0' }} } @else { — }
                     </td>
@@ -335,6 +425,7 @@ const B = 28;
               </tbody>
             </table>
           </div>
+          <ng-container *ngTemplateOutlet="paginador; context: { $implicit: paginaDias }" />
         </section>
 
         @if (p.esSupervisor && porCapital()) {
@@ -354,7 +445,7 @@ const B = 28;
                   <tr><th scope="col">Documento</th><th scope="col">Cliente</th><th scope="col">Fecha de contención</th><th scope="col" class="n">Capital</th></tr>
                 </thead>
                 <tbody>
-                  @for (cliente of contenidos(); track cliente.documentoCliente) {
+                  @for (cliente of paginaContenidos.filas(); track cliente.documentoCliente) {
                     <tr>
                       <td>{{ cliente.documentoCliente }}</td>
                       <td>{{ cliente.nombreCliente || '—' }}</td>
@@ -367,6 +458,7 @@ const B = 28;
                 </tbody>
               </table>
             </div>
+            <ng-container *ngTemplateOutlet="paginador; context: { $implicit: paginaContenidos }" />
           </section>
         }
 
@@ -406,7 +498,7 @@ const B = 28;
                   </tr>
                 </thead>
                 <tbody>
-                  @for (pg of noSuman(); track pg.conciliacionId) {
+                  @for (pg of paginaNoSuman.filas(); track pg.conciliacionId) {
                     <tr>
                       <td class="n" style="text-align:left">{{ diaMes(pg.fechaBanco) }}</td>
                       @if (p.esSupervisor) { <td>{{ pg.nombreAgenteGestion || '—' }}</td> }
@@ -426,6 +518,7 @@ const B = 28;
                 </tbody>
               </table>
             </div>
+            <ng-container *ngTemplateOutlet="paginador; context: { $implicit: paginaNoSuman }" />
           </section>
         }
       }
@@ -443,10 +536,13 @@ export class SustentoTabComponent {
   readonly fuenteDetalle = input<(idPeriodo: number) => Observable<DetalleComision[]>>();
   /** De dónde salen los pagos que no suman; por defecto, todos los del período (módulo de comisiones) */
   readonly fuentePagos = input<(idPeriodo: number) => Observable<PagoSustento[]>>();
+  /** Cómo se arma lo que cobra: en Mis comisiones no se muestra */
+  readonly mostrarDesglose = input(true);
   /** Persona elegida: id de usuario del asesor o 'sup' */
   readonly seleccion = model<number | 'sup' | null>(null);
 
   readonly diaMes = diaMes;
+  readonly truncar2 = truncar2;
 
   readonly filas = signal<DetalleComision[]>([]);
   readonly pagos = signal<PagoSustento[]>([]);
@@ -456,6 +552,8 @@ export class SustentoTabComponent {
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
   readonly abiertos = signal<Set<string>>(new Set());
+  /** Parte del desglose a la vista */
+  readonly vistaDesglose = signal<'COMISION' | 'BONO'>('COMISION');
 
   readonly metrica = computed(() => METRICA_INFO[this.reporte().periodo.tipoMetrica]);
   /** Contención: suma el capital asignado del cliente, no lo pagado */
@@ -522,10 +620,11 @@ export class SustentoTabComponent {
     if (lineas.some(l => l.tipo === 'META')) {
       partes.push('metas de cantidad');
     }
-    if (lineas.some(l => l.tipo === 'BONO')) {
-      partes.push('bonos');
-    }
     return partes.join(' + ');
+  }
+
+  tieneBonos(p: Persona): boolean {
+    return p.desglose.some(l => l.tipo === 'BONO');
   }
 
   /** Equipo del supervisor en RECAUDO (en Mis comisiones se cuenta en el detalle) */
@@ -576,6 +675,52 @@ export class SustentoTabComponent {
     return agruparPorDia(p.filas, p.meta, p.tramos);
   });
 
+  readonly paginaDias = new Paginado(this.dias);
+  readonly paginaContenidos = new Paginado(this.contenidos);
+  readonly paginaNoSuman = new Paginado(this.noSuman);
+
+  /** Día del gráfico bajo el cursor (fecha ISO) */
+  readonly activo = signal<string | null>(null);
+
+  /** Punto del gráfico con lo que representa ese día: capital de los contenidos o pagos */
+  readonly punto = computed(() => {
+    const fecha = this.activo();
+    const punto = fecha ? this.grafico()?.porDia.find(q => q.dia.fecha === fecha) : null;
+    if (!punto) {
+      return null;
+    }
+    const d = punto.dia;
+    return {
+      ...punto,
+      contenidos: d.pagos.filter(pg => (d.sumas.get(pg.conciliacionId) ?? 0) > 0).length,
+      pagado: d.pagos.reduce((total, pg) => total + (pg.recaudo ?? 0), 0),
+      pagos: (d.pagosSustento ?? d.pagos).length,
+      fuera: this.fueraDelMes(d.fecha)
+    };
+  });
+
+  /** "Fecha de octubre: el banco lo cuenta en setiembre" si la fecha no es del mes del período */
+  private fueraDelMes(fecha: string): string | null {
+    const v = this.vista();
+    const mes = Number(fecha.slice(5, 7));
+    if (Number(fecha.slice(0, 4)) === v.anio && mes === v.mes) {
+      return null;
+    }
+    return `Fecha de ${MESES[mes - 1].toLowerCase()}: el banco lo cuenta en ${MESES[v.mes - 1].toLowerCase()}`;
+  }
+
+  /** Elige el día con datos más cercano al cursor */
+  apuntar(evento: PointerEvent): void {
+    const puntos = this.grafico()?.porDia ?? [];
+    if (!puntos.length) {
+      return;
+    }
+    const caja = (evento.currentTarget as SVGSVGElement).getBoundingClientRect();
+    const x = (evento.clientX - caja.left) / caja.width * W;
+    const cercano = puntos.reduce((mejor, q) => Math.abs(q.x - x) < Math.abs(mejor.x - x) ? q : mejor);
+    this.activo.set(cercano.dia.fecha);
+  }
+
   readonly siguiente = computed(() => {
     const p = this.persona();
     return p ? siguienteTramo(p.tramos, p.nivel, p.logrado, p.meta) : null;
@@ -591,11 +736,21 @@ export class SustentoTabComponent {
     const diasMes = new Date(v.anio, v.mes, 0).getDate();
     const dias = this.dias();
     const ultimaFecha = p.esSupervisor && this.porCapital() ? dias.at(-1)?.fecha : v.pagos.ultimaFechaBanco;
-    const ultimo = ultimaFecha ? Number(ultimaFecha.slice(8, 10)) : 0;
+    // El último pago puede tener fecha banco del mes siguiente: entonces el mes ya no tiene días pendientes
+    const mesIso = `${v.anio}-${String(v.mes).padStart(2, '0')}`;
+    const ultimo = ultimaFecha?.startsWith(mesIso) ? Number(ultimaFecha.slice(8, 10)) : 0;
+    // Día de cada fecha contado desde el 1 del mes: 02/10 en setiembre es el día 32, no el 2. Los pagos que el
+    // banco cuenta en el mes con fecha de otro mes alargan el eje hacia ese lado.
+    const inicioMes = Date.UTC(v.anio, v.mes - 1, 1);
+    const diaDe = (fecha: string) =>
+      Math.round((Date.UTC(Number(fecha.slice(0, 4)), Number(fecha.slice(5, 7)) - 1, Number(fecha.slice(8, 10))) - inicioMes) / 864e5) + 1;
+    const posiciones = dias.map(d => diaDe(d.fecha));
+    const primero = Math.min(1, ...posiciones);
+    const ultimoEje = Math.max(diasMes, ...posiciones);
     const niveles = p.tramos.filter(t => t.porcentajeDesde > 0);
     const porcentajeContenidos = p.esSupervisor && this.porCapital() ? dias.at(-1)?.porcentaje ?? 0 : 0;
     const maxP = Math.max(p.porcentaje ?? 0, porcentajeContenidos, 110, niveles.length ? niveles[niveles.length - 1].porcentajeDesde + 10 : 0) * 1.06;
-    const x = (d: number) => L + (d - 1) / (diasMes - 1) * (W - L - R);
+    const x = (d: number) => L + (d - primero) / (ultimoEje - primero) * (W - L - R);
     const y = (pct: number) => T + (1 - pct / maxP) * (H - T - B);
     const base = y(0);
 
@@ -607,21 +762,47 @@ export class SustentoTabComponent {
     }
 
     const puntos: [number, number][] = [];
+    const porDia: { x: number; y: number; dia: DiaDetalle }[] = [];
     if (dias.length && p.meta) {
-      puntos.push([x(Number(dias[0].fecha.slice(8, 10))), base]);
-      for (const d of dias) {
-        puntos.push([x(Number(d.fecha.slice(8, 10))), y(d.acumulado / p.meta * 100)]);
+      puntos.push([x(posiciones[0]), base]);
+      for (const [i, d] of dias.entries()) {
+        const punto = { x: x(posiciones[i]), y: y(d.acumulado / p.meta * 100), dia: d };
+        puntos.push([punto.x, punto.y]);
+        porDia.push(punto);
       }
     }
     const linea = puntos.map((q, j) => (j ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ');
     const fin = puntos.length ? { x: puntos[puntos.length - 1][0], y: puntos[puntos.length - 1][1] } : { x: 0, y: 0 };
 
     const mesActual = ultimo > 0 && ultimo < diasMes;
+    const corto = (fecha: string) => MESES[Number(fecha.slice(5, 7)) - 1].slice(0, 3).toUpperCase() + '.';
+    const fuera: { x: number; w: number; corte: number; titulo: string }[] = [];
+    const ejeFuera: { d: number; x: number; t: string; fuera: boolean }[] = [];
+    if (primero < 1) {
+      const corte = x(0.5);
+      fuera.push({ x: L, w: corte - L, corte, titulo: corto(dias[0].fecha) });
+      ejeFuera.push({ d: primero, x: x(primero), t: diaMes(dias[0].fecha), fuera: true });
+    }
+    if (ultimoEje > diasMes) {
+      const corte = x(diasMes + 0.5);
+      const ultimaFuera = dias[dias.length - 1].fecha;
+      fuera.push({ x: corte, w: W - R - corte, corte, titulo: corto(ultimaFuera) });
+      ejeFuera.push({ d: ultimoEje, x: x(ultimoEje), t: diaMes(ultimaFuera), fuera: true });
+    }
     return {
       w: W, h: H, l: L, t: T, base, alto: H - T - B, xFin: W - R,
       lineas,
+      yTitulo: Math.max(Math.min(...lineas.map(l => l.yEtiqueta)) - 12, 10),
+      porDia,
       ejeY: [0, 50, 100].map(val => ({ v: val, y: y(val) })),
-      ejeX: [1, 8, 15, 22, diasMes].map(d => ({ d, x: x(d), t: String(d).padStart(2, '0') + '/' + String(v.mes).padStart(2, '0') })),
+      ejeX: [
+        // Si una fecha de fuera queda pegada a una del mes (01/10 junto al 30/09), se muestra solo la de fuera
+        ...[1, 8, 15, 22, diasMes]
+          .filter(d => ejeFuera.every(e => Math.abs(e.x - x(d)) >= 34))
+          .map(d => ({ d, x: x(d), t: String(d).padStart(2, '0') + '/' + String(v.mes).padStart(2, '0'), fuera: false })),
+        ...ejeFuera
+      ],
+      fuera,
       pendiente: mesActual ? { x: x(ultimo + 0.5), w: x(diasMes) - x(ultimo + 0.5) } : null,
       linea: puntos.length ? linea : '',
       area: puntos.length ? linea + ' L' + fin.x.toFixed(1) + ' ' + base.toFixed(1) + ' Z' : '',
@@ -629,29 +810,40 @@ export class SustentoTabComponent {
     };
   });
 
+  private readonly idPeriodo = computed(() => this.reporte().periodo.id);
+  private readonly fechaCalculo = computed(() => this.reporte().periodo.fechaCalculo);
+  private periodoCargado: number | null = null;
+
   constructor() {
     inject(DestroyRef).onDestroy(() => this.carga?.unsubscribe());
-    // Cada cálculo nuevo del período trae otro detalle
+    // El refresco automático trae otro objeto de reporte cada minuto: solo se vuelve a cargar si cambió el
+    // período o hubo un recálculo. Un recálculo del mismo período carga sin vaciar ni cerrar lo abierto.
     effect(() => {
-      const r = this.reporte();
-      r.periodo.id;
-      r.periodo.fechaCalculo;
-      untracked(() => this.cargar());
+      const id = this.idPeriodo();
+      this.fechaCalculo();
+      untracked(() => this.cargar(id !== this.periodoCargado));
     });
   }
 
-  cargar(): void {
+  cargar(reiniciar = true): void {
     this.carga?.unsubscribe();
     this.cargando.set(true);
     this.error.set(null);
-    this.filas.set([]);
-    this.pagos.set([]);
-    this.contenidos.set([]);
-    this.contenidosDisponibles.set(false);
-    this.abiertos.set(new Set());
+    if (reiniciar) {
+      this.filas.set([]);
+      this.pagos.set([]);
+      this.contenidos.set([]);
+      this.contenidosDisponibles.set(false);
+      this.abiertos.set(new Set());
+      this.activo.set(null);
+      this.paginaDias.reiniciar();
+      this.paginaContenidos.reiniciar();
+      this.paginaNoSuman.reiniciar();
+    }
     const fuente = this.fuenteDetalle() ?? ((id: number) => this.service.obtenerDetalle(id));
     const fuentePagos = this.fuentePagos() ?? ((id: number) => this.service.obtenerPagos(id));
     const id = this.reporte().periodo.id;
+    this.periodoCargado = id;
     // Los pagos excluidos y los contenidos son complementos: si fallan, el sustento se ve igual.
     this.carga = forkJoin({
       filas: fuente(id),
@@ -668,7 +860,10 @@ export class SustentoTabComponent {
       },
       error: e => {
         this.cargando.set(false);
-        this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
+        // Si falla una recarga en segundo plano, se queda lo que ya se ve
+        if (reiniciar || !this.filas().length) {
+          this.error.set(mensajeError(e, 'Revisa tu conexión e intenta de nuevo.'));
+        }
       }
     });
   }
@@ -692,6 +887,10 @@ export class SustentoTabComponent {
   elegir(clave: number | 'sup'): void {
     this.seleccion.set(clave);
     this.abiertos.set(new Set());
+    this.activo.set(null);
+    this.paginaDias.reiniciar();
+    this.paginaContenidos.reiniciar();
+    this.paginaNoSuman.reiniciar();
   }
 
   alternarDia(fecha: string): void {

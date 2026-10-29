@@ -145,6 +145,8 @@ export interface PeriodoComision {
   metaAjustada: number | null;
   /** La que se usa en el cálculo */
   metaDelMes: number;
+  /** Entre cuánto se divide la meta del mes para la meta individual de los asesores (admite decimales) */
+  divisorMeta: number | null;
   estado: EstadoPeriodo;
   cerradoPorNombre?: string | null;
   fechaCierre?: string | null;
@@ -179,7 +181,7 @@ export interface ParticipanteComision {
   nombre: string;
   rol: RolComision;
   metaIndividual: number | null;
-  /** Meta propia (excepción); null = meta del mes ÷ asesores de mes completo */
+  /** Meta propia (excepción); null = meta del mes ÷ divisor del período */
   metaManual: number | null;
   /** Ingresó a mitad de mes (yyyy-mm-dd); null = mes completo */
   fechaIngreso: string | null;
@@ -286,6 +288,8 @@ export interface ConfiguracionPeriodo {
   idSupervisor: number | null;
   /** En Tramo Propio es obligatoria: la meta de la cartera, escrita a mano */
   metaAjustada: number | null;
+  /** Entre cuánto se divide la meta del mes para la meta individual de los asesores */
+  divisorMeta: number;
   escalas: EscalaComision[];
   escalaAcumulativa: boolean;
   metasCantidad: MetaCantidad[];

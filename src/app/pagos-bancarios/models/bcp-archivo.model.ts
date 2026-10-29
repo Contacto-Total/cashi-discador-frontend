@@ -36,6 +36,11 @@ export interface BcpArchivoDetalle {
   numeroOperacionCanal: string;
   /** Al aprobar: retenido por el supervisor para resolverlo a mano. */
   retenerRevision?: boolean;
+  /** Deuda del pago en los archivos que reportan por deuda (Interbank: CJ), con su producto y moneda. */
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
+  banco?: string;
 }
 
 /**
@@ -58,6 +63,8 @@ export interface BcpArchivoResultado {
   todosAprobables?: boolean;
   estadoCarga?: EstadoCargaArchivoBcp;
   pagosDuplicados?: BcpPagoDuplicado[] | null;
+  /** Interbank: filas con REVERSA o monto negativo; no se cargan, se revisan caso por caso. */
+  reversas?: BcpPagoReversa[] | null;
 }
 
 export type EstadoCargaArchivoBcp =
@@ -70,6 +77,18 @@ export type EstadoCargaArchivoBcp =
 export type MotivoPagoDuplicadoBcp =
   | 'NUMERO_OPERACION_EXISTENTE'
   | 'DOCUMENTO_FECHA_MONTO_EXISTENTE';
+
+/** Fila de reversa del archivo de Interbank, que no se carga como pago. */
+export interface BcpPagoReversa {
+  documento: string | null;
+  cuenta: string | null;
+  producto: string | null;
+  moneda: string | null;
+  fechaPago: string | null;
+  montoPagado: number | null;
+  reversa: string | null;
+  numeroFila: number;
+}
 
 export interface BcpPagoDuplicado {
   documento: string;
@@ -157,6 +176,10 @@ export interface PrevalidacionArchivoBcp {
   alerta?: string | null;
   /** Marcado en pantalla: el supervisor no quiere que se aplique solo; queda pendiente al guardar. */
   retenerRevision?: boolean;
+  /** Interbank: deuda (CJ), producto y moneda del pago. */
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
 }
 
 export type CategoriaPagoBanco =
@@ -186,6 +209,9 @@ export interface PagoBancoPendiente {
   fechaPagoAsesor: string | null;
   montoPagoAsesor: number | null;
   grupoId: number | null;
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
   montoEsperado: number | null;
   montoFaltante: number | null;
   fechaLimiteGrupo: string | null;
@@ -284,6 +310,8 @@ export interface PagoResumenConciliacion {
   periodoBanco?: string | null;
   /** Inferido en backend: la cancelación que registró el pago subió voucher. */
   tieneVoucher?: boolean;
+  /** Interbank: el banco no lo confirmó a los 2 días hábiles. Solo es una etiqueta. */
+  noConfirmadoBanco?: boolean;
 }
 
 export interface HistorialArchivosCargaRequest {

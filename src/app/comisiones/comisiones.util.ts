@@ -34,6 +34,14 @@ export function codigoPeriodo(anio: number, mes: number): string {
   return `${anio}-${String(mes).padStart(2, '0')}`;
 }
 
+/**
+ * Porcentaje cortado a 2 decimales para mostrarlo: 49.996 se ve 49.99, nunca 50.00. El nivel se decide con
+ * el valor exacto, así que un porcentaje en pantalla igual al de un nivel siempre lo alcanzó.
+ */
+export function truncar2(valor: number | null | undefined): number {
+  return valor == null ? 0 : Math.trunc(valor * 100 + (valor >= 0 ? 1e-9 : -1e-9)) / 100;
+}
+
 /** dd/mm de una fecha ISO (yyyy-mm-dd) */
 export function diaMes(fechaIso: string | null | undefined): string {
   if (!fechaIso) {
@@ -67,15 +75,17 @@ export function estadoDeVista(vista: VistaPeriodo): EstadoVista {
   return estadoVista(vista.reporte?.periodo.estado, vista.pagos.cantidad);
 }
 
-export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: string; descripcion: string }> = {
+export const METRICA_INFO: Record<TipoMetrica, { etiqueta: string; logrado: string; acumulado: string; descripcion: string }> = {
   RECAUDO: {
     etiqueta: 'Recaudo',
     logrado: 'Recaudo',
+    acumulado: 'Recaudo acumulado',
     descripcion: 'Todo lo que pagan los clientes: cada pago conciliado suma su monto. Supervisor: suma todos los pagos conciliados del mes de la subcartera, incluidos los pagos voluntarios, los no asignados y los de gestiones de quien no participa. En Tramo Propio, solo los de los clientes de su cartera según su periodo de compra (el menor es CP Antigua, el otro CP Nueva), los gestione quien sea.'
   },
   CONTENCION: {
     etiqueta: 'Contención',
     logrado: 'Contención',
+    acumulado: 'Contención acumulada',
     descripcion: 'Asesor: cada cliente que contiene suma su saldo capital asignado, una sola vez; la PDP es del día de la contención o antes y cubre la baja 30. Supervisor: suma el saldo capital asignado de todos los clientes CONTENIDO del mes, gestionados o no por su equipo.'
   }
 };

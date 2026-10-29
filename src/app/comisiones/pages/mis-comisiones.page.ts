@@ -101,7 +101,7 @@ function claveMes(p: { anio: number; mes: number }): number {
                 <p style="max-width:52ch">Aquí verás cuánto llevas y cómo se arma lo que cobras cuando se configure y recalcule un periodo en el que participas.</p>
               </div>
             } @else if (reporte(); as r) {
-              <cmx-sustento-tab [reporte]="r" [vista]="vistaSustento()!" [fuenteDetalle]="fuenteDetalle" [fuentePagos]="fuentePagos" />
+              <cmx-sustento-tab [reporte]="r" [vista]="vistaSustento()!" [fuenteDetalle]="fuenteDetalle" [fuentePagos]="fuentePagos" [mostrarDesglose]="false" />
             }
           </div>
         </div>

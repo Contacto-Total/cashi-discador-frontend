@@ -33,6 +33,7 @@ const ESTADOS_FILA: Record<EstadoFilaArchivo, { label: string; tono: TonoCategor
 const TIPOS_ARCHIVO: Record<string, string> = {
   BCP: 'BCP',
   OH: 'Financiera OH',
+  INTERBANK: 'Interbank',
   CONSOLIDADO: 'Regularización del consolidado'
 };
 
