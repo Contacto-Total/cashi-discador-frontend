@@ -184,22 +184,17 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <!-- REQ-022: con la subcartera en intensidad automática la calcula el sistema y el campo no se muestra -->
+      <div class="form-group" *ngIf="!esAutomatica(selectedSubPortfolioId)">
         <label>Intensidad de Discado (1-100)</label>
-        <ng-container *ngIf="!esAutomatica(selectedSubPortfolioId)">
-          <input
-            type="number"
-            [(ngModel)]="newCampaign.intensidad"
-            class="form-input"
-            min="1"
-            max="100"
-            placeholder="50">
-          <small style="color: #666;">Número de llamadas simultáneas por agente. Ejemplo: 50 con 10 agentes = 5 llamadas por agente.</small>
-        </ng-container>
-        <ng-container *ngIf="esAutomatica(selectedSubPortfolioId)">
-          <input type="text" class="form-input" value="Automática" disabled>
-          <small style="color: #666;">La calcula el sistema para esta subcartera (Control de intensidad). Si la apagan, la campaña marca con {{ newCampaign.intensidad || 50 }}.</small>
-        </ng-container>
+        <input
+          type="number"
+          [(ngModel)]="newCampaign.intensidad"
+          class="form-input"
+          min="1"
+          max="100"
+          placeholder="50">
+        <small style="color: #666;">Número de llamadas simultáneas por agente. Ejemplo: 50 con 10 agentes = 5 llamadas por agente.</small>
       </div>
     </div>
 
