@@ -12,8 +12,6 @@ import {
 } from './control-intensidad.service';
 
 /** Lo que se edita en una fila de tramo y todavía no se guarda. */
-type TramoBorrador = TramoCambio;
-
 /** Meta de abandono en cola de jefatura, la misma del backend. Solo para pintar en rojo. */
 const ABANDONO_MAXIMO_PCT = 10;
 
@@ -59,26 +57,22 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                     <th class="py-2 pr-3">Arranque</th>
                     <th class="py-2 pr-3">Hoy</th>
                     <th class="py-2 pr-3">Espera máx. (s)</th>
-                    <th class="py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (t of e.tramos; track t.idSubcartera) {
-                    @let b = borrador(t);
                     <tr class="border-t border-border">
                       <td class="py-2 pr-3 font-semibold">{{ t.nombre }} <span class="text-muted-foreground">({{ t.idSubcartera }})</span></td>
                       <td class="py-2 pr-3">
-                        <button type="button" role="switch" [class]="switchClase(b.activo)" [attr.aria-checked]="b.activo"
-                                [attr.aria-label]="'Intensidad automática de ' + t.nombre" (click)="b.activo = !b.activo">
-                          <span [class]="perillaClase(b.activo)"></span>
+                        <button type="button" role="switch" [class]="switchClase(t.activo)" [attr.aria-checked]="t.activo"
+                                [disabled]="guardando()" [attr.aria-label]="'Intensidad automática de ' + t.nombre"
+                                (click)="guardarTramo(t, { activo: !t.activo })">
+                          <span [class]="perillaClase(t.activo)"></span>
                         </button>
                       </td>
-                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="b.intensidadInicial" (input)="b.intensidadInicial = num($event)"></td>
+                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="t.intensidadInicial" [attr.aria-label]="'Arranque de ' + t.nombre" (change)="guardarTramo(t, { intensidadInicial: num($event) })"></td>
                       <td class="py-2 pr-3 font-bold">{{ t.activo ? t.intensidadActual : 'manual' }}</td>
-                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="b.esperaMaximaSeg" (input)="b.esperaMaximaSeg = num($event)"></td>
-                      <td class="py-2 text-right">
-                        <button type="button" appBoton="secundario" appBotonAlto="chico" [disabled]="guardando()" (click)="guardarTramo(t.idSubcartera, b)">Guardar</button>
-                      </td>
+                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="t.esperaMaximaSeg" [attr.aria-label]="'Espera máxima de ' + t.nombre" (change)="guardarTramo(t, { esperaMaximaSeg: num($event) })"></td>
                     </tr>
                   }
                 </tbody>
@@ -89,7 +83,7 @@ const MOTIVO_CAMBIO: Record<string, string> = {
               por cada 100 marcadas; un tramo sin historial, 17) y nunca baja de la mitad. No tiene techo: la frenan la cola,
               la espera, el abandono en cola (meta 10%) y los canales del proveedor. Tipificando de más es la alerta roja de
               TIPIFICANDO en la configuración de umbrales. Al apagar un tramo, en el siguiente ciclo sus campañas vuelven
-              a su intensidad manual.
+              a su intensidad manual. Los cambios se guardan solos: el switch al tocarlo y los números al salir del campo.
             </p>
           </div>
 
@@ -261,8 +255,7 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
   readonly estado = signal<EstadoControl | null>(null);
   readonly guardando = signal(false);
 
-  /** Lo escrito en cada fila y aún no guardado: el refresco de cada 30 s no lo pisa. */
-  private borradores: Record<number, TramoBorrador> = {};
+  /** Lo escrito en cada proveedor y aún no guardado: el refresco de cada 30 s no lo pisa. */
   private borradoresProveedor: Record<number, ProveedorCambio> = {};
   nuevoProveedor: ProveedorCambio = { nombre: '', gateway: '', prefijo: '', canales: null, prioridad: 3, habilitado: true };
 
@@ -274,12 +267,6 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.refresco) clearInterval(this.refresco);
-  }
-
-  borrador(t: Tramo): TramoBorrador {
-    return this.borradores[t.idSubcartera] ??= {
-      activo: t.activo, intensidadInicial: t.intensidadInicial, esperaMaximaSeg: t.esperaMaximaSeg
-    };
   }
 
   borradorProveedor(p: Proveedor): ProveedorCambio {
@@ -320,16 +307,27 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
     return MOTIVO_CAMBIO[motivo] ?? motivo;
   }
 
-  guardarTramo(idSubcartera: number, b: TramoBorrador): void {
+  /** Guarda en el momento: el switch al tocarlo, los números al salir del campo. */
+  guardarTramo(t: Tramo, cambio: Partial<TramoCambio>): void {
+    const datos: TramoCambio = {
+      activo: t.activo, intensidadInicial: t.intensidadInicial, esperaMaximaSeg: t.esperaMaximaSeg, ...cambio
+    };
+    if (!Number.isInteger(datos.intensidadInicial) || datos.intensidadInicial < 1
+        || !Number.isInteger(datos.esperaMaximaSeg) || datos.esperaMaximaSeg < 1) {
+      this.toast.warning('El arranque y la espera deben ser números enteros mayores que cero');
+      this.cargar(); // vuelve a mostrar lo guardado
+      return;
+    }
     this.guardando.set(true);
-    this.servicio.guardarTramo(idSubcartera, b).subscribe({
-      next: t => {
-        this.toast.success(t.activo ? `${t.nombre}: intensidad automática encendida` : `${t.nombre}: intensidad manual`);
-        delete this.borradores[idSubcartera];
+    this.servicio.guardarTramo(t.idSubcartera, datos).subscribe({
+      next: guardado => {
+        // se pinta lo que devolvió el backend sin esperar la recarga
+        this.estado.update(e => e && { ...e, tramos: e.tramos.map(x => x.idSubcartera === guardado.idSubcartera ? guardado : x) });
+        this.toast.success(cambio.activo === undefined ? `${guardado.nombre}: guardado`
+          : guardado.activo ? `${guardado.nombre}: intensidad automática encendida` : `${guardado.nombre}: intensidad manual`);
         this.guardando.set(false);
-        this.cargar();
       },
-      error: (err: HttpErrorResponse) => this.fallo(err)
+      error: (err: HttpErrorResponse) => { this.fallo(err); this.cargar(); }
     });
   }
 
@@ -338,6 +336,7 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
     this.servicio.guardarProveedor(id, b).subscribe({
       next: p => {
         this.toast.success(`Proveedor ${p.nombre} guardado`);
+        this.estado.update(e => e && { ...e, proveedores: e.proveedores.map(x => x.id === p.id ? p : x) });
         delete this.borradoresProveedor[id];
         this.guardando.set(false);
         this.cargar();
