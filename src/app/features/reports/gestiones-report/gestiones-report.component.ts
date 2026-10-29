@@ -392,7 +392,12 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-medium">{{ item.id }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaGestion | appDate:'short' }}</td>
-                    <td class="px-3 py-2 text-gray-900 dark:text-white font-mono text-xs">{{ item.documentoCliente }}</td>
+                    <td class="px-3 py-2 text-gray-900 dark:text-white font-mono text-xs">
+                      {{ item.documentoCliente }}
+                      @if (item.identificadoresDeuda) {
+                        <span class="block font-sans text-[11px] text-gray-500 dark:text-gray-400">CJ {{ item.identificadoresDeuda }}</span>
+                      }
+                    </td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.nombreCliente | slice:0:20 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreAgente | slice:0:15 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreCartera | slice:0:15 }}</td>
@@ -404,6 +409,9 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.canalContacto }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs" [title]="item.rutaJerarquia">
                       {{ item.rutaNivel1 | slice:0:20 }}
+                      @if (item.motivoNoPago) {
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ item.motivoNoPago | slice:0:30 }}</span>
+                      }
                     </td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.campoMontoOrigen || '-' }}</td>
                     <td class="px-3 py-2 text-right text-gray-900 dark:text-white">
@@ -516,6 +524,7 @@ export class GestionesReportComponent implements OnInit {
 
   // Tipificacion (cascada N1 -> N2 -> N3)
   private tipificaciones: TipificacionCatalogo[] = [];
+  private tipificacionesReqSeq = 0;
   tipN1 = signal<number | null>(null);
   tipN2 = signal<number | null>(null);
   tipN3 = signal<number | null>(null);
@@ -553,14 +562,7 @@ export class GestionesReportComponent implements OnInit {
       error: (err) => console.error('Error cargando proveedores:', err)
     });
 
-    this.reporteService.getTipificaciones().subscribe({
-      next: (data) => {
-        this.tipificaciones = data;
-        this.nivel1Opciones.set(data.filter(t => t.nivel === 1));
-      },
-      error: (err) => console.error('Error cargando tipificaciones:', err)
-    });
-
+    this.reloadTipificaciones();
     this.reloadAgentes();
   }
 
@@ -577,6 +579,7 @@ export class GestionesReportComponent implements OnInit {
         error: (err) => console.error('Error cargando carteras:', err)
       });
     }
+    this.reloadTipificaciones();
     this.reloadAgentes();
   }
 
@@ -590,11 +593,29 @@ export class GestionesReportComponent implements OnInit {
         error: (err) => console.error('Error cargando subcarteras:', err)
       });
     }
+    this.reloadTipificaciones();
     this.reloadAgentes();
   }
 
   onSubcarteraChange(): void {
+    this.reloadTipificaciones();
     this.reloadAgentes();
+  }
+
+  /** Las tipificaciones del filtro son las del cliente, cartera y subcartera elegidos; la cascada vuelve a empezar. */
+  private reloadTipificaciones(): void {
+    const seq = ++this.tipificacionesReqSeq;
+    this.tipificaciones = [];
+    this.nivel1Opciones.set([]);
+    this.onTipN1Change(null);
+    this.reporteService.getTipificaciones(this.filtros.idProveedor, this.filtros.idCartera, this.filtros.idSubcartera).subscribe({
+      next: (data) => {
+        if (seq !== this.tipificacionesReqSeq) { return; }
+        this.tipificaciones = data;
+        this.nivel1Opciones.set(data.filter(t => t.nivel === 1));
+      },
+      error: (err) => console.error('Error cargando tipificaciones:', err)
+    });
   }
 
   // ===== Asesor multi-seleccion =====
