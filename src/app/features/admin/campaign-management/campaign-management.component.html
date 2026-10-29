@@ -65,7 +65,7 @@
               <td class="campaign-date-value">@if (campaign.createdAt) { <span>{{ campaign.createdAt | appDate: 'short' }}</span><small>{{ campaign.createdAt | appTime: false }}</small> } @else { - }</td>
               <td class="campaign-date-value">@if (campaign.startDate) { <span>{{ campaign.startDate | appDate: 'short' }}</span><small>{{ campaign.startDate | appTime: false }}</small> } @else { - }</td>
               <td class="campaign-date-value">@if (campaign.endDate) { <span>{{ campaign.endDate | appDate: 'short' }}</span><small>{{ campaign.endDate | appTime: false }}</small> } @else { - }</td>
-              <td class="!px-3 !py-2 !font-mono !font-semibold !text-slate-700 dark:!text-slate-300">{{ campaign.intensidad || 50 }}</td>
+              <td class="!px-3 !py-2 !font-mono !font-semibold !text-slate-700 dark:!text-slate-300">{{ esAutomatica(campaign.subPortfolioId) ? 'Auto' : (campaign.intensidad || 50) }}</td>
               <td class="!whitespace-nowrap !px-3 !py-2"><span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">{{ getStatusText(campaign.status) }}</span><span *ngIf="campaign.estaDiscando" class="dialing-indicator"><span class="pulse-dot"></span>Discando</span></td>
               <td class="!px-3 !py-2"><div class="!flex !items-center !gap-1 !whitespace-nowrap">
                 <button class="btn-action-small btn-view" (click)="viewCampaignDetail(campaign)" title="Ver detalle"><lucide-angular name="eye" [size]="15"></lucide-angular></button>
@@ -186,14 +186,20 @@
 
       <div class="form-group">
         <label>Intensidad de Discado (1-100)</label>
-        <input
-          type="number"
-          [(ngModel)]="newCampaign.intensidad"
-          class="form-input"
-          min="1"
-          max="100"
-          placeholder="50">
-        <small style="color: #666;">Número de llamadas simultáneas por agente. Ejemplo: 50 con 10 agentes = 5 llamadas por agente.</small>
+        <ng-container *ngIf="!esAutomatica(selectedSubPortfolioId)">
+          <input
+            type="number"
+            [(ngModel)]="newCampaign.intensidad"
+            class="form-input"
+            min="1"
+            max="100"
+            placeholder="50">
+          <small style="color: #666;">Número de llamadas simultáneas por agente. Ejemplo: 50 con 10 agentes = 5 llamadas por agente.</small>
+        </ng-container>
+        <ng-container *ngIf="esAutomatica(selectedSubPortfolioId)">
+          <input type="text" class="form-input" value="Automática" disabled>
+          <small style="color: #666;">La calcula el sistema para esta subcartera (Control de intensidad). Si la apagan, la campaña marca con {{ newCampaign.intensidad || 50 }}.</small>
+        </ng-container>
       </div>
     </div>
 

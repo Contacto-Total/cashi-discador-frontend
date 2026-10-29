@@ -190,6 +190,7 @@
         <div class="form-group">
           <label for="intensidad">Intensidad de Llamadas</label>
           <input
+            *ngIf="!intensidadAutomatica"
             type="number"
             id="intensidad"
             [(ngModel)]="campaign.intensidad"
@@ -198,6 +199,10 @@
             min="1"
             max="100"
             placeholder="50">
+          <ng-container *ngIf="intensidadAutomatica">
+            <input type="text" id="intensidad" class="form-input" value="Automática" disabled>
+            <small>La calcula el sistema para esta subcartera (Control de intensidad). Si la apagan, la campaña marca con {{ campaign.intensidad ?? 50 }}.</small>
+          </ng-container>
         </div>
       </div>
     </div>
