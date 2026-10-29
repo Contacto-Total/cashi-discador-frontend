@@ -21,7 +21,7 @@ import {
   PrevalidacionArchivoBcp,
   ResumenConciliacionCliente
 } from '../models/bcp-archivo.model';
-import { aFechaIso, infoCategoria } from '../models/categoria-pago';
+import { aFechaIso, infoCategoria, montoMoneda } from '../models/categoria-pago';
 import { ArchivoDropzoneWidget } from '../widgets/archivo-dropzone.widget';
 import { BcpPagosPendientesWidget } from '../widgets/bcp-pagos-pendientes.widget';
 import { PagoPendienteControlesDialogWidget } from '../widgets/pago-pendiente-controles-dialog.widget';
@@ -49,7 +49,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
             Pagos Bancarios
           </h1>
           <p class="text-xs text-slate-600 dark:text-slate-400">
-            Carga los pagos que entrega el banco: CREP de BCP (.txt) y archivo XLS de Financiera OH
+            Carga los pagos que entrega el banco: CREP de BCP (.txt), archivo XLS de Financiera OH y archivo de Interbank
           </p>
         </div>
         <div class="flex flex-wrap justify-end gap-2">
@@ -105,8 +105,8 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
             </button>
             -->
             <button
-              (click)="activeTab.set('oh')"
-              [class]="activeTab() === 'oh'
+              (click)="seleccionarExcel('OH')"
+              [class]="activeTab() === 'oh' && excelBanco() === 'OH'
                 ? 'border-purple-500 text-purple-600 dark:text-purple-400'
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
@@ -115,6 +115,18 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               Carga XLS · OH
+            </button>
+            <button
+              (click)="seleccionarExcel('IBK')"
+              [class]="activeTab() === 'oh' && excelBanco() === 'IBK'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Archivo Interbank
             </button>
             <button
               (click)="activeTab.set('consolidado')"
@@ -815,10 +827,17 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
       @if (activeTab() === 'oh') {
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
           <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <span class="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded">
-              Financiera OH
-            </span>
-            Cargar Archivo Excel de Pagos
+            @if (excelBanco() === 'IBK') {
+              <span class="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded">
+                Interbank
+              </span>
+              Cargar archivo de pagos (hoja HOLISTICO_PAGOS)
+            } @else {
+              <span class="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded">
+                Financiera OH
+              </span>
+              Cargar Archivo Excel de Pagos
+            }
           </h2>
 
           <div class="mb-5 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -872,7 +891,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
               <app-archivo-dropzone
                 inputId="file-upload-oh"
                 [extensiones]="['.xlsx', '.xls']"
-                descripcion="Archivos Excel (.xlsx, .xls)"
+                [descripcion]="excelBanco() === 'IBK' ? 'TRD_CASTIGO_AAAAMMDD.xlsx · hoja HOLISTICO_PAGOS' : 'Archivos Excel (.xlsx, .xls)'"
                 [file]="selectedFileOh()"
                 tono="purple"
                 [disabled]="isLoadingOh()"
@@ -919,6 +938,40 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
               <div>
                 <p class="font-medium text-amber-800 dark:text-amber-300">Se omitieron {{ resultadoOh()?.duplicadosOmitidos }} pagos ya cargados</p>
                 <p class="text-sm text-amber-700 dark:text-amber-400">La prevalidación muestra solo los pagos nuevos devueltos por el servicio.</p>
+              </div>
+            </div>
+          }
+
+          @if (resultadoOh()?.reversas?.length) {
+            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p class="font-medium text-amber-800 dark:text-amber-300">{{ resultadoOh()!.reversas!.length }} {{ resultadoOh()!.reversas!.length === 1 ? 'reversa no se carga' : 'reversas no se cargan' }}: se revisan caso por caso</p>
+              <div class="mt-3 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-xs text-amber-800 dark:text-amber-300">
+                      <th class="px-2 py-1 font-medium">Fila</th>
+                      <th class="px-2 py-1 font-medium">CJ</th>
+                      <th class="px-2 py-1 font-medium">Producto</th>
+                      <th class="px-2 py-1 font-medium">Documento</th>
+                      <th class="px-2 py-1 font-medium">Fecha</th>
+                      <th class="px-2 py-1 font-medium text-right">Monto</th>
+                      <th class="px-2 py-1 font-medium">Reversa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of resultadoOh()!.reversas!; track r.numeroFila) {
+                      <tr class="border-t border-amber-200 dark:border-amber-800 text-slate-800 dark:text-slate-200">
+                        <td class="px-2 py-1">{{ r.numeroFila }}</td>
+                        <td class="px-2 py-1">{{ r.cuenta || '-' }}</td>
+                        <td class="px-2 py-1">{{ r.producto || '-' }}{{ r.moneda ? ' · ' + r.moneda : '' }}</td>
+                        <td class="px-2 py-1">{{ r.documento || 'Fuera de la cartera' }}</td>
+                        <td class="px-2 py-1 whitespace-nowrap">{{ r.fechaPago || '-' }}</td>
+                        <td class="px-2 py-1 text-right whitespace-nowrap">{{ montoReversa(r.montoPagado, r.moneda) }}</td>
+                        <td class="px-2 py-1">{{ r.reversa || 'Monto negativo' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
               </div>
             </div>
           }
@@ -1740,7 +1793,26 @@ export class PagosBancariosPage implements OnInit {
         && !this.isPrevalidacionDuplicada(par.prevalidacion));
   }
 
-  // === Carga OH ===
+  // === Carga OH e Interbank (la misma pestaña; cambia el archivo y el endpoint) ===
+  /** Banco del archivo Excel que se carga en la pestaña: Financiera OH o Interbank. */
+  excelBanco = signal<'OH' | 'IBK'>('OH');
+
+  seleccionarExcel(banco: 'OH' | 'IBK'): void {
+    if (this.excelBanco() !== banco) {
+      this.excelBanco.set(banco);
+      this.selectedFileOh.set(null);
+      this.resultadoOh.set(null);
+      this.resultadoAprobacionOh.set(null);
+      this.errorMessageOh.set(null);
+      this.archivoOhAprobado.set(false);
+    }
+    this.activeTab.set('oh');
+  }
+
+  montoReversa(value: number | null, moneda: string | null): string {
+    return montoMoneda(value, moneda);
+  }
+
   onArchivoSeleccionadoOh(file: File): void {
     this.selectedFileOh.set(file);
     this.errorMessageOh.set(null);
@@ -1758,7 +1830,7 @@ export class PagosBancariosPage implements OnInit {
     if (!file) return;
 
     if (!this.hasRequiredOhContext()) {
-      this.errorMessageOh.set('Seleccione proveedor, cartera y subcartera para prevalidar el archivo OH.');
+      this.errorMessageOh.set('Seleccione proveedor, cartera y subcartera para prevalidar el archivo.');
       return;
     }
 
@@ -1767,7 +1839,10 @@ export class PagosBancariosPage implements OnInit {
     this.resultadoAprobacionOh.set(null);
     this.archivoOhAprobado.set(false);
 
-    this.bcpService.cargarArchivoOh(file, {
+    const cargar = this.excelBanco() === 'IBK'
+      ? this.bcpService.cargarArchivoIbk.bind(this.bcpService)
+      : this.bcpService.cargarArchivoOh.bind(this.bcpService);
+    cargar(file, {
       tenantId: this.selectedTenantIdOh,
       carteraId: this.selectedPortfolioIdOh,
       subcarteraId: this.selectedSubPortfolioIdOh

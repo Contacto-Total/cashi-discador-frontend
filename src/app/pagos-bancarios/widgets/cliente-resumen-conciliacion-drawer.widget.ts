@@ -191,8 +191,8 @@ import { AjustePagoBancoDialogWidget } from './ajuste-pago-banco-dialog.widget';
                                   @if (cuota.pagos.length > 0) {
                                     <div>
                                       <span class="flex gap-1 overflow-hidden whitespace-nowrap">
-                                        <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
-                                          {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
+                                        <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : hasPagoNoConfirmado(cuota) ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
+                                          {{ hasPagoVerificado(cuota) ? 'Verificado' : hasPagoNoConfirmado(cuota) ? 'No confirmado' : 'No verificado' }}
                                         </span>
                                         @for (id of getPagoBancarioIds(cuota); track id) {
                                           @if (permiteCorregir ? permiteAjustes() : !!contextoRecalculo()) {
@@ -838,6 +838,11 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
 
   hasPagoVerificado(cuota: any): boolean {
     return (cuota?.pagos || []).some((pago: any) => pago.verificadoBanco === true);
+  }
+
+  /** Interbank: algún pago del asesor lleva 2 días hábiles sin confirmación del banco. */
+  hasPagoNoConfirmado(cuota: any): boolean {
+    return (cuota?.pagos || []).some((pago: any) => pago.noConfirmadoBanco === true);
   }
 
   getPagoBancarioIds(cuota: any): number[] {

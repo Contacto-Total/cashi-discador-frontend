@@ -10,8 +10,9 @@ import {
   fechaCorta,
   infoCategoria,
   mesDeFecha,
-  montoSoles,
-  nombreMes
+  montoMoneda,
+  nombreMes,
+  textoDeuda
 } from '../models/categoria-pago';
 import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
@@ -115,9 +116,9 @@ import { TablaPaginacionWidget } from './tabla-paginacion.widget';
               <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                 @for (pago of paginaNoCorresponden(); track pago.id) {
                   <tr>
-                    <th scope="row" class="px-3 py-2 text-left font-semibold whitespace-nowrap text-slate-900 dark:text-white">{{ pago.documento }}</th>
+                    <th scope="row" class="px-3 py-2 text-left font-semibold whitespace-nowrap text-slate-900 dark:text-white">{{ pago.documento || '—' }}@if (deuda(pago)) {<span class="block text-[11px] font-normal text-slate-500 dark:text-slate-400">{{ deuda(pago) }}</span>}</th>
                     <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(pago.fechaBanco) }}</td>
-                    <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ monto(pago.montoBanco) }}</td>
+                    <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ monto(pago.montoBanco, pago.moneda) }}</td>
                     <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ pago.numeroOperacion || '-' }}</td>
                     <td class="px-3 py-2 whitespace-nowrap">
                       <button
@@ -180,16 +181,17 @@ import { TablaPaginacionWidget } from './tabla-paginacion.widget';
                     >
                       {{ pago.documento }}
                     </button>
+                    @if (deuda(pago)) {<span class="block text-[11px] font-normal text-slate-500 dark:text-slate-400">{{ deuda(pago) }}</span>}
                   </th>
                   <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(pago.fechaBanco) }}</td>
-                  <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ monto(pago.montoBanco) }}</td>
+                  <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ monto(pago.montoBanco, pago.moneda) }}</td>
                   <td class="px-3 py-2 whitespace-nowrap">
                     <span class="inline-flex rounded-full px-2 py-1 text-[11px] font-bold leading-tight" [class]="pill(info(pago).tono)">{{ info(pago).label }}</span>
                   </td>
                   <td class="px-3 py-2 max-w-72 text-slate-700 dark:text-slate-300 leading-snug">{{ detalle(pago) }}</td>
                   <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     @if (pago.montoPagoAsesor !== null) {
-                      {{ fecha(pago.fechaPagoAsesor) }} · {{ monto(pago.montoPagoAsesor) }}
+                      {{ fecha(pago.fechaPagoAsesor) }} · {{ monto(pago.montoPagoAsesor, pago.moneda) }}
                     } @else if (pago.montoEsperado !== null) {
                       Registrado {{ monto(pago.montoEsperado) }}
                     } @else {
@@ -542,8 +544,14 @@ export class BcpPagosPendientesWidget implements OnChanges {
     return fechaCorta(value);
   }
 
-  monto(value: number | null | undefined): string {
-    return montoSoles(value);
+  /** Monto en la moneda del pago (US$ en productos en dólares de Interbank). */
+  monto(value: number | null | undefined, moneda?: string | null): string {
+    return montoMoneda(value, moneda);
+  }
+
+  /** Interbank: CJ, producto y moneda bajo el documento. */
+  deuda(pago: any): string {
+    return textoDeuda(pago?.cuenta, pago?.producto, pago?.moneda);
   }
 
   private tieneContexto(): boolean {
