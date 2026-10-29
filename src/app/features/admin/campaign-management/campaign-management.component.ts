@@ -60,6 +60,9 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
   private subPortfolioNames = new Map<number, string>();
+  // Todos los inquilinos, incluso inactivos: hay subcarteras con el mismo nombre (p. ej. Castigo)
+  // y en la tabla solo se distinguen por el inquilino.
+  private tenantNames = new Map<number, string>();
   private campaignsWsSubscription?: Subscription;
 
   constructor(
@@ -101,9 +104,15 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.tenantService.getAllTenants().subscribe({
       next: (tenants) => {
         this.tenants = tenants.filter(t => t.isActive);
+        this.tenantNames = new Map(tenants.map(t => [t.id, t.tenantName]));
       },
       error: (err) => console.error('Error loading tenants:', err)
     });
+  }
+
+  tenantNombre(campaign: Campaign): string {
+    if (campaign.tenantId == null) return '-';
+    return this.tenantNames.get(campaign.tenantId) || ('#' + campaign.tenantId);
   }
 
   onTenantChange(): void {
