@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -8,6 +8,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, CampaignOrderField, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
+import { ControlIntensidadService } from '../../control-intensidad/control-intensidad.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { environment } from '../../../../environments/environment';
@@ -205,6 +206,14 @@ export class CampaignFormComponent implements OnInit {
   previewData: ImportPreview | null = null;
   previewError: string | null = null;
 
+  // REQ-022: subcarteras con intensidad automática; ahí el sistema calcula la intensidad y el campo no se edita.
+  private readonly controlIntensidad = inject(ControlIntensidadService);
+  subcarterasAutomaticas: number[] = [];
+
+  get intensidadAutomatica(): boolean {
+    return this.selectedSubPortfolioId > 0 && this.subcarterasAutomaticas.includes(this.selectedSubPortfolioId);
+  }
+
   constructor(
     private campaignService: CampaignAdminService,
     private tenantService: TenantService,
@@ -216,6 +225,11 @@ export class CampaignFormComponent implements OnInit {
 
   ngOnInit(): void {
   this.loadTenants();
+    // si no se puede consultar, el campo de intensidad queda como siempre
+    this.controlIntensidad.subcarterasAutomaticas().subscribe({
+      next: ids => this.subcarterasAutomaticas = ids,
+      error: () => this.subcarterasAutomaticas = []
+    });
 
     // Default en alta: fecha/hora actual en los inputs datetime-local (los que onSubmit consume)
     const ahora = this.toDateTimeLocal(new Date().toISOString());

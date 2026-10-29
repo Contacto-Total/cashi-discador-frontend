@@ -12,9 +12,10 @@ import {
 } from './control-intensidad.service';
 
 /** Lo que se edita en una fila de tramo y todavía no se guarda. */
-interface TramoBorrador extends TramoCambio {
-  idSubcartera: number | null;
-}
+type TramoBorrador = TramoCambio;
+
+/** Meta de abandono en cola de jefatura, la misma del backend. Solo para pintar en rojo. */
+const ABANDONO_MAXIMO_PCT = 10;
 
 const DECISION: Record<UltimoMinuto['decision'], string> = {
   SUBE: 'Sube',
@@ -55,14 +56,9 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                   <tr [class]="TUI.label">
                     <th class="py-2 pr-3">Tramo</th>
                     <th class="py-2 pr-3">Automático</th>
-                    <th class="py-2 pr-3">Inicial</th>
+                    <th class="py-2 pr-3">Arranque</th>
                     <th class="py-2 pr-3">Hoy</th>
-                    <th class="py-2 pr-3">Piso</th>
                     <th class="py-2 pr-3">Espera máx. (s)</th>
-                    <th class="py-2 pr-3">Abandono máx. (%)</th>
-                    <th class="py-2 pr-3">Asesor libre (s)</th>
-                    <th class="py-2 pr-3">Tipificando máx. (s)</th>
-                    <th class="py-2 pr-3">Ventana (min)</th>
                     <th class="py-2"></th>
                   </tr>
                 </thead>
@@ -79,40 +75,21 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                       </td>
                       <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="b.intensidadInicial" (input)="b.intensidadInicial = num($event)"></td>
                       <td class="py-2 pr-3 font-bold">{{ t.activo ? t.intensidadActual : 'manual' }}</td>
-                      <td class="py-2 pr-3 text-muted-foreground">{{ t.piso }}</td>
                       <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="b.esperaMaximaSeg" (input)="b.esperaMaximaSeg = num($event)"></td>
-                      <td class="py-2 pr-3"><input type="number" min="1" max="100" step="0.5" [class]="TUI.inputSm + ' w-20'" [value]="b.abandonoMaximoPct" (input)="b.abandonoMaximoPct = num($event)"></td>
-                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="b.asesorLibreSeg" (input)="b.asesorLibreSeg = num($event)"></td>
-                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="b.tipificandoMaximoSeg" (input)="b.tipificandoMaximoSeg = num($event)"></td>
-                      <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-16'" [value]="b.ventanaAbandonoMin" (input)="b.ventanaAbandonoMin = num($event)"></td>
                       <td class="py-2 text-right">
                         <button type="button" appBoton="secundario" appBotonAlto="chico" [disabled]="guardando()" (click)="guardarTramo(t.idSubcartera, b)">Guardar</button>
                       </td>
                     </tr>
                   }
-                  <tr class="border-t border-border">
-                    <td class="py-2 pr-3" colspan="2">
-                      <div class="flex gap-2">
-                        <input type="number" min="1" [class]="TUI.inputSm + ' w-24'" placeholder="Subcartera" [value]="nuevo.idSubcartera ?? ''" (input)="nuevo.idSubcartera = num($event)">
-                        <input [class]="TUI.inputSm + ' w-32'" placeholder="Nombre" [value]="nuevo.nombre" (input)="nuevo.nombre = $any($event.target).value">
-                      </div>
-                    </td>
-                    <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="nuevo.intensidadInicial" (input)="nuevo.intensidadInicial = num($event)"></td>
-                    <td class="py-2 pr-3" colspan="2"></td>
-                    <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="nuevo.esperaMaximaSeg" (input)="nuevo.esperaMaximaSeg = num($event)"></td>
-                    <td class="py-2 pr-3" colspan="4"></td>
-                    <td class="py-2 text-right">
-                      <button type="button" appBoton="secundario" appBotonAlto="chico" [disabled]="guardando()" (click)="agregarTramo()">Agregar</button>
-                    </td>
-                  </tr>
                 </tbody>
               </table>
             </div>
             <p class="m-0 text-[.75rem] text-muted-foreground">
-              Intensidad = llamadas por cada asesor libre. Cada día arranca en la inicial (100 / personas que contestan
-              por cada 100 marcadas; un tramo sin historial, 17) y nunca baja del piso. No tiene techo: la frenan la cola,
-              la espera, el abandono y los canales del proveedor. Al apagar un tramo, en el siguiente ciclo vuelve a la
-              intensidad manual de sus campañas.
+              Intensidad = llamadas por cada asesor libre. Cada día arranca en el arranque (100 / personas que contestan
+              por cada 100 marcadas; un tramo sin historial, 17) y nunca baja de la mitad. No tiene techo: la frenan la cola,
+              la espera, el abandono en cola (meta 10%) y los canales del proveedor. Tipificando de más es la alerta roja de
+              TIPIFICANDO en la configuración de umbrales. Al apagar un tramo, en el siguiente ciclo sus campañas vuelven
+              a su intensidad manual.
             </p>
           </div>
 
@@ -145,7 +122,7 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                         <td class="py-2 pr-3 font-bold" [ngClass]="decisionClase(m)">{{ decision(m) }} {{ m.intensidadAnterior }} → {{ m.intensidadNueva }}</td>
                         <td class="py-2 pr-3">{{ m.enCola }}</td>
                         <td class="py-2 pr-3" [ngClass]="m.esperaMaximaSeg > t.esperaMaximaSeg ? 'font-bold text-(--ro)' : ''">{{ m.esperaMaximaSeg }} s</td>
-                        <td class="py-2 pr-3" [ngClass]="m.abandonoPct !== null && m.abandonoPct > t.abandonoMaximoPct ? 'font-bold text-(--ro)' : ''">
+                        <td class="py-2 pr-3" [ngClass]="m.abandonoPct !== null && m.abandonoPct > ABANDONO_MAXIMO_PCT ? 'font-bold text-(--ro)' : ''">
                           {{ m.abandonoPct === null ? 'nadie entró' : (m.abandonoPct | number:'1.1-1') + '%' }}
                           <span class="text-muted-foreground">({{ m.colgaronCola }} de {{ m.entraronCola }})</span>
                         </td>
@@ -280,13 +257,13 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
   private refresco?: ReturnType<typeof setInterval>;
 
   readonly TUI = TUI;
+  readonly ABANDONO_MAXIMO_PCT = ABANDONO_MAXIMO_PCT;
   readonly estado = signal<EstadoControl | null>(null);
   readonly guardando = signal(false);
 
   /** Lo escrito en cada fila y aún no guardado: el refresco de cada 30 s no lo pisa. */
   private borradores: Record<number, TramoBorrador> = {};
   private borradoresProveedor: Record<number, ProveedorCambio> = {};
-  nuevo: TramoBorrador = this.tramoVacio();
   nuevoProveedor: ProveedorCambio = { nombre: '', gateway: '', prefijo: '', canales: null, prioridad: 3, habilitado: true };
 
   ngOnInit(): void {
@@ -301,9 +278,7 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
 
   borrador(t: Tramo): TramoBorrador {
     return this.borradores[t.idSubcartera] ??= {
-      idSubcartera: t.idSubcartera, nombre: t.nombre, activo: t.activo, intensidadInicial: t.intensidadInicial,
-      esperaMaximaSeg: t.esperaMaximaSeg, abandonoMaximoPct: t.abandonoMaximoPct, asesorLibreSeg: t.asesorLibreSeg,
-      tipificandoMaximoSeg: t.tipificandoMaximoSeg, ventanaAbandonoMin: t.ventanaAbandonoMin
+      activo: t.activo, intensidadInicial: t.intensidadInicial, esperaMaximaSeg: t.esperaMaximaSeg
     };
   }
 
@@ -346,9 +321,8 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
   }
 
   guardarTramo(idSubcartera: number, b: TramoBorrador): void {
-    const { idSubcartera: _, ...cambio } = b;
     this.guardando.set(true);
-    this.servicio.guardarTramo(idSubcartera, cambio).subscribe({
+    this.servicio.guardarTramo(idSubcartera, b).subscribe({
       next: t => {
         this.toast.success(t.activo ? `${t.nombre}: intensidad automática encendida` : `${t.nombre}: intensidad manual`);
         delete this.borradores[idSubcartera];
@@ -357,20 +331,6 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
       },
       error: (err: HttpErrorResponse) => this.fallo(err)
     });
-  }
-
-  agregarTramo(): void {
-    if (!this.nuevo.idSubcartera || this.nuevo.nombre.trim() === '') {
-      this.toast.warning('Escribe la subcartera y el nombre del tramo');
-      return;
-    }
-    if (this.estado()?.tramos.some(t => t.idSubcartera === this.nuevo.idSubcartera)) {
-      this.toast.warning('Ese tramo ya está en la lista');
-      return;
-    }
-    const id = this.nuevo.idSubcartera;
-    this.guardarTramo(id, this.nuevo);
-    this.nuevo = this.tramoVacio();
   }
 
   guardarProveedor(id: number, b: ProveedorCambio): void {
@@ -410,13 +370,6 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
       },
       error: (err: HttpErrorResponse) => this.fallo(err)
     });
-  }
-
-  private tramoVacio(): TramoBorrador {
-    return {
-      idSubcartera: null, nombre: '', activo: false, intensidadInicial: 17, esperaMaximaSeg: 20,
-      abandonoMaximoPct: 10, asesorLibreSeg: 30, tipificandoMaximoSeg: 120, ventanaAbandonoMin: 5
-    };
   }
 
   private cargar(): void {
