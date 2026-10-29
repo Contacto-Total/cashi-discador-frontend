@@ -13,7 +13,8 @@ import {
   TONO_PILL,
   fechaCorta,
   infoCategoria,
-  montoSoles
+  montoMoneda,
+  textoDeuda
 } from '../models/categoria-pago';
 import { coincideDocumento, cortarPagina } from '../models/paginacion';
 import { BuscadorDocumentoWidget } from './buscador-documento.widget';
@@ -117,9 +118,10 @@ interface ResumenCategoria {
                   >
                     {{ value(row, 'documentoBanco', 'documento_banco') || '-' }}
                   </button>
+                  @if (deuda(row)) {<span class="block text-[11px] font-normal text-slate-500 dark:text-slate-400">{{ deuda(row) }}</span>}
                 </td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(value(row, 'fechaBanco', 'fecha_banco')) }}</td>
-                <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
+                <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco'), row) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap" rowspan="2">
                   <span class="inline-flex rounded-full px-2 py-1 text-[11px] font-bold leading-tight" [class]="pill(info(row).tono)">
@@ -168,7 +170,7 @@ interface ResumenCategoria {
                 <th scope="row" class="px-2 pb-2 pt-1 text-left font-bold text-purple-700 dark:text-purple-300 rounded-bl-lg">ASESOR</th>
                 <td class="px-2 pb-2 pt-1 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoAgente', 'documento_agente') || '-' }}</td>
                 <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ fecha(value(row, 'fechaPago', 'fecha_pago')) }}</td>
-                <td class="px-2 pb-2 pt-1 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago')) }}</td>
+                <td class="px-2 pb-2 pt-1 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago'), row) }}</td>
                 <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'operacionAgente', 'operacion_agente') || '-' }}</td>
               </tr>
             </tbody>
@@ -512,7 +514,13 @@ export class BcpPrevalidacionArchivoWidget implements OnChanges {
     return fechaCorta(value);
   }
 
-  formatMoney(value: number | string | null | undefined): string {
-    return montoSoles(value);
+  /** Monto en la moneda de la fila (US$ en productos en dólares de Interbank). */
+  formatMoney(value: number | string | null | undefined, row?: any): string {
+    return montoMoneda(value, row?.moneda);
+  }
+
+  /** Interbank: CJ, producto y moneda bajo el documento. */
+  deuda(row: any): string {
+    return textoDeuda(row?.cuenta, row?.producto, row?.moneda);
   }
 }

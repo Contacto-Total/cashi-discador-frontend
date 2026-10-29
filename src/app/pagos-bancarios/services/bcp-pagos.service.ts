@@ -175,6 +175,16 @@ export class BcpPagosService {
     return this.http.post<BcpArchivoResultado>(`${this.baseUrl}/cargar-archivo-oh`, formData);
   }
 
+  /** Carga y prevalida la hoja HOLISTICO_PAGOS del archivo de Interbank (TRD_CASTIGO_AAAAMMDD.xlsx). Se aprueba con aprobarArchivo. */
+  cargarArchivoIbk(file: File, request: BcpArchivoCargaRequest): Observable<BcpArchivoResultado> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('tenantId', request.tenantId.toString());
+    formData.append('carteraId', request.carteraId.toString());
+    formData.append('subcarteraId', request.subcarteraId.toString());
+    return this.http.post<BcpArchivoResultado>(`${this.baseUrl}/cargar-archivo-ibk`, formData);
+  }
+
   /**
    * Registra un pago de forma manual
    * @param pago Datos del pago manual

@@ -114,6 +114,10 @@ export const MOTIVOS_REVISION: Record<string, { problema: string; accion: string
   CLIENTE_NO_PERTENECE_A_CONTEXTO: {
     problema: 'El cliente pertenece a otra subcartera.',
     accion: 'Cargar el archivo en la subcartera correcta.'
+  },
+  PRODUCTO_FUERA_DE_CARTERA: {
+    problema: 'El producto ya no está en la cartera.',
+    accion: 'Se guarda como no corresponde.'
   }
 };
 
@@ -162,6 +166,18 @@ export function fechaCorta(value: unknown): string {
   if (!iso) return '-';
   const [year, month, day] = iso.split('-');
   return day && month && year ? `${day}/${month}/${year}` : iso;
+}
+
+/** Monto en la moneda del pago: US$ en los productos en dólares de Interbank, soles en lo demás. */
+export function montoMoneda(value: number | string | null | undefined, moneda?: string | null): string {
+  if (moneda === 'USD' && value !== null && value !== undefined && value !== '') return `US$ ${Number(value).toFixed(2)}`;
+  return montoSoles(value);
+}
+
+/** Deuda del pago (Interbank: CJ) con su producto y moneda, para mostrar bajo el documento. */
+export function textoDeuda(cuenta?: string | null, producto?: string | null, moneda?: string | null): string {
+  if (!cuenta) return '';
+  return ['CJ ' + cuenta, producto, moneda].filter(Boolean).join(' · ');
 }
 
 export function montoSoles(value: number | string | null | undefined): string {
