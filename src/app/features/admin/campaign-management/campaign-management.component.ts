@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
+import { ControlIntensidadService } from '../../control-intensidad/control-intensidad.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { AppDatePipe, AppDateTimePipe, AppTimePipe } from '@/shared/pipes/format.pipes';
@@ -62,6 +63,14 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   private subPortfolioNames = new Map<number, string>();
   private campaignsWsSubscription?: Subscription;
 
+  // REQ-022: subcarteras con intensidad automática; sus campañas muestran "Auto" en vez del número.
+  private readonly controlIntensidad = inject(ControlIntensidadService);
+  subcarterasAutomaticas: number[] = [];
+
+  esAutomatica(subPortfolioId: number | null | undefined): boolean {
+    return !!subPortfolioId && this.subcarterasAutomaticas.includes(subPortfolioId);
+  }
+
   constructor(
     private campaignService: CampaignAdminService,
     private tenantService: TenantService,
@@ -71,6 +80,11 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // si no se puede consultar, la intensidad se muestra como siempre
+    this.controlIntensidad.subcarterasAutomaticas().subscribe({
+      next: ids => this.subcarterasAutomaticas = ids,
+      error: () => this.subcarterasAutomaticas = []
+    });
     this.loadCampaigns();
     this.loadTenants();
     this.escucharCambiosDeCampanas();

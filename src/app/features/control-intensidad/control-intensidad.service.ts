@@ -32,24 +32,14 @@ export interface Tramo {
   intensidadActual: number;
   piso: number;
   esperaMaximaSeg: number;
-  abandonoMaximoPct: number;
-  asesorLibreSeg: number;
-  tipificandoMaximoSeg: number;
-  ventanaAbandonoMin: number;
-  actualizadoPor: string | null;
-  actualizadoEn: string | null;
   ultimoMinuto: UltimoMinuto | null;
 }
 
+/** Lo único que se edita por tramo. */
 export interface TramoCambio {
-  nombre: string;
   activo: boolean;
   intensidadInicial: number;
   esperaMaximaSeg: number;
-  abandonoMaximoPct: number;
-  asesorLibreSeg: number;
-  tipificandoMaximoSeg: number;
-  ventanaAbandonoMin: number;
 }
 
 export interface Proveedor {
@@ -111,6 +101,11 @@ export class ControlIntensidadService {
 
   guardarProveedor(id: number, cambio: ProveedorCambio): Observable<Proveedor> {
     return this.http.put<Proveedor>(`${this.api}/proveedores/${id}`, cambio);
+  }
+
+  /** Subcarteras con intensidad automática; lo usan las pantallas de campañas. */
+  subcarterasAutomaticas(): Observable<number[]> {
+    return this.http.get<number[]>(`${this.api}/automaticas`);
   }
 
   usarProveedor(id: number): Observable<Proveedor> {
