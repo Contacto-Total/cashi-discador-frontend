@@ -31,6 +31,13 @@ export interface ReporteGestionesDTO {
   rutaNivel3: string;
   rutaNivel4: string;
   rutaJerarquia: string;
+  /** Opción de la lista que hereda la tipificación (en Interbank, el motivo de no pago). */
+  motivoNoPago?: string | null;
+  /** Solo en subcarteras con una fila por deuda (Interbank): CU, CJ y capital por moneda. */
+  codigoCliente?: string | null;
+  identificadoresDeuda?: string | null;
+  capitalSoles?: number | null;
+  capitalDolares?: number | null;
   montoBase: number;
   montoPromesa: number;
   totalCuotas: number;
@@ -149,8 +156,12 @@ export class GestionesReportService {
     return this.http.get<AgenteGestion[]>(`${this.baseUrl}/agentes`, { params });
   }
 
-  /** Catálogo de tipificaciones (niveles 1-3) para los filtros en cascada */
-  getTipificaciones(): Observable<TipificacionCatalogo[]> {
-    return this.http.get<TipificacionCatalogo[]>(`${this.baseUrl}/tipificaciones`);
+  /** Tipificaciones (niveles 1-3) de las subcarteras elegidas que el usuario puede ver, para la cascada */
+  getTipificaciones(idTenant?: number | null, idCartera?: number | null, idSubcartera?: number | null): Observable<TipificacionCatalogo[]> {
+    let params = new HttpParams();
+    if (idTenant) params = params.set('idTenant', idTenant.toString());
+    if (idCartera) params = params.set('idCartera', idCartera.toString());
+    if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
+    return this.http.get<TipificacionCatalogo[]>(`${this.baseUrl}/tipificaciones`, { params });
   }
 }
