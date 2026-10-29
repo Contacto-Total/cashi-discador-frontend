@@ -1402,7 +1402,8 @@ export class CampaignFormComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error preview V2:', err);
-        this.previewError = 'Error al obtener el preview';
+        // El backend explica si el resumen superó el tope de tiempo o si ya hay otro en curso.
+        this.previewError = err.error?.message || 'Error al obtener el preview';
         this.previewLoading = false;
       }
     });
