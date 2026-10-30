@@ -133,7 +133,8 @@ const MOTIVO_CAMBIO: Record<string, string> = {
             </div>
             <p class="m-0 text-[.75rem] text-muted-foreground">
               Se revisa en este orden y la primera que se cumple decide: canales llenos, no lanza más; alguien espera más
-              de lo permitido o hay cola y el abandono pasa la meta, baja en % según cuánto se pasó (sin bajar del piso);
+              de lo permitido o el abandono en cola de los últimos 5 min pasa la meta, baja en % según cuánto se pasó
+              (sin bajar del piso);
               hay un asesor libre sin llamada, nadie en cola
               y nadie tipificando de más, sube 1; si no, se mantiene.
             </p>
