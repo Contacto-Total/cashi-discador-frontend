@@ -109,6 +109,9 @@ interface BorradorDeuda {
   resumen: string;
   generaCarta: boolean;
   etiquetas: [string, string];
+  /** Pago de una cancelación: se registra antes que la gestión */
+  pago?: any;
+  pagoRegistrado?: boolean;
 }
 
 @Component({
@@ -3305,6 +3308,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const campoCuenta = this.campoCuenta();
     const fila = campoCuenta ? this.cuentasCliente().find(f => String(f[campoCuenta] ?? '') === cuenta) : null;
     if (!fila) return;
+    // La cuota elegida para una cancelación pertenece a la deuda que estaba a la vista
+    if (cuenta !== this.cuentaSeleccionada()) this.limpiarCuotaDeCancelacion();
     this.cuentaSeleccionada.set(cuenta);
     this.rawClientData.set({ ...this.datosBaseCliente, ...fila });
     const documento = this.customerData()?.numero_documento;
@@ -3444,14 +3449,56 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.guardarBorradores();
   }
 
+  private limpiarCuotaDeCancelacion() {
+    this.selectedInstallmentForCancellation.set(null);
+    this.montoPagoEditable.set(0);
+    this.fechaPagoEditable.set('');
+    this.uploadedComprobante.set(null);
+  }
+
+  /** Pago de la cuota elegida en una cancelación. null si no hay cuota o no se encuentra su promesa. */
+  private pagoDeCancelacion() {
+    const cuota = this.selectedInstallmentForCancellation();
+    if (!this.isCancellationTypification() || !cuota?.id) return null;
+
+    // Buscar también en todos los cronogramas porque las cuotas vencidas no siempre están activas.
+    const schedule = [...this.activePaymentSchedules(), ...this.allPaymentSchedules()].find(s =>
+      s.installments?.some((c: any) => c.id === cuota.id)
+    );
+    const grupoPromesaUuid = cuota.grupoPromesaUuid || schedule?.grupoPromesaUuid || cuota.scheduleId || schedule?.id;
+    if (!grupoPromesaUuid) return null;
+
+    return {
+      grupoPromesaUuid,
+      // Cuota elegida por el asesor: la distribución arranca en esta cuota y el excedente
+      // se aplica hacia adelante, sin tocar las anteriores.
+      cuotaId: Number(cuota.id),
+      monto: this.montoPagoEditable() || cuota.monto,
+      fechaPago: this.fechaPagoEditable() || new Date().toISOString().split('T')[0],
+      banco: null,
+      numeroOperacion: null,
+      agenteId: this.authService.getCurrentUser()?.id || 1,
+      metodoRegistro: 'MANUAL',
+      observaciones: this.managementForm.observaciones || 'Pago registrado desde gestión',
+      comprobanteUrl: null
+    };
+  }
+
   /**
    * Graba las tipificaciones listas una tras otra. Si una falla, las que ya se grabaron salen de la lista
-   * y las demás quedan listas para volver a intentar.
+   * y las demás quedan listas para volver a intentar. El pago de una cancelación va antes que su gestión:
+   * si se rechaza, de esa deuda no queda nada grabado y se corrige con «Rehacer».
    */
   private async guardarBorradores() {
     const grabadas: { borrador: BorradorDeuda; respuestas: any[] }[] = [];
     for (const borrador of [...this.borradores()]) {
       try {
+        if (borrador.pago && !borrador.pagoRegistrado) {
+          const resultado = await firstValueFrom(this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, borrador.pago));
+          // El backend puede responder 200 con { success: false } al rechazar el pago
+          if (resultado?.success === false) throw { status: 400, error: resultado };
+          borrador.pagoRegistrado = true;
+        }
         const respuestas: any[] = [];
         for (const request of borrador.requests) {
           respuestas.push(borrador.tipo === 'cronograma'
@@ -3463,14 +3510,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       } catch (error: any) {
         console.error('Error guardando la tipificación de', borrador.cuentas, error);
         this.saving.set(false);
-        const detalle = error?.status === 400 && error?.error?.message ? `\n\n${error.error.message}` : '';
+        const motivo = error?.error?.message || error?.error?.error || error?.error?.mensaje;
+        const detalle = error?.status === 400 && motivo ? `\n\n${motivo}` : '';
         alert(`⚠️ No se pudo guardar la tipificación de ${borrador.resumenProductos}.${detalle}\n\n`
+          + (borrador.pagoRegistrado ? 'El pago ya quedó registrado; falta solo la gestión. ' : '')
           + (grabadas.length ? `Ya se guardaron: ${grabadas.map(g => g.borrador.resumenProductos).join(', ')}. ` : '')
-          + 'Lo que falta sigue listo: corrija y vuelva a guardar.');
+          + 'Lo que falta sigue listo: corrija con «Rehacer» o vuelva a guardar.');
         return;
       }
     }
 
+    this.limpiarCuotaDeCancelacion();
     const primera = grabadas[0]?.respuestas[0];
     if (primera?.id && this.callStartTime && this.callActive()) {
       this.registerCallToBackend(primera.id);
@@ -6872,6 +6922,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
+    // Todas las deudas quedaron listas y una grabación falló: se reintenta lo que falta
+    if (this.borradores().length && !this.productosCliente().some(p => !p.tipificada)) {
+      this.saving.set(true);
+      this.guardarBorradores();
+      return;
+    }
+
     if (!this.validateForm()) {
       return;
     }
@@ -7169,19 +7226,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       const requestsPorDeuda = deudasDelGuardado.registros.map(r => ({ ...request, ...this.camposDeuda(r) }));
       if (this.mostrarProductosTipificacion()) {
-        if (this.isCancellationTypification()) {
+        const pago = this.pagoDeCancelacion();
+        if (this.isCancellationTypification() && !pago) {
           this.saving.set(false);
-          alert('⚠️ La cancelación con varios productos todavía no está disponible.');
+          alert('⚠️ No se encontró la promesa de la cuota elegida.');
           return;
         }
+        const tipificacion = managementClassification?.label || level1?.label || '';
         this.agregarBorrador({
           tipo: 'gestion',
           requests: requestsPorDeuda,
           cuentas: deudasDelGuardado.cuentas,
           resumenProductos: this.nombresDeCuentas(deudasDelGuardado.cuentas),
-          resumen: managementClassification?.label || level1?.label || '',
+          resumen: pago ? `${tipificacion} · ${this.formatCurrency(pago.monto)}` : tipificacion,
           generaCarta: false,
-          etiquetas: [contactClassification?.label || '', managementClassification?.label || '-']
+          etiquetas: [contactClassification?.label || '', managementClassification?.label || '-'],
+          pago
         });
         return;
       }
@@ -7198,48 +7258,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           // Usa el nuevo endpoint que distribuye automáticamente entre cuotas
           const selectedCuota = this.selectedInstallmentForCancellation();
           if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
-            // Usar los valores editables (monto y fecha)
-            const montoPago = this.montoPagoEditable() || selectedCuota.monto;
-            const fechaPago = this.fechaPagoEditable() || new Date().toISOString().split('T')[0];
+            const pago = this.pagoDeCancelacion();
 
-            console.log('💰 Registrando pago:', {
-              cuota: selectedCuota.numeroCuota,
-              montoOriginal: selectedCuota.monto,
-              montoPagado: montoPago,
-              fecha: fechaPago
-            });
-
-            // Buscar también en todos los cronogramas porque las cuotas vencidas no siempre están activas.
-            const schedule = [...this.activePaymentSchedules(), ...this.allPaymentSchedules()].find(s =>
-              s.installments?.some((c: any) => c.id === selectedCuota.id)
-            );
-            const grupoPromesaUuid = selectedCuota.grupoPromesaUuid || schedule?.grupoPromesaUuid || selectedCuota.scheduleId || schedule?.id;
-
-            if (!grupoPromesaUuid) {
+            if (!pago) {
               console.error('No se encontró el grupoPromesaUuid');
               this.selectedInstallmentForCancellation.set(null);
               this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               return;
             }
 
-            const currentUser = this.authService.getCurrentUser();
+            console.log('💰 Registrando pago:', pago);
 
             // Usar el nuevo endpoint de pagos
-            this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, {
-              grupoPromesaUuid: grupoPromesaUuid,
-              // Cuota elegida por el asesor: la distribución arranca en esta cuota y el excedente
-              // se aplica hacia adelante (sin tocar las anteriores). Si no eligió cuota va null →
-              // FIFO desde la más antigua, comportamiento retrocompatible.
-              cuotaId: selectedCuota ? Number(selectedCuota.id) : null,
-              monto: montoPago,
-              fechaPago: fechaPago,
-              banco: null,
-              numeroOperacion: null,
-              agenteId: currentUser?.id || 1,
-              metodoRegistro: 'MANUAL',
-              observaciones: this.managementForm.observaciones || 'Pago registrado desde gestión',
-              comprobanteUrl: null
-            }).subscribe({
+            this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, pago).subscribe({
               next: (result) => {
                 // El backend puede responder 200 con { success: false } al rechazar el pago
                 // (fecha posterior al vencimiento, cuota ya pagada o de otro grupo).
