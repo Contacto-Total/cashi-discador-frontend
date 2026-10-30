@@ -1,4 +1,4 @@
-import { AfterViewChecked, Component, ElementRef, Injector, OnDestroy, OnInit, ViewChild, afterNextRender, computed, inject, signal } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, EventEmitter, Injector, OnDestroy, OnInit, Output, ViewChild, afterNextRender, computed, inject, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -491,6 +491,9 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly inyector = inject(Injector);
 
+  /** Se eligió otro cliente: sus pagos se ven en la pantalla general. */
+  @Output() salir = new EventEmitter<void>();
+
   @ViewChild('zonaLista') private zonaLista?: ElementRef<HTMLElement>;
   @ViewChild('zonaCarga') private zonaCarga?: ElementRef<HTMLElement>;
   private observador?: ResizeObserver;
@@ -715,9 +718,10 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
     forkJoin({ alcance: this.alcance.mio(), tenants: this.tenants.getAllTenants() }).subscribe({
       next: ({ alcance, tenants }) => {
         this.miAlcance = alcance;
-        const clientes = tenants.filter(t => esClienteInterbank(t) && (alcance.todo || alcance.clientes.has(t.id)));
+        const clientes = tenants.filter(t => alcance.todo || alcance.clientes.has(t.id));
         this.clientes.set(clientes);
-        if (clientes.length) this.elegirCliente(clientes[0].id);
+        const interbank = clientes.find(t => esClienteInterbank(t));
+        if (interbank) this.elegirCliente(interbank.id);
         else this.error.set('El usuario no tiene asignada la cartera de Interbank.');
       },
       error: () => this.error.set('No se pudo cargar la cartera de Interbank.')
@@ -739,6 +743,11 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   elegirCliente(id: number): void {
+    const cliente = this.clientes().find(c => c.id === id);
+    if (cliente && !esClienteInterbank(cliente)) {
+      this.salir.emit();
+      return;
+    }
     this.tenantId.set(id);
     this.carteras.set([]);
     this.subcarteras.set([]);
