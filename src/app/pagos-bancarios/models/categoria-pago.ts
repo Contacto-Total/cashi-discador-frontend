@@ -96,8 +96,8 @@ export const MOTIVOS_REVISION: Record<string, { problema: string; accion: string
     accion: 'Corregir ese pago para que coincida con el banco.'
   },
   PROMESA_SIN_CUOTAS_PENDIENTES: {
-    problema: 'El cliente tiene promesa, pero ninguna cuota pendiente.',
-    accion: 'Verificar si la promesa ya fue completada o registrar un pago voluntario.'
+    problema: 'El cliente tiene promesa, pero ninguna cuota pendiente: ya está pagada o sigue en evaluación.',
+    accion: 'Verificar el estado de la promesa; si ya fue completada, registrar un pago voluntario.'
   },
   FALTA_TIPIFICACION_CANCELACION: {
     problema: 'El asesor no registró la cancelación de este pago.',
@@ -121,12 +121,37 @@ export const MOTIVOS_REVISION: Record<string, { problema: string; accion: string
   }
 };
 
+/** Nombre corto de cada motivo de revisión, para listas donde no entra la explicación completa. */
+export const MOTIVOS_CORTOS: Record<string, string> = {
+  DATOS_INVALIDOS: 'Datos inválidos',
+  DESFASE_CON_VARIOS_CANDIDATOS: 'Varios pagos posibles',
+  FUERA_DE_VENTANA: 'Fuera de ventana',
+  MONTO_CERCANO: 'Monto cercano',
+  PARCIAL_MENOR_AL_MINIMO: 'Parcial menor al mínimo',
+  PAGO_ANTERIOR_A_LA_PROMESA: 'Pago anterior a la promesa',
+  RETENIDO_POR_SUPERVISOR: 'Retenido al guardar',
+  MONTO_MAYOR_AL_REGISTRADO: 'Monto mayor al registrado',
+  MONTO_NO_CALZA: 'Monto no calza',
+  SIN_PROMESA_CON_PAGO_PENDIENTE: 'Sin promesa con pago pendiente',
+  PROMESA_SIN_CUOTAS_PENDIENTES: 'Promesa sin cuotas pendientes',
+  FALTA_TIPIFICACION_CANCELACION: 'Falta registrar la cancelación',
+  FECHA_FUERA_DE_RANGO_DE_PROMESA: 'Fecha fuera de la promesa',
+  PRODUCTO_FUERA_DE_CARTERA: 'Producto fuera de cartera',
+  DOCUMENTO_NO_EXISTE_EN_CLIENTES: 'Cliente no encontrado',
+  CLIENTE_NO_PERTENECE_A_CONTEXTO: 'Cliente de otra subcartera'
+};
+
 /** Enlaces automáticos de baja confianza que la prevalidación pide confirmar antes de guardar. */
 export const ALERTAS_PREVALIDACION: Record<string, string> = {
   PARCIAL_BAJO: 'Parcial que cubre menos de la mitad de lo registrado',
   DESFASE_ALTO: 'Concilia con 3 o más días de diferencia',
   VARIAS_PROMESAS: 'El cliente tiene más de una promesa con cuotas pendientes'
 };
+
+/** Los ids de cliente cambian entre ambientes: Interbank se reconoce por su nombre. */
+export function esClienteInterbank(cliente: { tenantName?: string | null; businessName?: string | null }): boolean {
+  return `${cliente.tenantName ?? ''} ${cliente.businessName ?? ''}`.toUpperCase().includes('INTERBANK');
+}
 
 export function infoCategoria(categoria: string | null | undefined): CategoriaPagoInfo {
   return (categoria && CATEGORIAS_PAGO[categoria]) || CATEGORIA_DESCONOCIDA;
