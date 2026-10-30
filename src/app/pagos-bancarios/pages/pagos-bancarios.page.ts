@@ -2,7 +2,7 @@ import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { BcpPagosService } from '../services/bcp-pagos.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AlcanceService } from '../../core/services/alcance.service';
@@ -35,12 +35,17 @@ import { HistorialCambiosWidget } from '../widgets/historial-cambios.widget';
 import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 import { ConsolidadoBancoWidget } from '../widgets/consolidado-banco.widget';
 import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widget';
+import { PagosInterbankPage } from './pagos-interbank/pagos-interbank.page';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget, CorreccionClienteDialogWidget, HistorialCambiosWidget],
+  host: { '[class]': "vista() === 'interbank' ? 'cashi-pantalla flex min-h-0 flex-1 flex-col' : ''" },
+  imports: [PagosInterbankPage, CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget, ConsolidadoBancoWidget, SeparadorExcelTramoWidget, ArchivoDropzoneWidget, BcpPagosPendientesWidget, PagoPendienteControlesDialogWidget, CorreccionClienteDialogWidget, HistorialCambiosWidget],
   template: `
+    @if (vista() === 'interbank') {
+      <app-pagos-interbank (salir)="vista.set('general')"></app-pagos-interbank>
+    } @else if (vista() === 'general') {
     <!-- relative: contiene los elementos sr-only de la página para que no estiren el scroll -->
     <div class="relative min-h-screen bg-slate-50 dark:bg-slate-900 px-6 pb-6 pt-4">
       <!-- Header compacto: título y acciones en una sola línea -->
@@ -117,8 +122,9 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
               </svg>
               Carga XLS · OH
             </button>
+            @if (tieneInterbank()) {
             <button
-              routerLink="/pagos-bancarios/interbank"
+              (click)="vista.set('interbank')"
               class="border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,6 +132,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
               </svg>
               Archivo Interbank
             </button>
+            }
             <button
               (click)="activeTab.set('consolidado')"
               [class]="activeTab() === 'consolidado'
@@ -1159,6 +1166,7 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
         (cerrado)="onResolverCerrado($event)"
       ></app-pago-pendiente-controles-dialog>
     </div>
+    }
   `
 })
 export class PagosBancariosPage implements OnInit {
@@ -1252,7 +1260,10 @@ export class PagosBancariosPage implements OnInit {
 
   private fmt = inject(FormatService);
   private alcance = inject(AlcanceService);
-  private router = inject(Router);
+
+  /** Qué se muestra en Pagos Bancarios: se decide con las asignaciones del usuario. */
+  vista = signal<'pendiente' | 'general' | 'interbank'>('pendiente');
+  tieneInterbank = signal(false);
 
   constructor(
     private bcpService: BcpPagosService,
@@ -1273,19 +1284,24 @@ export class PagosBancariosPage implements OnInit {
     this.tenantService.getAllTenants().subscribe({
       next: (tenants) => {
         this.tenants.set(tenants);
-        this.abrirInterbankSiEsSuCliente(tenants);
+        this.decidirVista(tenants);
       },
-      error: (error) => console.error('Error cargando proveedores:', error)
+      error: (error) => {
+        console.error('Error cargando proveedores:', error);
+        this.vista.set('general');
+      }
     });
   }
 
-  /** Quien solo tiene asignado Interbank trabaja en la vista de Interbank. */
-  private abrirInterbankSiEsSuCliente(tenants: Tenant[]): void {
+  /**
+   * Con solo Interbank asignado se abre su vista. Con otras carteras además, esta pantalla con la pestaña
+   * de Interbank, para que ninguna cartera quede sin acceso. Sin Interbank, la pestaña no aparece.
+   */
+  private decidirVista(tenants: Tenant[]): void {
     this.alcance.mio().subscribe(alcance => {
-      const asignados = tenants.filter(t => alcance.clientes.has(t.id));
-      if (!alcance.todo && asignados.length > 0 && asignados.every(esClienteInterbank)) {
-        this.router.navigate(['/pagos-bancarios/interbank'], { replaceUrl: true });
-      }
+      const asignados = alcance.todo ? tenants : tenants.filter(t => alcance.clientes.has(t.id));
+      this.tieneInterbank.set(asignados.some(t => esClienteInterbank(t)));
+      this.vista.set(asignados.length > 0 && asignados.every(t => esClienteInterbank(t)) ? 'interbank' : 'general');
     });
   }
 
