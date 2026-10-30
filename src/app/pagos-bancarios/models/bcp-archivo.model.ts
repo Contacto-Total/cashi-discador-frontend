@@ -65,6 +65,8 @@ export interface BcpArchivoResultado {
   pagosDuplicados?: BcpPagoDuplicado[] | null;
   /** Interbank: filas con REVERSA o monto negativo; no se cargan, se revisan caso por caso. */
   reversas?: BcpPagoReversa[] | null;
+  /** Interbank: filas del archivo acumulado que ya estaban guardadas. */
+  omitidos?: BcpPagoOmitido[] | null;
 }
 
 export type EstadoCargaArchivoBcp =
@@ -88,6 +90,18 @@ export interface BcpPagoReversa {
   montoPagado: number | null;
   reversa: string | null;
   numeroFila: number;
+}
+
+/** Fila del archivo de Interbank que ya estaba guardada. */
+export interface BcpPagoOmitido {
+  documento: string | null;
+  cuenta: string | null;
+  producto: string | null;
+  moneda: string | null;
+  fechaPago: string | null;
+  montoPagado: number | null;
+  numeroOperacion: string | null;
+  pagoBancoId: number | null;
 }
 
 export interface BcpPagoDuplicado {
@@ -180,6 +194,7 @@ export interface PrevalidacionArchivoBcp {
   cuenta?: string | null;
   producto?: string | null;
   moneda?: string | null;
+  nombreCliente?: string | null;
 }
 
 export type CategoriaPagoBanco =
@@ -212,9 +227,27 @@ export interface PagoBancoPendiente {
   cuenta?: string | null;
   producto?: string | null;
   moneda?: string | null;
+  nombreCliente?: string | null;
+  asesor?: string | null;
   montoEsperado: number | null;
   montoFaltante: number | null;
   fechaLimiteGrupo: string | null;
+}
+
+/** Pago del asesor que el banco no confirmó a tiempo. */
+export interface PagoNoConfirmadoBanco {
+  pagoCuotaId: number;
+  documento: string;
+  nombreCliente: string | null;
+  cuenta: string | null;
+  producto: string | null;
+  moneda: string | null;
+  fechaPago: string;
+  monto: number;
+  asesor: string | null;
+  gestionId: number | null;
+  numeroCuota: number | null;
+  diasHabiles: number | null;
 }
 
 export interface ReevaluacionPendientesResponse {
@@ -333,6 +366,8 @@ export interface ArchivoCargaHistorialItem {
   nombreArchivo: string;
   tipo: TipoArchivoCarga | string;
   subidoPorNombre: string | null;
+  /** Filas que traía el archivo; cantidadPagos son las que se guardaron como nuevas. */
+  totalRegistros?: number | null;
   fechaCarga: string;
   fechaPagoDesde: string | null;
   fechaPagoHasta: string | null;

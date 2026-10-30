@@ -411,6 +411,12 @@ export const routes: Routes = [
     canActivate: [authGuard, menuAccesoGuard]
   },
   {
+    path: 'pagos-bancarios/interbank',
+    loadComponent: () => import('./pagos-bancarios/pages/pagos-interbank/pagos-interbank.page').then(m => m.PagosInterbankPage),
+    canActivate: [authGuard, menuAccesoGuard],
+    data: { acceso: '/pagos-bancarios' }
+  },
+  {
     path: 'correccion-pagos',
     loadComponent: () => import('./pagos-bancarios/pages/correccion-pagos/correccion-pagos.page').then(m => m.CorreccionPagosPage),
     canActivate: [authGuard, menuAccesoGuard],

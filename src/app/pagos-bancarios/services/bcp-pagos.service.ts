@@ -16,6 +16,7 @@ import {
   ArchivoCargaHistorialPage,
   HistorialArchivosCargaRequest,
   PagoBancoPendiente,
+  PagoNoConfirmadoBanco,
   ReevaluacionPendientesResponse,
   ResumenConciliacionCliente,
   ResumenConciliacionClienteRequest
@@ -70,6 +71,11 @@ export class BcpPagosService {
   /** Pagos de la subcartera marcados como «no corresponde». */
   listarNoCorresponden(request: ResumenConciliacionClienteRequest): Observable<PagoBancoPendiente[]> {
     return this.http.get<PagoBancoPendiente[]>(`${this.baseUrl}/no-corresponde`, { params: this.contextoParams(request) });
+  }
+
+  /** Pagos del asesor que el banco no confirmó a tiempo. */
+  listarNoConfirmados(request: ResumenConciliacionClienteRequest): Observable<PagoNoConfirmadoBanco[]> {
+    return this.http.get<PagoNoConfirmadoBanco[]>(`${this.baseUrl}/no-confirmados`, { params: this.contextoParams(request) });
   }
 
   /** Saca de pendientes un pago que no corresponde a la gestión de la empresa. */

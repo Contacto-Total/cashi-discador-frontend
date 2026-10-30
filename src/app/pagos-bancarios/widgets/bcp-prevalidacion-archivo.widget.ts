@@ -351,14 +351,14 @@ export class BcpPrevalidacionArchivoWidget implements OnChanges {
     if (this.requiereRevision(row)) {
       return this.motivo(row)?.problema || 'No se encontró contra qué conciliar este pago.';
     }
-    return this.info(row).label;
+    return this.motivo(row)?.problema || this.info(row).label;
   }
 
   accion(row: PrevalidacionArchivoBcp): string {
     if (this.requiereRevision(row)) {
       return this.motivo(row)?.accion || 'Revisión manual requerida.';
     }
-    return this.info(row).resultado;
+    return this.motivo(row)?.accion || this.info(row).resultado;
   }
 
   private motivo(row: PrevalidacionArchivoBcp): { problema: string; accion: string } | undefined {

@@ -2,9 +2,10 @@ import { Component, signal, computed, OnInit, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { BcpPagosService } from '../services/bcp-pagos.service';
 import { AuthService } from '../../core/services/auth.service';
+import { AlcanceService } from '../../core/services/alcance.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
@@ -21,7 +22,7 @@ import {
   PrevalidacionArchivoBcp,
   ResumenConciliacionCliente
 } from '../models/bcp-archivo.model';
-import { aFechaIso, infoCategoria, montoMoneda } from '../models/categoria-pago';
+import { aFechaIso, esClienteInterbank, infoCategoria, montoMoneda } from '../models/categoria-pago';
 import { ArchivoDropzoneWidget } from '../widgets/archivo-dropzone.widget';
 import { BcpPagosPendientesWidget } from '../widgets/bcp-pagos-pendientes.widget';
 import { PagoPendienteControlesDialogWidget } from '../widgets/pago-pendiente-controles-dialog.widget';
@@ -117,11 +118,8 @@ import { SeparadorExcelTramoWidget } from '../widgets/separador-excel-tramo.widg
               Carga XLS · OH
             </button>
             <button
-              (click)="seleccionarExcel('IBK')"
-              [class]="activeTab() === 'oh' && excelBanco() === 'IBK'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
-              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+              routerLink="/pagos-bancarios/interbank"
+              class="border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -1253,6 +1251,8 @@ export class PagosBancariosPage implements OnInit {
   manualSubPortfolios = signal<SubPortfolio[]>([]);
 
   private fmt = inject(FormatService);
+  private alcance = inject(AlcanceService);
+  private router = inject(Router);
 
   constructor(
     private bcpService: BcpPagosService,
@@ -1271,8 +1271,21 @@ export class PagosBancariosPage implements OnInit {
 
   cargarTenants(): void {
     this.tenantService.getAllTenants().subscribe({
-      next: (tenants) => this.tenants.set(tenants),
+      next: (tenants) => {
+        this.tenants.set(tenants);
+        this.abrirInterbankSiEsSuCliente(tenants);
+      },
       error: (error) => console.error('Error cargando proveedores:', error)
+    });
+  }
+
+  /** Quien solo tiene asignado Interbank trabaja en la vista de Interbank. */
+  private abrirInterbankSiEsSuCliente(tenants: Tenant[]): void {
+    this.alcance.mio().subscribe(alcance => {
+      const asignados = tenants.filter(t => alcance.clientes.has(t.id));
+      if (!alcance.todo && asignados.length > 0 && asignados.every(esClienteInterbank)) {
+        this.router.navigate(['/pagos-bancarios/interbank'], { replaceUrl: true });
+      }
     });
   }
 
