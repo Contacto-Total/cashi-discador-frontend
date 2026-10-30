@@ -38,6 +38,9 @@ export interface ReporteGestionesDTO {
   identificadoresDeuda?: string | null;
   capitalSoles?: number | null;
   capitalDolares?: number | null;
+  /** En esas mismas subcarteras: si el cliente sigue en la cartera y, si salió, el último día que vino asignado. */
+  estadoAsignacion?: 'VIGENTE' | 'RETIRADO' | null;
+  ultimaAsignacion?: string | null;
   montoBase: number;
   montoPromesa: number;
   totalCuotas: number;

@@ -397,6 +397,11 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                       @if (item.identificadoresDeuda) {
                         <span class="block font-sans text-[11px] text-gray-500 dark:text-gray-400">CJ {{ item.identificadoresDeuda }}</span>
                       }
+                      @if (item.estadoAsignacion === 'RETIRADO') {
+                        <span class="block font-sans text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                          Retirado · asignado hasta {{ item.ultimaAsignacion | appDate:'dayMonth' }}
+                        </span>
+                      }
                     </td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.nombreCliente | slice:0:20 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreAgente | slice:0:15 }}</td>
