@@ -22,7 +22,6 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 
 Chart.register(...registerables);
 
-type PeriodType = 'today' | 'week' | 'month' | 'lastMonth' | 'year' | 'custom';
 type TabType = 'productividad' | 'corteHorario';
 // Ventana de vencimiento de la columna Generacion: de lo pactado hoy, que
 // cuotas se cuentan segun cuando vencen.
@@ -176,14 +175,11 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   selectedTenantId: number | null = null;
   selectedCarteraId: number | null = null;
   selectedSubcarteraId: number | null = null;
-  selectedPeriod: PeriodType = 'today';
   generacionVentana: GeneracionVentana = 'mes';
   cierreVentana: CierreVentana = 'hoy';
   gestionesTipo: GestionesTipo = 'todos';
   // Filtro por nombre. Se resuelve en memoria sobre lo ya consultado.
   buscarAgente = '';
-  customDateFrom: string = '';
-  customDateTo: string = '';
 
   // Tab activo
   activeTab: TabType = 'productividad';
@@ -216,7 +212,6 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   ngOnInit(): void {
     this.loadTenants();
-    this.setDefaultDates();
     // No se consulta al entrar: el usuario debe pulsar "Buscar" para lanzar la consulta.
   }
 
@@ -227,54 +222,6 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.destroyCharts();
-  }
-
-  private setDefaultDates(): void {
-    const today = new Date();
-    this.customDateTo = this.formatDate(today);
-    this.customDateFrom = this.formatDate(today);
-  }
-
-  private formatDate(date: Date): string {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  private getDateRange(): { fechaInicio: string; fechaFin: string } {
-    const today = new Date();
-    let fechaInicio: Date;
-    let fechaFin: Date = today;
-
-    switch (this.selectedPeriod) {
-      case 'today':
-        fechaInicio = today;
-        break;
-      case 'week':
-        fechaInicio = new Date(today);
-        fechaInicio.setDate(today.getDate() - 7);
-        break;
-      case 'month':
-        fechaInicio = new Date(today.getFullYear(), today.getMonth(), 1);
-        break;
-      case 'lastMonth':
-        fechaInicio = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        fechaFin = new Date(today.getFullYear(), today.getMonth(), 0);
-        break;
-      case 'year':
-        fechaInicio = new Date(today.getFullYear(), 0, 1);
-        break;
-      case 'custom':
-        return { fechaInicio: this.customDateFrom, fechaFin: this.customDateTo };
-      default:
-        fechaInicio = today;
-    }
-
-    return {
-      fechaInicio: this.formatDate(fechaInicio),
-      fechaFin: this.formatDate(fechaFin)
-    };
   }
 
   loadTenants(): void {
@@ -322,28 +269,21 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     }
   }
 
-  onPeriodChange(): void {
-    if (this.selectedPeriod !== 'custom') {
-      this.loadData(true);
-    }
-  }
-
   // Cambiar un selector de columna reconsultaba el SP entero. Como la respuesta
   // depende solo de estos parametros, se guarda por combinacion: volver a una
   // ventana ya vista es instantaneo. "Buscar" limpia el cache.
+  // La fecha no va en la llave: siempre es hoy y la pone el servidor (REQ-22).
   private cache = new Map<string, AgentProductivityResponse>();
 
-  private cacheKey(fechaInicio: string, fechaFin: string): string {
+  private cacheKey(): string {
     return [
-      fechaInicio, fechaFin,
       this.selectedTenantId, this.selectedCarteraId, this.selectedSubcarteraId,
       this.generacionVentana, this.cierreVentana
     ].join('|');
   }
 
   loadData(forzar: boolean = false): void {
-    const { fechaInicio, fechaFin } = this.getDateRange();
-    const key = this.cacheKey(fechaInicio, fechaFin);
+    const key = this.cacheKey();
 
     if (forzar) {
       this.cache.clear();
@@ -361,8 +301,6 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     this.error = null;
 
     this.reportService.getAgentProductivity(
-      fechaInicio,
-      fechaFin,
       this.selectedTenantId || undefined,
       this.selectedCarteraId || undefined,
       this.selectedSubcarteraId || undefined,
@@ -477,12 +415,26 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     return y && m && d ? `${d}/${m}/${y}` : '—';
   }
 
+  private readonly DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+  /**
+   * Día consultado, como lo manda el servidor ('YYYY-MM-DD'). Antes de la primera
+   * búsqueda no hay fecha: la pantalla solo dice "Hoy".
+   */
+  private get fechaServidor(): string | null {
+    return this.productivityData?.fecha || this.corteHorarioData?.fecha || null;
+  }
+
+  /** "Hoy · lunes 02/11/2026". El día de la semana se arma con la fecha local, no en UTC. */
+  get fechaHoy(): string {
+    const iso = this.fechaServidor;
+    if (!iso) return 'Hoy';
+    const [y, m, d] = iso.split('-').map(Number);
+    return `Hoy · ${this.DIAS[new Date(y, m - 1, d).getDay()]} ${this.fechaCorta(iso)}`;
+  }
+
   get subtitulo(): string {
-    const { fechaInicio, fechaFin } = this.getDateRange();
-    const rango = fechaInicio === fechaFin
-      ? this.fechaCorta(fechaInicio)
-      : `${this.fechaCorta(fechaInicio)} al ${this.fechaCorta(fechaFin)}`;
-    const partes = [this.selectedPeriod === 'custom' ? rango : `${this.getPeriodLabel()}, ${rango}`];
+    const partes = [this.fechaHoy];
 
     const tenant = this.tenants.find(t => t.id === this.selectedTenantId);
     const cartera = this.portfolios.find(p => p.id === this.selectedCarteraId);
@@ -787,18 +739,6 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     return value > 0 ? 'trending-up' : 'trending-down';
   }
 
-  getPeriodLabel(): string {
-    switch (this.selectedPeriod) {
-      case 'today': return 'Hoy';
-      case 'week': return 'Últimos 7 días';
-      case 'month': return 'Este mes';
-      case 'lastMonth': return 'Mes anterior';
-      case 'year': return 'Este año';
-      case 'custom': return 'Personalizado';
-      default: return '';
-    }
-  }
-
   // Tab management
   switchTab(tab: TabType): void {
     this.activeTab = tab;
@@ -810,12 +750,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   loadCorteHorario(): void {
     this.loadingCorte = true;
 
-    // Usa el mismo rango de fechas del filtro de productividad
-    const { fechaInicio, fechaFin } = this.getDateRange();
-
+    // Siempre el día de hoy, con la fecha del servidor, igual que Productividad
     this.reportService.getCorteHorario(
-      fechaInicio,
-      fechaFin,
       this.selectedTenantId || undefined,
       this.selectedCarteraId || undefined,
       this.selectedSubcarteraId || undefined

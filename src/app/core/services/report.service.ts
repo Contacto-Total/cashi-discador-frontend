@@ -44,6 +44,8 @@ export interface CampaignReport {
 
 // Interfaces para el dashboard de productividad de agentes
 export interface AgentProductivityResponse {
+  // Día consultado ('YYYY-MM-DD'), fijado por el servidor
+  fecha?: string;
   summary: ProductivitySummary;
   agents: AgentMetrics[];
   chartData: ChartData;
@@ -107,6 +109,8 @@ export interface AgentMetrics {
 
 // Corte Horario interfaces
 export interface CorteHorarioResponse {
+  // Día consultado ('YYYY-MM-DD'), fijado por el servidor
+  fecha?: string;
   agents: AgentCorte[];
 }
 
@@ -192,20 +196,16 @@ export class ReportService {
   }
 
   /**
-   * Obtiene métricas de productividad de agentes
+   * Obtiene métricas de productividad de agentes del día de hoy (la fecha la pone el servidor)
    */
   getAgentProductivity(
-    fechaInicio: string,
-    fechaFin: string,
     tenantId?: number,
     carteraId?: number,
     subcarteraId?: number,
     generacionVentana?: string,
     cierreVentana?: string
   ): Observable<AgentProductivityResponse> {
-    let params = new HttpParams()
-      .set('fechaInicio', fechaInicio)
-      .set('fechaFin', fechaFin);
+    let params = new HttpParams();
 
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());
@@ -217,18 +217,14 @@ export class ReportService {
   }
 
   /**
-   * Obtiene métricas de corte horario por agente
+   * Obtiene métricas de corte horario por agente del día de hoy (la fecha la pone el servidor)
    */
   getCorteHorario(
-    fechaInicio: string,
-    fechaFin: string,
     tenantId?: number,
     carteraId?: number,
     subcarteraId?: number
   ): Observable<CorteHorarioResponse> {
-    let params = new HttpParams()
-      .set('fechaInicio', fechaInicio)
-      .set('fechaFin', fechaFin);
+    let params = new HttpParams();
 
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());
