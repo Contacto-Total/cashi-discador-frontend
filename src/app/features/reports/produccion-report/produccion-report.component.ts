@@ -17,7 +17,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { UserRole } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-produccion-report',
@@ -363,7 +362,7 @@ export class ProduccionReportComponent implements OnInit {
   ) {}
 
   get isAdmin(): boolean {
-    return this.authService.getCurrentUser()?.role === UserRole.ADMIN;
+    return this.authService.esAdminOAdministracion();
   }
 
   ngOnInit(): void {

@@ -164,7 +164,7 @@ export class CorreccionPagosPage implements OnInit {
   private readonly portfolioService = inject(PortfolioService);
   private readonly ajusteService = inject(AjusteConciliacionService);
   private readonly route = inject(ActivatedRoute);
-  private readonly esAdmin = inject(AuthService).hasAnyRole('ADMIN');
+  private readonly esAdmin = inject(AuthService).esAdminOAdministracion();
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);

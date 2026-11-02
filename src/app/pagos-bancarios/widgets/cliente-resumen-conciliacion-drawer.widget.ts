@@ -553,7 +553,7 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges, OnDest
   }
 
   permiteAjustes(): boolean {
-    return this.authService.hasAnyRole('ADMIN') && !!this.contextoRecalculo();
+    return this.authService.esAdminOAdministracion() && !!this.contextoRecalculo();
   }
 
   /** Gestión PAGO VOLUNTARIO del sistema cuyo pago no tiene pago del banco: queda suelta y bloquea el próximo enlace. */

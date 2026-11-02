@@ -361,18 +361,21 @@ export class AuthService {
   private mapRolesToBase(roles?: string[]): string {
     const bases = (roles ?? []).map(rol => this.mapRoleToBase(rol));
     if (bases.includes('ADMIN')) return 'ADMIN';
-    return bases.includes('SUPERVISOR') ? 'SUPERVISOR' : 'AGENT';
+    if (bases.includes('SUPERVISOR')) return 'SUPERVISOR';
+    return bases.includes('ADMINISTRACION') ? 'ADMINISTRACION' : 'AGENT';
   }
 
   /**
-   * Maps non-standard roles to base roles (ADMIN, SUPERVISOR, AGENT).
-   * Any role not matching ADMIN or SUPERVISOR is treated as AGENT.
+   * Maps non-standard roles to base roles (ADMIN, SUPERVISOR, ADMINISTRACION, AGENT).
+   * Any role not matching one of the others is treated as AGENT.
+   * ADMINISTRACION (e.g. "ADMINISTRACION TRAMO 5") is not an asesor: no gestión timer or agent checks.
    */
   private mapRoleToBase(role?: string): string {
     if (!role) return 'AGENT';
     const upper = role.toUpperCase();
     if (upper === 'ADMIN') return 'ADMIN';
     if (upper.includes('SUPERVISOR') || upper === 'COORDINADOR') return 'SUPERVISOR';
+    if (upper.includes('ADMINISTRACION')) return 'ADMINISTRACION';
     return 'AGENT';
   }
 
@@ -417,6 +420,17 @@ export class AuthService {
       : new Set(user.role ? [this.normalizarRol(String(user.role))] : []);
 
     return Array.from(deseados).some(rol => actuales.has(rol));
+  }
+
+  /**
+   * ADMIN o algún rol de administración ('ADMINISTRACION TRAMO 5'...), como lo mapea el backend
+   * a ROLE_ADMINISTRACION: las acciones de administración de pagos y la meta interna.
+   */
+  esAdminOAdministracion(): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+    const roles = [...(user.roles ?? []), String(user.role ?? '')].map(rol => this.normalizarRol(rol));
+    return roles.some(rol => rol === 'ADMIN' || rol.includes('ADMINISTRACION'));
   }
 
   private normalizarRol(rol: string): string {
