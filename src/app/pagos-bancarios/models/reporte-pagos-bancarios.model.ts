@@ -28,4 +28,10 @@ export interface DetallePagoBancario {
   cuotaAplicadaId: number | null;
   transaccionIdAplicada: number | null;
   periodoCompra?: string | null;
+  /** Deuda, producto y moneda del pago (solo en los archivos que los traen). */
+  cuenta?: string | null;
+  producto?: string | null;
+  moneda?: string | null;
+  categoria?: string | null;
+  nombreCliente?: string | null;
 }
