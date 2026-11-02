@@ -156,7 +156,7 @@ export class CorreccionClienteWidget implements OnChanges {
   @Output() cambio = new EventEmitter<string>();
 
   /** Ajustes finos (ficha, desconciliar): solo administradores. */
-  readonly esAdmin = inject(AuthService).hasAnyRole('ADMIN');
+  readonly esAdmin = inject(AuthService).esAdminOAdministracion();
 
   readonly pestanas: { id: Pestana; label: string }[] = [
     { id: 'banco', label: 'Pagos del banco' },
