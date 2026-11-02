@@ -90,7 +90,7 @@ function finDeMes(fechaIso: string): string {
       }
     </div>
 
-    <div class="mb-3 flex flex-none flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
+    <div class="mb-[.75rem] flex flex-none flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
       @if (documento()) {
         <div class="min-w-40 flex-1">
           <span class="block font-semibold">{{ resumen()?.nombreCliente || documento() }}</span>
@@ -116,11 +116,11 @@ function finDeMes(fechaIso: string): string {
 
     <div class="-mx-8 min-h-0 flex-1 overflow-y-auto px-8">
       @if (!documento()) {
-        <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Busca un cliente por DNI o número de pago</div>
+        <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Busca un cliente por DNI o número de pago</div>
       } @else if (cargando()) {
         <p class="m-0 px-2 py-4 text-muted-foreground">Cargando…</p>
       } @else if (errorCarga(); as e) {
-        <p role="alert" class="m-0 mt-3 rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 font-medium text-(--ro)">{{ e }}</p>
+        <p role="alert" class="m-0 mt-[.75rem] rounded-[.625rem] border border-(--ro-ln) bg-(--ro-bg) px-3 py-2.5 font-medium text-(--ro)">{{ e }}</p>
       } @else {
         @switch (pestana()) {
           @case ('banco') {
@@ -188,9 +188,9 @@ function finDeMes(fechaIso: string): string {
                           <ul class="m-0 pl-4">
                             @for (t of cambiosDe(v); track t) { <li>{{ t }}</li> }
                           </ul>
-                          @for (b of v.bloqueos; track b) { <span class="mt-1 block font-medium text-(--ro)">{{ b }}</span> }
-                          @for (a of v.avisos; track a) { <span class="mt-1 block text-muted-foreground">{{ a }}</span> }
-                          @if (destinoElegido(); as d) { <span class="mt-1 block text-[.75rem] text-muted-foreground">{{ d }}</span> }
+                          @for (b of v.bloqueos; track b) { <span class="mt-[.25rem] block font-medium text-(--ro)">{{ b }}</span> }
+                          @for (a of v.avisos; track a) { <span class="mt-[.25rem] block text-muted-foreground">{{ a }}</span> }
+                          @if (destinoElegido(); as d) { <span class="mt-[.25rem] block text-[.75rem] text-muted-foreground">{{ d }}</span> }
                         </div>
                       }
                       @if (opcion() === 'resolver') {
@@ -246,16 +246,16 @@ function finDeMes(fechaIso: string): string {
                 </div>
               }
             } @empty {
-              <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin pagos del banco para este cliente</div>
+              <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin pagos del banco para este cliente</div>
             }
           }
 
           @case ('promesas') {
-            <div class="mb-2 flex justify-end">
+            <div class="mb-[.5rem] flex justify-end">
               <button type="button" appBoton="secundario" appBotonAlto="chico" [attr.aria-expanded]="abierta() === 'voluntario'" (click)="alternar('voluntario')">Registrar pago voluntario</button>
             </div>
             @if (abierta() === 'voluntario') {
-              <div class="mb-3 flex min-w-0 flex-wrap items-end gap-3 rounded-xl border border-border px-3 py-3">
+              <div class="mb-[.75rem] flex min-w-0 flex-wrap items-end gap-3 rounded-xl border border-border px-3 py-3">
                 <div class="flex-[1_1_100%] rounded-lg bg-muted px-3 py-2.5 text-[.8125rem]">Acción crítica: el pago no se asigna a ningún asesor y no se puede revertir.</div>
                 <div class="flex min-w-0 items-end gap-3">
                   <div [class]="DATO + ' min-w-[8.75rem]'">
@@ -295,7 +295,7 @@ function finDeMes(fechaIso: string): string {
                 <div class="flex min-w-0 flex-col items-start">
                   <span [class]="PILL + ' ' + (f.voluntarioSinBanco ? 'border-border bg-transparent text-muted-foreground' : pillCuota(f.cuota.estado))">{{ f.voluntarioSinBanco ? 'Sin banco' : estadoCuota(f.cuota.estado) }}</span>
                   @if (!f.voluntarioSinBanco && (f.verificado || f.sinVerificar)) {
-                    <span class="mt-1 text-[.75rem] leading-[1.3] text-muted-foreground">{{ f.sinVerificar ? 'Sin verificar por el banco' : 'Verificado por el banco' }}</span>
+                    <span class="mt-[.25rem] text-[.75rem] leading-[1.3] text-muted-foreground">{{ f.sinVerificar ? 'Sin verificar por el banco' : 'Verificado por el banco' }}</span>
                   }
                 </div>
                 @if (!angosto) {
@@ -355,7 +355,7 @@ function finDeMes(fechaIso: string): string {
                           <ul class="m-0 pl-4">
                             @for (t of cambiosDe(v); track t) { <li>{{ t }}</li> }
                           </ul>
-                          @for (b of v.bloqueos; track b) { <span class="mt-1 block font-medium text-(--ro)">{{ b }}</span> }
+                          @for (b of v.bloqueos; track b) { <span class="mt-[.25rem] block font-medium text-(--ro)">{{ b }}</span> }
                         </div>
                       }
                       @if (o === 'eliminar') {
@@ -407,7 +407,7 @@ function finDeMes(fechaIso: string): string {
                 </div>
               }
             } @empty {
-              <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin promesas para este cliente</div>
+              <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin promesas para este cliente</div>
             }
           }
 
@@ -422,7 +422,7 @@ function finDeMes(fechaIso: string): string {
                 <span>{{ contacto(i.metodoContacto) }}</span>
               </div>
             } @empty {
-              <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin intentos de cancelación</div>
+              <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin intentos de cancelación</div>
             }
           }
 
@@ -442,7 +442,7 @@ function finDeMes(fechaIso: string): string {
                 </div>
               </div>
             } @empty {
-              <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin cambios</div>
+              <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin cambios</div>
             }
             @if (!historicoCompleto()) {
               <div class="py-3 text-center"><button type="button" appBoton="secundario" appBotonAlto="chico" (click)="masHistorico()">Ver más</button></div>

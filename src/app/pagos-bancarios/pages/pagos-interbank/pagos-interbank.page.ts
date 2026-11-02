@@ -120,7 +120,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
             }
           </div>
 
-          <div class="mb-3 flex flex-none flex-wrap items-center gap-x-3 gap-y-2">
+          <div class="mb-[.75rem] flex flex-none flex-wrap items-center gap-x-3 gap-y-2">
             <select id="ibk-mes" aria-label="Mes" [class]="LISTA + ' flex-[0_0_10rem]! w-auto!'" [ngModel]="mes()" (ngModelChange)="elegirMes($event)">
               @for (m of meses(); track m) {
                 <option [value]="m">{{ nombreDeMes(m) }}</option>
@@ -156,7 +156,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
                   <div class="flex min-w-0 flex-col items-start">
                     <span [class]="PILL + ' ' + pill(f.tono)">{{ f.estado }}</span>
                     @if (f.detalle) {
-                      <span class="mt-1 text-[.75rem] leading-[1.3] text-muted-foreground">{{ f.detalle }}</span>
+                      <span class="mt-[.25rem] text-[.75rem] leading-[1.3] text-muted-foreground">{{ f.detalle }}</span>
                     }
                   </div>
                   <div class="min-w-0">
@@ -180,7 +180,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
                   </div>
                 }
               } @empty {
-                <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin pagos</div>
+                <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin pagos</div>
               }
             }
           </div>
@@ -235,7 +235,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
         </div>
       </div>
 
-      <div appTarjeta class="font-cashi mt-3 flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+      <div appTarjeta class="font-cashi mt-[.75rem] flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
         <span class="mr-auto font-medium" [ngClass]="totalPendientes() ? 'text-foreground' : 'text-muted-foreground'">{{ textoPendientes() }}</span>
         <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="!contexto()" (click)="abrirCorreccion(null)">Corrección de pagos</button>
         <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="reevaluando() || !contexto()" (click)="reevaluar()">
@@ -291,7 +291,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
             <button type="button" appBoton="secundario" (click)="volverALista()">Ver pagos</button>
           </div>
         } @else {
-          <div class="mb-3 flex flex-none flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
+          <div class="mb-[.75rem] flex flex-none flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
             <div class="min-w-40 flex-1">
               <span class="block font-semibold">{{ resultado()?.nombreArchivo }}</span>
               <span class="block text-[.75rem] text-muted-foreground">Hoja HOLISTICO_PAGOS</span>
@@ -304,10 +304,10 @@ function tonoDe(categoria: string | null | undefined): Tono {
           </div>
 
           @if (filasSinCargar().length) {
-            <p role="status" class="m-0 mb-3 flex-none rounded-[.625rem] border border-(--am-ln) bg-(--am-bg) px-3.5 py-2.5 text-(--am)">Sin cargar: {{ filasSinCargar().join('; ') }}</p>
+            <p role="status" class="m-0 mb-[.75rem] flex-none rounded-[.625rem] border border-(--am-ln) bg-(--am-bg) px-3.5 py-2.5 text-(--am)">Sin cargar: {{ filasSinCargar().join('; ') }}</p>
           }
 
-          <div class="mb-1 flex flex-none flex-wrap gap-1.5" role="group" aria-label="Filtrar pagos">
+          <div class="mb-[.25rem] flex flex-none flex-wrap gap-1.5" role="group" aria-label="Filtrar pagos">
             @for (p of pillsCarga(); track p.id) {
               <button type="button" [attr.aria-pressed]="filtroCarga() === p.id" (click)="elegirFiltroCarga(p.id)"
                       [style.--t]="color(p.tono)" [style.--t-bg]="fondo(p.tono)"
@@ -354,9 +354,9 @@ function tonoDe(categoria: string | null | undefined): Tono {
                 </div>
                 <div class="flex min-w-0 flex-col items-start">
                   <span [class]="PILL + ' ' + pill(f.tono)">{{ f.estado }}</span>
-                  @if (f.detalle) { <span class="mt-1 text-[.75rem] leading-[1.3] text-muted-foreground">{{ f.detalle }}</span> }
-                  @if (f.alerta) { <span class="mt-1 text-[.75rem] font-medium text-(--ro)">{{ f.alerta }}</span> }
-                  @if (f.fila?.retenerRevision) { <span class="mt-1 text-[.75rem] text-muted-foreground">Retenido</span> }
+                  @if (f.detalle) { <span class="mt-[.25rem] text-[.75rem] leading-[1.3] text-muted-foreground">{{ f.detalle }}</span> }
+                  @if (f.alerta) { <span class="mt-[.25rem] text-[.75rem] font-medium text-(--ro)">{{ f.alerta }}</span> }
+                  @if (f.fila?.retenerRevision) { <span class="mt-[.25rem] text-[.75rem] text-muted-foreground">Retenido</span> }
                 </div>
                 <div class="flex flex-col items-end gap-1.5">
                   @if (f.grupo === 'rev') {
@@ -379,7 +379,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
                 </div>
               }
             } @empty {
-              <div class="mt-3 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin pagos</div>
+              <div class="mt-[.75rem] rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground">Sin pagos</div>
             }
           </div>
 
@@ -410,7 +410,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
               <div><dt class="text-[.75rem] text-muted-foreground">Intentos de cancelación</dt><dd class="m-0 font-semibold">{{ r.intentosCancelacion?.length || 0 }}</dd></div>
             </dl>
             <div>
-              <h3 class="m-0 mb-1 text-[.8125rem] font-semibold">Promesa y cuotas</h3>
+              <h3 class="m-0 mb-[.25rem] text-[.8125rem] font-semibold">Promesa y cuotas</h3>
               @for (p of r.promesas; track p.idGestion) {
                 @for (c of p.cuotas; track c.cuotaId) {
                   <p class="m-0 mb-1.5">Cuota {{ c.numeroCuota }}, vence {{ fechaCorta(c.fechaPromesa) }}
@@ -426,7 +426,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
       }
       </div>
 
-      <div appTarjeta class="font-cashi mt-3 flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+      <div appTarjeta class="font-cashi mt-[.75rem] flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
         @if (guardado()) {
           <span class="mr-auto font-medium text-muted-foreground">Carga guardada</span>
         } @else if (resultado()) {
@@ -466,7 +466,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
         }
       </div>
 
-      <div appTarjeta class="font-cashi mt-3 flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+      <div appTarjeta class="font-cashi mt-[.75rem] flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
         <span class="mr-auto font-medium" [ngClass]="nombreCorreccion() ? 'text-foreground' : 'text-muted-foreground'">{{ nombreCorreccion() || 'Sin cliente' }}</span>
         <button type="button" appBoton="secundario" class="flex-none px-4!" (click)="volverDeCorreccion()">Volver a pagos</button>
       </div>
@@ -524,7 +524,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
     </ng-template>
 
     <ng-template #paginacion let-total="total" let-tam="tam" let-pagina="pagina" let-ir="ir">
-      <nav class="mt-1 -mb-1 flex flex-none flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3" aria-label="Paginación">
+      <nav class="mt-[.25rem] -mb-1 flex flex-none flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3" aria-label="Paginación">
         <span class="text-[.75rem] text-muted-foreground">{{ total ? 'Mostrando ' + ((pagina - 1) * tam + 1) + '–' + min(pagina * tam, total) + ' de ' + total : 'Sin resultados' }}</span>
         @if (total > tam) {
           <div class="flex items-center gap-2">
