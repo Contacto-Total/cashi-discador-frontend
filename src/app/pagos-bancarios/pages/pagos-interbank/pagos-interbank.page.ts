@@ -1,7 +1,6 @@
 import { AfterViewChecked, Component, ElementRef, EventEmitter, Injector, OnDestroy, OnInit, Output, ViewChild, afterNextRender, computed, inject, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
@@ -32,12 +31,14 @@ import {
 import { DetallePagoBancario } from '../../models/reporte-pagos-bancarios.model';
 import { ALERTAS_PREVALIDACION, MOTIVOS_CORTOS, aFechaIso, esClienteInterbank, fechaCorta, infoCategoria, mesDeFecha, nombreMes } from '../../models/categoria-pago';
 import { ContextoIbk, PagoIbkPorResolver, PagoIbkResolverWidget } from '../../widgets/pago-ibk-resolver.widget';
-import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-resumen-conciliacion-drawer.widget';
-import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from '../../widgets/correccion-cliente-dialog.widget';
+import { CorreccionIbkWidget } from '../../widgets/correccion-ibk.widget';
+import { FichaPagoLadoWidget } from '../../widgets/ficha-pago-lado.widget';
+import { PILL_IBK } from '../../widgets/ibk-estilos';
+import { VoucherAbierto, VoucherLadoWidget } from '../../widgets/voucher-lado.widget';
 import { HistorialCargasBcpWidget } from '../../widgets/historial-cargas-bcp.widget';
 import { HistorialCambiosWidget } from '../../widgets/historial-cambios.widget';
 
-type Vista = 'lista' | 'carga' | 'historial';
+type Vista = 'lista' | 'carga' | 'historial' | 'correccion';
 type Filtro = 'pend' | 'rev' | 'par' | 'conf' | 'conc' | 'nc';
 type FiltroCarga = 'nuevos' | 'conc' | 'par' | 'vol' | 'rev' | 'nc' | 'ya' | 'rv';
 type Tono = 'ok' | 'am' | 'ro' | 'info' | 'neu';
@@ -58,7 +59,7 @@ interface FilaPago {
   fecha: string;
   montoAsesor: number | null;
   /** Qué se puede hacer en la fila. */
-  accion: 'resolver' | 'espera' | 'restaurar' | null;
+  accion: 'resolver' | 'cliente' | 'restaurar' | null;
   motivo: string | null;
 }
 
@@ -98,9 +99,9 @@ function tonoDe(categoria: string | null | undefined): Tono {
 @Component({
   selector: 'app-pagos-interbank',
   standalone: true,
-  imports: [NgClass, NgTemplateOutlet, FormsModule, RouterLink, LucideAngularModule, BotonDirective, TarjetaDirective, TituloTarjetaComponent, PageHeaderComponent,
-    PagoIbkResolverWidget, ClienteResumenConciliacionDrawerWidget, CorreccionClienteDialogWidget, HistorialCargasBcpWidget, HistorialCambiosWidget],
-  host: { class: 'cashi-pantalla flex min-h-0 flex-1 flex-col gap-3' },
+  imports: [NgClass, NgTemplateOutlet, FormsModule, LucideAngularModule, BotonDirective, TarjetaDirective, TituloTarjetaComponent, PageHeaderComponent,
+    PagoIbkResolverWidget, CorreccionIbkWidget, VoucherLadoWidget, FichaPagoLadoWidget, HistorialCargasBcpWidget, HistorialCambiosWidget],
+  host: { class: 'cashi-pantalla flex min-h-0 flex-1 flex-col' },
   template: `
     @if (vista() === 'lista') {
       <div class="font-cashi grid min-h-0 flex-1 grid-cols-[minmax(0,2.35fr)_minmax(20rem,1fr)] grid-rows-[minmax(0,1fr)] items-stretch gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased max-[56rem]:grid-cols-[minmax(0,1fr)]">
@@ -126,7 +127,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
               }
             </select>
             <label class="relative ml-auto block min-w-44 flex-[0_1_17rem]">
-              <lucide-angular name="search" [size]="16" class="pointer-events-none absolute top-1/2 left-2.5 flex size-4 -translate-y-1/2 text-muted-foreground [&>svg]:static!"></lucide-angular>
+              <lucide-angular name="search" [size]="16" class="pointer-events-none absolute top-1/2 left-2.5 flex size-4 -translate-y-1/2 text-muted-foreground [&>svg]:static! [&>svg]:transform-none! [&>svg]:translate-none!"></lucide-angular>
               <input [class]="BUSCADOR" placeholder="Buscar CJ, DNI o nombre" [ngModel]="busqueda()" (ngModelChange)="buscar($event)">
             </label>
             <button type="button" appBoton="secundario" appBotonAlto="chico" class="flex-none" [disabled]="!pagosDelMes().length" (click)="descargarExcel()">
@@ -149,7 +150,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
               @for (f of paginaLista(); track f.clave) {
                 <div data-fila [id]="'fila-' + f.clave" [class]="REJILLA + ' py-[.5625rem]'" [ngClass]="abierta() === f.clave ? '' : 'border-b border-border last:border-b-0'">
                   <div class="min-w-0">
-                    <button type="button" class="font-cashi block max-w-full cursor-pointer truncate border-0! bg-transparent p-0! text-left font-semibold text-foreground hover:underline" (click)="abrirResumen(f.documento)">{{ f.nombre }}</button>
+                    <span class="block truncate font-semibold">{{ f.nombre }}</span>
                     <span class="block truncate text-[.75rem] text-muted-foreground">DNI {{ f.documento }}{{ f.cuenta ? ', CJ ' + f.cuenta : '' }}</span>
                   </div>
                   <div class="flex min-w-0 flex-col items-start">
@@ -165,8 +166,8 @@ function tonoDe(categoria: string | null | undefined): Tono {
                   <div class="text-right">
                     @if (f.accion === 'resolver') {
                       <button type="button" appBoton="secundario" appBotonAlto="chico" [attr.aria-expanded]="abierta() === f.clave" (click)="alternarResolver(f)">Resolver</button>
-                    } @else if (f.accion === 'espera') {
-                      <span class="text-[.75rem] text-muted-foreground">En espera del banco</span>
+                    } @else if (f.accion === 'cliente') {
+                      <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="verCliente(f.documento)">Ver cliente</button>
                     } @else if (f.accion === 'restaurar') {
                       <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="restaurar(f)">Volver a pendientes</button>
                     }
@@ -174,7 +175,8 @@ function tonoDe(categoria: string | null | undefined): Tono {
                 </div>
                 @if (abierta() === f.clave && porResolver(); as pago) {
                   <div class="border-b border-border px-2 pb-5">
-                    <app-pago-ibk-resolver [pago]="pago" [contexto]="contexto()!" (listo)="llevarFilaALaVista()" (cerrado)="alCerrarResolver($event)"></app-pago-ibk-resolver>
+                    <app-pago-ibk-resolver [pago]="pago" [contexto]="contexto()!" [rejilla]="COLUMNAS" [voucherAbierto]="!!voucher()"
+                      (listo)="llevarFilaALaVista()" (cerrado)="alCerrarResolver($event)" (verCliente)="verCliente($event)" (verVoucher)="alternarVoucher($event)"></app-pago-ibk-resolver>
                   </div>
                 }
               } @empty {
@@ -187,6 +189,9 @@ function tonoDe(categoria: string | null | undefined): Tono {
         </section>
 
         <div class="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto">
+          @if (voucher(); as v) {
+            <app-voucher-lado [voucher]="v" [contexto]="contexto()!" (cerrado)="voucher.set(null)"></app-voucher-lado>
+          } @else {
           <section appTarjeta [class]="MONTO">
             <app-titulo-tarjeta titulo="Recibido del banco"></app-titulo-tarjeta>
             <div [class]="CIFRA">
@@ -226,12 +231,13 @@ function tonoDe(categoria: string | null | undefined): Tono {
               <lucide-angular name="upload" [size]="16"></lucide-angular>Subir nuevo archivo
             </button>
           </section>
+          }
         </div>
       </div>
 
-      <div appTarjeta class="font-cashi flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
-        <span class="mr-auto font-medium" [ngClass]="totalPendientes() ? 'text-foreground' : 'text-muted-foreground'">{{ totalPendientes() ? totalPendientes() + ' pagos pendientes' : 'Sin pagos pendientes' }}</span>
-        <a appBoton="secundario" class="flex-none px-4!" routerLink="/correccion-pagos">Corrección de pagos</a>
+      <div appTarjeta class="font-cashi mt-3 flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+        <span class="mr-auto font-medium" [ngClass]="totalPendientes() ? 'text-foreground' : 'text-muted-foreground'">{{ textoPendientes() }}</span>
+        <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="!contexto()" (click)="abrirCorreccion(null)">Corrección de pagos</button>
         <button type="button" appBoton="secundario" class="flex-none px-4!" [disabled]="reevaluando() || !contexto()" (click)="reevaluar()">
           <lucide-angular [name]="reevaluando() ? 'loader-2' : 'refresh-cw'" [size]="16" [class.animate-spin]="reevaluando()"></lucide-angular>Reevaluar pendientes
         </button>
@@ -239,6 +245,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
     }
 
     @if (vista() === 'carga') {
+      <div class="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] items-stretch gap-3" [ngClass]="ladoCarga() ? 'grid-cols-[minmax(0,2.35fr)_minmax(20rem,1fr)] max-[56rem]:grid-cols-[minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]'">
       <section appTarjeta class="font-cashi flex min-h-0 flex-1 flex-col overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
         <ng-container [ngTemplateOutlet]="cabecera"></ng-container>
 
@@ -290,7 +297,7 @@ function tonoDe(categoria: string | null | undefined): Tono {
               <span class="block text-[.75rem] text-muted-foreground">Hoja HOLISTICO_PAGOS</span>
             </div>
             <label class="relative block min-w-44 flex-[0_1_17rem]">
-              <lucide-angular name="search" [size]="16" class="pointer-events-none absolute top-1/2 left-2.5 flex size-4 -translate-y-1/2 text-muted-foreground [&>svg]:static!"></lucide-angular>
+              <lucide-angular name="search" [size]="16" class="pointer-events-none absolute top-1/2 left-2.5 flex size-4 -translate-y-1/2 text-muted-foreground [&>svg]:static! [&>svg]:transform-none! [&>svg]:translate-none!"></lucide-angular>
               <input [class]="BUSCADOR" placeholder="Buscar CJ, DNI o nombre" [ngModel]="busquedaCarga()" (ngModelChange)="buscarCarga($event)">
             </label>
             <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="cambiarArchivo()">Cambiar archivo</button>
@@ -312,18 +319,21 @@ function tonoDe(categoria: string | null | undefined): Tono {
           </div>
 
           <div #zonaCarga class="-mx-8 min-h-0 flex-1 overflow-y-auto px-8">
-            <div [class]="REJILLA_CARGA + ' border-b border-border py-2.5 text-[.75rem] font-medium text-muted-foreground'">
-              <span>Producto</span><span>Cliente</span><span>Pago del banco</span><span>Pago del asesor</span><span>Resultado</span><span></span>
+            <div [class]="rejillaCarga() + ' px-2 border-b border-border py-2.5 text-[.75rem] font-medium text-muted-foreground'">
+              @if (!ladoCarga()) { <span>Producto</span> }
+              <span>Cliente</span><span>Pago del banco</span><span>Pago del asesor</span><span>Resultado</span><span></span>
             </div>
             @for (f of paginaCarga(); track f.clave) {
-              <div data-fila [id]="'fila-' + f.clave" [class]="REJILLA_CARGA + ' py-[.5625rem]'" [ngClass]="abierta() === f.clave ? '' : 'border-b border-border last:border-b-0'">
-                <div class="min-w-0">
-                  <span class="block truncate">{{ f.cuenta || '—' }}</span>
-                  <span class="block truncate text-[.75rem] text-muted-foreground">{{ f.producto }}{{ f.moneda ? ', ' + f.moneda : '' }}</span>
-                </div>
+              <div data-fila [id]="'fila-' + f.clave" [class]="rejillaCarga() + ' px-2 py-[.5625rem]'" [ngClass]="abierta() === f.clave ? '' : 'border-b border-border last:border-b-0'">
+                @if (!ladoCarga()) {
+                  <div class="min-w-0">
+                    <span class="block truncate">{{ f.cuenta || '—' }}</span>
+                    <span class="block truncate text-[.75rem] text-muted-foreground">{{ f.producto }}{{ f.moneda ? ', ' + f.moneda : '' }}</span>
+                  </div>
+                }
                 <div class="min-w-0">
                   @if (f.documento) {
-                    <button type="button" class="font-cashi block max-w-full cursor-pointer truncate border-0! bg-transparent p-0! text-left font-semibold text-foreground hover:underline" (click)="abrirResumen(f.documento)">{{ f.nombre }}</button>
+                    <span class="block truncate font-semibold">{{ f.nombre }}</span>
                     <span class="block truncate text-[.75rem] text-muted-foreground">DNI {{ f.documento }}</span>
                   } @else {
                     <span class="block font-semibold">—</span>
@@ -348,17 +358,24 @@ function tonoDe(categoria: string | null | undefined): Tono {
                   @if (f.alerta) { <span class="mt-1 text-[.75rem] font-medium text-(--ro)">{{ f.alerta }}</span> }
                   @if (f.fila?.retenerRevision) { <span class="mt-1 text-[.75rem] text-muted-foreground">Retenido</span> }
                 </div>
-                <div class="text-right">
+                <div class="flex flex-col items-end gap-1.5">
                   @if (f.grupo === 'rev') {
                     <button type="button" appBoton="secundario" appBotonAlto="chico" [attr.aria-expanded]="abierta() === f.clave" (click)="alternarResolverCarga(f)">Resolver</button>
-                  } @else if (f.alerta) {
-                    <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="alternarRetener(f)">{{ f.fila?.retenerRevision ? 'Quitar retención' : 'Retener' }}</button>
+                  } @else {
+                    @if (f.documento && f.fila && f.grupo !== 'nc') {
+                      <button type="button" appBoton="secundario" appBotonAlto="chico" [attr.aria-expanded]="resumenDocumento() === f.documento" (click)="alternarLectura(f.documento)">Ver cliente</button>
+                    }
+                    @if (f.alerta) {
+                      <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="alternarRetener(f)">{{ f.fila?.retenerRevision ? 'Quitar retención' : 'Retener' }}</button>
+                    }
                   }
                 </div>
               </div>
               @if (abierta() === f.clave && porResolver(); as pago) {
                 <div class="border-b border-border px-2 pb-5">
-                  <app-pago-ibk-resolver [pago]="pago" [contexto]="contexto()!" (listo)="llevarFilaALaVista()" (cerrado)="alCerrarResolverCarga($event)"></app-pago-ibk-resolver>
+                  <app-pago-ibk-resolver [pago]="pago" [contexto]="contexto()!" [rejilla]="columnasCarga()" [columnas]="ladoCarga() ? ['2', '3', '4 / -1'] : ['3', '4', '5 / -1']"
+                    [voucherAbierto]="!!voucher()" [clienteAbierto]="resumenDocumento() === pago.documento"
+                    (listo)="llevarFilaALaVista()" (cerrado)="alCerrarResolverCarga($event)" (verCliente)="alternarLectura($event)" (verVoucher)="alternarVoucher($event)"></app-pago-ibk-resolver>
                 </div>
               }
             } @empty {
@@ -369,8 +386,47 @@ function tonoDe(categoria: string | null | undefined): Tono {
           <ng-container [ngTemplateOutlet]="paginacion" [ngTemplateOutletContext]="{ total: filasCargaVisibles().length, tam: tamCarga(), pagina: paginaActualCarga(), ir: irCarga }"></ng-container>
         }
       </section>
+      @if (voucher(); as v) {
+        <div class="flex min-h-0 min-w-0 flex-col">
+          <app-voucher-lado [voucher]="v" [contexto]="contexto()!" (cerrado)="voucher.set(null)"></app-voucher-lado>
+        </div>
+      } @else if (resumenDocumento(); as doc) {
+        <section appTarjeta aria-label="Resumen del cliente" class="font-cashi flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto px-4 pt-[clamp(.75rem,1.8vh,1rem)] pb-4 text-[.8125rem] leading-[1.45] text-foreground">
+          <div class="flex flex-none items-center gap-2">
+            <h2 class="m-0 mr-auto text-[.9375rem] font-bold">Resumen del cliente</h2>
+            <button type="button" appBoton="secundario" appBotonAlto="icono" aria-label="Cerrar resumen" title="Cerrar resumen" (click)="resumenDocumento.set(null)"><lucide-angular name="x" [size]="16"></lucide-angular></button>
+          </div>
+          @if (resumenCargando()) {
+            <p class="m-0 text-muted-foreground">Cargando…</p>
+          } @else if (resumenError(); as e) {
+            <p role="alert" class="m-0 font-medium text-(--ro)">{{ e }}</p>
+          } @else if (resumen(); as r) {
+            <div>
+              <span class="block font-semibold">{{ r.nombreCliente || doc }}</span>
+              <span class="block text-[.75rem] text-muted-foreground">DNI {{ doc }}</span>
+            </div>
+            <dl class="m-0 grid grid-cols-2 gap-x-3 gap-y-2">
+              <div><dt class="text-[.75rem] text-muted-foreground">Promesas</dt><dd class="m-0 font-semibold">{{ r.promesas.length }}</dd></div>
+              <div><dt class="text-[.75rem] text-muted-foreground">Intentos de cancelación</dt><dd class="m-0 font-semibold">{{ r.intentosCancelacion?.length || 0 }}</dd></div>
+            </dl>
+            <div>
+              <h3 class="m-0 mb-1 text-[.8125rem] font-semibold">Promesa y cuotas</h3>
+              @for (p of r.promesas; track p.idGestion) {
+                @for (c of p.cuotas; track c.cuotaId) {
+                  <p class="m-0 mb-1.5">Cuota {{ c.numeroCuota }}, vence {{ fechaCorta(c.fechaPromesa) }}
+                    <span class="block text-[.75rem] text-muted-foreground">{{ monto(c.montoPromesa, 'PEN') }}, pagado {{ monto(c.montoPagadoReal, 'PEN') }}, {{ c.estado.toLowerCase() }}</span>
+                  </p>
+                }
+              } @empty {
+                <p class="m-0 text-muted-foreground">Sin promesas.</p>
+              }
+            </div>
+          }
+        </section>
+      }
+      </div>
 
-      <div appTarjeta class="font-cashi flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+      <div appTarjeta class="font-cashi mt-3 flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
         @if (guardado()) {
           <span class="mr-auto font-medium text-muted-foreground">Carga guardada</span>
         } @else if (resultado()) {
@@ -388,6 +444,31 @@ function tonoDe(categoria: string | null | undefined): Tono {
             <lucide-angular [name]="procesando() ? 'loader-2' : 'upload'" [size]="16" [class.animate-spin]="procesando()"></lucide-angular>Procesar archivo
           </button>
         }
+      </div>
+    }
+
+    @if (vista() === 'correccion' && contexto()) {
+      <div class="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] items-stretch gap-3" [ngClass]="ladoCorreccion() ? 'grid-cols-[minmax(0,2.35fr)_minmax(20rem,1fr)] max-[56rem]:grid-cols-[minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]'">
+        <section appTarjeta class="font-cashi flex min-h-0 flex-col overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+          <ng-container [ngTemplateOutlet]="cabecera"></ng-container>
+          <app-correccion-ibk [contexto]="contexto()!" [documentoInicial]="clienteCorreccion()" [esAdmin]="esAdmin" [puedeCambiarMes]="puedeCambiarMes"
+            [angosto]="ladoCorreccion()" [voucherDe]="voucherCuota()" (volver)="volverDeCorreccion()" (cambio)="huboCambios = true"
+            (voucher)="alternarVoucherCuota($event)" (ficha)="fichaPago.set($event); voucher.set(null); voucherCuota.set(null)" (clienteElegido)="nombreCorreccion.set($event)"></app-correccion-ibk>
+        </section>
+        @if (voucher(); as v) {
+          <div class="flex min-h-0 min-w-0 flex-col">
+            <app-voucher-lado [voucher]="v" [contexto]="contexto()!" (cerrado)="voucher.set(null); voucherCuota.set(null)"></app-voucher-lado>
+          </div>
+        } @else if (fichaPago(); as id) {
+          <div class="flex min-h-0 min-w-0 flex-col">
+            <app-ficha-pago-lado [pagoId]="id" [contexto]="contexto()!" (cerrado)="fichaPago.set(null)"></app-ficha-pago-lado>
+          </div>
+        }
+      </div>
+
+      <div appTarjeta class="font-cashi mt-3 flex flex-none flex-wrap items-center gap-2 py-3 pr-3 pl-5 text-[.875rem] leading-[1.5] text-foreground antialiased">
+        <span class="mr-auto font-medium" [ngClass]="nombreCorreccion() ? 'text-foreground' : 'text-muted-foreground'">{{ nombreCorreccion() || 'Sin cliente' }}</span>
+        <button type="button" appBoton="secundario" class="flex-none px-4!" (click)="volverDeCorreccion()">Volver a pagos</button>
       </div>
     }
 
@@ -454,12 +535,6 @@ function tonoDe(categoria: string | null | undefined): Tono {
         }
       </nav>
     </ng-template>
-
-    <app-cliente-resumen-conciliacion-drawer
-      [open]="resumenAbierto()" [loading]="resumenCargando()" [error]="resumenError()" [documento]="resumenDocumento()" [resumen]="resumen()"
-      [tenantId]="tenantId()" [carteraId]="carteraId()" [subcarteraId]="subcarteraId()"
-      (close)="resumenAbierto.set(false)" (ajustado)="alAjustarResumen()" (corregir)="correccionCliente.set($event)"></app-cliente-resumen-conciliacion-drawer>
-    <app-correccion-cliente-dialog [solicitud]="correccionCliente()" (cerrado)="alCerrarCorreccion($event)"></app-correccion-cliente-dialog>
   `
 })
 export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
@@ -472,9 +547,12 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
     + 'placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
   readonly BUSCADOR = 'font-cashi m-0! w-full min-w-0 rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! py-2! pr-3! pl-[2.125rem]! text-[.875rem]! leading-[1.5]! text-foreground! outline-none '
     + 'placeholder:text-muted-foreground focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
-  readonly REJILLA = 'grid grid-cols-[minmax(0,1.25fr)_minmax(0,1.2fr)_minmax(0,1.1fr)_7.5rem] items-center gap-x-3 px-2';
-  readonly REJILLA_CARGA = 'grid grid-cols-[minmax(0,.85fr)_minmax(0,1.2fr)_minmax(0,.75fr)_minmax(0,.8fr)_minmax(0,1.15fr)_6.5rem] items-center gap-x-3 px-2';
-  readonly PILL = 'inline-flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-2 text-[.75rem] leading-[1.3] font-semibold whitespace-nowrap before:size-[.4375rem] before:flex-none before:rounded-full before:bg-current';
+  /** Columnas de la lista; el panel de Resolver usa las mismas para que sus datos caigan debajo. */
+  readonly COLUMNAS = 'grid grid-cols-[minmax(0,1.25fr)_minmax(0,1.2fr)_minmax(0,1.1fr)_7.5rem] items-center gap-x-3';
+  readonly REJILLA = this.COLUMNAS + ' px-2';
+  readonly COLUMNAS_CARGA = 'grid grid-cols-[minmax(0,.85fr)_minmax(0,1.2fr)_minmax(0,.75fr)_minmax(0,.8fr)_minmax(0,1.15fr)_6.5rem] items-center gap-x-3';
+  readonly COLUMNAS_CARGA_LADO = 'grid grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,1.15fr)_6.5rem] items-center gap-x-3';
+  readonly PILL = PILL_IBK;
   readonly MONTO = 'flex flex-[1_0_auto] flex-col justify-between gap-2 px-5 py-[clamp(.875rem,2vh,1.25rem)] [@media(max-height:740px)]:gap-1';
   readonly CIFRA = 'flex flex-col gap-1 [@media(max-height:740px)]:flex-row [@media(max-height:740px)]:items-baseline [@media(max-height:740px)]:justify-between [@media(max-height:740px)]:gap-3';
   readonly PESTANA = 'font-cashi cursor-pointer rounded-md border-0 px-1.5 py-[.4375rem] text-[.875rem] font-medium transition-colors duration-150';
@@ -490,6 +568,10 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   private readonly fmt = inject(FormatService);
   private readonly toast = inject(ToastService);
   private readonly inyector = inject(Injector);
+
+  /** Ficha y desconciliar son de administrador. Cambiar el mes exige ADMIN o SUPERVISOR en el backend: Operaciones IBK no lo tiene. */
+  readonly esAdmin = this.auth.hasAnyRole('ADMIN');
+  readonly puedeCambiarMes = !this.auth.hasAnyRole('OPERACIONES IBK');
 
   /** Se eligió otro cliente: sus pagos se ven en la pantalla general. */
   @Output() salir = new EventEmitter<void>();
@@ -536,13 +618,24 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   abierta = signal<string | null>(null);
   porResolver = signal<PagoIbkPorResolver | null>(null);
 
-  // Resumen del cliente
-  resumenAbierto = signal(false);
+  // Columna derecha
+  voucher = signal<VoucherAbierto | null>(null);
+  voucherCuota = signal<number | null>(null);
+  fichaPago = signal<number | null>(null);
   resumenCargando = signal(false);
   resumenError = signal<string | null>(null);
   resumenDocumento = signal<string | null>(null);
   resumen = signal<ResumenConciliacionCliente | null>(null);
-  correccionCliente = signal<CorreccionClienteSolicitud | null>(null);
+
+  // Corrección
+  clienteCorreccion = signal<string | null>(null);
+  nombreCorreccion = signal<string | null>(null);
+  huboCambios = false;
+
+  ladoCarga = computed(() => !!this.voucher() || !!this.resumenDocumento());
+  ladoCorreccion = computed(() => !!this.voucher() || this.fichaPago() !== null);
+  columnasCarga = computed(() => this.ladoCarga() ? this.COLUMNAS_CARGA_LADO : this.COLUMNAS_CARGA);
+  rejillaCarga = computed(() => this.columnasCarga());
 
   // Carga
   archivo = signal<File | null>(null);
@@ -700,6 +793,11 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   alertasActivas = computed(() => {
     this.retenciones();
     return this.filasPrevalidacion().some(fila => !!fila.alerta && !fila.retenerRevision);
+  });
+
+  textoPendientes = computed(() => {
+    const total = this.totalPendientes();
+    return !total ? 'Sin pagos pendientes' : total === 1 ? '1 pago pendiente' : `${total} pagos pendientes`;
   });
 
   paso = computed(() => this.guardado() ? 2 : this.resultado() ? 1 : 0);
@@ -889,26 +987,49 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
     if (huboCambios) this.procesar();
   }
 
-  abrirResumen(documento: string): void {
+  /** Abre al cliente sin salir de la pantalla: la URL no cambia. */
+  verCliente(documento: string): void {
+    this.abrirCorreccion(documento);
+  }
+
+  abrirCorreccion(documento: string | null): void {
+    this.cerrarResolver();
+    this.limpiarLado();
+    this.clienteCorreccion.set(documento);
+    this.nombreCorreccion.set(null);
+    this.huboCambios = false;
+    this.vista.set('correccion');
+  }
+
+  volverDeCorreccion(): void {
+    this.limpiarLado();
+    this.clienteCorreccion.set(null);
+    this.vista.set('lista');
+    if (this.huboCambios) this.cargar();
+  }
+
+  /** Resumen de solo lectura en la revisión de la carga: el pago aún no está guardado. */
+  alternarLectura(documento: string): void {
     const contexto = this.contexto();
     if (!documento || !contexto) return;
-    this.resumenAbierto.set(true);
+    this.voucher.set(null);
+    if (this.resumenDocumento() === documento) return this.resumenDocumento.set(null);
     this.resumenDocumento.set(documento);
     this.resumen.set(null);
     this.resumenError.set(null);
     this.cargarResumen(documento, contexto);
   }
 
-  alAjustarResumen(): void {
-    const documento = this.resumenDocumento();
-    const contexto = this.contexto();
-    if (documento && contexto) this.cargarResumen(documento, contexto);
-    this.cargar();
+  alternarVoucher(datos: VoucherAbierto): void {
+    this.resumenDocumento.set(null);
+    this.voucher.update(actual => actual ? null : datos);
   }
 
-  alCerrarCorreccion(evento: { documento: string; huboCambios: boolean }): void {
-    this.correccionCliente.set(null);
-    if (evento.huboCambios) this.alAjustarResumen();
+  alternarVoucherCuota(evento: { cuotaId: number; datos: VoucherAbierto }): void {
+    const cerrar = this.voucherCuota() === evento.cuotaId;
+    this.fichaPago.set(null);
+    this.voucherCuota.set(cerrar ? null : evento.cuotaId);
+    this.voucher.set(cerrar ? null : evento.datos);
   }
 
   async descargarExcel(): Promise<void> {
@@ -1109,6 +1230,14 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   private cerrarResolver(): void {
     this.abierta.set(null);
     this.porResolver.set(null);
+    this.voucher.set(null);
+  }
+
+  private limpiarLado(): void {
+    this.voucher.set(null);
+    this.voucherCuota.set(null);
+    this.fichaPago.set(null);
+    this.resumenDocumento.set(null);
   }
 
   private tomarArchivo(archivo: File | undefined): void {
@@ -1122,6 +1251,7 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   private reiniciarCarga(): void {
+    this.limpiarLado();
     this.archivo.set(null);
     this.resultado.set(null);
     this.guardado.set(null);
@@ -1194,21 +1324,21 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
       estado: infoCategoria(p.categoria).label, tono: tonoDe(p.categoria),
       detalle: parcial ? `Falta ${this.monto(p.montoFaltante, p.moneda)}` : sugerida ? 'Ya puede conciliarse' : this.motivoDe(p.motivo),
       monto: Number(p.montoBanco), fecha: aFechaIso(p.fechaBanco), montoAsesor: p.montoPagoAsesor ?? null,
-      accion: parcial ? 'espera' : 'resolver', motivo: p.motivo
+      accion: parcial ? 'cliente' : 'resolver', motivo: p.motivo
     };
   }
 
   private filaNoConfirmada(p: PagoNoConfirmadoBanco): FilaPago {
     return {
       clave: `a${p.pagoCuotaId}`, id: null, documento: p.documento, nombre: p.nombreCliente || p.documento, cuenta: p.cuenta, producto: p.producto, moneda: p.moneda,
-      estado: 'No confirmado', tono: 'am', detalle: `${p.diasHabiles ?? 0} días hábiles`, monto: null, fecha: aFechaIso(p.fechaPago), montoAsesor: Number(p.monto), accion: null, motivo: null
+      estado: 'No confirmado', tono: 'am', detalle: `${p.diasHabiles ?? 0} días hábiles`, monto: null, fecha: aFechaIso(p.fechaPago), montoAsesor: Number(p.monto), accion: 'cliente', motivo: null
     };
   }
 
   private filaConciliada(p: DetallePagoBancario): FilaPago {
     return {
       clave: `c${p.id}`, id: p.id, documento: p.documento || '', nombre: p.nombreCliente || p.documento || '', cuenta: p.cuenta ?? null, producto: p.producto ?? null, moneda: p.moneda ?? null,
-      estado: infoCategoria(p.categoria).label, tono: tonoDe(p.categoria), detalle: '', monto: Number(p.montoBanco), fecha: aFechaIso(p.fechaBanco), montoAsesor: null, accion: null, motivo: null
+      estado: infoCategoria(p.categoria).label, tono: tonoDe(p.categoria), detalle: '', monto: Number(p.montoBanco), fecha: aFechaIso(p.fechaBanco), montoAsesor: null, accion: 'cliente', motivo: null
     };
   }
 
@@ -1217,7 +1347,7 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
     return {
       clave: `n${p.id}`, id: p.id, documento: p.documento, nombre: p.nombreCliente || p.documento, cuenta: p.cuenta ?? null, producto: p.producto ?? null, moneda: p.moneda ?? null,
       estado: 'No corresponde', tono: 'neu', detalle: this.motivoDe(p.motivo), monto: Number(p.montoBanco), fecha: aFechaIso(p.fechaBanco), montoAsesor: null,
-      accion: delSistema ? null : 'restaurar', motivo: p.motivo
+      accion: delSistema ? 'cliente' : 'restaurar', motivo: p.motivo
     };
   }
 
