@@ -16,7 +16,7 @@ import { LucideAngularModule } from 'lucide-angular';
     <button type="button" [disabled]="bloqueado || actual || enCurso" (click)="elegir.emit()" [style.--tono]="tono" [style.--tinta]="tinta || tono"
             class="font-cashi relative flex min-h-[4.25rem] min-w-0 items-center gap-2.5 overflow-hidden rounded-xl border! bg-transparent px-[.75rem] py-[.5rem] text-left text-foreground transition-[border-color,background-color,box-shadow,opacity] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed"
             [class]="actual
-              ? 'border-[color:var(--tono)]! bg-[color-mix(in_oklab,var(--tono)_8%,transparent)] shadow-[0_1px_2px_rgb(0_0_0/.05)]'
+              ? 'border-[color:var(--tono)]! bg-[color-mix(in_oklab,var(--tono)_8%,transparent)]! shadow-[0_1px_2px_rgb(0_0_0/.05)]'
               : bloqueado
                 ? 'border-border! opacity-40'
                 : enCurso
