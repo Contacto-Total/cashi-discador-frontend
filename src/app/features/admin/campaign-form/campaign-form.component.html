@@ -280,8 +280,7 @@
 
     </div>
 
-    <fieldset class="readonly-configuration readonly-configuration--details" *ngIf="!isEditMode || showReadOnlyConfiguration" [disabled]="isEditMode">
-    <!-- SECCIÓN: Grupo de asesores -->
+    <!-- SECCIÓN: Grupo de asesores (editable también en edición) -->
     <div class="form-section full-width !rounded-lg !p-3" *ngIf="selectedSubPortfolioId > 0">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
@@ -329,6 +328,7 @@
       </div>
     </div>
 
+    <fieldset class="readonly-configuration readonly-configuration--details" *ngIf="!isEditMode || showReadOnlyConfiguration" [disabled]="isEditMode">
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section !rounded-lg !p-3">
       <h2>

@@ -1261,7 +1261,11 @@ export class CampaignFormComponent implements OnInit {
     this.error = null;
 
     if (this.isEditMode && this.campaignId) {
-      // En modo edición, actualizar directamente
+      // En modo edición, actualizar directamente. El grupo dirigido sí se puede cambiar;
+      // si los grupos no llegaron a cargar se conserva el que ya tenía la campaña.
+      if (this.grupos.length > 0) {
+        this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
+      }
       this.loading = true;
       this.campaignService.updateCampaign(this.campaignId, this.campaign).subscribe({
         next: () => {
@@ -1270,7 +1274,7 @@ export class CampaignFormComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error updating campaign:', err);
-          this.error = 'Error al actualizar la campaña';
+          this.error = err?.error?.message || 'Error al actualizar la campaña';
           this.loading = false;
         }
       });
