@@ -212,11 +212,13 @@ export class CustomerService {
     });
   }
 
-  searchCustomersAcrossAllTenants(searchBy: string, value: string): Observable<CustomerResource[]> {
+  /** soloAsignados deja fuera a los clientes INACTIVE; la Consulta de Cliente no lo usa porque muestra el histórico. */
+  searchCustomersAcrossAllTenants(searchBy: string, value: string, soloAsignados = false): Observable<CustomerResource[]> {
     return this.http.get<CustomerResource[]>(`${this.apiUrl}/search-all-tenants`, {
       params: {
         searchBy: searchBy,
-        value: value
+        value: value,
+        ...(soloAsignados ? { soloAsignados: 'true' } : {})
       }
     });
   }
