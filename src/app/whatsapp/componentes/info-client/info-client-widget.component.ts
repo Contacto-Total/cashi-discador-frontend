@@ -38,6 +38,7 @@ interface OfferDisplay {
   porcentajeAutoAprobacion?: number;
   porcentajeAutoAprobacionAumento?: number;
   porcentajeMaximoPromesa?: number;
+  topeSobrepagoSoles?: number | null;
 }
 
 interface InstallmentEditor {
@@ -897,7 +898,8 @@ export class InfoClientWidgetComponent {
             maxCuotas: option.maxCuotas,
             porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
             porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
-            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa,
+            topeSobrepagoSoles: option.topeSobrepagoSoles
           }] : [];
         })
       : allOffers;
@@ -1043,7 +1045,9 @@ export class InfoClientWidgetComponent {
       generaCartaAcuerdo: offer.generaCartaAcuerdo ?? !isException,
       porcentajeAutoAprobacion: offer.porcentajeAutoAprobacion,
       porcentajeAutoAprobacionAumento: offer.porcentajeAutoAprobacionAumento,
-      porcentajeMaximoPromesa: offer.porcentajeMaximoPromesa
+      porcentajeMaximoPromesa: offer.porcentajeMaximoPromesa,
+      // El sobrepago máximo es el de la tarjeta base (también en Excepción con campo base)
+      topeSobrepagoSoles: baseOffer?.topeSobrepagoSoles
     });
   }
 
@@ -1187,6 +1191,7 @@ export class InfoClientWidgetComponent {
       porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
       porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
       porcentajeMaximoPromesa: config.porcentajeMaximoPromesa,
+      topeSobrepagoSoles: config.topeSobrepagoSoles,
       observaciones: this.selectedOffer()?.field === 'personalizado'
         ? 'Excepción generada desde WhatsApp; su evaluación depende del monto base y los límites configurados.'
         : 'Promesa generada desde WhatsApp.',

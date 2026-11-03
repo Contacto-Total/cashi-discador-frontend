@@ -2449,7 +2449,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             maxCuotas: option.maxCuotas || 6,
             porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
             porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
-            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa,
+            topeSobrepagoSoles: option.topeSobrepagoSoles
           });
         }
       }
@@ -7206,7 +7207,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // También a nivel raíz para que el backend lo procese
         porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
         porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
-        porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa
+        porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
+        topeSobrepagoSoles: paymentScheduleData.topeSobrepagoSoles
       };
 
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);

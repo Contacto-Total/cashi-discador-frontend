@@ -213,6 +213,7 @@ export interface CampoOpcionDTO {
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
   porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+  topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
 }
 
@@ -233,6 +234,7 @@ export interface OpcionToggleDTO {
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
   porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+  topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
 }
 
@@ -272,6 +274,7 @@ export interface PaymentScheduleConfig {
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
   porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+  topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
 }
 
@@ -289,5 +292,6 @@ export interface PaymentScheduleRequest {
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
   porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+  topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
 }
