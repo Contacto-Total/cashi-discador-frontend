@@ -151,14 +151,23 @@
   <section class="sp-tarjeta" *ngIf="selectedSubcartera && tab === 'horarios'">
     <h2>Horarios de esta subcartera</h2>
     <p class="sp-ayuda">
-      Fuera de estas ventanas el asesor no ve el botón de seguimiento. Se guardan por
-      subcartera, así que valen para todos los períodos y no hay que rehacerlos cada mes.
+      Fuera de estas ventanas el asesor no ve la tarjeta de seguimiento, y sin ningún
+      horario activo no la ve en ningún momento. Se guardan por subcartera, así que valen
+      para todos los períodos y no hay que rehacerlos cada mes.
     </p>
 
     <p class="sp-vacio" *ngIf="horarios.length === 0">
-      Sin horarios configurados: el seguimiento se puede trabajar a cualquier hora.
-      Los sugeridos son 8-9am, 2-3pm y 5-6pm.
+      Sin horarios: el asesor no ve la tarjeta de seguimiento. Los sugeridos son
+      8-9am, 2-3pm y 5-6pm.
     </p>
+
+    <div class="sp-alerta sp-alerta-error" *ngIf="sinHorarioActivo">
+      <lucide-angular name="alert-triangle" [size]="18"></lucide-angular>
+      <span>
+        Los horarios están todos inactivos: los asesores de esta subcartera no ven el
+        seguimiento a ninguna hora. Activa al menos uno.
+      </span>
+    </div>
 
     <table class="sp-tabla" *ngIf="horarios.length > 0">
       <thead>
@@ -263,6 +272,79 @@
         </tr>
       </tbody>
     </table>
+
+    <!-- Baja manual (Word 4.8). Vive aquí porque se decide mirando el avance del día. -->
+    <div class="sp-padron">
+      <div class="sp-padron-cabecera">
+        <h3>Baja manual del padrón</h3>
+        <button type="button" class="sp-btn sp-btn-chico" (click)="alternarPadron()">
+          <lucide-angular [name]="mostrarPadron ? 'chevron-up' : 'chevron-down'" [size]="14"></lucide-angular>
+          {{ mostrarPadron ? 'Ocultar' : 'Buscar clientes' }}
+        </button>
+      </div>
+
+      <ng-container *ngIf="mostrarPadron">
+        <p class="sp-ayuda">
+          Sacar a un cliente lo retira del padrón por el resto del mes y descarta lo que
+          tenga pendiente en la lista de hoy. Lo que ya está en llamada o trabajado no se
+          toca, y la baja no se puede deshacer desde la pantalla.
+        </p>
+
+        <div class="sp-padron-busca">
+          <input type="text" [(ngModel)]="buscaPadron" [ngModelOptions]="{standalone: true}"
+                 placeholder="Documento o nombre…" (keyup.enter)="cargarPadron()">
+          <button type="button" class="sp-btn sp-btn-chico" [disabled]="cargandoPadron"
+                  (click)="cargarPadron()">
+            <lucide-angular name="search" [size]="14"></lucide-angular>
+            Buscar
+          </button>
+          <button type="button" class="sp-btn sp-btn-chico sp-btn-peligro"
+                  [disabled]="saving || documentosElegidos.length === 0" (click)="darDeBaja()">
+            <lucide-angular name="user-minus" [size]="14"></lucide-angular>
+            Dar de baja ({{ documentosElegidos.length }})
+          </button>
+        </div>
+
+        <p class="sp-vacio" *ngIf="cargandoPadron">Cargando…</p>
+        <p class="sp-vacio" *ngIf="!cargandoPadron && padron.length === 0">
+          Sin resultados. Sin texto se listan los primeros 100 clientes activos del padrón.
+        </p>
+
+        <table class="sp-tabla" *ngIf="!cargandoPadron && padron.length > 0">
+          <thead>
+            <tr>
+              <th class="sp-acciones-col"></th>
+              <th>Documento</th>
+              <th>Cliente</th>
+              <th>Entró como</th>
+              <th>Estado</th>
+              <th>Motivo de la baja</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of padron" [class.sp-fila-inactiva]="c.estado !== 'ACTIVO'">
+              <td>
+                <input type="checkbox" [disabled]="c.estado !== 'ACTIVO'"
+                       [(ngModel)]="elegidos[c.documentoCliente]"
+                       [ngModelOptions]="{standalone: true}">
+              </td>
+              <td>{{ c.documentoCliente }}</td>
+              <td>{{ c.nombreCliente || '(sin nombre)' }}</td>
+              <td class="sp-tenue">{{ c.estadoSegmento || '-' }}</td>
+              <td>
+                <span [class]="c.estado === 'ACTIVO' ? 'chip chip-activo' : 'chip chip-cerrado'">
+                  {{ c.estado }}
+                </span>
+              </td>
+              <td class="sp-tenue">
+                {{ c.motivoExclusion ? etiquetaMotivo(c.motivoExclusion) : '-' }}
+                <span *ngIf="c.excluidoPor"> · {{ c.excluidoPor }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </ng-container>
+    </div>
   </section>
 
   <!-- Modal -->
@@ -336,7 +418,8 @@
             <input type="number" [(ngModel)]="form.diasVigentesAdelante" min="0">
           </label>
           <p class="sp-ayuda">
-            Si un cliente tiene vencida y vigente a la vez, se le llama por la vencida.
+            Cada cliente genera un solo registro por día: entre sus promesas se elige la
+            de fecha más cercana a hoy.
           </p>
         </fieldset>
 

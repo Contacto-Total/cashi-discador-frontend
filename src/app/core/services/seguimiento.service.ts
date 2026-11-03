@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   CoberturaSeguimiento,
   MiListaSeguimiento,
+  PadronCliente,
   SeguimientoPeriodo
 } from '../models/seguimiento.model';
 
@@ -77,6 +78,21 @@ export class SeguimientoService {
   cobertura(id: number, fecha?: string): Observable<CoberturaSeguimiento> {
     const params = fecha ? `?fecha=${fecha}` : '';
     return this.http.get<CoberturaSeguimiento>(`${this.baseUrl}/periodos/${id}/cobertura${params}`);
+  }
+
+  /**
+   * El padron del periodo. Sin texto trae los ACTIVOS; con texto busca por
+   * documento o nombre e incluye a los que ya estan de baja, para que el
+   * supervisor vea el motivo en vez de pensar que la baja no se aplico.
+   */
+  padron(id: number, q?: string, limite = 100): Observable<PadronCliente[]> {
+    const params = new URLSearchParams();
+    const texto = (q || '').trim();
+    if (texto) params.set('q', texto);
+    params.set('limite', String(limite));
+    return this.http.get<PadronCliente[]>(
+      `${this.baseUrl}/periodos/${id}/padron?${params.toString()}`
+    );
   }
 
   bajaManual(id: number, documentos: string[]): Observable<any> {

@@ -53,6 +53,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   // Seguimiento/Recordatorios
   recordatoriosPendientes: number = 0;
   recordatoriosHabilitado: boolean = false;
+  /**
+   * La subcartera tiene al menos un horario activo. Sin horarios la tarjeta de
+   * seguimiento no se muestra: la ventana de atencion se abre poniendo horarios,
+   * no quitandolos.
+   */
+  recordatoriosConHorario: boolean = false;
 
   private statusSubscription?: Subscription;
   private currentStatusSubscription?: Subscription;
@@ -319,6 +325,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     if (!this.userId || !this.subPortfolioId) {
       this.recordatoriosPendientes = 0;
       this.recordatoriosHabilitado = false;
+      this.recordatoriosConHorario = false;
       return;
     }
 
@@ -329,19 +336,24 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       if (!lista) {
         this.recordatoriosPendientes = 0;
         this.recordatoriosHabilitado = false;
+        this.recordatoriosConHorario = false;
         return;
       }
 
       this.recordatoriosPendientes = lista.pendientes;
 
       // El horario sigue mandando: la ventana la define la subcartera y el
-      // período no la reemplaza.
+      // período no la reemplaza. Dos cosas distintas, y la tarjeta las muestra
+      // distinto: sin horarios configurados no aparece, y con horarios fuera de
+      // hora aparece apagada con el motivo.
       this.recordatoriosService.verificarHorario(idSubcartera).subscribe({
         next: horario => {
+          this.recordatoriosConHorario = horario.tieneConfiguracion;
           this.recordatoriosHabilitado = horario.permitido && lista.pendientes > 0;
         },
         error: () => {
           // Si no se puede verificar, no se bloquea al asesor por eso.
+          this.recordatoriosConHorario = true;
           this.recordatoriosHabilitado = lista.pendientes > 0;
         }
       });

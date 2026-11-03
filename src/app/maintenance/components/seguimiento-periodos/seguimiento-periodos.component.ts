@@ -9,6 +9,7 @@ import {
   ESTADOS_SEGMENTO,
   EstadoSegmento,
   MOTIVOS_EXCLUSION,
+  PadronCliente,
   SeguimientoPeriodo
 } from '../../../core/models/seguimiento.model';
 import { CampaignAdminService, GrupoAsesor } from '../../../core/services/campaign-admin.service';
@@ -34,7 +35,12 @@ import { Portfolio, SubPortfolio } from '../../models/portfolio.model';
  *
  *  - HORARIOS: las ventanas en las que el asesor puede trabajar el seguimiento.
  *    Se guardan por SUBCARTERA, no por período, para no obligar al supervisor a
- *    volver a escribir Mañana/Tarde 1/Tarde 2 cada mes.
+ *    volver a escribir Mañana/Tarde 1/Tarde 2 cada mes. Sin ningún horario
+ *    activo el asesor no ve la tarjeta: la ventana se abre poniendo horarios.
+ *
+ * La baja manual del padrón vive dentro de Cobertura, no en una pestaña aparte:
+ * se saca a un cliente mirando el avance del día, que es cuando se nota que
+ * alguien no debería estar en la lista.
  *
  * Reemplaza a horarios-recordatorios, que además editaba las reglas de promesas
  * en configuracion_recordatorio_subcartera; esas reglas ahora viven en el
@@ -84,6 +90,15 @@ export class SeguimientoPeriodosComponent implements OnInit {
   showModalHorario = false;
   editModeHorario = false;
   horarioForm: ConfiguracionHorarioRecordatorio = this.horarioVacio();
+
+  // ==================== BAJA MANUAL DEL PADRON ====================
+
+  padron: PadronCliente[] = [];
+  buscaPadron = '';
+  cargandoPadron = false;
+  mostrarPadron = false;
+  /** documento -> marcado. Se limpia en cada búsqueda y después de cada baja. */
+  elegidos: Record<string, boolean> = {};
 
   constructor(
     private seguimientoService: SeguimientoService,
@@ -135,6 +150,7 @@ export class SeguimientoPeriodosComponent implements OnInit {
   onSubcarteraChange(): void {
     this.cobertura = null;
     this.periodoCobertura = null;
+    this.cerrarPadron();
     if (!this.selectedSubcartera) {
       this.periodos = [];
       this.horarios = [];
@@ -179,7 +195,11 @@ export class SeguimientoPeriodosComponent implements OnInit {
 
   editar(p: SeguimientoPeriodo): void {
     if (p.estado !== 'BORRADOR') {
-      this.error = 'Solo se puede editar un período en BORRADOR. Ciérralo y crea uno nuevo.';
+      // "Crea uno nuevo" no servía: solo cabe un período por subcartera y mes,
+      // así que el mes ya está ocupado por este. Rehacerlo es por base de datos.
+      this.error = 'Solo se puede editar un período en BORRADOR. Un período ya activado o cerrado '
+                 + 'no se reconfigura, y no se puede crear otro para el mismo mes: para rehacerlo '
+                 + 'hay que eliminarlo por base de datos.';
       return;
     }
     this.form = { ...p };
@@ -291,10 +311,94 @@ export class SeguimientoPeriodosComponent implements OnInit {
 
   verCobertura(p: SeguimientoPeriodo): void {
     if (!p.id) return;
+    if (this.periodoCobertura !== p.id) {
+      // Otro período: el padrón que estaba a la vista es de otro mes.
+      this.cerrarPadron();
+    }
     this.periodoCobertura = p.id;
     this.seguimientoService.cobertura(p.id).subscribe({
       next: c => this.cobertura = c,
       error: () => this.error = 'No se pudo cargar la cobertura'
+    });
+  }
+
+  // ==================== BAJA MANUAL DEL PADRON ====================
+
+  alternarPadron(): void {
+    this.mostrarPadron = !this.mostrarPadron;
+    if (this.mostrarPadron) {
+      this.cargarPadron();
+    }
+  }
+
+  private cerrarPadron(): void {
+    this.mostrarPadron = false;
+    this.padron = [];
+    this.buscaPadron = '';
+    this.elegidos = {};
+  }
+
+  /**
+   * Sin texto trae los primeros activos; con texto busca por documento o nombre
+   * e incluye a los que ya salieron, con su motivo.
+   */
+  cargarPadron(): void {
+    if (!this.periodoCobertura) return;
+    this.cargandoPadron = true;
+    this.elegidos = {};
+    this.seguimientoService.padron(this.periodoCobertura, this.buscaPadron).subscribe({
+      next: filas => {
+        this.padron = filas;
+        this.cargandoPadron = false;
+      },
+      error: () => {
+        this.error = 'No se pudo cargar el padrón';
+        this.cargandoPadron = false;
+      }
+    });
+  }
+
+  get documentosElegidos(): string[] {
+    return Object.keys(this.elegidos).filter(d => this.elegidos[d]);
+  }
+
+  /**
+   * La baja no se puede deshacer desde la pantalla: altasDiarias no reabre a
+   * quien ya salió del padrón. Por eso se pregunta antes.
+   */
+  darDeBaja(): void {
+    const documentos = this.documentosElegidos;
+    if (!this.periodoCobertura || documentos.length === 0) return;
+    if (!confirm(
+      `¿Sacar ${documentos.length} cliente(s) del padrón? Se descarta lo que tengan ` +
+      `pendiente en la lista de hoy y no vuelven a entrar este mes.`)) {
+      return;
+    }
+
+    this.saving = true;
+    this.seguimientoService.bajaManual(this.periodoCobertura, documentos).subscribe({
+      next: r => {
+        this.saving = false;
+        const n = r?.excluidos ?? 0;
+        this.aviso = n > 0
+          ? `${n} cliente(s) dados de baja del padrón.`
+          : (r?.mensaje || 'Ninguno de esos clientes estaba activo en el padrón.');
+        this.cargarPadron();
+        this.verCoberturaDeNuevo();
+      },
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.mensaje || 'No se pudo dar de baja';
+      }
+    });
+  }
+
+  /** Refresca los indicadores después de una baja, sin cerrar el padrón. */
+  private verCoberturaDeNuevo(): void {
+    if (!this.periodoCobertura) return;
+    this.seguimientoService.cobertura(this.periodoCobertura).subscribe({
+      next: c => this.cobertura = c,
+      error: () => {}
     });
   }
 
@@ -465,6 +569,11 @@ export class SeguimientoPeriodosComponent implements OnInit {
     if (!idGrupo) return 'Todos los asesores de la subcartera';
     const g = this.grupos.find(x => x.id === idGrupo);
     return g ? g.nombre : `Grupo ${idGrupo}`;
+  }
+
+  /** Todos los horarios apagados: la subcartera queda sin ventana de atención. */
+  get sinHorarioActivo(): boolean {
+    return this.horarios.length > 0 && !this.horarios.some(h => h.activo);
   }
 
   /** El trabajado del día: completadas sobre asignadas. */

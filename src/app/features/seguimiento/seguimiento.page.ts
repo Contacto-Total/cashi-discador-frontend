@@ -371,6 +371,15 @@ export class SeguimientoPage implements OnInit, OnDestroy {
         if (!this.authService.isAuthenticated() || err.status === 401 || err.status === 403) {
           return;
         }
+        // El asesor ya tiene un cliente en curso (otra pestaña, o volvió sin
+        // cerrar). El backend devuelve el estado en el 400: se sigue con ese
+        // cliente en vez de devolverlo al tablero, que era quedarse sin trabajar
+        // su lista por algo que no es un error.
+        if (err.status === 400 && err.error?.estado) {
+          console.warn('[Seguimiento] Sesión ya en curso, se retoma:', err.error?.mensaje);
+          this.aplicarEstadoDialer(err.error.estado);
+          return;
+        }
         console.error('[Seguimiento] Error iniciando dialer:', err.status);
         this.router.navigate(['/agent-dashboard']);
       }

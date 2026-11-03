@@ -274,9 +274,14 @@ export const routes: Routes = [
     canDeactivate: [gestionPendienteGuard]
   },
   {
+    // No es una opcion del menu: se entra desde la tarjeta del Panel del asesor.
+    // Sin declarar de quien depende, menuAccesoGuard no encuentra la direccion
+    // en menu_item y la deja pasar a cualquiera con sesion. Se decide por el
+    // Panel del asesor, que es la pantalla del menu desde la que se llega.
     path: 'seguimiento',
     loadComponent: () => import('./features/seguimiento/seguimiento.page').then(m => m.SeguimientoPage),
-    canActivate: [authGuard, menuAccesoGuard]
+    canActivate: [authGuard, menuAccesoGuard],
+    data: { acceso: '/agent-dashboard' }
   },
 
   // ========================================

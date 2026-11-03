@@ -475,6 +475,44 @@ legend {
 :host-context(.dark) .sp-tab:hover { color: #f1f5f9; }
 :host-context(.dark) .sp-tab-activo { color: #4ade80; border-bottom-color: #4ade80; }
 
+/* ---------- Baja manual del padron ---------- */
+.sp-padron {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.sp-padron-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sp-padron-cabecera h3 { margin: 0; }
+
+.sp-padron-busca {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.sp-padron-busca input {
+  flex: 1 1 14rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--input-bg, #fff);
+  color: inherit;
+}
+
+:host-context(.dark) .sp-padron { border-top-color: #334155; }
+:host-context(.dark) .sp-padron-busca input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+
 /* ---------- Pantalla chica ---------- */
 @media (max-width: 760px) {
   .sp-contenedor { padding: 1rem; }

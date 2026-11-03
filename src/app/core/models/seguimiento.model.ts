@@ -111,6 +111,26 @@ export interface MiListaSeguimiento {
   items: SeguimientoListaItem[];
 }
 
+/**
+ * Una fila del padron, como la devuelve /periodos/{id}/padron. Es lo que se ve
+ * en la pantalla de baja manual: el cliente del segmento, su estado y, si salio,
+ * por que motivo.
+ */
+export interface PadronCliente {
+  id: number;
+  idPeriodo: number;
+  documentoCliente: string;
+  idCliente?: number | null;
+  nombreCliente?: string | null;
+  estadoSegmento?: string | null;
+  estado: 'ACTIVO' | 'EXCLUIDO';
+  motivoExclusion?: string | null;
+  excluidoEn?: string | null;
+  excluidoPor?: string | null;
+  fechaAlta?: string;
+  origenAlta?: string;
+}
+
 export interface CoberturaAsesor {
   idAsesor: number;
   asesor: string;
