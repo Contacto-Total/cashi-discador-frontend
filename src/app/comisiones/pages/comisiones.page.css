@@ -667,6 +667,8 @@
 .cmx.cmx-root .cmx-borig input { accent-color: var(--cmx-blue); }
 .cmx-bsw { display: inline-flex; align-items: center; gap: 8px; font-size: .8rem; cursor: pointer; margin-top: 8px; }
 .cmx.cmx-root .cmx-bsw input { width: 16px; height: 16px; accent-color: var(--cmx-blue); }
+.cmx-bsw-meta { display: flex; align-items: flex-start; }
+.cmx-bsw-meta > span > span { display: block; font-size: .74rem; color: var(--cmx-ink-3); }
 .cmx-brow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: .8rem; color: var(--cmx-ink-2); padding: 6px 0; border-bottom: 1px dashed var(--cmx-line); }
 .cmx-brow:last-of-type { border-bottom: 0; }
 .cmx-brow .cmx-money { max-width: 170px; }

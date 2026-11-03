@@ -283,7 +283,7 @@ export const PRESETS_BONO: { clave: PresetBono; etiqueta: string }[] = [
 /** Bono nuevo con los niveles de las tablas de setiembre 2026 (el sobrecumplimiento se llena a mano) */
 export function bonoDePreset(clave: PresetBono): BonoPeriodo {
   const nivel = (desde: number, monto: number) => ({ desde, monto, montoSegundo: null });
-  const base = { id: null, activo: true, origenes: [] as string[], baseTotal: false, porPuesto: false, excluidos: [] as number[] };
+  const base = { id: null, activo: true, origenes: [] as string[], baseTotal: false, porPuesto: false, requiereMetaSubcartera: false, excluidos: [] as number[] };
   switch (clave) {
     case 'LTD_A':
       return { ...base, tipo: 'LTD', aplica: 'ASESOR', origenes: [...ORIGENES_LTD], niveles: [nivel(10, 15), nivel(26, 20), nivel(46, 25)] };

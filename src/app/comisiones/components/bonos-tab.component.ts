@@ -108,13 +108,20 @@ import { CmxIconComponent } from './cmx-icon.component';
                       <label class="cmx-opt" [for]="'cmx-bb-t-' + i">
                         <input type="radio" [name]="'cmx-bbase-' + i" [id]="'cmx-bb-t-' + i" [checked]="b.baseTotal" [disabled]="soloLectura()"
                                (change)="cambiar(i, { baseTotal: true })" />
-                        <span><b>El total de la subcartera</b><span>Todos cobran si la subcartera pasa el monto.</span></span>
+                        <span><b>El total de la subcartera</b><span>Los niveles se comparan con el total del equipo.</span></span>
                       </label>
                     </div>
                     <label class="cmx-bsw" [for]="'cmx-bpu-' + i">
                       <input type="checkbox" [id]="'cmx-bpu-' + i" [checked]="b.porPuesto" [disabled]="soloLectura()" (change)="cambiar(i, { porPuesto: !b.porPuesto })" />
                       Paga por puesto: solo el 1° y el 2° (por mayor {{ metrica() }})
                     </label>
+                    @if (!b.baseTotal) {
+                      <label class="cmx-bsw cmx-bsw-meta" [for]="'cmx-bms-' + i">
+                        <input type="checkbox" [id]="'cmx-bms-' + i" [checked]="b.requiereMetaSubcartera" [disabled]="soloLectura()"
+                               (change)="cambiar(i, { requiereMetaSubcartera: !b.requiereMetaSubcartera })" />
+                        <span><b>Solo si la subcartera llega al 100 % de su meta del mes</b><span>Si la subcartera no llega, nadie cobra este bono aunque pase su nivel.</span></span>
+                      </label>
+                    }
                   </div>
                 }
               }
@@ -385,6 +392,7 @@ export class BonosTabComponent {
         origenes: b.tipo === 'LTD' ? [...(b.origenes ?? [])].sort() : [],
         baseTotal: sobreAsesor && !!b.baseTotal,
         porPuesto,
+        requiereMetaSubcartera: sobreAsesor && !b.baseTotal && !!b.requiereMetaSubcartera,
         excluidos: b.aplica === 'ASESOR' ? [...(b.excluidos ?? [])].sort((x, y) => x - y) : [],
         niveles: [...b.niveles]
           .sort((x, y) => (x.desde ?? 0) - (y.desde ?? 0))
