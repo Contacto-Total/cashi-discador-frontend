@@ -462,7 +462,7 @@ class Paginado<T> {
           </section>
         }
 
-        @if (noSuman().length) {
+        @if (mostrarNoSuman() && noSuman().length) {
           <section class="cmx-block cmx-enter" style="--i:3" aria-labelledby="cmx-sus-nosuman">
             <div class="cmx-block-head">
               <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman{{ p.esSupervisor && !porCapital() && !cartera() ? ' a los asesores' : '' }} ({{ noSuman().length }})</h3>
@@ -538,6 +538,8 @@ export class SustentoTabComponent {
   readonly fuentePagos = input<(idPeriodo: number) => Observable<PagoSustento[]>>();
   /** Cómo se arma lo que cobra: en Mis comisiones no se muestra */
   readonly mostrarDesglose = input(true);
+  /** Pagos que no suman: solo los ve el responsable de comisiones; en Mis comisiones no se muestran */
+  readonly mostrarNoSuman = input(true);
   /** Persona elegida: id de usuario del asesor o 'sup' */
   readonly seleccion = model<number | 'sup' | null>(null);
 
