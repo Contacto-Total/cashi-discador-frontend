@@ -190,6 +190,29 @@ interface ConfiguracionCabecera {
                           </span>
                         </div>
 
+                        <!-- Sobrepago máximo en soles: Personalizado no lo tiene porque ya es monto libre -->
+                        @if (opcion.codigoOpcion !== 'personalizado') {
+                          <div class="flex flex-col gap-1.5">
+                            <label [for]="'mf-tope-' + opcion.codigoOpcion"
+                                   class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Sobrepago máximo</label>
+                            <div class="flex items-center gap-1.5">
+                              <span class="text-[12.5px] font-semibold text-[#5f6c80] dark:text-slate-400">S/</span>
+                              <input type="number" min="0" step="1" placeholder="Sin tope"
+                                     [id]="'mf-tope-' + opcion.codigoOpcion"
+                                     [value]="opcion.topeSobrepagoSoles ?? ''"
+                                     (input)="onTopeSobrepagoChange(opcion.codigoOpcion, $event)"
+                                     [class]="ui.inputSm + ' w-[120px] tabular-nums'"/>
+                            </div>
+                            <span [class]="ui.ayuda">
+                              @if (opcion.topeSobrepagoSoles != null) {
+                                Si la promesa sube hasta S/ {{ opcion.topeSobrepagoSoles }} sobre este monto, se guarda como sobrepago. Si sube más, es monto libre y pasa a evaluación.
+                              } @else {
+                                Sin tope: si el asesor sube el monto, siempre se guarda como sobrepago.
+                              }
+                            </span>
+                          </div>
+                        }
+
                         @if (opcion.codigoOpcion === 'personalizado') {
                           <div class="flex flex-col gap-1">
                             <div class="flex items-baseline justify-between gap-2.5">
@@ -588,6 +611,17 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.opciones.set([...opciones]);
   }
 
+  // Sobrepago máximo en soles; vacío = sin tope
+  onTopeSobrepagoChange(codigoOpcion: string, event: Event) {
+    const valor = (event.target as HTMLInputElement).value.trim();
+    const tope = valor === '' ? null : Number(valor);
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (!opcion) return;
+    opcion.topeSobrepagoSoles = tope === null || isNaN(tope) || tope < 0 ? null : tope;
+    this.opciones.set([...opciones]);
+  }
+
   getOpcionesHabilitadasCount(): number {
     return this.opciones().filter(o => o.estaHabilitada).length;
   }
@@ -626,7 +660,8 @@ export class TypificationAdditionalFieldsDialogComponent {
         maxCuotas: o.maxCuotas || 6,
         porcentajeAutoAprobacion: o.porcentajeAutoAprobacion ?? 10,
         porcentajeAutoAprobacionAumento: o.porcentajeAutoAprobacionAumento ?? 5,
-        porcentajeMaximoPromesa: o.porcentajeMaximoPromesa ?? 10
+        porcentajeMaximoPromesa: o.porcentajeMaximoPromesa ?? 10,
+        topeSobrepagoSoles: o.topeSobrepagoSoles ?? null
       }))
     };
 

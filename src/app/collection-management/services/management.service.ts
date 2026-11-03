@@ -275,6 +275,7 @@ export interface PaymentScheduleRequest {
   porcentajeAutoAprobacion?: number;
   porcentajeAutoAprobacionAumento?: number;
   porcentajeMaximoPromesa?: number;
+  topeSobrepagoSoles?: number | null;  // Sobrepago máximo en soles de la tarjeta elegida (null = sin tope)
   schedule: {
     montoTotal: number;
     numeroCuotas: number;

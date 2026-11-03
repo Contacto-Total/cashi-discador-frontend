@@ -16,6 +16,7 @@ export interface AmountOption {
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo para personalizado)
   porcentajeAutoAprobacionAumento?: number;
   porcentajeMaximoPromesa?: number;
+  topeSobrepagoSoles?: number | null;  // Sobrepago máximo en soles; si la promesa lo pasa es monto libre (null = sin tope)
 }
 
 @Component({
@@ -35,32 +36,27 @@ export interface AmountOption {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           @for (option of regularAmountOptions(); track option.field) {
             @if (selectedField() === option.field && !isCustomAmount()) {
-              <!-- Tarjeta elegida: el monto se ajusta aquí mismo, sobre su campo base -->
+              <!-- Tarjeta elegida: el monto se ajusta aquí mismo con − / + o escribiéndolo -->
               <div
                 role="group"
                 [attr.aria-label]="'Monto de ' + option.label"
-                [class]="'flex flex-col items-center p-2 border-2 rounded-lg min-w-0 text-white transition-all duration-200 ' +
-                  (montoAjustado()
-                    ? 'border-purple-500 bg-purple-500 dark:bg-purple-600 shadow-lg shadow-purple-500/30'
-                    : 'border-blue-500 bg-blue-500 dark:bg-blue-600 shadow-lg shadow-blue-500/30')"
+                [class]="'flex flex-col items-center gap-1 p-2 border-2 rounded-lg min-w-0 bg-white dark:bg-slate-800 ring-4 transition-all duration-200 ' + claseTarjetaElegida()"
               >
-                <span class="text-[9px] opacity-80 leading-tight text-center truncate w-full">{{ option.label }}</span>
-                @if (montoAjustado()) {
-                  <span class="text-[9px] opacity-70 line-through mt-0.5">{{ formatCurrency(option.value) }}</span>
-                }
+                <span class="text-[9px] font-bold uppercase tracking-wide leading-tight text-center truncate w-full text-slate-500 dark:text-slate-400">{{ option.label }}</span>
                 @if (puedeAjustar(option)) {
-                  <div class="flex items-center justify-center gap-1 mt-0.5 w-full">
+                  <div class="flex items-center gap-1 w-full max-w-[180px] p-0.5 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900">
                     <button
                       type="button"
-                      class="w-6 h-6 flex-shrink-0 rounded-md flex items-center justify-center bg-white/20 hover:bg-white/35 transition-colors focus:outline-none focus:ring-2 focus:ring-white/70"
+                      class="w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       [attr.aria-label]="'Bajar 1 % sobre ' + option.label"
                       (click)="ajustarPaso(-1)"
                     >
-                      <lucide-angular name="minus" [size]="12"></lucide-angular>
+                      <lucide-angular name="minus" [size]="13"></lucide-angular>
                     </button>
+                    <span class="pl-0.5 text-[10px] text-slate-400 dark:text-slate-500">{{ simboloMoneda() }}</span>
                     <input
                       type="number"
-                      class="w-full min-w-0 max-w-[110px] px-1 py-0.5 border border-white/30 rounded text-center text-xs font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+                      class="flex-1 w-full min-w-0 p-0 border-0 bg-transparent text-center text-xs font-bold tabular-nums text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-0"
                       [(ngModel)]="montoTarjeta"
                       (ngModelChange)="onMontoTarjetaChange($event)"
                       (wheel)="$event.preventDefault()"
@@ -70,27 +66,39 @@ export interface AmountOption {
                     >
                     <button
                       type="button"
-                      class="w-6 h-6 flex-shrink-0 rounded-md flex items-center justify-center bg-white/20 hover:bg-white/35 transition-colors focus:outline-none focus:ring-2 focus:ring-white/70"
+                      class="w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       [attr.aria-label]="'Subir 1 % sobre ' + option.label"
                       (click)="ajustarPaso(1)"
                     >
-                      <lucide-angular name="plus" [size]="12"></lucide-angular>
+                      <lucide-angular name="plus" [size]="13"></lucide-angular>
                     </button>
                   </div>
+                  @if (montoAjustado()) {
+                    <span class="text-[9px] tabular-nums text-slate-400 dark:text-slate-500">Base <span class="line-through">{{ formatCurrency(option.value) }}</span></span>
+                  }
                 } @else {
-                  <span class="text-xs font-bold mt-0.5">{{ formatCurrency(option.value) }}</span>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ formatCurrency(option.value) }}</span>
                 }
-                @if (montoAjustado()) {
-                  <span class="text-[8px] font-bold mt-1 px-1.5 py-0.5 rounded-full bg-white/25 text-white">
-                    Excepción {{ ajusteInfo().signo }}{{ ajusteInfo().porcentaje }}%
-                  </span>
-                } @else if (option.restriccionFecha && option.restriccionFecha !== 'SIN_RESTRICCION') {
-                  <span class="text-[7px] mt-0.5 px-1 py-0.5 rounded-full"
-                    [class]="option.restriccionFecha === 'DENTRO_MES'
-                      ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                      : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
-                    {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Mensual' }}
-                  </span>
+                @switch (ajusteInfo().tipo) {
+                  @case ('EXCEPCION') {
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Excepción −{{ ajusteInfo().porcentaje }}%</span>
+                  }
+                  @case ('SOBREPAGO') {
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Sobrepago +{{ formatCurrency(ajusteInfo().diferencia) }}</span>
+                  }
+                  @case ('MONTO_LIBRE') {
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">Monto libre</span>
+                  }
+                  @default {
+                    @if (option.restriccionFecha && option.restriccionFecha !== 'SIN_RESTRICCION') {
+                      <span class="text-[7px] px-1 py-0.5 rounded-full"
+                        [class]="option.restriccionFecha === 'DENTRO_MES'
+                          ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                          : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
+                        {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Mensual' }}
+                      </span>
+                    }
+                  }
                 }
               </div>
             } @else {
@@ -148,14 +156,14 @@ export interface AmountOption {
           }
         </div>
 
-        <!-- Aviso del ajuste sobre la tarjeta elegida: se bloquea o pasa a evaluación -->
-        @if (!isCustomAmount() && superaLimiteTarjeta) {
-          <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
-            La promesa supera el monto base en más del {{ selectedPorcentajeMaximoPromesa() }}%. Máximo permitido: {{ formatCurrency(limitePermitidoValor) }}
+        <!-- Aviso del ajuste sobre la tarjeta elegida: pasa a evaluación o queda como monto libre -->
+        @if (!isCustomAmount() && ajusteInfo().tipo === 'MONTO_LIBRE') {
+          <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300">
+            Sube {{ formatCurrency(ajusteInfo().diferencia) }} y el sobrepago máximo es {{ formatCurrency(selectedTopeSobrepago() ?? 0) }}: se guarda como monto libre y pasa a evaluación del supervisor.
           </p>
-        } @else if (!isCustomAmount() && montoAjustado() && ajusteInfo().pasaAEvaluacion) {
-          <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
-            {{ ajusteInfo().signo === '−' ? 'El descuento supera el ' + selectedPorcentajeAutoAprobacion() : 'El aumento supera el ' + selectedPorcentajeAutoAprobacionAumento() }}%: la promesa pasa a evaluación del supervisor.
+        } @else if (!isCustomAmount() && ajusteInfo().tipo === 'EXCEPCION' && ajusteInfo().pasaAEvaluacion) {
+          <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+            El descuento de {{ ajusteInfo().porcentaje }}% supera el {{ selectedPorcentajeAutoAprobacion() }}% que se aprueba solo: la promesa pasa a evaluación del supervisor.
           </p>
         }
       </div>
@@ -330,29 +338,48 @@ export class PaymentScheduleComponent implements OnInit {
 
   // Ajuste del monto dentro de la tarjeta elegida: lo que escribe el asesor (o mueve con − / +)
   montoTarjeta: number | null = null;
-  // El aumento sobre la base pasa el tope de la tarjeta: no se arma cronograma
-  superaLimiteTarjeta = false;
+  // Sobrepago máximo en soles de la tarjeta elegida (null = sin tope)
+  selectedTopeSobrepago = signal<number | null>(null);
 
-  /** El monto de la tarjeta elegida ya no es el suyo tal cual: es una excepción sobre su campo base. */
+  /** El monto de la tarjeta elegida ya no es el suyo tal cual: lo bajó o lo subió. */
   montoAjustado = computed(() => {
     const base = this.montoBase();
     if (this._isCustomAmount() || !base) return false;
     return Math.round(this.selectedAmount() * 100) !== Math.round(base * 100);
   });
 
-  /** Cuánto se movió el monto respecto de su base y si, con los límites de la tarjeta, va a evaluación. */
+  /**
+   * Cómo queda el monto respecto de su tarjeta, con la misma regla que aplica el backend al guardar:
+   * por debajo es EXCEPCION (va a evaluación si pasa el % de la opción), por encima es SOBREPAGO,
+   * salvo que pase el sobrepago máximo en soles de la opción: ahí es MONTO_LIBRE.
+   */
   ajusteInfo = computed(() => {
     const base = this.montoBase() || 0;
     const actual = this.selectedAmount();
-    const pct = base > 0 ? Math.abs(actual - base) / base * 100 : 0;
-    const esDescuento = actual < base;
+    const diferencia = Math.round((actual - base) * 100) / 100;
+    const pct = base > 0 ? Math.abs(diferencia) / base * 100 : 0;
+    const tope = this.selectedTopeSobrepago();
+    const tipo: 'IGUAL' | 'EXCEPCION' | 'SOBREPAGO' | 'MONTO_LIBRE' =
+      !this.montoAjustado() || actual <= 0 ? 'IGUAL'
+        : diferencia < 0 ? 'EXCEPCION'
+        : tope !== null && diferencia > tope ? 'MONTO_LIBRE'
+        : 'SOBREPAGO';
     return {
-      signo: esDescuento ? '−' : '+',
+      tipo,
+      diferencia: Math.abs(diferencia),
       porcentaje: Math.round(pct * 10) / 10,
-      pasaAEvaluacion: esDescuento
-        ? pct > this.selectedPorcentajeAutoAprobacion()
-        : pct > this.selectedPorcentajeAutoAprobacionAumento()
+      pasaAEvaluacion: tipo === 'MONTO_LIBRE' || (tipo === 'EXCEPCION' && pct > this.selectedPorcentajeAutoAprobacion())
     };
+  });
+
+  /** Borde y halo de la tarjeta elegida según cómo quedó el monto (claro y oscuro). */
+  claseTarjetaElegida = computed(() => {
+    switch (this.ajusteInfo().tipo) {
+      case 'EXCEPCION': return 'border-amber-500 dark:border-amber-400 ring-amber-100 dark:ring-amber-900/40';
+      case 'SOBREPAGO': return 'border-emerald-500 dark:border-emerald-400 ring-emerald-100 dark:ring-emerald-900/40';
+      case 'MONTO_LIBRE': return 'border-purple-500 dark:border-purple-400 ring-purple-100 dark:ring-purple-900/40';
+      default: return 'border-blue-500 dark:border-blue-400 ring-blue-100 dark:ring-blue-900/40';
+    }
   });
 
   // Computed: opciones de cuotas basadas en min/max de la opción seleccionada
@@ -457,7 +484,7 @@ export class PaymentScheduleComponent implements OnInit {
         this.customAmountValue = 0;
         this.montoBase.set(undefined);
         this.montoTarjeta = null;
-        this.superaLimiteTarjeta = false;
+        this.selectedTopeSobrepago.set(null);
         // El cronograma anterior deja de valer para quien lo recibió
         this.scheduleChange.emit(null);
 
@@ -495,7 +522,7 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedPorcentajeMaximoPromesa.set(porcentajeMaximoPromesa ?? 10);
     this.montoBase.set(amount);  // Guardar monto original del campo
     this.montoTarjeta = amount;  // La tarjeta arranca con su monto tal cual
-    this.superaLimiteTarjeta = false;
+    this.selectedTopeSobrepago.set(this.availableAmounts().find(o => o.field === field)?.topeSobrepagoSoles ?? null);
 
     // Ajustar número de cuotas si está fuera del nuevo rango
     const currentNum = this.numberOfInstallments();
@@ -521,7 +548,7 @@ export class PaymentScheduleComponent implements OnInit {
     this._isCustomAmount.set(true);
     this.selectedField.set(undefined);
     this.montoBase.set(undefined);  // Excepción no tiene base
-    this.superaLimiteTarjeta = false;
+    this.selectedTopeSobrepago.set(null);
 
     // Buscar la opción "personalizado" para obtener sus configuraciones
     const customOption = this.availableAmounts().find(o => o.field === 'personalizado');
@@ -592,7 +619,6 @@ export class PaymentScheduleComponent implements OnInit {
   /** El asesor escribe el monto acordado dentro de la tarjeta. */
   onMontoTarjetaChange(valor: number | null): void {
     if (valor === null || valor === undefined || isNaN(valor) || valor <= 0) {
-      this.superaLimiteTarjeta = false;
       this.selectedAmount.set(0);
       this.installments.set([]);
       this.scheduleChange.emit(null);
@@ -601,21 +627,9 @@ export class PaymentScheduleComponent implements OnInit {
     this.aplicarMontoTarjeta(Math.round(valor * 100) / 100);
   }
 
-  /**
-   * Lleva el monto ajustado al cronograma. Si el aumento sobre la base pasa el tope de la tarjeta,
-   * no arma cuotas (el backend tampoco lo registraría).
-   */
+  /** Lleva el monto ajustado al cronograma. Subir o bajar no se bloquea: solo cambia cómo se guarda. */
   private aplicarMontoTarjeta(monto: number): void {
     this.selectedAmount.set(monto);
-    const base = this.montoBase() || 0;
-    const tope = base * (1 + this.selectedPorcentajeMaximoPromesa() / 100);
-    this.superaLimiteTarjeta = base > 0 && monto > base && (monto - base) / base * 100 > this.selectedPorcentajeMaximoPromesa();
-    if (this.superaLimiteTarjeta) {
-      this.limitePermitidoValor = Math.floor(tope * 100) / 100;
-      this.installments.set([]);
-      this.scheduleChange.emit(null);
-      return;
-    }
     this.generateInstallments();
   }
 
@@ -799,7 +813,8 @@ export class PaymentScheduleComponent implements OnInit {
       generaCartaAcuerdo: this.selectedGeneraCartaAcuerdo(),  // Si el monto seleccionado genera carta
       porcentajeAutoAprobacion: this.selectedPorcentajeAutoAprobacion(),//Excepciones %
       porcentajeAutoAprobacionAumento: this.selectedPorcentajeAutoAprobacionAumento(),
-      porcentajeMaximoPromesa: this.selectedPorcentajeMaximoPromesa()
+      porcentajeMaximoPromesa: this.selectedPorcentajeMaximoPromesa(),
+      topeSobrepagoSoles: this.selectedTopeSobrepago()
     };
 
     this.scheduleChange.emit(config);
