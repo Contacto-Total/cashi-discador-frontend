@@ -1519,6 +1519,23 @@ import {
                 </div>
               }
 
+              <!-- Clientes que salen, vuelven o llegan (subcarteras de una fila por deuda) -->
+              @if (lastResult()?.mainFileResult?.cartera; as cartera) {
+                <div class="!bg-slate-50 dark:!bg-slate-800/50 rounded-lg p-3 mt-3 border !border-slate-200 dark:!border-slate-700/50">
+                  <div class="flex items-center gap-2 mb-2">
+                    <lucide-angular name="users" [size]="16" class="!text-slate-600 dark:!text-slate-300"></lucide-angular>
+                    <span class="text-sm font-semibold !text-slate-700 dark:!text-slate-200">Cartera:</span>
+                  </div>
+                  <div class="flex flex-wrap gap-4 text-sm">
+                    <span class="!text-red-600 dark:!text-red-400">{{ cartera.clientesRetirados || 0 }} clientes retirados</span>
+                    <span class="!text-emerald-600 dark:!text-emerald-400">{{ cartera.clientesReingresados || 0 }} reingresados</span>
+                    <span class="!text-blue-600 dark:!text-blue-400">{{ cartera.clientesNuevos || 0 }} nuevos</span>
+                    <span class="!text-gray-600 dark:!text-gray-400">{{ cartera.cjAgregados || 0 }} CJ agregados</span>
+                    <span class="!text-gray-600 dark:!text-gray-400">{{ cartera.contactosBloqueados || 0 }} contactos de campaña sin llamar</span>
+                  </div>
+                </div>
+              }
+
               <!-- Resultados de archivos complementarios -->
               @if (lastResult()?.complementaryResults?.length > 0) {
                 <div class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-3 mt-3">
