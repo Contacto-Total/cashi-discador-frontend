@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
@@ -42,7 +42,7 @@ const MOTIVO_CAMBIO: Record<string, string> = {
     <div class="font-cashi flex flex-col gap-3 text-[.875rem] leading-[1.5] text-foreground antialiased">
       <section appTarjeta class="flex flex-col gap-5 px-8 pt-6 pb-6">
         <app-page-header titulo="Control de intensidad"
-                         subtitulo="Cada minuto, por tramo, la intensidad sube o baja según la cola, la espera, el abandono y los asesores libres."></app-page-header>
+                         subtitulo="Cada minuto, por tramo, 6 variables suman puntos y el puntaje decide si la intensidad sube, baja o se mantiene."></app-page-header>
 
         @if (estado(); as e) {
           <!-- Tramos -->
@@ -57,6 +57,8 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                     <th class="py-2 pr-3">Arranque</th>
                     <th class="py-2 pr-3">Hoy</th>
                     <th class="py-2 pr-3">Espera máx. (s)</th>
+                    <th class="py-2 pr-3">Avance normal</th>
+                    <th class="py-2 pr-3">Contactab. normal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -73,6 +75,8 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                       <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="t.intensidadInicial" [attr.aria-label]="'Arranque de ' + t.nombre" (change)="guardarTramo(t, { intensidadInicial: num($event) })"></td>
                       <td class="py-2 pr-3 font-bold">{{ t.activo ? t.intensidadActual : 'manual' }}</td>
                       <td class="py-2 pr-3"><input type="number" min="1" [class]="TUI.inputSm + ' w-20'" [value]="t.esperaMaximaSeg" [attr.aria-label]="'Espera máxima de ' + t.nombre" (change)="guardarTramo(t, { esperaMaximaSeg: num($event) })"></td>
+                      <td class="py-2 pr-3">{{ t.avanceNormal === null ? 'sin dato' : t.avanceNormal + ' clientes/h' }}</td>
+                      <td class="py-2 pr-3">{{ t.contactabilidadNormalPct === null ? 'sin dato' : (t.contactabilidadNormalPct | number:'1.1-1') + '%' }}</td>
                     </tr>
                   }
                 </tbody>
@@ -80,10 +84,10 @@ const MOTIVO_CAMBIO: Record<string, string> = {
             </div>
             <p class="m-0 text-[.75rem] text-muted-foreground">
               Intensidad = llamadas por cada asesor libre. Cada día arranca en el arranque (100 / personas que contestan
-              por cada 100 marcadas; un tramo sin historial, 17) y nunca baja de la mitad. No tiene techo: la frenan la cola,
-              la espera, el abandono en cola (meta 10%) y los canales del proveedor. Tipificando de más es la alerta roja de
-              TIPIFICANDO en la configuración de umbrales. Al apagar un tramo, en el siguiente ciclo sus campañas vuelven
-              a su intensidad manual. Los cambios se guardan solos: el switch al tocarlo y los números al salir del campo.
+              por cada 100 marcadas; un tramo sin historial, 17) y nunca baja de la mitad. Avance y contactabilidad normal
+              son lo normal del tramo en producción (1/08 al 2/11/2026); sin dato, esas dos variables no suman. Al apagar
+              un tramo, en el siguiente ciclo sus campañas vuelven a su intensidad manual. Los cambios se guardan solos:
+              el switch al tocarlo y los números al salir del campo.
             </p>
           </div>
 
@@ -97,13 +101,14 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                     <th class="py-2 pr-3">Tramo</th>
                     <th class="py-2 pr-3">Hora</th>
                     <th class="py-2 pr-3">Decisión</th>
-                    <th class="py-2 pr-3">En cola</th>
-                    <th class="py-2 pr-3">Espera máx.</th>
-                    <th class="py-2 pr-3">Abandono en cola</th>
+                    <th class="py-2 pr-3">Puntaje</th>
                     <th class="py-2 pr-3">Libres sin llamada</th>
-                    <th class="py-2 pr-3">Tipificando de más</th>
-                    <th class="py-2 pr-3">Disponibles</th>
+                    <th class="py-2 pr-3">Abandono en cola</th>
+                    <th class="py-2 pr-3">Espera máx.</th>
                     <th class="py-2 pr-3">Llamadas / canales</th>
+                    <th class="py-2 pr-3">Avance</th>
+                    <th class="py-2 pr-3">Contactab.</th>
+                    <th class="py-2 pr-3">Marcadas 5 min</th>
                     <th class="py-2">Por qué</th>
                   </tr>
                 </thead>
@@ -114,16 +119,17 @@ const MOTIVO_CAMBIO: Record<string, string> = {
                         <td class="py-2 pr-3 font-semibold">{{ t.nombre }}</td>
                         <td class="py-2 pr-3 text-muted-foreground">{{ m.fecha | date:'dd/MM HH:mm' }}</td>
                         <td class="py-2 pr-3 font-bold" [ngClass]="decisionClase(m)">{{ decision(m) }} {{ m.intensidadAnterior }} → {{ m.intensidadNueva }}</td>
-                        <td class="py-2 pr-3">{{ m.enCola }}</td>
-                        <td class="py-2 pr-3" [ngClass]="m.esperaMaximaSeg > t.esperaMaximaSeg ? 'font-bold text-(--ro)' : ''">{{ m.esperaMaximaSeg }} s</td>
+                        <td class="py-2 pr-3 font-bold">{{ m.puntaje ?? '-' }}</td>
+                        <td class="py-2 pr-3" [ngClass]="m.asesoresLibresLargo === 0 ? 'text-(--ro)' : ''">{{ m.asesoresLibresLargo }}</td>
                         <td class="py-2 pr-3" [ngClass]="m.abandonoPct !== null && m.abandonoPct > ABANDONO_MAXIMO_PCT ? 'font-bold text-(--ro)' : ''">
                           {{ m.abandonoPct === null ? 'nadie entró' : (m.abandonoPct | number:'1.1-1') + '%' }}
                           <span class="text-muted-foreground">({{ m.colgaronCola }} de {{ m.entraronCola }})</span>
                         </td>
-                        <td class="py-2 pr-3">{{ m.asesoresLibresLargo }}</td>
-                        <td class="py-2 pr-3">{{ m.tipificandoLargo }}</td>
-                        <td class="py-2 pr-3">{{ m.asesoresDisponibles }}</td>
+                        <td class="py-2 pr-3" [ngClass]="m.esperaMaximaSeg > t.esperaMaximaSeg ? 'font-bold text-(--ro)' : ''">{{ m.esperaMaximaSeg }} s</td>
                         <td class="py-2 pr-3">{{ m.llamadasProveedor ?? 'sin dato' }} / {{ m.canales ?? 'sin dato' }}</td>
+                        <td class="py-2 pr-3">{{ m.avance === null ? 'sin dato' : (m.avance | number:'1.0-0') }}</td>
+                        <td class="py-2 pr-3">{{ m.contactabilidadPct === null ? 'sin dato' : (m.contactabilidadPct | number:'1.1-1') + '%' }}</td>
+                        <td class="py-2 pr-3" [ngClass]="m.marcadas5Min === 0 ? 'text-(--ro)' : ''">{{ m.marcadas5Min ?? '-' }}</td>
                         <td class="py-2 text-[.75rem] text-muted-foreground">{{ m.motivo }}</td>
                       </tr>
                     }
@@ -132,12 +138,79 @@ const MOTIVO_CAMBIO: Record<string, string> = {
               </table>
             </div>
             <p class="m-0 text-[.75rem] text-muted-foreground">
-              Se revisa en este orden y la primera que se cumple decide: canales llenos, no lanza más; alguien espera más
-              de lo permitido o el abandono en cola de los últimos 5 min pasa la meta (con al menos 5 que entraron a cola),
-              baja en % según cuánto se pasó (sin bajar del piso); hay un asesor libre hace 30 s, nadie en cola, nadie
-              tipificando de más y el abandono dentro de la meta, sube en % según cuánto esperan los asesores sobre 30 s
-              (máximo 50% por minuto); si no, se mantiene.
+              Puntos: asesor libre hace 30 s o más 30, abandono en cola de los últimos 5 min hasta 10% 35, espera máxima
+              hasta la del tramo 15, llamadas vivas bajo el 90% de los canales 10, avance bajo lo normal 5 y contactabilidad
+              bajo lo normal 5. Puntaje 0-29 baja 20%, 30-49 baja 10%, 50-69 se mantiene, 70-84 sube 10% y 85-100 sube 20%
+              (de la intensidad actual, al menos 1, sin bajar del piso). Reglas de seguridad: si no se marcó nada en 5 min
+              no cambia; si el abandono pasa el 10% baja sí o sí; sin asesores libres no sube; con los canales llenos
+              no sube. Solo se miden las campañas activas: una campaña en pausa no mueve la intensidad.
             </p>
+          </div>
+
+          <!-- Historial de hoy -->
+          <div class="flex flex-col gap-3">
+            <app-titulo-tarjeta titulo="Historial de hoy"></app-titulo-tarjeta>
+            <div class="flex flex-wrap gap-2">
+              @for (t of e.tramos; track t.idSubcartera) {
+                <button type="button" appBoton="secundario" appBotonAlto="chico"
+                        [ngClass]="t.idSubcartera === tramoHistorial() ? 'font-bold ring-2 ring-(--ok-ln)' : ''"
+                        (click)="verHistorial(t.idSubcartera)">{{ t.nombre }}</button>
+              }
+            </div>
+            @if (historial().length === 0) {
+              <p class="m-0 text-muted-foreground">Hoy el control todavía no decidió nada en este tramo (apagado, o sin campañas activas marcando).</p>
+            } @else {
+              @let g = grafico();
+              <svg [attr.viewBox]="'0 0 ' + g.ancho + ' ' + g.alto" class="h-40 w-full rounded border border-border bg-background" preserveAspectRatio="none"
+                   role="img" [attr.aria-label]="'Intensidad de hoy: de ' + g.primera + ' a ' + g.ultima">
+                <polyline [attr.points]="g.linea" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+                @for (p of g.puntos; track $index) {
+                  <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3" [attr.fill]="p.decision === 'SUBE' ? 'var(--ok)' : 'var(--ro)'" vector-effect="non-scaling-stroke" />
+                }
+              </svg>
+              <p class="m-0 text-[.75rem] text-muted-foreground">
+                Intensidad minuto a minuto desde {{ historial()[0].fecha | date:'HH:mm' }}: arrancó en {{ g.primera }}, máxima {{ g.maxima }},
+                ahora {{ g.ultima }}. Puntos verdes: subió; rojos: bajó. Se actualiza cada 30 s.
+                Hoy: {{ g.subio }} veces subió, {{ g.bajo }} bajó y {{ g.mantuvo }} se mantuvo.
+              </p>
+              <div class="max-h-96 overflow-auto">
+                <table class="w-full border-collapse text-left tabular-nums">
+                  <thead class="sticky top-0 bg-background">
+                    <tr [class]="TUI.label">
+                      <th class="py-2 pr-3">Hora</th>
+                      <th class="py-2 pr-3">Decisión</th>
+                      <th class="py-2 pr-3">Puntaje</th>
+                      <th class="py-2 pr-3">Cambio</th>
+                      <th class="py-2 pr-3">Libres</th>
+                      <th class="py-2 pr-3">Abandono en cola</th>
+                      <th class="py-2 pr-3">Espera máx.</th>
+                      <th class="py-2 pr-3">Llamadas / canales</th>
+                      <th class="py-2 pr-3">Marcadas 5 min</th>
+                      <th class="py-2">Por qué</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (m of historialReciente(); track m.fecha) {
+                      <tr class="border-t border-border">
+                        <td class="py-1.5 pr-3 text-muted-foreground">{{ m.fecha | date:'HH:mm' }}</td>
+                        <td class="py-1.5 pr-3 font-bold" [ngClass]="decisionClase(m)">{{ decision(m) }} {{ m.intensidadAnterior }} → {{ m.intensidadNueva }}</td>
+                        <td class="py-1.5 pr-3">{{ m.puntaje ?? '-' }}</td>
+                        <td class="py-1.5 pr-3">{{ m.cambioPct === null ? '-' : (m.cambioPct > 0 ? '+' : '') + m.cambioPct + '%' }}</td>
+                        <td class="py-1.5 pr-3">{{ m.asesoresLibresLargo }}</td>
+                        <td class="py-1.5 pr-3" [ngClass]="m.abandonoPct !== null && m.abandonoPct > ABANDONO_MAXIMO_PCT ? 'font-bold text-(--ro)' : ''">
+                          {{ m.abandonoPct === null ? 'nadie entró' : (m.abandonoPct | number:'1.0-0') + '%' }}
+                          <span class="text-muted-foreground">({{ m.colgaronCola }} de {{ m.entraronCola }})</span>
+                        </td>
+                        <td class="py-1.5 pr-3">{{ m.esperaMaximaSeg }} s</td>
+                        <td class="py-1.5 pr-3">{{ m.llamadasProveedor ?? 'sin dato' }} / {{ m.canales ?? 'sin dato' }}</td>
+                        <td class="py-1.5 pr-3">{{ m.marcadas5Min ?? '-' }}</td>
+                        <td class="py-1.5 text-[.75rem] text-muted-foreground">{{ m.motivo }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
           </div>
 
           <!-- Proveedores -->
@@ -256,6 +329,32 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
   readonly ABANDONO_MAXIMO_PCT = ABANDONO_MAXIMO_PCT;
   readonly estado = signal<EstadoControl | null>(null);
   readonly guardando = signal(false);
+  /** Tramo del historial; al cargar, el primero encendido. */
+  readonly tramoHistorial = signal<number | null>(null);
+  readonly historial = signal<UltimoMinuto[]>([]);
+  /** El último minuto arriba. */
+  readonly historialReciente = computed(() => [...this.historial()].reverse());
+  /** La intensidad de hoy como línea: x = minuto, y = intensidad después de decidir. */
+  readonly grafico = computed(() => {
+    const h = this.historial();
+    const ancho = 600;
+    const alto = 120;
+    const valores = h.map(m => m.intensidadNueva);
+    const maxima = Math.max(1, ...valores);
+    const x = (i: number) => h.length <= 1 ? ancho / 2 : (i * ancho) / (h.length - 1);
+    const y = (v: number) => alto - 6 - (v * (alto - 12)) / maxima;
+    return {
+      ancho, alto, maxima,
+      primera: h.length ? h[0].intensidadAnterior : 0,
+      ultima: h.length ? h[h.length - 1].intensidadNueva : 0,
+      linea: h.map((m, i) => `${x(i)},${y(m.intensidadNueva)}`).join(' '),
+      puntos: h.flatMap((m, i) => m.decision === 'SUBE' || m.decision === 'BAJA'
+        ? [{ x: x(i), y: y(m.intensidadNueva), decision: m.decision }] : []),
+      subio: h.filter(m => m.decision === 'SUBE').length,
+      bajo: h.filter(m => m.decision === 'BAJA').length,
+      mantuvo: h.filter(m => m.decision !== 'SUBE' && m.decision !== 'BAJA').length
+    };
+  });
 
   /** Lo escrito en cada proveedor y aún no guardado: el refresco de cada 30 s no lo pisa. */
   private borradoresProveedor: Record<number, ProveedorCambio> = {};
@@ -373,9 +472,30 @@ export class ControlIntensidadComponent implements OnInit, OnDestroy {
     });
   }
 
+  verHistorial(idSubcartera: number): void {
+    this.tramoHistorial.set(idSubcartera);
+    this.cargarHistorial();
+  }
+
   private cargar(): void {
     this.servicio.estado().subscribe({
-      next: e => this.estado.set(e),
+      next: e => {
+        this.estado.set(e);
+        if (this.tramoHistorial() === null && e.tramos.length > 0) {
+          this.tramoHistorial.set((e.tramos.find(t => t.activo) ?? e.tramos[0]).idSubcartera);
+        }
+        this.cargarHistorial();
+      },
+      error: (err: HttpErrorResponse) => this.fallo(err)
+    });
+  }
+
+  private cargarHistorial(): void {
+    const id = this.tramoHistorial();
+    if (id === null) return;
+    this.servicio.historial(id).subscribe({
+      // si mientras tanto se eligió otro tramo, esta respuesta ya no sirve
+      next: h => { if (this.tramoHistorial() === id) this.historial.set(h); },
       error: (err: HttpErrorResponse) => this.fallo(err)
     });
   }

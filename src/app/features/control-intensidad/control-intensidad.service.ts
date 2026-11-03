@@ -10,6 +10,10 @@ export interface UltimoMinuto {
   motivo: string | null;
   intensidadAnterior: number;
   intensidadNueva: number;
+  /** Suma de los puntos de las 6 variables (0 a 100); null en registros de antes de la regla de puntaje. */
+  puntaje: number | null;
+  /** % que cambió, después de las reglas de seguridad. */
+  cambioPct: number | null;
   campanas: number;
   asesoresDisponibles: number;
   asesoresLibresLargo: number;
@@ -21,6 +25,12 @@ export interface UltimoMinuto {
   abandonoPct: number | null;
   llamadasProveedor: number | null;
   canales: number | null;
+  /** Clientes distintos marcados hoy por hora. */
+  avance: number | null;
+  /** % de las llamadas de hoy que llegaron a un asesor. */
+  contactabilidadPct: number | null;
+  /** Llamadas lanzadas en los últimos 5 min; con 0 la intensidad no cambia. */
+  marcadas5Min: number | null;
 }
 
 export interface Tramo {
@@ -32,6 +42,10 @@ export interface Tramo {
   intensidadActual: number;
   piso: number;
   esperaMaximaSeg: number;
+  /** Clientes por hora de una campaña normal del tramo; null si no está cargado (la variable no suma). */
+  avanceNormal: number | null;
+  /** % de marcadas que llegan a un asesor en el tramo; null si no está cargado. */
+  contactabilidadNormalPct: number | null;
   ultimoMinuto: UltimoMinuto | null;
 }
 
@@ -101,6 +115,11 @@ export class ControlIntensidadService {
 
   guardarProveedor(id: number, cambio: ProveedorCambio): Observable<Proveedor> {
     return this.http.put<Proveedor>(`${this.api}/proveedores/${id}`, cambio);
+  }
+
+  /** Cada minuto que decidió hoy el control para un tramo, del primero al último. */
+  historial(idSubcartera: number): Observable<UltimoMinuto[]> {
+    return this.http.get<UltimoMinuto[]>(`${this.api}/tramos/${idSubcartera}/historial`);
   }
 
   /** Subcarteras con intensidad automática; lo usan las pantallas de campañas. */
