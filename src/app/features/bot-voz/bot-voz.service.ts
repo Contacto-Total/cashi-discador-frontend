@@ -53,7 +53,7 @@ export interface BotCola {
   idCartera?: number;
   idSubcartera: number;
   /**
-   * El UNICO objetivo: RECORDATORIO | CREACION | PRIMER_CONTACTO.
+   * El UNICO objetivo: RECORDATORIO | CREACION | PRIMER_CONTACTO | LEVANTAMIENTO.
    *
    * El campo se sigue llamando `objetivos` y sigue siendo texto —renombrarlo obligaba
    * a migrar datos para no ganar nada—, pero ya no es una lista separada por comas: el

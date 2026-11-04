@@ -1090,7 +1090,7 @@
                 <input type="number" min="0" max="15" [(ngModel)]="nuevaCola.diasAnticipacion" (ngModelChange)="recalcular()" [class]="ui.campo">
               </label>
             }
-            @if (objetivo === 'CREACION') {
+            @if (objetivo === 'CREACION' || objetivo === 'LEVANTAMIENTO') {
               <label class="flex flex-col gap-1">
                 <span [class]="ui.subetiqueta">Hasta cuántos días después del vencimiento</span>
                 <input type="number" min="1" max="3" [(ngModel)]="nuevaCola.maxDiasVencida" (ngModelChange)="recalcular()" [class]="ui.campo">
