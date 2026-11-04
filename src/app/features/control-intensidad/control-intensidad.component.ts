@@ -84,8 +84,9 @@ const MOTIVO_CAMBIO: Record<string, string> = {
             </div>
             <p class="m-0 text-[.75rem] text-muted-foreground">
               Intensidad = llamadas por cada asesor libre. Cada día arranca en el arranque (100 / personas que contestan
-              por cada 100 marcadas; un tramo sin historial, 17) y nunca baja de la mitad. Avance y contactabilidad normal
-              son lo normal del tramo en producción (1/08 al 2/11/2026); sin dato, esas dos variables no suman. Al apagar
+              por cada 100 marcadas) y nunca baja de la mitad. Avance y contactabilidad normal: la mediana de lo que midió
+              el sistema minuto a minuto en producción (1/08 al 23/10/2026). Solo aparecen los tramos con ese historial;
+              los demás marcan con su intensidad manual. Al apagar
               un tramo, en el siguiente ciclo sus campañas vuelven a su intensidad manual. Los cambios se guardan solos:
               el switch al tocarlo y los números al salir del campo.
             </p>
