@@ -137,7 +137,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     { valor: 'llamadas', texto: 'Llamadas' },
   ];
 
-  /** Los tres objetivos posibles de una cola, para las opciones del formulario. */
+  /** Los objetivos posibles de una cola, para las opciones del formulario. */
   readonly objetivosForm = [
     { valor: 'RECORDATORIO', titulo: 'Recordar una cuota que está por vencer',
       ayuda: 'No negocia ni ofrece descuentos: solo avisa de la fecha.' },
@@ -145,6 +145,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
       ayuda: 'Ofrece las rebajas configuradas hasta cerrar una promesa nueva.' },
     { valor: 'PRIMER_CONTACTO', titulo: 'Abrir la primera promesa de un cliente',
       ayuda: 'Clientes de la subcartera que nunca han pactado nada.' },
+    { valor: 'LEVANTAMIENTO', titulo: 'Levantar una promesa rota',
+      ayuda: 'Ofrece revivir la promesa pagando la cuota vencida; no negocia el monto.' },
   ] as const;
 
   /** Pestaña: pulsar la que ya está abierta no hace nada. `abrir` la trataba como ida y vuelta.
@@ -2110,6 +2112,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       case 'RECORDATORIO':    return 'Recordarle una cuota por vencer';
       case 'CREACION':        return 'Negociar una cuota vencida';
       case 'PRIMER_CONTACTO': return 'Abrir su primera promesa';
+      case 'LEVANTAMIENTO':   return 'Levantar su promesa rota';
       default:                return '—';
     }
   }
@@ -2202,6 +2205,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       RECORDATORIO: 'Recordar',
       CREACION: 'Negociar',
       PRIMER_CONTACTO: '1ª promesa',
+      LEVANTAMIENTO: 'Levantar',
     };
     return (c.objetivos || '').split(',').filter(Boolean).map((o) => bonito[o.trim()] ?? o);
   }
@@ -2212,6 +2216,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       RECORDATORIO: 'Recordatorio',
       CREACION: 'Negociar vencidas',
       PRIMER_CONTACTO: 'Primer contacto',
+      LEVANTAMIENTO: 'Levantar promesa',
     };
     const o = (c.objetivos || '').split(',')[0]?.trim() || '';
     return textos[o] ?? (o || '—');
