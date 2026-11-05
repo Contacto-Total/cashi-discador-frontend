@@ -22,7 +22,7 @@ import { CampoOpcionDTO } from '../../maintenance/models/typification-v2.model';
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
-import { AmountOption } from '../../shared/components/payment-schedule/payment-schedule.component';
+import { AmountOption, ContextoDescuento } from '../../shared/components/payment-schedule/payment-schedule.component';
 import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
@@ -1582,6 +1582,7 @@ interface BorradorDeuda {
                 [customerAmounts]="finalPaymentAmounts()"
                 [simboloMoneda]="simboloMoneda()"
                 [deuda]="cuentaSeleccionada()"
+                [contextoDescuento]="contextoDescuento()"
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
@@ -2393,8 +2394,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
-            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            idOpcion: option.id,
             porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
           continue;
@@ -2425,8 +2425,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
-            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            idOpcion: option.id,
             porcentajeMaximoPromesa: option.porcentajeMaximoPromesa,
             topeSobrepagoSoles: option.topeSobrepagoSoles
           });
@@ -3560,6 +3559,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const texto = String(valor);
     const fecha = tipo === 'FECHA' ? /^(\d{4})-(\d{2})-(\d{2})/.exec(texto) : null;
     return fecha ? `${fecha[3]}/${fecha[2]}/${fecha[1]}` : texto;
+  }
+
+  /**
+   * Cliente y subcartera para que el cronograma revise el descuento máximo mientras se arma la promesa.
+   * Se reutiliza el mismo objeto mientras no cambien, para no repetir la revisión en cada ciclo.
+   */
+  private ctxDescuento: ContextoDescuento | null = null;
+  contextoDescuento(): ContextoDescuento | null {
+    const documento = this.customerData()?.numero_documento;
+    if (!this.selectedTenantId || !this.selectedSubPortfolioId || !documento) return null;
+    const cuenta = this.esMultiproducto() ? this.cuentaSeleccionada() : null;
+    const c = this.ctxDescuento;
+    if (c && c.idTenant === this.selectedTenantId && c.idCartera === this.selectedPortfolioId
+        && c.idSubcartera === this.selectedSubPortfolioId && c.documentoCliente === documento && c.cuenta === cuenta) {
+      return c;
+    }
+    this.ctxDescuento = {
+      idTenant: this.selectedTenantId,
+      idCartera: this.selectedPortfolioId,
+      idSubcartera: this.selectedSubPortfolioId,
+      documentoCliente: documento,
+      cuenta
+    };
+    return this.ctxDescuento;
   }
 
   // Enabled payment amount options (configured in maintenance)
@@ -7107,22 +7130,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             monto: cuota.monto,
             fechaPago: cuota.fechaPago
           })),
-          // Porcentaje de auto-aprobación para calcular excepciones
-          porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
-          porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
           porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
           generaCartaAcuerdo: paymentScheduleData.generaCartaAcuerdo
         },
-        // También a nivel raíz para que el backend lo procese
-        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
-        porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+        // Tarjeta elegida: el backend lee su descuento máximo
+        idOpcion: paymentScheduleData.idOpcion,
         porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
         topeSobrepagoSoles: paymentScheduleData.topeSobrepagoSoles
       };
 
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);
-      console.log('[SAVE] porcentajeAutoAprobacion from paymentScheduleData:', paymentScheduleData.porcentajeAutoAprobacion);
-      console.log('[SAVE] porcentajeAutoAprobacion in request:', scheduleRequest.porcentajeAutoAprobacion);
 
       if (this.mostrarProductosTipificacion()) {
         this.agregarBorrador({

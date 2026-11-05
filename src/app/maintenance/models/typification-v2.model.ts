@@ -160,6 +160,34 @@ export enum RestriccionFecha {
   FUERA_MES = 'FUERA_MES'                // Solo fechas del próximo mes en adelante
 }
 
+// Descuento máximo sin aprobación de una tarjeta de monto (tipificacion_campo_opciones.regla_descuento)
+export type TipoLimiteDescuento = 'PORCENTAJE' | 'MONTO';
+/** ANTIGUA_NUEVA: por periodo de compra. ANIO: por año del periodo de castigo. */
+export type SegmentoDescuento = 'ANTIGUA_NUEVA' | 'ANIO';
+
+export interface FilaReglaDescuento {
+  valor: string | null;                // null | 'ANTIGUA' | 'NUEVA' | '2026' (null en ANIO = resto de años)
+  descuentoMaximo: number | null;      // % o soles según el tipo; null = por definir
+  maxCuotas: number | null;            // con descuento; null = las de la tarjeta
+  montoMinimoCuota: number | null;     // con descuento; null = sin mínimo
+}
+
+export interface ReglaDescuento {
+  tipo: TipoLimiteDescuento;
+  campoReferencia: string | null;      // columna sobre la que se calcula; null = el monto de la tarjeta
+  segmento: SegmentoDescuento | null;
+  filas: FilaReglaDescuento[];
+}
+
+/** Resultado de POST /api/v2/descuento-maximo/evaluar */
+export interface EvaluacionDescuento {
+  estado: 'DIRECTO' | 'EVALUACION' | 'BLOQUEADO';
+  mensaje: string | null;
+  montoMinimoDirecto: number | null;
+  maxCuotas: number | null;
+  montoMinimoCuota: number | null;
+}
+
 // Modelos para el sistema de opciones con toggles
 export interface CampoOpcionDTO {
   id?: number;
@@ -172,8 +200,7 @@ export interface CampoOpcionDTO {
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
   minCuotas?: number;  // Número mínimo de cuotas permitidas (default 1)
   maxCuotas?: number;  // Número máximo de cuotas permitidas (default 6)
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  reglaDescuento?: ReglaDescuento | null;    // Descuento máximo sin aprobación; null = por definir
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
@@ -193,8 +220,7 @@ export interface OpcionToggleDTO {
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
   minCuotas?: number;  // Número mínimo de cuotas permitidas
   maxCuotas?: number;  // Número máximo de cuotas permitidas
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  reglaDescuento?: ReglaDescuento | null;    // Descuento máximo sin aprobación; null = por definir
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
@@ -233,8 +259,7 @@ export interface PaymentScheduleConfig {
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   generaCartaAcuerdo?: boolean;  // Si el monto seleccionado genera carta de acuerdo
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  idOpcion?: number;                         // Opción de la tarjeta elegida (su descuento máximo se lee en el backend)
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
@@ -251,8 +276,7 @@ export interface PaymentScheduleRequest {
   observaciones?: string;
   metodoContacto?: string;
   schedule: PaymentScheduleConfig;
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  idOpcion?: number;                         // Opción de la tarjeta elegida (su descuento máximo se lee en el backend)
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 

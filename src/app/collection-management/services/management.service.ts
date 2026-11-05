@@ -271,17 +271,13 @@ export interface PaymentScheduleRequest {
   diasPrimeraCuota?: number;         // Días desde hoy hasta la fecha de la primera cuota
   maxDiasPermitidos?: number;        // Máximo de días permitidos según configuración
   telefonoContacto?: string;
-  // Porcentaje de auto-aprobación para excepciones
-  porcentajeAutoAprobacion?: number;
-  porcentajeAutoAprobacionAumento?: number;
+  idOpcion?: number;                 // Tarjeta elegida: el backend lee su descuento máximo
   porcentajeMaximoPromesa?: number;
   topeSobrepagoSoles?: number | null;  // Sobrepago máximo en soles de la tarjeta elegida (null = sin tope)
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
     cuotas: PaymentInstallmentRequest[];
-    porcentajeAutoAprobacion?: number;  // Porcentaje para calcular excepciones
-    porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
     porcentajeMaximoPromesa?: number;
     generaCartaAcuerdo?: boolean;       // Si el monto genera carta de acuerdo
   };

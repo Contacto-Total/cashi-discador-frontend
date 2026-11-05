@@ -384,7 +384,7 @@ export class CallNotesComponent implements OnInit {
             generaCartaAcuerdo: opt.generaCartaAcuerdo || false,
             minCuotas: opt.minCuotas || 1,
             maxCuotas: opt.maxCuotas || 6,
-            porcentajeAutoAprobacion: opt.porcentajeAutoAprobacion || 10
+            idOpcion: opt.id
           });
         } else if (opt.value !== null && opt.value !== undefined) {
           // Opciones con valor de tabla dinámica
@@ -396,7 +396,7 @@ export class CallNotesComponent implements OnInit {
             generaCartaAcuerdo: opt.generaCartaAcuerdo || false,
             minCuotas: opt.minCuotas || 1,
             maxCuotas: opt.maxCuotas || 6,
-            porcentajeAutoAprobacion: opt.porcentajeAutoAprobacion
+            idOpcion: opt.id
           });
         }
       });
@@ -500,8 +500,8 @@ export class CallNotesComponent implements OnInit {
             metodoContacto: 'GESTION_PROGRESIVO',
             canalContacto: 'LLAMADA_SALIENTE',
             schedule: this.paymentScheduleConfig,
-            // Porcentaje de auto-aprobación para excepciones (solo si viene del schedule)
-            porcentajeAutoAprobacion: this.paymentScheduleConfig.porcentajeAutoAprobacion
+            // Tarjeta elegida: el backend lee su descuento máximo
+            idOpcion: this.paymentScheduleConfig.idOpcion
           };
 
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
