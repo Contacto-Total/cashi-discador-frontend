@@ -18,6 +18,7 @@ export interface CasoAgendaBot {
   telefono?: string;
   resumen?: string;
   motivo?: string;
+  objetivo?: string;
 
   estadoCita?: string;
   idAgenda?: number;

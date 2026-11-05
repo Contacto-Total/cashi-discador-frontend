@@ -641,6 +641,17 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   }
 
   /** Texto del motivo, que llega como código del bot. */
+  etiquetaObjetivo(objetivo?: string): string {
+    if (!objetivo) return '';
+    return ({
+      RECORDATORIO: 'Seguimiento',
+      LEVANTAMIENTO: 'Levantamiento',
+      PRIMER_CONTACTO: 'Primera promesa',
+      CREACION: 'Promesa nueva',
+      RESCATE: 'Rescate',
+    } as Record<string, string>)[objetivo] ?? '';
+  }
+
   etiquetaMotivo(motivo?: string): string {
     if (!motivo) return '';
     return ({
