@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output, signal, computed } from '@angular/core';
+import { Component, effect, inject, input, output, signal, computed, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -528,11 +528,15 @@ export class TypificationAdditionalFieldsDialogComponent {
   private toast = inject(ToastService);
 
   constructor() {
+    // Solo depende de isOpen: lo que se lee al cargar (campo de cronograma, subcartera) no debe
+    // volver a dispararlo, o cada respuesta reinicia el diálogo y se queda cargando sin fin
     effect(() => {
       if (this.isOpen()) {
-        this.resetState();
-        this.elegirInicial();
-        this.loadPaymentScheduleField();
+        untracked(() => {
+          this.resetState();
+          this.elegirInicial();
+          this.loadPaymentScheduleField();
+        });
       }
     });
   }
