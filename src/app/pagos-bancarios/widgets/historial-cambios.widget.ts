@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, input, signal, untracked } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
@@ -15,14 +16,14 @@ import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from './cor
 @Component({
   selector: 'app-historial-cambios',
   standalone: true,
-  imports: [FormsModule, CorreccionClienteDialogWidget],
+  imports: [FormsModule, NgClass, CorreccionClienteDialogWidget],
   template: `
     <section class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="hc-titulo">
       <div class="border-b border-slate-200 p-4 dark:border-slate-700">
         <h2 id="hc-titulo" class="text-base font-semibold text-slate-900 dark:text-white">Historial de cambios</h2>
         <p class="text-sm text-slate-600 dark:text-slate-400">Todas las correcciones de pagos y conciliaciones, con el usuario que las hizo.</p>
 
-        <form class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 xl:items-end" (submit)="buscar($event)">
+        <form class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:items-end" [ngClass]="contextoFijo() ? 'xl:grid-cols-5' : 'xl:grid-cols-8'" (submit)="buscar($event)">
           <div>
             <label for="hc-desde" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Desde</label>
             <input id="hc-desde" name="desde" type="date" required [(ngModel)]="desde" [class]="claseCampo" />
@@ -31,6 +32,7 @@ import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from './cor
             <label for="hc-hasta" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Hasta</label>
             <input id="hc-hasta" name="hasta" type="date" required [(ngModel)]="hasta" [class]="claseCampo" />
           </div>
+          @if (!contextoFijo()) {
           <div>
             <label for="hc-proveedor" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Proveedor</label>
             <select id="hc-proveedor" name="proveedor" [(ngModel)]="tenantId" (ngModelChange)="onTenantChange($event)" [class]="claseCampo">
@@ -58,6 +60,7 @@ import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from './cor
               }
             </select>
           </div>
+          }
           <div>
             <label for="hc-usuario" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Usuario</label>
             <select id="hc-usuario" name="usuario" [(ngModel)]="usuarioId" [class]="claseCampo">
@@ -80,7 +83,7 @@ import { CorreccionClienteDialogWidget, CorreccionClienteSolicitud } from './cor
             <label for="hc-documento" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Documento</label>
             <input id="hc-documento" name="documento" type="search" inputmode="numeric" autocomplete="off" placeholder="Opcional" [(ngModel)]="documento" [class]="claseCampo" />
           </div>
-          <div class="sm:col-span-2 lg:col-span-4 xl:col-span-8">
+          <div class="sm:col-span-2 lg:col-span-4" [ngClass]="contextoFijo() ? 'xl:col-span-5' : 'xl:col-span-8'">
             <button type="submit" [disabled]="cargando()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400 dark:focus-visible:ring-offset-slate-800">
               {{ cargando() ? 'Buscando...' : 'Buscar' }}
             </button>
@@ -176,6 +179,9 @@ export class HistorialCambiosWidget implements OnInit {
     .sort((a, b) => a.label.localeCompare(b.label));
   private static readonly TAMANO = 50;
 
+  /** Subcartera ya elegida en la pantalla que lo contiene: oculta proveedor, cartera y subcartera y filtra por ella. */
+  readonly contextoFijo = input<{ tenantId: number; carteraId: number; subcarteraId: number } | null>(null);
+
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
@@ -194,7 +200,21 @@ export class HistorialCambiosWidget implements OnInit {
   tipoCambio = '';
   documento = '';
 
+  constructor() {
+    effect(() => {
+      const fijo = this.contextoFijo();
+      if (!fijo) return;
+      untracked(() => {
+        this.tenantId = fijo.tenantId;
+        this.carteraId = fijo.carteraId;
+        this.subcarteraId = fijo.subcarteraId;
+        this.cargar(0);
+      });
+    });
+  }
+
   ngOnInit(): void {
+    if (this.contextoFijo()) return;
     this.tenantService.getAllTenants().subscribe({
       next: tenants => this.tenants.set(tenants),
       error: () => this.error.set('No se pudieron cargar los proveedores.')

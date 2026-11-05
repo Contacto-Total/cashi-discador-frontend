@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -53,7 +53,8 @@ const TIPOS_ARCHIVO: Record<string, string> = {
           <p class="text-xs text-slate-600 dark:text-slate-400">Archivos cargados en la subcartera y cómo quedaron sus pagos. Busca un documento para ver en qué archivos llegó el cliente.</p>
         </div>
 
-        <form class="grid grid-cols-1 gap-3 md:grid-cols-6 md:items-end" (submit)="buscar(0, $event)">
+        <form class="grid grid-cols-1 gap-3 md:items-end" [ngClass]="contextoFijo() ? 'md:grid-cols-3' : 'md:grid-cols-6'" (submit)="buscar(0, $event)">
+          @if (!contextoFijo()) {
           <div>
             <label for="historial-tenant" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Proveedor</label>
             <select id="historial-tenant" name="tenant" [(ngModel)]="selectedTenantId" (ngModelChange)="onTenantChange($event)" [class]="claseCampo">
@@ -81,6 +82,7 @@ const TIPOS_ARCHIVO: Record<string, string> = {
               }
             </select>
           </div>
+          }
           <div>
             <label for="historial-mes" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Mes de pago <span class="font-normal text-slate-500 dark:text-slate-400">(opcional)</span></label>
             <input id="historial-mes" name="mes" type="month" [(ngModel)]="mes" [class]="claseCampo" />
@@ -389,6 +391,9 @@ const TIPOS_ARCHIVO: Record<string, string> = {
 export class HistorialCargasBcpWidget implements OnInit {
   readonly claseCampo = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white dark:disabled:bg-slate-800';
 
+  /** Subcartera ya elegida en la pantalla que lo contiene: oculta los selectores y busca en ella. */
+  readonly contextoFijo = input<{ tenantId: number; carteraId: number; subcarteraId: number } | null>(null);
+
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
@@ -474,9 +479,22 @@ export class HistorialCargasBcpWidget implements OnInit {
     };
     effect(() => sincronizar(this.detalleOpen()));
     inject(DestroyRef).onDestroy(() => sincronizar(false));
+
+    effect(() => {
+      const fijo = this.contextoFijo();
+      if (!fijo) return;
+      untracked(() => {
+        this.selectedTenantId = fijo.tenantId;
+        this.selectedPortfolioId = fijo.carteraId;
+        this.selectedSubPortfolioId = fijo.subcarteraId;
+        this.clearResults();
+        this.buscar(0);
+      });
+    });
   }
 
   ngOnInit(): void {
+    if (this.contextoFijo()) return;
     this.tenantService.getAllTenants().subscribe({
       next: (tenants) => this.tenants.set(tenants),
       error: () => this.errorMessage.set('No se pudieron cargar los proveedores.')

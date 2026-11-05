@@ -485,9 +485,9 @@ function tonoDe(categoria: string | null | undefined): Tono {
           </div>
         </div>
         @if (vistaHistorial() === 'cargas') {
-          <app-historial-cargas-bcp></app-historial-cargas-bcp>
+          <app-historial-cargas-bcp [contextoFijo]="contexto()"></app-historial-cargas-bcp>
         } @else {
-          <app-historial-cambios></app-historial-cambios>
+          <app-historial-cambios [contextoFijo]="contexto()"></app-historial-cambios>
         }
       </section>
     }
