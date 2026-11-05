@@ -163,6 +163,9 @@
                     @if (etiquetaMotivo(c.motivo)) {
                       <span [class]="insignia('gris')">{{ etiquetaMotivo(c.motivo) }}</span>
                     }
+                    @if (etiquetaObjetivo(c.objetivo)) {
+                      <span [class]="insignia('gris')">{{ etiquetaObjetivo(c.objetivo) }}</span>
+                    }
                     @if (esSupervision && c.nombreAsignado) {
                       <span [class]="insignia('gris')">
                         <lucide-angular name="user" [size]="12"></lucide-angular> {{ c.nombreAsignado }}
@@ -347,6 +350,9 @@
             </span>
             @if (etiquetaMotivo(c.motivo)) {
               <span [class]="insignia('gris')">{{ etiquetaMotivo(c.motivo) }}</span>
+            }
+            @if (etiquetaObjetivo(c.objetivo)) {
+              <span [class]="insignia('gris')">{{ etiquetaObjetivo(c.objetivo) }}</span>
             }
           </span>
         </div>
