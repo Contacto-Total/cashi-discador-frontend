@@ -35,8 +35,7 @@ interface OfferDisplay {
   generaCartaAcuerdo?: boolean;
   minCuotas?: number;
   maxCuotas?: number;
-  porcentajeAutoAprobacion?: number;
-  porcentajeAutoAprobacionAumento?: number;
+  idOpcion?: number;  // Opción de la tarjeta: el backend lee su descuento máximo
   porcentajeMaximoPromesa?: number;
   topeSobrepagoSoles?: number | null;
 }
@@ -883,8 +882,7 @@ export class InfoClientWidgetComponent {
               generaCartaAcuerdo: option.generaCartaAcuerdo,
               minCuotas: option.minCuotas,
               maxCuotas: option.maxCuotas,
-              porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
-              porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+              idOpcion: option.id,
               porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
             }];
           }
@@ -896,8 +894,7 @@ export class InfoClientWidgetComponent {
             generaCartaAcuerdo: option.generaCartaAcuerdo,
             minCuotas: option.minCuotas,
             maxCuotas: option.maxCuotas,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
-            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            idOpcion: option.id,
             porcentajeMaximoPromesa: option.porcentajeMaximoPromesa,
             topeSobrepagoSoles: option.topeSobrepagoSoles
           }] : [];
@@ -1043,8 +1040,8 @@ export class InfoClientWidgetComponent {
       campoMontoOrigen: baseOffer?.field,
       montoBase: baseOffer?.value,
       generaCartaAcuerdo: offer.generaCartaAcuerdo ?? !isException,
-      porcentajeAutoAprobacion: offer.porcentajeAutoAprobacion,
-      porcentajeAutoAprobacionAumento: offer.porcentajeAutoAprobacionAumento,
+      // El descuento máximo es el de la tarjeta base (también en Excepción con campo base)
+      idOpcion: baseOffer?.idOpcion,
       porcentajeMaximoPromesa: offer.porcentajeMaximoPromesa,
       // El sobrepago máximo es el de la tarjeta base (también en Excepción con campo base)
       topeSobrepagoSoles: baseOffer?.topeSobrepagoSoles
@@ -1188,8 +1185,7 @@ export class InfoClientWidgetComponent {
       canalContacto: 'WHATSAPP',
       campoMontoOrigen: config.campoMontoOrigen,
       montoBase: config.montoBase,
-      porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
-      porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
+      idOpcion: config.idOpcion,
       porcentajeMaximoPromesa: config.porcentajeMaximoPromesa,
       topeSobrepagoSoles: config.topeSobrepagoSoles,
       observaciones: this.selectedOffer()?.field === 'personalizado'
@@ -1200,8 +1196,6 @@ export class InfoClientWidgetComponent {
         numeroCuotas: config.numeroCuotas,
         cuotas: config.cuotas,
         generaCartaAcuerdo: config.generaCartaAcuerdo,
-        porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
-        porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
         porcentajeMaximoPromesa: config.porcentajeMaximoPromesa
       }
     };

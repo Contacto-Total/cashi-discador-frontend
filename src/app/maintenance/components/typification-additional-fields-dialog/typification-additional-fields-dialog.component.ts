@@ -4,7 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { HttpClient } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
-import { CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, RestriccionFecha } from '../../models/typification-v2.model';
+import {
+  CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, FilaReglaDescuento, ReglaDescuento, RestriccionFecha,
+  TipoLimiteDescuento
+} from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { environment } from '../../../../environments/environment';
@@ -17,13 +20,36 @@ interface ConfiguracionCabecera {
   tipoSql: string;
 }
 
+/** Subcartera de la pantalla de Tipificaciones, con su cliente y su cartera. */
+export interface SubcarteraMontos {
+  tenantId: number;
+  cliente: string;
+  portfolioId: number;
+  cartera: string;
+  subId: number;
+  subcartera: string;
+}
+
+/** Cómo se pueden separar los clientes de la subcartera (GET /v2/descuento-maximo/segmentacion). */
+interface Segmentacion {
+  antiguaNueva: boolean;
+  aniosCastigo: string[];
+  conMoneda: boolean;
+}
+
+type OpcionVista = CampoOpcionDTO & { visualName: string };
+
+const SIN_SEGMENTACION: Segmentacion = { antiguaNueva: false, aniosCastigo: [], conMoneda: false };
+const NUM_INPUT = 'h-[30px] w-full min-w-0 bg-transparent text-[12.5px] font-semibold tabular-nums outline-none placeholder:font-medium placeholder:text-[#8491a3] dark:placeholder:text-slate-500';
+const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#d5dbe3] bg-white px-2 focus-within:border-[#2563eb] dark:border-slate-700 dark:bg-slate-900';
+
 @Component({
   selector: 'app-typification-additional-fields-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, A11yModule],
   template: `
     <div [class]="ui.fondo" (click)="handleCancel()">
-      <div [class]="ui.panel + ' max-w-[940px]'" role="dialog" aria-modal="true" aria-labelledby="mf-titulo"
+      <div [class]="ui.panel + ' max-w-[980px]'" role="dialog" aria-modal="true" aria-labelledby="mf-titulo"
            cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
            (click)="$event.stopPropagation()" (keydown.escape)="handleCancel()">
 
@@ -55,26 +81,40 @@ interface ConfiguracionCabecera {
               </p>
             </div>
           } @else {
-            <!-- Subcartera: llega elegida la misma de la pantalla -->
+            <!-- Cliente, cartera y subcartera: llegan con lo elegido en la pantalla -->
             <div class="flex flex-wrap items-end justify-between gap-2.5">
-              <div class="flex flex-col gap-1.5">
-                <label for="mf-sub" [class]="ui.label">Subcartera</label>
-                @if (loadingSubPortfolios()) {
-                  <span class="flex h-[38px] items-center gap-2 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                    <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
-                    Cargando subcarteras…
+              <div class="flex flex-wrap items-end gap-2.5">
+                <div class="flex flex-col gap-1.5">
+                  <span [class]="ui.label">Cliente</span>
+                  <span class="flex h-[38px] items-center rounded-lg border border-[#e6e9ee] bg-[#f8fafc] px-3 text-[13px] font-semibold text-[#334155] dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+                    {{ clienteActual() || '—' }}
                   </span>
-                } @else if (subPortfolios().length > 0) {
-                  <select id="mf-sub" [ngModel]="selectedSubPortfolioId()" (ngModelChange)="onSubPortfolioChange($event)"
-                          [class]="ui.input + ' min-w-[240px]'">
-                    <option [ngValue]="undefined">Seleccionar subcartera</option>
-                    @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
-                      <option [ngValue]="subPortfolio.id">{{ subPortfolio.nombre || subPortfolio.nombreSubcartera || subPortfolio.subPortfolioName }}</option>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label for="mf-car" [class]="ui.label">Cartera</label>
+                  <select id="mf-car" [ngModel]="carteraActual()" (ngModelChange)="onCarteraChange($event)"
+                          [disabled]="carterasDelCliente().length === 0" [class]="ui.input + ' min-w-[180px]'">
+                    @for (c of carterasDelCliente(); track c) {
+                      <option [ngValue]="c">{{ c }}</option>
                     }
                   </select>
-                } @else {
-                  <span class="flex h-[38px] items-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">No hay subcarteras disponibles</span>
-                }
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label for="mf-sub" [class]="ui.label">Subcartera</label>
+                  @if (subsDeLaCartera().length > 0) {
+                    <select id="mf-sub" [ngModel]="selectedSubPortfolioId()" (ngModelChange)="onSubPortfolioChange($event)"
+                            [class]="ui.input + ' min-w-[200px]'">
+                      @if (!selectedSubPortfolioId()) {
+                        <option [ngValue]="undefined">Seleccionar subcartera</option>
+                      }
+                      @for (s of subsDeLaCartera(); track s.subId) {
+                        <option [ngValue]="s.subId">{{ s.subcartera }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span class="flex h-[38px] items-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">No hay subcarteras disponibles</span>
+                  }
+                </div>
               </div>
               @if (opciones().length > 0) {
                 <span class="pb-[9px] text-[12px] text-[#5f6c80] dark:text-slate-400">
@@ -90,7 +130,7 @@ interface ConfiguracionCabecera {
                 <span>Elige una subcartera para ver sus montos</span>
               </div>
             } @else if (loadingOpciones() || cargandoCampos()) {
-              <div class="grid animate-pulse grid-cols-1 gap-2.5 motion-reduce:animate-none md:grid-cols-2" role="status">
+              <div class="flex animate-pulse flex-col gap-2.5 motion-reduce:animate-none" role="status">
                 <span class="sr-only">Cargando montos…</span>
                 @for (n of esqueleto; track n) {
                   <div class="h-[52px] rounded-xl border border-[#e6e9ee] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-800/60"></div>
@@ -108,7 +148,7 @@ interface ConfiguracionCabecera {
                 <span>No se encontraron campos numéricos en esta subcartera</span>
               </div>
             } @else {
-              <div class="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2">
+              <div class="flex flex-col gap-2.5">
                 @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
                   <div [class]="'flex flex-col rounded-xl border bg-white transition-colors duration-150 dark:bg-slate-900 '
                                 + (opcion.estaHabilitada ? 'border-[#c5ccd6] dark:border-slate-600' : 'border-[#e6e9ee] dark:border-slate-800')">
@@ -129,14 +169,16 @@ interface ConfiguracionCabecera {
                         }
                       </div>
                       @if (opcion.codigoOpcion === 'personalizado') {
-                        <span [class]="ui.chipVioleta">Lo escribe el asesor</span>
+                        <span [class]="ui.chipVioleta">Siempre a evaluación</span>
+                      } @else if (opcion.estaHabilitada) {
+                        <span [class]="resumenPendiente(opcion) ? ui.chipAmbar : ui.chipGris">{{ resumen(opcion) }}</span>
                       }
                     </div>
 
                     <!-- Reglas: solo si el monto está habilitado -->
                     @if (opcion.estaHabilitada) {
                       <div class="tui-entra flex flex-col gap-3.5 border-t border-[#eef1f5] p-3 dark:border-slate-800">
-                        <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                           <div class="flex flex-col gap-1.5">
                             <span [class]="ui.label">Fecha de pago</span>
                             <select [ngModel]="opcion.restriccionFecha || 'SIN_RESTRICCION'"
@@ -164,34 +206,21 @@ interface ConfiguracionCabecera {
                                      [class]="ui.inputSm + ' w-[58px] tabular-nums'"/>
                             </div>
                           </div>
-                        </div>
-
-                        <div class="flex items-center justify-between gap-2.5">
-                          <span class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Genera carta de acuerdo</span>
-                          <button type="button" role="switch" (click)="alternarCarta(opcion.codigoOpcion)"
-                                  [attr.aria-checked]="!!opcion.generaCartaAcuerdo"
-                                  [attr.aria-label]="'Genera carta de acuerdo: ' + opcion.visualName"
-                                  [class]="sw(!!opcion.generaCartaAcuerdo)">
-                            <span [class]="perilla(!!opcion.generaCartaAcuerdo)"></span>
-                          </button>
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                          <div class="flex items-baseline justify-between gap-2.5">
-                            <span class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Descuento máximo que se aprueba solo</span>
-                            <b class="text-[13px] font-extrabold tabular-nums">{{ opcion.porcentajeAutoAprobacion ?? 10 }}%</b>
+                          <div class="flex flex-col gap-1.5">
+                            <span [class]="ui.label">Genera carta de acuerdo</span>
+                            <div class="flex h-[34px] items-center">
+                              <button type="button" role="switch" (click)="alternarCarta(opcion.codigoOpcion)"
+                                      [attr.aria-checked]="!!opcion.generaCartaAcuerdo"
+                                      [attr.aria-label]="'Genera carta de acuerdo: ' + opcion.visualName"
+                                      [class]="sw(!!opcion.generaCartaAcuerdo)">
+                                <span [class]="perilla(!!opcion.generaCartaAcuerdo)"></span>
+                              </button>
+                            </div>
                           </div>
-                          <input type="range" min="0" max="100" step="5" [value]="opcion.porcentajeAutoAprobacion ?? 10"
-                                 (input)="onPorcentajeChange(opcion.codigoOpcion, $event)"
-                                 [attr.aria-label]="'Descuento máximo para auto-aprobación de ' + opcion.visualName"
-                                 class="w-full cursor-pointer accent-[#2563eb]"/>
-                          <span [class]="ui.ayuda">
-                            Hasta {{ opcion.porcentajeAutoAprobacion ?? 10 }}% se aprueba automáticamente. Un descuento mayor pasa a evaluación.
-                          </span>
                         </div>
 
-                        <!-- Sobrepago máximo en soles: Personalizado no lo tiene porque ya es monto libre -->
                         @if (opcion.codigoOpcion !== 'personalizado') {
+                          <!-- Sobrepago máximo en soles: Personalizado no lo tiene porque ya es monto libre -->
                           <div class="flex flex-col gap-1.5">
                             <label [for]="'mf-tope-' + opcion.codigoOpcion"
                                    class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Sobrepago máximo</label>
@@ -211,23 +240,152 @@ interface ConfiguracionCabecera {
                               }
                             </span>
                           </div>
-                        }
 
-                        @if (opcion.codigoOpcion === 'personalizado') {
-                          <div class="flex flex-col gap-1">
-                            <div class="flex items-baseline justify-between gap-2.5">
-                              <span class="text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">Aumento máximo sobre la deuda que se aprueba solo</span>
-                              <b class="text-[13px] font-extrabold tabular-nums">{{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}%</b>
+                          <!-- Descuento máximo sin aprobación -->
+                          @let regla = reglaDe(opcion);
+                          <div class="flex flex-col gap-3 rounded-[10px] border border-[#e6e9ee] bg-[#f8fafc] p-3 dark:border-slate-700 dark:bg-slate-800/40">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                              <span class="text-[12.5px] font-bold text-[#0f172a] dark:text-slate-100">Descuento máximo sin aprobación</span>
+                              <div class="inline-flex rounded-lg border border-[#d5dbe3] bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900"
+                                   role="group" [attr.aria-label]="'Tipo de límite de ' + opcion.visualName">
+                                @for (t of tipos; track t.valor) {
+                                  <button type="button" [attr.aria-pressed]="regla.tipo === t.valor"
+                                          (click)="onTipoChange(opcion.codigoOpcion, t.valor)"
+                                          [class]="'h-7 rounded-md px-3 text-[12px] font-bold transition-colors duration-150 '
+                                                   + (regla.tipo === t.valor
+                                                      ? 'bg-[#0f172a] text-white dark:bg-white dark:text-slate-900'
+                                                      : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100')">
+                                    {{ t.texto }}
+                                  </button>
+                                }
+                              </div>
                             </div>
-                            <input type="range" min="0" max="100" step="5" [value]="opcion.porcentajeAutoAprobacionAumento ?? 5"
-                                   (input)="onPorcentajeAumentoChange(opcion.codigoOpcion, $event)"
-                                   aria-label="Aumento máximo sobre la deuda para auto-aprobación"
-                                   class="w-full cursor-pointer accent-[#2563eb]"/>
-                            <span [class]="ui.ayuda">
-                              Hasta {{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}% por encima de la deuda se aprueba automáticamente. Más, pasa a evaluación.
-                            </span>
-                          </div>
 
+                            <div class="flex flex-wrap items-end gap-x-5 gap-y-2.5">
+                              <div class="flex min-w-[260px] max-w-[420px] flex-1 flex-col gap-1.5">
+                                <label [for]="'mf-ref-' + opcion.codigoOpcion" [class]="ui.label">Descuento calculado sobre</label>
+                                <select [id]="'mf-ref-' + opcion.codigoOpcion" [ngModel]="regla.campoReferencia"
+                                        (ngModelChange)="onReferenciaChange(opcion.codigoOpcion, $event)"
+                                        [class]="ui.inputSm + ' w-full'">
+                                  <option [ngValue]="null">El monto de esta tarjeta ({{ opcion.visualName }})</option>
+                                  @for (r of referencias(opcion); track r.campo) {
+                                    <option [ngValue]="r.campo">{{ r.nombre }} del cliente</option>
+                                  }
+                                </select>
+                              </div>
+                              @if (segmentacion().aniosCastigo.length > 0) {
+                                <label class="flex h-[34px] cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
+                                  <input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#2563eb]"
+                                         [checked]="regla.segmento === 'ANIO'"
+                                         (change)="onPorAnioChange(opcion.codigoOpcion, $event)"/>
+                                  Límite distinto por año de castigo
+                                </label>
+                              }
+                            </div>
+
+                            <div class="overflow-x-auto">
+                              <table class="w-full min-w-[520px] border-separate border-spacing-0 text-left">
+                                <thead>
+                                  <tr>
+                                    @if (regla.segmento === 'ANTIGUA_NUEVA') {
+                                      <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Cartera</th>
+                                    } @else if (regla.segmento === 'ANIO') {
+                                      <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Año de castigo</th>
+                                    }
+                                    <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Descuento máximo {{ regla.tipo === 'PORCENTAJE' ? '(%)' : '(S/)' }}</th>
+                                    <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Cuotas máximas con descuento</th>
+                                    <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Monto mínimo por cuota</th>
+                                    @if (regla.segmento === 'ANIO') {
+                                      <th class="w-8 pb-1.5"><span class="sr-only">Quitar</span></th>
+                                    }
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  @for (fila of regla.filas; track $index; let i = $index) {
+                                    <tr>
+                                      @if (regla.segmento === 'ANTIGUA_NUEVA') {
+                                        <td class="py-1 pr-2.5 text-[12.5px] font-bold text-[#334155] dark:text-slate-200">{{ rotuloFila(regla, fila) }}</td>
+                                      } @else if (regla.segmento === 'ANIO') {
+                                        <td class="py-1 pr-2.5">
+                                          @if (fila.valor === null) {
+                                            <span class="text-[12.5px] font-bold text-[#334155] dark:text-slate-200">Resto de años</span>
+                                          } @else {
+                                            <select [ngModel]="fila.valor" (ngModelChange)="onAnioChange(opcion.codigoOpcion, i, $event)"
+                                                    aria-label="Año de castigo" [class]="ui.inputSm + ' h-[30px] w-[150px]'">
+                                              @for (a of aniosLibres(regla, fila.valor); track a) {
+                                                <option [ngValue]="a">Castigo {{ a }}</option>
+                                              }
+                                            </select>
+                                          }
+                                        </td>
+                                      }
+                                      <td class="py-1 pr-2.5">
+                                        <span [class]="numCaja">
+                                          <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">{{ regla.tipo === 'PORCENTAJE' ? '%' : 'S/' }}</span>
+                                          <input type="number" min="0" [attr.max]="regla.tipo === 'PORCENTAJE' ? 100 : null" step="1"
+                                                 placeholder="Por definir" [value]="fila.descuentoMaximo ?? ''"
+                                                 (change)="onFilaChange(opcion.codigoOpcion, i, 'descuentoMaximo', $event)"
+                                                 [attr.aria-label]="'Descuento máximo ' + rotuloFila(regla, fila)"
+                                                 [class]="numInput"/>
+                                        </span>
+                                      </td>
+                                      <td class="py-1 pr-2.5">
+                                        <span [class]="numCaja">
+                                          <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">Máx.</span>
+                                          <input type="number" min="1" max="48" step="1" placeholder="De la tarjeta"
+                                                 [value]="fila.maxCuotas ?? ''"
+                                                 (change)="onFilaChange(opcion.codigoOpcion, i, 'maxCuotas', $event)"
+                                                 [attr.aria-label]="'Cuotas máximas con descuento ' + rotuloFila(regla, fila)"
+                                                 [class]="numInput"/>
+                                        </span>
+                                      </td>
+                                      <td class="py-1 pr-2.5">
+                                        <span [class]="numCaja">
+                                          <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">S/</span>
+                                          <input type="number" min="0" step="1" placeholder="Opcional"
+                                                 [value]="fila.montoMinimoCuota ?? ''"
+                                                 (change)="onFilaChange(opcion.codigoOpcion, i, 'montoMinimoCuota', $event)"
+                                                 [attr.aria-label]="'Monto mínimo por cuota ' + rotuloFila(regla, fila)"
+                                                 [class]="numInput"/>
+                                        </span>
+                                      </td>
+                                      @if (regla.segmento === 'ANIO') {
+                                        <td class="py-1">
+                                          @if (fila.valor !== null) {
+                                            <button type="button" (click)="quitarAnio(opcion.codigoOpcion, i)"
+                                                    [attr.aria-label]="'Quitar Castigo ' + fila.valor" [class]="ui.iconBtnPeligro">
+                                              <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+                                            </button>
+                                          }
+                                        </td>
+                                      }
+                                    </tr>
+                                  }
+                                </tbody>
+                              </table>
+                            </div>
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                              @if (regla.segmento === 'ANIO' && aniosLibres(regla, null).length > 0) {
+                                <button type="button" (click)="agregarAnio(opcion.codigoOpcion)" [class]="ui.textoBtn">
+                                  <lucide-angular name="plus" [size]="14"></lucide-angular>
+                                  Agregar año
+                                </button>
+                              } @else {
+                                <span></span>
+                              }
+                              <button type="button" (click)="aplicarAOtras(opcion)" [class]="ui.textoBtn">
+                                <lucide-angular name="copy" [size]="14"></lucide-angular>
+                                Aplicar estos valores a otras tarjetas
+                              </button>
+                            </div>
+
+                            <span [class]="ui.ayuda">{{ ayuda(opcion) }}</span>
+                            @if (segmentacion().conMoneda && regla.tipo === 'MONTO') {
+                              <span [class]="ui.ayuda">En las cuentas en dólares, un límite en soles pasa a evaluación.</span>
+                            }
+                          </div>
+                        } @else {
                           <div class="flex flex-col gap-1">
                             <div class="flex items-baseline justify-between gap-2.5">
                               <span class="inline-flex items-center gap-[7px] text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
@@ -244,6 +402,7 @@ interface ConfiguracionCabecera {
                               Si la promesa supera la deuda en más de {{ opcion.porcentajeMaximoPromesa ?? 10 }}%, no se puede registrar.
                             </span>
                           </div>
+                          <span [class]="ui.ayuda">Monto libre: el asesor escribe el monto y la promesa siempre pasa a evaluación.</span>
                         }
                       </div>
                     }
@@ -290,6 +449,8 @@ export class TypificationAdditionalFieldsDialogComponent {
   portfolioId = input<number | undefined>(undefined);
   /** Subcartera abierta en la pantalla: el diálogo arranca con esa misma elegida. */
   subPortfolioId = input<number | undefined>(undefined);
+  /** Subcarteras de la pantalla, para los filtros de cartera y subcartera. */
+  subcarteras = input<SubcarteraMontos[]>([]);
 
   close = output<void>();
   save = output<void>();
@@ -298,12 +459,16 @@ export class TypificationAdditionalFieldsDialogComponent {
   readonly sw = tuiSwitch;
   readonly perilla = tuiPerilla;
   readonly esqueleto = [0, 1, 2, 3];
+  readonly numCaja = NUM_CAJA;
+  readonly numInput = NUM_INPUT;
+  readonly tipos: { valor: TipoLimiteDescuento; texto: string }[] = [
+    { valor: 'PORCENTAJE', texto: 'Porcentaje' },
+    { valor: 'MONTO', texto: 'Monto (S/)' }
+  ];
 
   opciones = signal<CampoOpcionDTO[]>([]);
   loadingOpciones = signal<boolean>(false);
   errorMessage = signal<string>('');
-  subPortfolios = signal<any[]>([]);
-  loadingSubPortfolios = signal<boolean>(false);
   selectedSubPortfolioId = signal<number | undefined>(undefined);
   paymentScheduleFieldId = signal<number | null>(null);
   /** Aún no se sabe si la tipificación tiene campo de cronograma de pagos. */
@@ -311,13 +476,27 @@ export class TypificationAdditionalFieldsDialogComponent {
   /** Ya se sabe que no lo tiene: no hay montos que configurar. */
   sinCronograma = signal<boolean>(false);
   guardando = signal<boolean>(false);
+  segmentacion = signal<Segmentacion>(SIN_SEGMENTACION);
 
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
   private cabecerasUrl = `${environment.apiUrl}/configuracion-cabeceras`;
+  private descuentoUrl = `${environment.apiUrl}/v2/descuento-maximo`;
+
+  /** Cliente de la pantalla: fijo mientras el diálogo está abierto. */
+  private readonly inicial = computed(() =>
+    this.subcarteras().find(s => s.subId === this.subPortfolioId()) ?? this.subcarteras()[0] ?? null);
+  readonly clienteActual = computed(() => this.inicial()?.cliente ?? '');
+  readonly carterasDelCliente = computed(() =>
+    [...new Set(this.subcarteras().filter(s => s.cliente === this.clienteActual()).map(s => s.cartera))]);
+  carteraActual = signal<string | undefined>(undefined);
+  readonly subsDeLaCartera = computed(() =>
+    this.subcarteras().filter(s => s.cliente === this.clienteActual() && s.cartera === this.carteraActual()));
+  private readonly seleccion = computed(() =>
+    this.subcarteras().find(s => s.subId === this.selectedSubPortfolioId()) ?? null);
 
   // Computed: opciones con nombres visuales traducidos
-  opcionesConNombres = computed(() => {
+  opcionesConNombres = computed<OpcionVista[]>(() => {
     const opciones = this.opciones();
     const cabeceras = this.cabeceras();
 
@@ -352,7 +531,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     effect(() => {
       if (this.isOpen()) {
         this.resetState();
-        this.loadSubPortfolios();
+        this.elegirInicial();
         this.loadPaymentScheduleField();
       }
     });
@@ -363,9 +542,19 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.cabeceras.set([]);
     this.errorMessage.set('');
     this.selectedSubPortfolioId.set(undefined);
+    this.carteraActual.set(undefined);
     this.paymentScheduleFieldId.set(null);
     this.sinCronograma.set(false);
     this.guardando.set(false);
+    this.segmentacion.set(SIN_SEGMENTACION);
+  }
+
+  /** Se parte de la subcartera abierta en la pantalla. */
+  private elegirInicial() {
+    const inicial = this.inicial();
+    if (!inicial) return;
+    this.carteraActual.set(inicial.cartera);
+    this.elegirSub(inicial.subId);
   }
 
   private loadPaymentScheduleField() {
@@ -395,49 +584,28 @@ export class TypificationAdditionalFieldsDialogComponent {
     });
   }
 
-  loadSubPortfolios() {
-    const portfolioId = this.portfolioId();
-    if (!portfolioId) return;
-
-    this.loadingSubPortfolios.set(true);
-
-    this.typificationService.getSubPortfoliosByPortfolio(portfolioId)
-      .subscribe({
-        next: (subPortfolios) => {
-          this.subPortfolios.set(subPortfolios);
-          this.loadingSubPortfolios.set(false);
-
-          // Se parte de la subcartera abierta en la pantalla. Antes el diálogo la
-          // descartaba y obligaba a elegirla otra vez (salvo que hubiera una sola).
-          const deLaPantalla = this.subPortfolioId();
-          const inicial = subPortfolios.some(s => s.id === deLaPantalla)
-            ? deLaPantalla
-            : (subPortfolios.length === 1 ? subPortfolios[0].id : undefined);
-
-          if (inicial !== undefined) {
-            this.selectedSubPortfolioId.set(inicial);
-            this.loadCabeceras(inicial);
-            this.loadOpcionesAutomatically();
-          }
-        },
-        error: (error) => {
-          console.error('Error loading subportfolios:', error);
-          this.subPortfolios.set([]);
-          this.loadingSubPortfolios.set(false);
-        }
-      });
+  onCarteraChange(cartera: string) {
+    this.carteraActual.set(cartera);
+    const subs = this.subsDeLaCartera();
+    this.onSubPortfolioChange(subs.length === 1 ? subs[0].subId : undefined);
   }
 
   onSubPortfolioChange(subPortfolioId: number | undefined) {
-    this.selectedSubPortfolioId.set(subPortfolioId);
     this.opciones.set([]);
     this.cabeceras.set([]);
     this.errorMessage.set('');
-
+    this.segmentacion.set(SIN_SEGMENTACION);
+    this.selectedSubPortfolioId.set(subPortfolioId);
     if (subPortfolioId) {
-      this.loadCabeceras(subPortfolioId);
-      this.loadOpcionesAutomatically();
+      this.elegirSub(subPortfolioId);
     }
+  }
+
+  private elegirSub(subPortfolioId: number) {
+    this.selectedSubPortfolioId.set(subPortfolioId);
+    this.loadCabeceras(subPortfolioId);
+    this.loadSegmentacion();
+    this.loadOpcionesAutomatically();
   }
 
   private loadCabeceras(subPortfolioId: number) {
@@ -452,6 +620,22 @@ export class TypificationAdditionalFieldsDialogComponent {
       });
   }
 
+  /** Cartera antigua y nueva o años de castigo, según lo que la subcartera enlaza en Config. Cabeceras. */
+  private loadSegmentacion() {
+    const sel = this.seleccion();
+    if (!sel) return;
+    this.http.get<Segmentacion>(`${this.descuentoUrl}/segmentacion`, {
+      params: { idTenant: sel.tenantId, idCartera: sel.portfolioId, idSubcartera: sel.subId }
+    }).subscribe({
+      next: (s) => {
+        if (this.selectedSubPortfolioId() !== sel.subId) return;
+        this.segmentacion.set({ antiguaNueva: !!s?.antiguaNueva, aniosCastigo: s?.aniosCastigo ?? [], conMoneda: !!s?.conMoneda });
+        this.opciones.set(this.opciones().map(o => this.normalizarRegla(o)));
+      },
+      error: (error) => console.warn('[DIALOG] Error loading segmentación:', error)
+    });
+  }
+
   /**
    * Carga los montos cuando ya se conocen las dos cosas que necesita: el campo de
    * cronograma y la subcartera. Se llama al resolverse cada una, así que ya no hace
@@ -459,8 +643,9 @@ export class TypificationAdditionalFieldsDialogComponent {
    * la tipificación no tenía ese campo).
    */
   private loadOpcionesAutomatically() {
-    const tenantId = this.tenantId();
-    const portfolioId = this.portfolioId();
+    const sel = this.seleccion();
+    const tenantId = sel?.tenantId ?? this.tenantId();
+    const portfolioId = sel?.portfolioId ?? this.portfolioId();
     const subPortfolioId = this.selectedSubPortfolioId();
     const campoId = this.paymentScheduleFieldId();
 
@@ -474,8 +659,9 @@ export class TypificationAdditionalFieldsDialogComponent {
     // First try to get existing options for this subPortfolio
     this.typificationService.getOpcionesCampo(campoId, subPortfolioId).subscribe({
       next: (opciones) => {
+        if (this.selectedSubPortfolioId() !== subPortfolioId) return;
         if (opciones && opciones.length > 0) {
-          this.opciones.set(opciones);
+          this.opciones.set(opciones.map(o => this.normalizarRegla(o)));
           this.loadingOpciones.set(false);
         } else {
           // Initialize options from subportfolio
@@ -493,7 +679,8 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.typificationService.inicializarOpcionesCampo(campoId, tenantId, portfolioId, subPortfolioId)
       .subscribe({
         next: (opciones) => {
-          this.opciones.set(opciones);
+          if (this.selectedSubPortfolioId() !== subPortfolioId) return;
+          this.opciones.set(opciones.map(o => this.normalizarRegla(o)));
           this.loadingOpciones.set(false);
         },
         error: (error) => {
@@ -580,28 +767,6 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.opciones.set([...opciones]);
   }
 
-  // Handler para cambio de porcentaje de auto-aprobación
-  onPorcentajeChange(codigoOpcion: string, event: Event) {
-    const target = event.target as HTMLInputElement;
-    const porcentaje = parseInt(target.value, 10);
-
-    const opciones = this.opciones();
-    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
-    if (!opcion) return;
-
-    opcion.porcentajeAutoAprobacion = porcentaje;
-    this.opciones.set([...opciones]);
-  }
-
-  onPorcentajeAumentoChange(codigoOpcion: string, event: Event) {
-    const porcentaje = parseInt((event.target as HTMLInputElement).value, 10);
-    const opciones = this.opciones();
-    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
-    if (!opcion) return;
-    opcion.porcentajeAutoAprobacionAumento = porcentaje;
-    this.opciones.set([...opciones]);
-  }
-
   onPorcentajeMaximoChange(codigoOpcion: string, event: Event) {
     const porcentaje = parseInt((event.target as HTMLInputElement).value, 10);
     const opciones = this.opciones();
@@ -620,6 +785,211 @@ export class TypificationAdditionalFieldsDialogComponent {
     if (!opcion) return;
     opcion.topeSobrepagoSoles = tope === null || isNaN(tope) || tope < 0 ? null : tope;
     this.opciones.set([...opciones]);
+  }
+
+  // ---------------------------------------------------------------- Descuento máximo
+
+  private filaVacia(valor: string | null): FilaReglaDescuento {
+    return { valor, descuentoMaximo: null, maxCuotas: null, montoMinimoCuota: null };
+  }
+
+  /** Regla que se muestra cuando la tarjeta todavía no tiene una: todo por definir. */
+  private reglaInicial(): ReglaDescuento {
+    return this.segmentacion().antiguaNueva
+      ? { tipo: 'PORCENTAJE', campoReferencia: null, segmento: 'ANTIGUA_NUEVA', filas: [this.filaVacia('ANTIGUA'), this.filaVacia('NUEVA')] }
+      : { tipo: 'PORCENTAJE', campoReferencia: null, segmento: null, filas: [this.filaVacia(null)] };
+  }
+
+  /**
+   * Deja la regla con las filas que corresponden a la subcartera: con periodo de compra, siempre cartera
+   * antigua y nueva; por año, los años y al final "Resto de años"; si no, una sola fila.
+   */
+  private normalizarRegla(o: CampoOpcionDTO): CampoOpcionDTO {
+    if (o.codigoOpcion === 'personalizado' || !o.reglaDescuento) return o;
+    const r: ReglaDescuento = { ...o.reglaDescuento, filas: [...(o.reglaDescuento.filas ?? [])] };
+    const busca = (v: string | null) => r.filas.find(f => f.valor === v);
+    if (this.segmentacion().antiguaNueva) {
+      r.segmento = 'ANTIGUA_NUEVA';
+      r.filas = [busca('ANTIGUA') ?? this.filaVacia('ANTIGUA'), busca('NUEVA') ?? this.filaVacia('NUEVA')];
+    } else if (r.segmento === 'ANIO') {
+      r.filas = [...r.filas.filter(f => f.valor !== null), busca(null) ?? this.filaVacia(null)];
+    } else if (r.segmento === 'ANTIGUA_NUEVA') {
+      // La subcartera ya no enlaza el periodo de compra: queda un solo límite por definir
+      r.segmento = null;
+      r.filas = [this.filaVacia(null)];
+    } else {
+      r.filas = [busca(null) ?? r.filas[0] ?? this.filaVacia(null)];
+    }
+    return { ...o, reglaDescuento: r };
+  }
+
+  reglaDe(o: CampoOpcionDTO): ReglaDescuento {
+    return o.reglaDescuento ?? this.reglaInicial();
+  }
+
+  /** Aplica un cambio a la regla de la tarjeta (creándola si aún no tenía) y refresca la vista. */
+  private editarRegla(codigoOpcion: string, cambio: (r: ReglaDescuento) => void) {
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (!opcion) return;
+    const base = this.reglaDe(opcion);
+    const r: ReglaDescuento = { ...base, filas: base.filas.map(f => ({ ...f })) };
+    cambio(r);
+    opcion.reglaDescuento = r;
+    this.opciones.set([...opciones]);
+  }
+
+  onTipoChange(codigoOpcion: string, tipo: TipoLimiteDescuento) {
+    this.editarRegla(codigoOpcion, r => {
+      if (r.tipo === tipo) return;
+      r.tipo = tipo;
+      // Un 85 en % no significa S/ 85: el límite se vuelve a escribir
+      r.filas.forEach(f => f.descuentoMaximo = null);
+    });
+  }
+
+  onReferenciaChange(codigoOpcion: string, campo: string | null) {
+    this.editarRegla(codigoOpcion, r => r.campoReferencia = campo || null);
+  }
+
+  onPorAnioChange(codigoOpcion: string, event: Event) {
+    const porAnio = (event.target as HTMLInputElement).checked;
+    this.editarRegla(codigoOpcion, r => {
+      const resto = r.filas.find(f => f.valor === null) ?? r.filas[0] ?? this.filaVacia(null);
+      if (porAnio) {
+        const anios = this.segmentacion().aniosCastigo.slice(0, 1);
+        r.segmento = 'ANIO';
+        r.filas = [...anios.map(a => this.filaVacia(a)), { ...resto, valor: null }];
+      } else {
+        r.segmento = null;
+        r.filas = [{ ...resto, valor: null }];
+      }
+    });
+  }
+
+  aniosLibres(regla: ReglaDescuento, actual: string | null): string[] {
+    const usados = regla.filas.map(f => f.valor).filter(v => v !== null && v !== actual);
+    return this.segmentacion().aniosCastigo.filter(a => !usados.includes(a));
+  }
+
+  agregarAnio(codigoOpcion: string) {
+    this.editarRegla(codigoOpcion, r => {
+      const libre = this.aniosLibres(r, null)[0];
+      if (!libre) return;
+      // Antes de "Resto de años", que siempre va al final
+      r.filas.splice(Math.max(0, r.filas.length - 1), 0, this.filaVacia(libre));
+    });
+  }
+
+  onAnioChange(codigoOpcion: string, i: number, anio: string) {
+    this.editarRegla(codigoOpcion, r => r.filas[i].valor = anio);
+  }
+
+  quitarAnio(codigoOpcion: string, i: number) {
+    this.editarRegla(codigoOpcion, r => r.filas.splice(i, 1));
+  }
+
+  onFilaChange(codigoOpcion: string, i: number, campo: 'descuentoMaximo' | 'maxCuotas' | 'montoMinimoCuota', event: Event) {
+    const input = event.target as HTMLInputElement;
+    const texto = input.value.trim();
+    let valor: number | null = texto === '' ? null : Number(texto);
+    if (valor !== null && (isNaN(valor) || valor < 0)) valor = null;
+    this.editarRegla(codigoOpcion, r => {
+      if (valor !== null && campo === 'descuentoMaximo' && r.tipo === 'PORCENTAJE') valor = Math.min(100, valor);
+      if (valor !== null && campo === 'maxCuotas') valor = Math.max(1, Math.min(48, Math.round(valor)));
+      r.filas[i][campo] = valor;
+    });
+    input.value = valor === null ? '' : String(valor);
+  }
+
+  /** Copia tipo, saldo de referencia, segmento y filas a las demás tarjetas de la subcartera. */
+  aplicarAOtras(origen: OpcionVista) {
+    const regla = this.reglaDe(origen);
+    const opciones = this.opciones();
+    let n = 0;
+    for (const o of opciones) {
+      if (o.codigoOpcion === origen.codigoOpcion || o.codigoOpcion === 'personalizado') continue;
+      o.reglaDescuento = {
+        ...regla,
+        // Sobre su propio monto, la referencia es la tarjeta misma
+        campoReferencia: regla.campoReferencia && regla.campoReferencia.toLowerCase() === (o.campoTablaDinamica || '').toLowerCase()
+          ? null : regla.campoReferencia,
+        filas: regla.filas.map(f => ({ ...f }))
+      };
+      n++;
+    }
+    this.opciones.set([...opciones]);
+    this.toast.success(`Valores de ${origen.visualName} aplicados a ${n} ${n === 1 ? 'tarjeta' : 'tarjetas'}. Se guardan con «Guardar».`);
+  }
+
+  /** Saldos del cliente que pueden servir de referencia: los montos de las demás tarjetas. */
+  referencias(o: OpcionVista): { campo: string; nombre: string }[] {
+    const propio = (o.campoTablaDinamica || '').toLowerCase();
+    const vistos = new Set<string>();
+    const lista: { campo: string; nombre: string }[] = [];
+    for (const x of this.opcionesConNombres()) {
+      const campo = x.campoTablaDinamica;
+      if (!campo || x.codigoOpcion === 'personalizado' || campo.toLowerCase() === propio || vistos.has(campo.toLowerCase())) continue;
+      vistos.add(campo.toLowerCase());
+      lista.push({ campo, nombre: x.visualName });
+    }
+    // La referencia guardada se muestra aunque esa tarjeta ya no esté en la subcartera
+    const actual = this.reglaDe(o).campoReferencia;
+    if (actual && !vistos.has(actual.toLowerCase()) && actual.toLowerCase() !== propio) {
+      lista.push({ campo: actual, nombre: this.nombreCampo(actual) });
+    }
+    return lista;
+  }
+
+  private nombreCampo(campo: string): string {
+    const x = this.opcionesConNombres().find(y => (y.campoTablaDinamica || '').toLowerCase() === campo.toLowerCase());
+    if (x) return x.visualName;
+    const c = this.cabeceras().find(y => y.codigo.toLowerCase() === campo.toLowerCase());
+    return c?.nombre ?? campo;
+  }
+
+  rotuloFila(regla: ReglaDescuento, fila: FilaReglaDescuento): string {
+    if (regla.segmento === 'ANTIGUA_NUEVA') return fila.valor === 'NUEVA' ? 'Cartera nueva' : 'Cartera antigua';
+    if (regla.segmento === 'ANIO') return fila.valor === null ? 'Resto de años' : 'Castigo ' + fila.valor;
+    return '';
+  }
+
+  private limiteTexto(regla: ReglaDescuento, v: number): string {
+    return regla.tipo === 'PORCENTAJE' ? `${v}%` : `S/ ${v.toLocaleString('es-PE')}`;
+  }
+
+  resumenPendiente(o: OpcionVista): boolean {
+    return this.reglaDe(o).filas.every(f => f.descuentoMaximo == null);
+  }
+
+  /** Resumen del límite junto al nombre de la tarjeta. */
+  resumen(o: OpcionVista): string {
+    const r = this.reglaDe(o);
+    if (r.filas.every(f => f.descuentoMaximo == null)) return 'Descuento por definir';
+    const sobre = r.campoReferencia ? ' sobre ' + this.nombreCampo(r.campoReferencia) : '';
+    if (r.segmento === 'ANTIGUA_NUEVA') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ': antigua y nueva';
+    if (r.segmento === 'ANIO') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ' por año de castigo';
+    const lim = r.filas[0].descuentoMaximo as number;
+    return r.campoReferencia
+      ? `Hasta ${this.limiteTexto(r, lim)} bajo ${this.nombreCampo(r.campoReferencia)}`
+      : `Hasta ${this.limiteTexto(r, lim)} de descuento`;
+  }
+
+  ayuda(o: OpcionVista): string {
+    const r = this.reglaDe(o);
+    const sobre = r.campoReferencia ? this.nombreCampo(r.campoReferencia) : o.visualName;
+    const cuando = r.campoReferencia ? ` Aplica cuando la promesa es menor que ${o.visualName}.` : '';
+    if (r.segmento === 'ANTIGUA_NUEVA') {
+      return `El descuento se calcula sobre ${sobre}.${cuando} Cada cliente toma la fila de su cartera: la nueva es la compra más reciente y la antigua, las anteriores. Una fila sin límite está por definir.`;
+    }
+    if (r.segmento === 'ANIO') {
+      return `El descuento se calcula sobre ${sobre}.${cuando} Cada cliente toma la fila del año en que se castigó su deuda; los años sin fila van a «Resto de años». Una fila sin límite está por definir.`;
+    }
+    const lim = r.filas[0]?.descuentoMaximo;
+    if (lim == null) return `Por definir: mientras no tenga límite, todo descuento sobre ${o.visualName} pasa a evaluación.`;
+    return r.tipo === 'PORCENTAJE'
+      ? `Sin aprobación, la promesa puede bajar hasta el ${100 - lim}% de ${sobre}.${cuando} Un descuento mayor pasa a evaluación.`
+      : `Sin aprobación, la promesa puede bajar hasta ${sobre} menos ${this.limiteTexto(r, lim)}.${cuando} Un descuento mayor pasa a evaluación.`;
   }
 
   getOpcionesHabilitadasCount(): number {
@@ -658,8 +1028,8 @@ export class TypificationAdditionalFieldsDialogComponent {
         generaCartaAcuerdo: o.generaCartaAcuerdo || false,
         minCuotas: o.minCuotas || 1,
         maxCuotas: o.maxCuotas || 6,
-        porcentajeAutoAprobacion: o.porcentajeAutoAprobacion ?? 10,
-        porcentajeAutoAprobacionAumento: o.porcentajeAutoAprobacionAumento ?? 5,
+        // Personalizado es monto libre: no lleva descuento máximo
+        reglaDescuento: o.codigoOpcion === 'personalizado' ? null : (o.reglaDescuento ?? null),
         porcentajeMaximoPromesa: o.porcentajeMaximoPromesa ?? 10,
         topeSobrepagoSoles: o.topeSobrepagoSoles ?? null
       }))
@@ -670,7 +1040,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.typificationService.configurarOpciones(request).subscribe({
       next: (opcionesActualizadas) => {
         this.guardando.set(false);
-        this.opciones.set(opcionesActualizadas);
+        this.opciones.set(opcionesActualizadas.map(o => this.normalizarRegla(o)));
         this.save.emit();
       },
       error: (error) => {

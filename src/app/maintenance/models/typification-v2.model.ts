@@ -188,6 +188,7 @@ export interface EvaluacionDescuento {
   montoMinimoCuota: number | null;
 }
 
+<<<<<<< HEAD
 /** Canal por el que el cliente paga o pagará, de una subcartera (REQ-074). */
 export interface CanalPagoDTO {
   id: number;
@@ -198,6 +199,8 @@ export interface CanalPagoDTO {
   enUso: boolean;
 }
 
+=======
+>>>>>>> 6860f9cd (feat(montos): configurar descuento máximo por tarjeta y revisarlo en el cronograma)
 // Modelos para el sistema de opciones con toggles
 export interface CampoOpcionDTO {
   id?: number;
@@ -210,8 +213,7 @@ export interface CampoOpcionDTO {
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
   minCuotas?: number;  // Número mínimo de cuotas permitidas (default 1)
   maxCuotas?: number;  // Número máximo de cuotas permitidas (default 6)
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  reglaDescuento?: ReglaDescuento | null;    // Descuento máximo sin aprobación; null = por definir
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
@@ -231,8 +233,7 @@ export interface OpcionToggleDTO {
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
   minCuotas?: number;  // Número mínimo de cuotas permitidas
   maxCuotas?: number;  // Número máximo de cuotas permitidas
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  reglaDescuento?: ReglaDescuento | null;    // Descuento máximo sin aprobación; null = por definir
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
@@ -271,8 +272,7 @@ export interface PaymentScheduleConfig {
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   generaCartaAcuerdo?: boolean;  // Si el monto seleccionado genera carta de acuerdo
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  idOpcion?: number;                         // Opción de la tarjeta elegida (su descuento máximo se lee en el backend)
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
@@ -289,8 +289,7 @@ export interface PaymentScheduleRequest {
   observaciones?: string;
   metodoContacto?: string;
   schedule: PaymentScheduleConfig;
-  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
-  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  idOpcion?: number;                         // Opción de la tarjeta elegida (su descuento máximo se lee en el backend)
   porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
   topeSobrepagoSoles?: number | null;        // Sobrepago máximo en soles sobre el monto; más es monto libre (null = sin tope)
 
