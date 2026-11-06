@@ -77,6 +77,17 @@
                 Necesita información<span class="tabular-nums font-bold">{{ casosConInfo }}</span>
               </button>
             }
+            @for (o of objetivosConCasos; track o) {
+              <button type="button" (click)="alternarObjetivo(o)" [attr.aria-pressed]="filtroObjetivo === o"
+                      class="pastilla-filtro"
+                      [attr.aria-label]="etiquetaObjetivo(o) + ': ' + contarObjetivo(o) + ' casos'"
+                      [style.--pf-borde]="filtroObjetivo === o ? '#0f172a' : '#64748b59'"
+                      [style.--pf-fondo]="filtroObjetivo === o ? '#0f172a' : '#f1f5f9'"
+                      [style.--pf-texto]="filtroObjetivo === o ? '#ffffff' : '#334155'">
+                <lucide-angular name="target" [size]="13" class="block"></lucide-angular>
+                {{ etiquetaObjetivo(o) }}<span class="tabular-nums font-bold">{{ contarObjetivo(o) }}</span>
+              </button>
+            }
           </div>
 
           @if (visibles.length > 4) {
@@ -112,12 +123,12 @@
             <lucide-angular name="calendar-check" [size]="28" class="mx-auto block text-[#8491a3]"></lucide-angular>
             <p class="!m-0 mt-2 text-[14px] font-bold">
               {{ filtroDia ? 'Ese día no dejó nada pendiente'
-                  : (filtroTipo || buscar ? 'Ningún caso con estos filtros'
+                  : (filtroTipo || filtroObjetivo || buscar ? 'Ningún caso con estos filtros'
                       : (esSupervision ? 'Nada pendiente' : 'No tienes promesas')) }}
             </p>
             <p class="!m-0" [class]="ui.ayuda">
               {{ filtroDia ? 'Quita el filtro de día para ver todo lo pendiente.'
-                  : (filtroTipo || buscar ? 'Quita el filtro para ver el resto.'
+                  : (filtroTipo || filtroObjetivo || buscar ? 'Quita el filtro para ver el resto.'
                       : (esSupervision
                           ? 'Las promesas repartidas están en la tarjeta de cada asesor.'
                           : 'El sistema te asigna las promesas el día antes de que venzan.')) }}

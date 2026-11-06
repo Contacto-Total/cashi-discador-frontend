@@ -118,6 +118,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   esSupervision = false;
 
   filtroTipo = '';
+  filtroObjetivo = '';
   /** Solo los casos donde el cliente necesita información. */
   soloConInfo = false;
   /**
@@ -288,6 +289,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     return this.colaSinDia
       .filter((c) => !this.filtroDia || (c.cuando || '').slice(0, 10) === this.filtroDia)
       .filter((c) => !this.filtroTipo || c.tipo === this.filtroTipo)
+      .filter((c) => !this.filtroObjetivo || c.objetivo === this.filtroObjetivo)
       .filter((c) => !this.soloConInfo || this.tienePedido(c))
       .filter((c) => !q || (`${c.nombreCliente ?? ''} ${c.documento ?? ''} ${c.telefono ?? ''}`)
         .toLowerCase().includes(q))
@@ -372,6 +374,22 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     if (i.fechaPrometida) l.push({ rotulo: 'Fecha que dijo', valor: i.fechaPrometida });
     if (i.cuotas) l.push({ rotulo: 'Cuotas que aceptó', valor: String(i.cuotas) });
     return l;
+  }
+
+  contarObjetivo(objetivo: string): number {
+    return this.colaSinDia
+      .filter((c) => !this.filtroDia || (c.cuando || '').slice(0, 10) === this.filtroDia)
+      .filter((c) => c.objetivo === objetivo).length;
+  }
+
+  get objetivosConCasos(): string[] {
+    return ['RECORDATORIO', 'LEVANTAMIENTO', 'PRIMER_CONTACTO', 'CREACION', 'RESCATE']
+      .filter((o) => this.contarObjetivo(o) > 0 || this.filtroObjetivo === o);
+  }
+
+  alternarObjetivo(objetivo: string): void {
+    this.filtroObjetivo = this.filtroObjetivo === objetivo ? '' : objetivo;
+    this.pagina = 0;
   }
 
   alternarTipo(tipo: string): void {
