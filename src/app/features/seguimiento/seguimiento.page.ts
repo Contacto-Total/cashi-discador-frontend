@@ -578,17 +578,35 @@ export class SeguimientoPage implements OnInit, OnDestroy {
           console.log('[Seguimiento] Llamada directa iniciada, UUID:', resultado.callUuid);
           // El flujo SIP normal navega a /collection-management
         } else {
-          console.error('[Seguimiento] Error iniciando llamada directa:', resultado.mensaje);
-          this.limpiarLlamadaCancelada();
-          this.obtenerSiguienteYMostrar();
+          this.abortarDiscado(resultado.mensaje);
         }
       },
       error: (err) => {
-        console.error('[Seguimiento] Error en llamada directa:', err);
-        this.limpiarLlamadaCancelada();
-        this.obtenerSiguienteYMostrar();
+        this.abortarDiscado(err.error?.mensaje || err.error?.message, err.status);
       }
     });
+  }
+
+  /**
+   * La llamada directa no salio. Antes se pedia el siguiente cliente, pero
+   * ninguno de los motivos es del cliente: son del agente o de la sesion (fuera
+   * de horario, sin extension SIP, predictiva en vuelo, originate caido, lista
+   * no activa). El siguiente fallaba igual, asi que la pantalla recorria toda la
+   * lista de a 3 segundos, en silencio, y dejaba cada cliente TOMADO hasta que
+   * lo soltara el reaper.
+   *
+   * Ahora para, suelta el cliente que tenia tomado, vuelve al estado inicial y
+   * dice por que. El asesor reintenta con "Iniciar" cuando el motivo ya no este.
+   */
+  private abortarDiscado(motivo?: string, status?: number): void {
+    console.error('[Seguimiento] Llamada directa no iniciada:', status ?? '', motivo);
+    this.limpiarIntervals();
+    this.limpiarLlamadaCancelada();
+    this.soltarItemActual();
+    this.llamadaIniciada = false;
+    this.recordatorioActual = null;
+    this.pageState = 'initial';
+    this.toast.error(motivo || 'No se pudo iniciar la llamada. Intente de nuevo.', 6000);
   }
 
   // ==================== CANCELAR / VOLVER ====================
