@@ -445,6 +445,8 @@ export class ComisionesPage implements OnInit {
   private readonly tabs = viewChild<ElementRef<HTMLElement>>('tabs');
   private readonly ink = viewChild<ElementRef<HTMLElement>>('ink');
   private tabsAnimadas = false;
+  /** Vuelve a medir el subrayado cuando la pestaña cambia de tamaño (zoom, fuente que carga después, ventana) */
+  private tinta: ResizeObserver | null = null;
   private pedido = 0;
 
   readonly reporte = computed<ReportePeriodo | null>(() => this.vista()?.reporte ?? null);
@@ -541,12 +543,28 @@ export class ComisionesPage implements OnInit {
       if (!this.tabsAnimadas) {
         ink.style.transition = 'none';
       }
-      ink.style.transform = `translateX(${activa.offsetLeft}px) scaleX(${activa.offsetWidth})`;
+      let medida = `translateX(${activa.offsetLeft}px) scaleX(${activa.offsetWidth})`;
+      ink.style.transform = medida;
       if (!this.tabsAnimadas) {
         void ink.offsetWidth;
         ink.style.transition = '';
         this.tabsAnimadas = true;
       }
+      // El observador avisa también al empezar: solo se mueve si la medida cambió, y sin animación
+      this.tinta?.disconnect();
+      this.tinta = new ResizeObserver(() => {
+        const nueva = `translateX(${activa.offsetLeft}px) scaleX(${activa.offsetWidth})`;
+        if (nueva === medida) {
+          return;
+        }
+        medida = nueva;
+        ink.style.transition = 'none';
+        ink.style.transform = nueva;
+        void ink.offsetWidth;
+        ink.style.transition = '';
+      });
+      this.tinta.observe(activa);
+      this.tinta.observe(barra);
     });
 
     // Mientras el período está abierto, se refresca solo (lo recalcula el backend con cada archivo aprobado)
@@ -556,7 +574,10 @@ export class ComisionesPage implements OnInit {
         this.cargarVista(true);
       }
     }, REFRESCO_MS);
-    inject(DestroyRef).onDestroy(() => clearInterval(reloj));
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(reloj);
+      this.tinta?.disconnect();
+    });
   }
 
   ngOnInit(): void {

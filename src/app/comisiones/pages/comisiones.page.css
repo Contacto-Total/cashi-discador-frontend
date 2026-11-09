@@ -522,6 +522,20 @@
 .cmx-who-sep { width: 1px; background: var(--cmx-line-2); margin: 2px 4px; }
 .cmx-who button.is-sup { border-style: dashed; }
 .cmx-who button.is-sup[aria-pressed="true"] { border-style: solid; }
+
+/* Filtro del Día a día por DNI, nombre o celular */
+.cmx-flt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--cmx-line); }
+.cmx-flt-f { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; max-width: 380px; min-height: 34px; border: 1px solid var(--cmx-line-2); border-radius: 7px; background: var(--cmx-surface); padding: 0 6px 0 10px; color: var(--cmx-ink-3); transition: border-color .3s var(--cmx-ease), box-shadow .3s var(--cmx-ease); }
+.cmx-flt-f:focus-within { border-color: var(--cmx-blue); box-shadow: 0 0 0 3px var(--cmx-blue-soft); }
+.cmx.cmx-root .cmx-flt-f input { flex: 1; min-width: 0; border: 0 !important; background: transparent !important; font-size: .82rem; padding: 6px 0; outline: none; color: var(--cmx-ink); }
+.cmx-flt-f input::placeholder { color: var(--cmx-ink-4); }
+.cmx-flt-x { border: 0; background: none; padding: 4px; border-radius: 5px; cursor: pointer; color: var(--cmx-ink-3); display: inline-flex; }
+.cmx-flt-x:hover { background: var(--cmx-soft-2); color: var(--cmx-ink); }
+.cmx-flt-h { font-size: .74rem; color: var(--cmx-ink-3); }
+.cmx-flt-h b { color: var(--cmx-ink-2); font-weight: 600; }
+.cmx .cmx-table mark { background: var(--cmx-amber-soft); color: var(--cmx-amber); border-radius: 3px; padding: 0 1px; }
+/* Con el filtro puesto los días se abren sin animación: nada se mueve mientras se escribe */
+.cmx-flt-on .cmx-det-in { animation: none; }
 .cmx-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .72rem; color: var(--cmx-ink-2); padding: 10px 14px 0; }
 .cmx-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .cmx-legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--cmx-brand); }
