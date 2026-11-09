@@ -20,7 +20,8 @@ const ENLACES: Record<string, string> = {
   FOH_TR3_TR3: 'https://app.powerbi.com/view?r=eyJrIjoiOTNkNDYxOGEtNGQ1MS00MmQ0LTgwMjAtNmVkYzE4NjRhYTQzIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
   FOH_TR5_TR5: 'https://app.powerbi.com/view?r=eyJrIjoiYjAxNjIxYWUtNGQwYy00ZjMzLWJiNTQtMDcxNmQ4NTdmNjI2IiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
   FOH_CAS_CST: 'https://app.powerbi.com/view?r=eyJrIjoiMTAxY2MzNTgtMjVjMi00Mjg3LWE2NTYtMmI5OGU0N2QxM2YxIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9',
-  FOH_NSO_TPR: 'https://app.powerbi.com/view?r=eyJrIjoiOGM1Nzg0OGQtNjI5ZS00MTAzLWJlODUtNGEyZWRmNzVmZWU2IiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9&disablecdnExpiration=1782867941'
+  FOH_NSO_TPR: 'https://app.powerbi.com/view?r=eyJrIjoiOGM1Nzg0OGQtNjI5ZS00MTAzLWJlODUtNGEyZWRmNzVmZWU2IiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9&disablecdnExpiration=1782867941',
+  IBK_ICS_IBC: 'https://app.powerbi.com/view?r=eyJrIjoiNTkxZjVkZTItN2FmMy00OGRhLTg5NjItMTA5ZmVmNWY0NWRiIiwidCI6IjVmZjNlMmE4LTJkYWUtNGY2MC04ZWE4LWFjZjE5NTQ0MzMyNSIsImMiOjR9'
 };
 const ORDEN = Object.keys(ENLACES);
 
@@ -37,7 +38,7 @@ interface Ambito {
 }
 
 /**
- * Reporte Power BI: el reporte publicado de la subcartera elegida (Tramo 3, Tramo 5, Castigo o Tramo Propio),
+ * Reporte Power BI: el reporte publicado de la subcartera elegida (Tramo 3, Tramo 5, Castigo, Tramo Propio o Castigo de Interbank),
  * cargado en la pantalla. Se elige como en la ficha del cliente: cliente, cartera y subcartera arriba, o la
  * subcartera en el panel lateral.
  */
