@@ -25,6 +25,31 @@ interface Persona {
   filas: DetalleComision[];
 }
 
+/** Un pago o cliente del sustento, con lo que mira el filtro */
+interface ClienteFiltrable {
+  documentoCliente: string | null;
+  nombreCliente: string | null;
+  celularCliente?: string | null;
+}
+
+/** Filtro del Día a día: números = DNI o celular (aunque sea una parte); letras = palabras del nombre */
+interface Criterio {
+  numero: string | null;
+  palabras: string[];
+}
+
+/** Día del Día a día con el filtro puesto: total = pagos o clientes del día sin filtrar */
+type DiaVista = DiaDetalle & { total?: number };
+
+/** Letra a letra sin tildes y en minúsculas, con el mismo largo que el texto (para marcar lo que coincide) */
+function plano(texto: string): string {
+  return [...texto].map(c => c.normalize('NFD')[0].toLowerCase()).join('');
+}
+
+function plural(n: number, uno: string, varios: string): string {
+  return `${n} ${n === 1 ? uno : varios}`;
+}
+
 const W = 780;
 const H = 270;
 const L = 44;
@@ -86,6 +111,12 @@ class Paginado<T> {
           <button type="button" class="cmx-dbtn" [disabled]="pg.pagina() === pg.paginas()" (click)="pg.mover(1)">Siguiente ›</button>
         </div>
       }
+    </ng-template>
+
+    <ng-template #marcado let-texto let-campo="campo">@for (s of partes(texto, campo); track $index) {@if (s.marca) {<mark>{{ s.texto }}</mark>} @else {<ng-container>{{ s.texto }}</ng-container>}}</ng-template>
+    <ng-template #dniCelular let-c>
+      <ng-container *ngTemplateOutlet="marcado; context: { $implicit: c.documentoCliente || '—', campo: 'numero' }" />
+      @if (c.celularCliente) { <span class="cmx-role"><ng-container *ngTemplateOutlet="marcado; context: { $implicit: c.celularCliente, campo: 'numero' }" /></span> }
     </ng-template>
 
     @if (cargando() && !filas().length) {
@@ -263,7 +294,7 @@ class Paginado<T> {
           }
         </section>
 
-        <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-sus-dias">
+        <section class="cmx-block cmx-enter" style="--i:1" aria-labelledby="cmx-sus-dias" [class.cmx-flt-on]="!!criterio()">
           <div class="cmx-block-head">
             <h3 id="cmx-sus-dias" class="cmx-block-title">Día a día</h3>
             <span class="cmx-block-desc">
@@ -273,6 +304,17 @@ class Paginado<T> {
                 Por fecha banco (FEC_ULT_PAGO en Financiera OH, fecha de pago en BCP)@if (porCapital()) {. Cada cliente contenido suma su capital asignado el día de su primer pago del mes }
               }
             </span>
+          </div>
+          <div class="cmx-flt" role="search">
+            <label class="cmx-flt-f">
+              <cmx-icon name="search" [size]="15" />
+              <input type="text" autocomplete="off" maxlength="60" placeholder="Filtrar por DNI, nombre o celular"
+                     aria-label="Filtrar por DNI, nombre o celular" [value]="filtro()" (input)="filtrar($any($event.target).value)" />
+              @if (filtro()) {
+                <button type="button" class="cmx-flt-x" aria-label="Quitar filtro" (click)="filtrar('')"><cmx-icon name="x" [size]="14" /></button>
+              }
+            </label>
+            <span class="cmx-flt-h" aria-live="polite">@if (resumenFiltro(); as r) { <b>{{ r.cuenta }}</b>{{ r.resto }} }</span>
           </div>
           <div class="cmx-tw">
             <table class="cmx-table">
@@ -288,7 +330,7 @@ class Paginado<T> {
               </thead>
               <tbody>
                 @for (d of paginaDias.filas(); track d.fecha) {
-                  <tr [class.is-open]="abiertos().has(d.fecha)">
+                  <tr [class.is-open]="abierto(d.fecha)">
                     <td class="n" style="text-align:left">{{ diaMes(d.fecha) }}@if (d.etiqueta) { <span class="cmx-tag">{{ d.etiqueta }}</span> }</td>
                     <td class="n">{{ d.monto | appNumber:'1.2-2' }}</td>
                     <td class="n">{{ d.acumulado | appNumber:'1.2-2' }}</td>
@@ -297,25 +339,25 @@ class Paginado<T> {
                       @if (d.nivel && d.nivel.montoComision) { {{ d.sube ? '▲ ' : '' }}{{ d.nivel.porcentajeDesde }} % · S/ {{ d.nivel.montoComision | appNumber:'1.0-0' }} } @else { — }
                     </td>
                     <td style="text-align:right">
-                      <button type="button" class="cmx-dbtn" [attr.aria-expanded]="abiertos().has(d.fecha)" (click)="alternarDia(d.fecha)">
-                        {{ abiertos().has(d.fecha) ? 'Ocultar' : d.clientes ? 'Ver clientes (' + d.clientes.length + ')' : 'Ver pagos (' + (d.pagosSustento ?? d.pagos).length + ')' }}
-                        <span class="cmx-chev" [class.is-open]="abiertos().has(d.fecha)"><cmx-icon name="chevron-down" [size]="13" /></span>
+                      <button type="button" class="cmx-dbtn" [attr.aria-expanded]="abierto(d.fecha)" (click)="alternarDia(d.fecha)">
+                        {{ etiquetaDia(d) }}
+                        <span class="cmx-chev" [class.is-open]="abierto(d.fecha)"><cmx-icon name="chevron-down" [size]="13" /></span>
                       </button>
                     </td>
                   </tr>
-                  @if (abiertos().has(d.fecha)) {
+                  @if (abierto(d.fecha)) {
                     <tr class="cmx-det">
                       <td colspan="6">
                         <div class="cmx-det-in">
                           @if (d.clientes; as clientes) {
                             <div class="cmx-tw">
                               <table class="cmx-table">
-                                <thead><tr><th scope="col">Documento</th><th scope="col">Cliente</th><th scope="col" class="n">Capital</th></tr></thead>
+                                <thead><tr><th scope="col">DNI y celular</th><th scope="col">Cliente</th><th scope="col" class="n">Capital</th></tr></thead>
                                 <tbody>
                                   @for (cliente of clientes; track cliente.documentoCliente) {
                                     <tr>
-                                      <td>{{ cliente.documentoCliente }}</td>
-                                      <td>{{ cliente.nombreCliente || '—' }}</td>
+                                      <td><ng-container *ngTemplateOutlet="dniCelular; context: { $implicit: cliente }" /></td>
+                                      <td><ng-container *ngTemplateOutlet="marcado; context: { $implicit: cliente.nombreCliente || '—', campo: 'nombre' }" /></td>
                                       <td class="n">{{ cliente.capitalAsignado ?? 0 | appNumber:'1.2-2' }}</td>
                                     </tr>
                                   }
@@ -330,7 +372,7 @@ class Paginado<T> {
                                     <th scope="col">Origen</th>
                                     <th scope="col">Asesor</th>
                                     <th scope="col">Cliente</th>
-                                    <th scope="col">DNI</th>
+                                    <th scope="col">DNI y celular</th>
                                     <th scope="col" class="n">Gestión</th>
                                     <th scope="col" class="n">Monto</th>
                                     <th scope="col">Al asesor</th>
@@ -341,8 +383,8 @@ class Paginado<T> {
                                     <tr>
                                       <td><span class="cmx-src">{{ origen(pg) }}</span></td>
                                       <td>{{ pg.nombreAgenteGestion || '—' }}</td>
-                                      <td>{{ pg.nombreCliente || '—' }}</td>
-                                      <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
+                                      <td><ng-container *ngTemplateOutlet="marcado; context: { $implicit: pg.nombreCliente || '—', campo: 'nombre' }" /></td>
+                                      <td class="n" style="text-align:left"><ng-container *ngTemplateOutlet="dniCelular; context: { $implicit: pg }" /></td>
                                       <td class="n">{{ pg.idGestion }}</td>
                                       <td class="n">{{ pg.montoAplicado | appNumber:'1.2-2' }}</td>
                                       <td [class.na]="pg.motivoExclusion" [attr.title]="detalleCuadre(pg)">
@@ -363,7 +405,7 @@ class Paginado<T> {
                                   <th scope="col">Origen</th>
                                   @if (p.esSupervisor) { <th scope="col">Asesor</th> }
                                   <th scope="col">Cliente</th>
-                                  <th scope="col">DNI</th>
+                                  <th scope="col">DNI y celular</th>
                                   <th scope="col" class="n">Gestión</th>
                                   <th scope="col" class="n">Cuota</th>
                                   @if (porCapital()) {
@@ -387,10 +429,10 @@ class Paginado<T> {
                                     <td><span class="cmx-src">{{ origen(pg) }}</span></td>
                                     @if (p.esSupervisor) { <td>{{ pg.nombreAsesor }}</td> }
                                     <td>
-                                      {{ pg.nombreCliente || '—' }}
+                                      <ng-container *ngTemplateOutlet="marcado; context: { $implicit: pg.nombreCliente || '—', campo: 'nombre' }" />
                                       @if (esParcial(pg)) { <span class="cmx-src is-warn" [title]="TITULO_PARCIAL">parcial en espera</span> }
                                     </td>
-                                    <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
+                                    <td class="n" style="text-align:left"><ng-container *ngTemplateOutlet="dniCelular; context: { $implicit: pg }" /></td>
                                     <td class="n">{{ pg.idGestion }}</td>
                                     <td class="n">{{ pg.numeroCuota }}</td>
                                     @if (porCapital()) {
@@ -420,7 +462,23 @@ class Paginado<T> {
                     </tr>
                   }
                 } @empty {
-                  <tr><td colspan="6" class="empty">{{ p.esSupervisor && porCapital() ? 'No hay clientes contenidos en la tabla de este periodo.' : p.esSupervisor ? 'Todavía no hay pagos conciliados en este periodo.' : 'Todavía no hay pagos que sumen en este periodo.' }}</td></tr>
+                  @if (criterio()) {
+                    <tr>
+                      <td colspan="6" class="empty">
+                        @if (mostrarNoSuman() && noSumanVista().length) {
+                          Ningún pago que suma coincide. Los que coinciden están abajo, en <b>Pagos que no suman</b>.
+                        } @else {
+                          Ningún {{ p.esSupervisor && porCapital() ? 'cliente' : 'pago' }} coincide con "{{ filtro().trim() }}" {{ mostrarNoSuman() ? 'en el sustento de ' + p.nombre : 'en tu sustento' }}.
+                        }
+                        @if (enOtraPersona(); as o) {
+                          Sí está en el sustento de <b>{{ o.nombre }}</b>.
+                          <button type="button" class="cmx-dbtn" style="margin-left:8px" (click)="elegir(o.clave)">Ver en {{ o.nombre }}</button>
+                        }
+                      </td>
+                    </tr>
+                  } @else {
+                    <tr><td colspan="6" class="empty">{{ p.esSupervisor && porCapital() ? 'No hay clientes contenidos en la tabla de este periodo.' : p.esSupervisor ? 'Todavía no hay pagos conciliados en este periodo.' : 'Todavía no hay pagos que sumen en este periodo.' }}</td></tr>
+                  }
                 }
               </tbody>
             </table>
@@ -431,7 +489,7 @@ class Paginado<T> {
         @if (p.esSupervisor && porCapital()) {
           <section class="cmx-block cmx-enter" style="--i:2" aria-labelledby="cmx-sus-contenidos">
             <div class="cmx-block-head">
-              <h3 id="cmx-sus-contenidos" class="cmx-block-title">Clientes contenidos del mes ({{ contenidos().length }})</h3>
+              <h3 id="cmx-sus-contenidos" class="cmx-block-title">Clientes contenidos del mes ({{ criterio() ? contenidosVista().length + ' de ' + contenidos().length : contenidos().length }})</h3>
               <span class="cmx-block-desc">Total S/ {{ totalContenidos() | appNumber:'1.2-2' }}</span>
             </div>
             @if (contenidosDesactualizados()) {
@@ -442,18 +500,18 @@ class Paginado<T> {
             <div class="cmx-tw">
               <table class="cmx-table">
                 <thead>
-                  <tr><th scope="col">Documento</th><th scope="col">Cliente</th><th scope="col">Fecha de contención</th><th scope="col" class="n">Capital</th></tr>
+                  <tr><th scope="col">DNI y celular</th><th scope="col">Cliente</th><th scope="col">Fecha de contención</th><th scope="col" class="n">Capital</th></tr>
                 </thead>
                 <tbody>
                   @for (cliente of paginaContenidos.filas(); track cliente.documentoCliente) {
                     <tr>
-                      <td>{{ cliente.documentoCliente }}</td>
-                      <td>{{ cliente.nombreCliente || '—' }}</td>
+                      <td><ng-container *ngTemplateOutlet="dniCelular; context: { $implicit: cliente }" /></td>
+                      <td><ng-container *ngTemplateOutlet="marcado; context: { $implicit: cliente.nombreCliente || '—', campo: 'nombre' }" /></td>
                       <td>{{ cliente.fechaContencion ? diaMes(cliente.fechaContencion) : 'Ya venía contenido' }}</td>
                       <td class="n">{{ cliente.capitalAsignado ?? 0 | appNumber:'1.2-2' }}</td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="4" class="empty">No hay clientes contenidos en la tabla de este periodo.</td></tr>
+                    <tr><td colspan="4" class="empty">{{ criterio() ? 'Ningún cliente contenido coincide con el filtro.' : 'No hay clientes contenidos en la tabla de este periodo.' }}</td></tr>
                   }
                 </tbody>
               </table>
@@ -465,7 +523,7 @@ class Paginado<T> {
         @if (mostrarNoSuman() && noSuman().length) {
           <section class="cmx-block cmx-enter" style="--i:3" aria-labelledby="cmx-sus-nosuman">
             <div class="cmx-block-head">
-              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman{{ p.esSupervisor && !porCapital() && !cartera() ? ' a los asesores' : '' }} ({{ noSuman().length }})</h3>
+              <h3 id="cmx-sus-nosuman" class="cmx-block-title">Pagos que no suman{{ p.esSupervisor && !porCapital() && !cartera() ? ' a los asesores' : '' }} ({{ criterio() ? noSumanVista().length + ' de ' + noSuman().length : noSuman().length }})</h3>
               <span class="cmx-block-desc">
                 @if (p.esSupervisor && porCapital()) {
                   Conciliados en el mes, pero no suman capital a los asesores. Los motivos de contención siguen contando para su meta de pagos.
@@ -485,7 +543,7 @@ class Paginado<T> {
                     <th scope="col">Fecha banco</th>
                     @if (p.esSupervisor) { <th scope="col">Asesor</th> }
                     <th scope="col">Cliente</th>
-                    <th scope="col">DNI</th>
+                    <th scope="col">DNI y celular</th>
                     <th scope="col" class="n">Gestión</th>
                     <th scope="col">Fecha PDP</th>
                     <th scope="col" class="n">Monto</th>
@@ -502,8 +560,8 @@ class Paginado<T> {
                     <tr>
                       <td class="n" style="text-align:left">{{ diaMes(pg.fechaBanco) }}</td>
                       @if (p.esSupervisor) { <td>{{ pg.nombreAgenteGestion || '—' }}</td> }
-                      <td>{{ pg.nombreCliente || '—' }}</td>
-                      <td class="n" style="text-align:left">{{ pg.documentoCliente || '—' }}</td>
+                      <td><ng-container *ngTemplateOutlet="marcado; context: { $implicit: pg.nombreCliente || '—', campo: 'nombre' }" /></td>
+                      <td class="n" style="text-align:left"><ng-container *ngTemplateOutlet="dniCelular; context: { $implicit: pg }" /></td>
                       <td class="n">{{ pg.idGestion }}</td>
                       <td class="n" style="text-align:left">{{ pg.fechaGestion ? diaMes(pg.fechaGestion.slice(0, 10)) : '—' }}</td>
                       <td class="n">{{ pg.montoAplicado | appNumber:'1.2-2' }}</td>
@@ -514,6 +572,8 @@ class Paginado<T> {
                       }
                       <td [attr.title]="detalleCuadre(pg)">{{ motivo(pg) }}</td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="12" class="empty">Ningún pago que no suma coincide con el filtro.</td></tr>
                   }
                 </tbody>
               </table>
@@ -677,9 +737,144 @@ export class SustentoTabComponent {
     return agruparPorDia(p.filas, p.meta, p.tramos);
   });
 
-  readonly paginaDias = new Paginado(this.dias);
-  readonly paginaContenidos = new Paginado(this.contenidos);
-  readonly paginaNoSuman = new Paginado(this.noSuman);
+  /** Texto del filtro del Día a día: DNI, nombre o celular */
+  readonly filtro = signal('');
+  /** Con filtro, los días que quedan se abren solos: aquí van los que se cerraron a mano */
+  private readonly cerrados = signal<Set<string>>(new Set());
+
+  readonly criterio = computed<Criterio | null>(() => {
+    const texto = this.filtro().trim();
+    if (!texto) {
+      return null;
+    }
+    const digitos = texto.replace(/[\s-]/g, '');
+    return /^\d+$/.test(digitos)
+      ? { numero: digitos, palabras: [] }
+      : { numero: null, palabras: plano(texto).split(/\s+/).filter(Boolean) };
+  });
+
+  private coincide(c: ClienteFiltrable): boolean {
+    const k = this.criterio();
+    if (!k) {
+      return true;
+    }
+    if (k.numero) {
+      return !!c.documentoCliente?.includes(k.numero) || !!c.celularCliente?.includes(k.numero);
+    }
+    const nombre = plano(c.nombreCliente ?? '');
+    return k.palabras.every(w => nombre.includes(w));
+  }
+
+  /**
+   * Día a día con el filtro: solo los días con algún pago (o cliente) que coincide y, dentro, solo esos.
+   * Los montos del día no cambian: el filtro elige qué ver, no recalcula.
+   */
+  readonly diasVista = computed<DiaVista[]>(() => {
+    const dias = this.dias();
+    if (!this.criterio()) {
+      return dias;
+    }
+    return dias
+      .map(d => ({
+        ...d,
+        total: this.itemsDia(d).length,
+        pagos: d.pagos.filter(pg => this.coincide(pg)),
+        pagosSustento: d.pagosSustento?.filter(pg => this.coincide(pg)),
+        clientes: d.clientes?.filter(c => this.coincide(c))
+      }))
+      .filter(d => this.itemsDia(d).length);
+  });
+
+  readonly contenidosVista = computed(() => this.criterio() ? this.contenidos().filter(c => this.coincide(c)) : this.contenidos());
+  readonly noSumanVista = computed(() => this.criterio() ? this.noSuman().filter(pg => this.coincide(pg)) : this.noSuman());
+
+  /** "3 pagos de 1 cliente en 2 días" junto al filtro */
+  readonly resumenFiltro = computed(() => {
+    if (!this.criterio()) {
+      return null;
+    }
+    const dias = this.diasVista();
+    const items: ClienteFiltrable[] = dias.flatMap(d => this.itemsDia(d));
+    if (!items.length) {
+      return null;
+    }
+    const clientes = plural(new Set(items.map(i => i.documentoCliente)).size, 'cliente', 'clientes');
+    const porClientes = dias.some(d => d.clientes);
+    return {
+      cuenta: porClientes ? clientes : plural(items.length, 'pago', 'pagos'),
+      resto: `${porClientes ? '' : ' de ' + clientes} en ${plural(dias.length, 'día', 'días')}. Los montos de cada día no cambian.`
+    };
+  });
+
+  /** Sin nada en la persona elegida: otro asesor que sí tiene pagos de ese cliente (solo en Comisiones) */
+  readonly enOtraPersona = computed<Persona | null>(() => {
+    const p = this.persona();
+    if (!p || p.esSupervisor || !this.criterio() || !this.mostrarNoSuman() || this.diasVista().length || this.noSumanVista().length) {
+      return null;
+    }
+    return this.personas().find(o => !o.esSupervisor && o.clave !== p.clave
+      && (o.filas.some(f => this.coincide(f))
+        || this.pagos().some(pg => pg.motivoExclusion != null && pg.idAgenteGestion === o.clave && this.coincide(pg)))) ?? null;
+  });
+
+  /** Texto partido en lo que coincide con el filtro y lo que no, para marcarlo */
+  partes(texto: string, campo: 'numero' | 'nombre'): { texto: string; marca: boolean }[] {
+    const k = this.criterio();
+    if (!k || (campo === 'numero') !== !!k.numero) {
+      return [{ texto, marca: false }];
+    }
+    const letras = [...texto];
+    const base = plano(texto);
+    const marca = letras.map(() => false);
+    for (const w of k.numero ? [k.numero] : k.palabras) {
+      for (let i = base.indexOf(w); w && i >= 0; i = base.indexOf(w, i + w.length)) {
+        for (let j = i; j < i + w.length; j++) {
+          marca[j] = true;
+        }
+      }
+    }
+    const partes: { texto: string; marca: boolean }[] = [];
+    letras.forEach((letra, i) => {
+      const ultima = partes[partes.length - 1];
+      if (ultima && ultima.marca === marca[i]) {
+        ultima.texto += letra;
+      } else {
+        partes.push({ texto: letra, marca: marca[i] });
+      }
+    });
+    return partes;
+  }
+
+  filtrar(texto: string): void {
+    this.filtro.set(texto);
+    this.cerrados.set(new Set());
+    this.paginaDias.reiniciar();
+    this.paginaContenidos.reiniciar();
+    this.paginaNoSuman.reiniciar();
+  }
+
+  private itemsDia(d: DiaDetalle): ClienteFiltrable[] {
+    return d.clientes ?? d.pagosSustento ?? d.pagos;
+  }
+
+  abierto(fecha: string): boolean {
+    return this.criterio() ? !this.cerrados().has(fecha) : this.abiertos().has(fecha);
+  }
+
+  etiquetaDia(d: DiaVista): string {
+    if (this.abierto(d.fecha)) {
+      return 'Ocultar';
+    }
+    const n = this.itemsDia(d).length;
+    if (d.total != null) {
+      return `Ver ${n} de ${d.total} ${d.clientes ? 'clientes' : 'pagos'}`;
+    }
+    return d.clientes ? `Ver clientes (${n})` : `Ver pagos (${n})`;
+  }
+
+  readonly paginaDias = new Paginado(this.diasVista);
+  readonly paginaContenidos = new Paginado(this.contenidosVista);
+  readonly paginaNoSuman = new Paginado(this.noSumanVista);
 
   /** Día del gráfico bajo el cursor (fecha ISO) */
   readonly activo = signal<string | null>(null);
@@ -837,6 +1032,8 @@ export class SustentoTabComponent {
       this.contenidos.set([]);
       this.contenidosDisponibles.set(false);
       this.abiertos.set(new Set());
+      this.filtro.set('');
+      this.cerrados.set(new Set());
       this.activo.set(null);
       this.paginaDias.reiniciar();
       this.paginaContenidos.reiniciar();
@@ -889,6 +1086,7 @@ export class SustentoTabComponent {
   elegir(clave: number | 'sup'): void {
     this.seleccion.set(clave);
     this.abiertos.set(new Set());
+    this.cerrados.set(new Set());
     this.activo.set(null);
     this.paginaDias.reiniciar();
     this.paginaContenidos.reiniciar();
@@ -896,7 +1094,8 @@ export class SustentoTabComponent {
   }
 
   alternarDia(fecha: string): void {
-    this.abiertos.update(s => {
+    // Con filtro se anotan los que se cierran; sin filtro, los que se abren
+    (this.criterio() ? this.cerrados : this.abiertos).update(s => {
       const n = new Set(s);
       if (n.has(fecha)) {
         n.delete(fecha);
