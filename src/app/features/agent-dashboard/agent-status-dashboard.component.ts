@@ -352,9 +352,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           this.recordatoriosHabilitado = horario.permitido && lista.pendientes > 0;
         },
         error: () => {
-          // Si no se puede verificar, no se bloquea al asesor por eso.
+          // Si no se puede verificar, la tarjeta queda APAGADA. Antes abría: el
+          // horario lo controlaba solo esta tarjeta, así que un fallo de red la
+          // dejaba habilitada y el asesor entraba fuera de hora. La tarjeta se
+          // sigue mostrando (para que vea que tiene pendientes) pero sin botón.
           this.recordatoriosConHorario = true;
-          this.recordatoriosHabilitado = lista.pendientes > 0;
+          this.recordatoriosHabilitado = false;
         }
       });
     });

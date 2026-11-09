@@ -110,8 +110,17 @@ export class RecordatoriosService {
    * @param idAgente ID del agente
    * @param idSubcartera ID de la subcartera (opcional, para usar configuración de promesas)
    */
-  iniciarDialer(idAgente: number, idSubcartera?: number): Observable<IniciarDialerResponse> {
-    const params = idSubcartera ? `?idSubcartera=${idSubcartera}` : '';
+  /**
+   * `origen` solo lo manda la pantalla de Seguimiento. Estos endpoints los comparte
+   * el modal de recordatorios, y el horario de seguimiento no aplica a ese flujo:
+   * sin horarios configurados esHorarioPermitido devuelve FALSE, así que validarlo
+   * para todos dejaría al modal sin funcionar. Ver ManagementRecordV2Controller.
+   */
+  iniciarDialer(idAgente: number, idSubcartera?: number, origen?: string): Observable<IniciarDialerResponse> {
+    const qs: string[] = [];
+    if (idSubcartera) qs.push(`idSubcartera=${idSubcartera}`);
+    if (origen) qs.push(`origen=${origen}`);
+    const params = qs.length ? `?${qs.join('&')}` : '';
     return this.http.post<IniciarDialerResponse>(`${this.baseUrl}/dialer/iniciar/${idAgente}${params}`, {});
   }
 
@@ -137,9 +146,10 @@ export class RecordatoriosService {
    * Funciona como llamada manual: originate al agente, bridge al cliente.
    * El agente escucha timbrar y tipifica SIEMPRE.
    */
-  iniciarLlamadaDirecta(idAgente: number): Observable<{ success: boolean; callUuid: string; recordatorio: any; mensaje: string }> {
+  iniciarLlamadaDirecta(idAgente: number, origen?: string): Observable<{ success: boolean; callUuid: string; recordatorio: any; mensaje: string }> {
+    const params = origen ? `?origen=${origen}` : '';
     return this.http.post<{ success: boolean; callUuid: string; recordatorio: any; mensaje: string }>(
-      `${this.baseUrl}/dialer/llamar-directo/${idAgente}`, {}
+      `${this.baseUrl}/dialer/llamar-directo/${idAgente}${params}`, {}
     );
   }
 
