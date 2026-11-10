@@ -1,246 +1,113 @@
-import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
+import { NombrePropioPipe } from '../../shared/ui/nombre-propio.pipe';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaReporte, Justificacion } from './asistencia.models';
-import { ESTILOS, estadoVisible, hoy, lunesDe, semanaPorDefecto, sumarDias } from './asistencia.estilos';
-import { AsistenciaReporteComponent } from './asistencia-reporte.component';
-import { AsistenciaDashboardComponent } from './asistencia-dashboard.component';
-import { AsistenciaJustificacionesComponent } from './asistencia-justificaciones.component';
-import { AsistenciaCierreComponent } from './asistencia-cierre.component';
-import { AsistenciaAuditoriaComponent } from './asistencia-auditoria.component';
-import { AsistenciaHorarioComponent } from './asistencia-horario.component';
-import { AsistenciaConfiguracionComponent } from './asistencia-configuracion.component';
-import { AsistenciaEdicionComponent } from './asistencia-edicion.component';
+import { Justificacion } from './asistencia.models';
+import { hoy, lunesDe, sumarDias } from './asistencia.estilos';
+import { CABECERA, CABECERA_TEXTO, CAMPO, ETIQUETA, FILTROS, LISTA, PANTALLA, SUBTITULO, TITULO } from './ui/clases';
+import { MINI_ICONO } from './ui/ficha-clases';
+import { SegmentadoComponent } from './ui/segmentado.component';
+import { rangoSemana } from './ui/control-comun';
+import { ControlReporteComponent } from './control-reporte.component';
+import { ControlSolicitudesComponent } from './control-solicitudes.component';
+import { ControlRecuperacionesComponent } from './control-recuperaciones.component';
+import { ControlCierreComponent } from './control-cierre.component';
+import { ControlAuditoriaComponent } from './control-auditoria.component';
+import { ControlConfiguracionComponent } from './control-configuracion.component';
+
+type Pestana = 'reporte' | 'dashboard' | 'solicitudes' | 'horario' | 'cierre' | 'auditoria' | 'config';
 
 /**
- * Control de Asistencia: el módulo de RR.HH. y las supervisoras.
+ * Control de asistencia: la pantalla de RR.HH.
  *
- * El ámbito, el rango y el agente viven aquí y no en cada pestaña: son los
- * mismos para todas y, repetidos, se desincronizan en cuanto alguien cambia de
- * tab. Cada pestaña los recibe como entrada y vuelve a pedir sus datos sola.
- *
- * El ámbito es una cascada de tres —cliente › cartera › subcartera— porque así
- * es como está montada la operación y como se busca una cartera. Sin
- * subcartera elegida no se consulta nada: traer a toda la empresa de golpe
- * hace lenta la pantalla que más se abre, y nadie revisa la asistencia de una
- * empresa entera a la vez.
- *
- * Configuración y Corregir marcaciones son BOTONES y no pestañas: no son otra vista de
- * los mismos datos, son otra tarea. Al entrar en ellas desaparecen los filtros
- * y las pestañas, porque ahí no se usan.
+ * Arriba, el ámbito (Cliente › Cartera › Subcartera) y las pestañas; la semana, en las que son de una
+ * semana. Cada pestaña pinta esta cabecera dentro de su tarjeta y es dueña de su tabla, su columna y su
+ * barra de abajo. El Dashboard se ve, con «Pronto», pero todavía no se abre.
  */
 @Component({
   selector: 'app-control-asistencia',
   standalone: true,
-  // Engancha las tablas al estilo del módulo (styles.css, «MÓDULO DE ASISTENCIA - tablas»).
-  host: { class: 'cashi-asistencia' },
-  imports: [
-    CommonModule,
-    FormsModule,
-    LucideAngularModule,
-    AsistenciaReporteComponent,
-    AsistenciaDashboardComponent,
-    AsistenciaJustificacionesComponent,
-    AsistenciaCierreComponent,
-    AsistenciaAuditoriaComponent,
-    AsistenciaHorarioComponent,
-    AsistenciaConfiguracionComponent,
-    AsistenciaEdicionComponent
-  ],
-  styles: [`
-    :host { display: block; }
-  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: PANTALLA + ' @container/p5' },
+  imports: [NgTemplateOutlet, LucideAngularModule, NombrePropioPipe, SegmentadoComponent, ControlReporteComponent, ControlSolicitudesComponent,
+            ControlRecuperacionesComponent, ControlCierreComponent, ControlAuditoriaComponent, ControlConfiguracionComponent],
   template: `
-    <div class="min-h-full overflow-x-hidden bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
-
-      <!-- La cabecera del módulo va siempre, también en Configuración y Editar
-           horas: el ámbito y el rango de arriba son los que esas pantallas usan. -->
-      <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Control de Asistencia</h1>
-            <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" (click)="pantalla.set('configuracion')"
-                    [class]="pantalla() === 'configuracion' ? botonActivo : estilos.botonSecundario"
-                    [attr.aria-current]="pantalla() === 'configuracion' ? 'page' : null">
-              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
-              Administración
-            </button>
-            <button type="button" [class]="estilos.botonSecundario" (click)="pantalla.set('edicion')"
-                    [attr.aria-current]="pantalla() === 'edicion' ? 'page' : null">
-              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              Corregir marcaciones
-            </button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="exportar()">
-              <svg class="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Descargar Excel
-            </button>
-          </div>
+    <ng-template #cabecera>
+      <div [class]="CABECERA">
+        <div [class]="CABECERA_TEXTO">
+          <p role="heading" aria-level="1" [class]="TITULO">Control de asistencia</p>
+          <p [class]="SUBTITULO">{{ subtitulo() }}</p>
         </div>
-
-        <!-- El ámbito, en los tres niveles con los que está montada la operación -->
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="cliente">Cliente</label>
-            <select id="cliente" [class]="estilos.campo + ' !w-[178px]'"
-                    [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
-              <option [ngValue]="null">Todos</option>
-              @for (c of clientes(); track c.id) {
-                <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option>
-              }
+        <div [class]="FILTROS">
+          <div [class]="CAMPO">
+            <label for="ca-cli" [class]="ETIQUETA">Cliente</label>
+            <select id="ca-cli" [class]="LISTA" (change)="elegirCliente(+$any($event.target).value || null)">
+              <option value="" [selected]="!idCliente()">Todos</option>
+              @for (c of clientes(); track c.id) { <option [value]="c.id" [selected]="c.id === idCliente()">{{ c.tenantName || c.businessName }}</option> }
             </select>
           </div>
-          <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="cartera">Cartera</label>
-            <select id="cartera" [class]="estilos.campo + ' !w-[178px]'"
-                    [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
-                    [disabled]="!idCliente()">
-              <option [ngValue]="null">Todas</option>
-              @for (c of carteras(); track c.id) {
-                <option [ngValue]="c.id">{{ c.portfolioName }}</option>
-              }
+          <div [class]="CAMPO">
+            <label for="ca-car" [class]="ETIQUETA">Cartera</label>
+            <select id="ca-car" [class]="LISTA" (change)="elegirCartera(+$any($event.target).value || null)">
+              <option value="" [selected]="!idCartera()">Todas</option>
+              @for (c of carteras(); track c.id) { <option [value]="c.id" [selected]="c.id === idCartera()">{{ c.portfolioName | nombrePropio }}</option> }
             </select>
           </div>
-          <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="subcartera">Subcartera</label>
-            <select id="subcartera" [class]="estilos.campo + ' !w-[178px]'"
-                    [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)"
-                    [disabled]="!idCartera()">
-              <option [ngValue]="null">Elige una</option>
-              @for (s of subcarteras(); track s.id) {
-                <option [ngValue]="s.id">{{ s.subPortfolioName }}</option>
-              }
+          <div [class]="CAMPO">
+            <label for="ca-sub" [class]="ETIQUETA">Subcartera</label>
+            <select id="ca-sub" [class]="LISTA" (change)="elegirSubcartera(+$any($event.target).value || null)">
+              <option value="" [selected]="!idSubcartera()">Todas</option>
+              @for (s of subcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.subPortfolioName | nombrePropio }}</option> }
             </select>
-          </div>
-
-          <!-- La semana, en vez de un rango libre: se recorre con las flechas y
-               tocar las fechas abre el calendario para saltar a otra. -->
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="texto-semana">Semana</label>
-            <div class="relative inline-flex h-[38px] items-center gap-0.5 rounded-lg border !border-[#8491a3] !bg-white px-[3px] dark:!border-slate-600 dark:!bg-slate-800">
-              <button type="button" [class]="flechaSemana" (click)="moverSemana(-7)" aria-label="Semana anterior">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-              </button>
-              <button id="texto-semana" type="button" title="Elegir otra semana" (click)="abrirCalendario(fechaSemana)"
-                      class="h-[30px] min-w-[112px] rounded-md px-1.5 text-[13px] font-semibold tabular-nums !text-[#0f172a] hover:bg-[#f1f3f6] dark:!text-slate-100 dark:hover:bg-slate-700">
-                {{ corta(desde()) }} – {{ corta(hasta()) }}
-              </button>
-              <button type="button" [class]="flechaSemana" (click)="moverSemana(7)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-              </button>
-              <input #fechaSemana type="date" tabindex="-1" aria-hidden="true" [max]="hoy()"
-                     class="pointer-events-none absolute bottom-0 left-9 h-px w-px opacity-0"
-                     (change)="irASemana(fechaSemana.value)">
-            </div>
-          </div>
-
-          <!-- Un solo campo para buscar y elegir: escribir filtra, el desplegable lista el roster. -->
-          <div class="flex min-w-[200px] flex-1 flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="buscar">Agente</label>
-            <input id="buscar" type="text" list="roster-asistencia" autocomplete="off"
-                   placeholder="Escribe o elige de la lista" [class]="estilos.campo"
-                   [ngModel]="agente()" (ngModelChange)="agente.set($event)">
-            <datalist id="roster-asistencia">
-              @for (a of roster(); track a) { <option [value]="a"></option> }
-            </datalist>
           </div>
         </div>
       </div>
 
-      <!-- Corregir marcaciones y Configuración se entran desde la cabecera y salen con
-           «Volver al reporte»: ahí el selector de pantallas no pinta nada. -->
-      @if (!esPantallaAparte()) {
-        <div class="flex min-h-[54px] items-center overflow-x-auto border-b border-[#e6e9ee] bg-white px-7 py-[11px] dark:border-slate-800 dark:bg-slate-900">
-          <nav [class]="estilos.segmentos" aria-label="Pantallas del módulo">
-            @for (t of TABS; track t.clave) {
-              <button type="button"
-                      [class]="estilos.tab + ' ' + (pantalla() === t.clave ? estilos.tabActiva : estilos.tabApagada)
-                        + ' disabled:cursor-default disabled:opacity-60'"
-                      [disabled]="t.pronto"
-                      [attr.aria-current]="pantalla() === t.clave ? 'page' : null"
-                      [attr.aria-label]="t.clave === 'justificaciones' && sinResolver()
-                        ? 'Solicitudes, ' + sinResolver() + ' sin resolver' : null"
-                      (click)="pantalla.set(t.clave)">
-                {{ t.texto }}
-                @if (t.pronto) {
-                  <span class="ml-1.5 rounded-full bg-[#eff5ff] px-1.5 py-px text-[10.5px] font-bold text-[#2563eb] dark:bg-slate-800 dark:text-[#60a5fa]">
-                    Pronto
-                  </span>
-                }
-                @if (t.clave === 'justificaciones' && sinResolver()) {
-                  <span aria-hidden="true"
-                        [class]="estilos.cuenta + ' ' + (pantalla() === t.clave ? estilos.cuentaActiva : estilos.cuentaApagada)">
-                    {{ sinResolver() }}
-                  </span>
-                }
+      @if (!(pestana() === 'reporte' && detalle())) {
+        <div class="mb-4 flex flex-none flex-wrap items-center gap-3">
+          <app-segmentado [opciones]="opciones()" [valor]="pestana()" (cambiar)="pestana.set($any($event))" />
+          @if (pestana() === 'reporte' || pestana() === 'cierre') {
+            <div class="ml-auto flex flex-none items-center gap-[.375rem]">
+              <button type="button" [class]="MINI_ICONO" (click)="moverSemana(-7)" aria-label="Semana anterior">
+                <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
               </button>
-            }
-          </nav>
+              <span class="min-w-[9.5rem] text-center text-[.875rem] font-semibold">{{ rango() }}</span>
+              <button type="button" [class]="MINI_ICONO" (click)="moverSemana(7)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
+                <lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular>
+              </button>
+            </div>
+          }
         </div>
       }
+    </ng-template>
 
-      <div>
-        @switch (pantalla()) {
-          @case ('asistencia') {
-            <app-asistencia-reporte
-              [idCliente]="idCliente()" [idCartera]="idCartera()"
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              [agente]="agente()"
-              (rosterCambia)="roster.set($event)"
-              (agenteCambia)="agente.set($event)"
-              (reporteCargado)="reporte.set($event)" />
-          }
-          @case ('dashboard') {
-            <app-asistencia-dashboard
-              [idCliente]="idCliente()" [idCartera]="idCartera()"
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              (semanaAnterior)="retrocederSemana()"
-              (volverASemana)="volverASemanaPorDefecto()"
-              (irA)="pantalla.set($event)" />
-          }
-          @case ('justificaciones') {
-            <app-asistencia-justificaciones
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()" [agente]="agente()"
-              (sinResolverCambia)="cargarPorAprobar()" />
-          }
-          @case ('cierre') {
-            <app-asistencia-cierre [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              (irA)="pantalla.set($event)" />
-          }
-          @case ('horario') {
-            <app-asistencia-horario [idSubcartera]="idSubcartera()" [subcartera]="nombreSubcartera()"
-              [agente]="agente()" />
-          }
-          @case ('auditoria') {
-            <app-asistencia-auditoria [desde]="desde()" [hasta]="hasta()"
-              [idSubcartera]="idSubcartera()" [agente]="agente()" />
-          }
-          @case ('configuracion') {
-            <app-asistencia-configuracion [idSubcartera]="idSubcartera()" [subcartera]="nombreSubcartera()"
-              (volver)="pantalla.set('asistencia')" />
-          }
-          @case ('edicion') {
-            <app-asistencia-edicion
-              [idCliente]="idCliente()" [idCartera]="idCartera()"
-              [idSubcartera]="idSubcartera()" [desde]="desde()" [hasta]="hasta()"
-              (volver)="pantalla.set('asistencia')" />
-          }
-        }
-      </div>
-    </div>
+    @switch (pestana()) {
+      @case ('reporte') {
+        <app-control-reporte [abrirAl]="personaReporte()" [cabecera]="cabecera" [ambito]="ambito()" [subcartera]="nombreSubcartera()" [lunes]="lunes()" (detalle)="detalle.set($event)" />
+      }
+      @case ('solicitudes') {
+        <app-control-solicitudes [cabecera]="cabecera" [ambito]="ambito()" [subcartera]="nombreSubcartera()" [lunes]="lunes()" (cambio)="cargarPorAprobar()" />
+      }
+      @case ('horario') {
+        <app-control-recuperaciones [cabecera]="cabecera" [ambito]="ambito()" [subcartera]="nombreSubcartera()" [lunes]="lunes()" (semana)="semanaRecuperaciones.set($event)"
+                                    (irA)="irAConfiguracion($event)" />
+      }
+      @case ('cierre') {
+        <app-control-cierre [cabecera]="cabecera" [ambito]="ambito()" [subcartera]="nombreSubcartera()" [lunes]="lunes()" (irA)="pestana.set($any($event))" (abrirPersona)="abrirEnReporte($event)" />
+      }
+      @case ('auditoria') {
+        <app-control-auditoria [cabecera]="cabecera" [ambito]="ambito()" [subcartera]="nombreSubcartera()" [lunes]="lunes()" />
+      }
+      @case ('config') {
+        <app-control-configuracion [clientes]="nombresClientes()" [cabecera]="cabecera" [ambito]="ambito()" [subcartera]="nombreSubcartera()" [lunes]="lunes()" [seccionInicial]="seccionConfig()" />
+      }
+    }
   `
 })
 export class ControlAsistenciaComponent implements OnInit {
@@ -249,110 +116,71 @@ export class ControlAsistenciaComponent implements OnInit {
   private readonly servicio = inject(AsistenciaService);
   private readonly toast = inject(ToastService);
 
-  protected readonly estilos = ESTILOS;
-  /** «Configuración» mientras se está en ella: fondo suave y texto oscuro, como la maqueta. */
-  protected readonly botonActivo = ESTILOS.botonSecundario.replace('!text-[#334155]', '!text-[#0f172a]') + ' !bg-[#f4f6f9] dark:!bg-slate-700';
+  protected readonly CABECERA = CABECERA; protected readonly CABECERA_TEXTO = CABECERA_TEXTO; protected readonly TITULO = TITULO;
+  protected readonly SUBTITULO = SUBTITULO; protected readonly FILTROS = FILTROS; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
+  protected readonly LISTA = LISTA; protected readonly MINI_ICONO = MINI_ICONO;
 
-  /**
-   * `pronto`: la pantalla existe pero todavía no se abre. El Dashboard queda
-   * así por decisión de RR.HH. (22/09/2026): se usará, pero no en esta versión.
-   */
-  protected readonly TABS = [
-    { clave: 'asistencia', texto: 'Reporte', pronto: false },
-    { clave: 'dashboard', texto: 'Dashboard', pronto: true },
-    { clave: 'justificaciones', texto: 'Solicitudes', pronto: false },
-    // El horario de la semana con las recuperaciones: el fijo no se edita.
-    { clave: 'horario', texto: 'Horario', pronto: false },
-    { clave: 'auditoria', texto: 'Auditoría', pronto: false },
-    // El cierre es el último paso de la semana: va al final.
-    { clave: 'cierre', texto: 'Cierre semanal', pronto: false }
-  ] as const;
-
-  readonly pantalla = signal<string>('asistencia');
+  readonly pestana = signal<Pestana>('reporte');
+  /** El Reporte con una persona abierta: su detalle ocupa el lugar de las pestañas. */
+  readonly detalle = signal(false);
+  /** Configuración puede abrirse en una sección (desde Recuperaciones, en el horario base). */
+  readonly seccionConfig = signal<string | null>(null);
+  /** La persona que se abre al entrar al Reporte (desde el Cierre, para corregir sus marcas). */
+  readonly personaReporte = signal<number | null>(null);
+  /** La semana que muestra Recuperaciones: la dice la cabecera. */
+  readonly semanaRecuperaciones = signal<string | null>(null);
 
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
   readonly idSubcartera = signal<number | null>(null);
-  /**
-   * El módulo es semanal (25/09/2026): con un rango libre, cuatro semanas eran
-   * una pantalla enorme y los límites son de cada semana. La semana va de lunes
-   * a viernes; el sábado es solo de CASTIGO, que lo trabaja opcional.
-   */
-  readonly semana = signal(semanaPorDefecto().desde);
-  readonly desde = computed(() => this.semana());
-  readonly hasta = computed(() => sumarDias(this.semana(), this.conSabado() ? 5 : 4));
-  readonly esSemanaActual = computed(() => this.semana() >= lunesDe(new Date()));
-  protected readonly hoy = hoy;
-  protected readonly flechaSemana = 'inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[7px] !text-[#334155] hover:bg-[#f4f6f9] disabled:cursor-default disabled:opacity-35 dark:!text-slate-200 dark:hover:bg-slate-700';
-  readonly agente = signal('');
-
   readonly clientes = signal<Tenant[]>([]);
   readonly carteras = signal<Portfolio[]>([]);
   readonly subcarteras = signal<SubPortfolio[]>([]);
 
-  /** Los nombres del roster, para el desplegable del campo de agente. */
-  readonly roster = signal<string[]>([]);
-  readonly reporte = signal<AsistenciaReporte | null>(null);
-  /** Lo que espera a RR.HH. en todas las subcarteras; el número se acota al ámbito. */
+  /** La semana a la vista: de lunes a sábado. Arranca en la que corre; la siguiente no se mira. */
+  readonly lunes = signal(lunesDe(new Date()));
+  readonly esSemanaActual = computed(() => this.lunes() >= lunesDe(new Date()));
+  readonly rango = computed(() => rangoSemana(this.lunes(), sumarDias));
+
+  /** Lo que espera a RR.HH.: el número de la pestaña, aunque no se haya abierto. */
   private readonly porAprobar = signal<Justificacion[]>([]);
-  /** Solo las de la gente del ámbito elegido, igual que la lista de la pestaña. */
-  private readonly genteDelAmbito = signal<Set<number> | null>(null);
-  readonly sinResolver = computed(() => {
-    const lista = this.porAprobar();
-    const gente = this.genteDelAmbito();
-    return gente ? lista.filter(j => gente.has(j.idUsuario)).length : lista.length;
-  });
 
-  /** El nombre de la subcartera elegida: Configuración lo usa para decir a quién alcanza un cambio. */
-  readonly nombreSubcartera = computed(() =>
-    this.subcarteras().find(s => s.id === this.idSubcartera())?.subPortfolioName ?? null);
+  readonly opciones = computed(() => [
+    { clave: 'reporte', texto: 'Reporte' },
+    { clave: 'dashboard', texto: 'Dashboard', pronto: true },
+    { clave: 'solicitudes', texto: 'Solicitudes', n: this.porAprobar().length || null },
+    { clave: 'horario', texto: 'Recuperaciones' },
+    { clave: 'cierre', texto: 'Cierre semanal' },
+    { clave: 'auditoria', texto: 'Auditoría' },
+    { clave: 'config', texto: 'Configuración' }
+  ]);
 
-  /** La semana llega al sábado solo en CASTIGO. */
-  readonly conSabado = computed(() => (this.nombreSubcartera() ?? '').trim().toUpperCase() === 'CASTIGO');
-
-  /** Configuración y Corregir marcaciones no comparten filtros con el resto. */
-  readonly esPantallaAparte = computed(() =>
-    this.pantalla() === 'configuracion' || this.pantalla() === 'edicion');
-
-  /** Lo que hay que saber del ámbito antes de mirar a nadie en concreto. */
-  readonly resumen = computed(() => {
-    const r = this.reporte();
-    if (!r) {
-      return 'Ingreso y salida según el inicio y cierre de sesión en Cashi';
+  readonly subtitulo = computed(() => {
+    switch (this.pestana()) {
+      case 'solicitudes': return 'Aprobación de RR.HH.';
+      case 'horario': return 'Recuperaciones de la semana del ' + rangoSemana(this.semanaRecuperaciones() ?? sumarDias(lunesDe(new Date()), 7), sumarDias);
+      case 'auditoria': return 'Historial de cambios';
+      case 'config': return 'Reglas, horario y calendario';
+      default: return 'Semana del ' + this.rango();
     }
-    const faltas = r.dias.filter(d => d.estado === 'FALTA').length;
-    const incompletos = r.dias.filter(d => estadoVisible(d) === 'INCOMPLETO').length;
-    const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
-    return `${plural(r.agentes.length, 'persona', 'personas')} en el ámbito · `
-      + `${plural(faltas, 'falta', 'faltas')} · `
-      + `${plural(incompletos, 'día', 'días')} sin marcación completa`;
   });
 
-  constructor() {
-    // El número de la pestaña de justificaciones tiene que estar aunque no se
-    // haya abierto: es lo que avisa de que hay algo esperando. Cuenta solo lo
-    // que le toca a RR.HH. (lo que ya revisó la supervisora), de tres meses
-    // atrás a dos adelante, lo mismo que lista la pestaña.
-    this.cargarPorAprobar();
+  readonly nombresClientes = computed(() => Object.fromEntries(this.clientes().map(c => [c.id, c.tenantName || c.businessName])));
+  readonly nombreSubcartera = computed(() => this.subcarteras().find(s => s.id === this.idSubcartera())?.subPortfolioName ?? null);
 
-    // La gente del ámbito en esa semana. Sale de la lista de personal y no del
-    // reporte: pedir el reporte entero solo para contar lo duplicaba.
-    effect(() => {
-      const ambito = this.idSubcartera(), desde = this.desde(), hasta = this.hasta();
-      untracked(() => this.genteDelAmbito.set(null));
-      if (!ambito) {
-        return;
-      }
-      this.servicio.personal(ambito).subscribe({
-        next: p => this.genteDelAmbito.set(new Set(p
-          .filter(x => (!x.fechaIngreso || x.fechaIngreso <= hasta) && (!x.fechaCese || x.fechaCese >= desde))
-          .map(x => x.idUsuario))),
-        error: () => this.genteDelAmbito.set(null)
-      });
+  /** El ámbito elegido, para todas las pestañas. */
+  readonly ambito = computed(() => ({ idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera() }));
+
+  ngOnInit(): void {
+    this.cargarPorAprobar();
+    // Sin filtrar por `isActive`: Financiera Oh y varias de sus carteras están inactivas en QAS.
+    this.clientesServicio.getAllTenants().subscribe({
+      next: c => this.clientes.set([...c].sort((a, b) => (a.tenantName || a.businessName).localeCompare(b.tenantName || b.businessName))),
+      error: () => this.toast.error('No se pudieron cargar los clientes')
     });
   }
 
-  /** Se vuelve a leer cuando la pestaña resuelve una solicitud. */
+  /** Lo que espera a RR.HH., de tres meses atrás a dos adelante: lo mismo que lista la pestaña. */
   cargarPorAprobar(): void {
     this.servicio.justificaciones(sumarDias(hoy(), -90), sumarDias(hoy(), 60), ['REVISADA']).subscribe({
       next: j => this.porAprobar.set(j),
@@ -360,26 +188,22 @@ export class ControlAsistenciaComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
-    // Sin filtrar por `isActive`: en QAS el cliente que se usa —Financiera Oh—
-    // y tres de sus cuatro carteras están marcados como inactivos, así que
-    // filtrar deja la pantalla vacía justo para el caso real. La bandera dice
-    // si se siguen cargando datos, no si se puede consultar su asistencia.
-    this.clientesServicio.getAllTenants().subscribe({
-      next: c => {
-        const ordenados = [...c].sort((a, b) =>
-          (a.businessName || a.tenantName).localeCompare(b.businessName || b.tenantName));
-        this.clientes.set(ordenados);
-        // Con un solo cliente, elegirlo a mano es un paso de más.
-        if (ordenados.length === 1) {
-          this.elegirCliente(ordenados[0].id);
-        }
-      },
-      error: () => this.toast.error('No se pudieron cargar los clientes')
-    });
+  abrirEnReporte(id: number): void {
+    this.personaReporte.set(id);
+    this.pestana.set('reporte');
   }
 
-  // ==================== ÁMBITO ====================
+  irAConfiguracion(seccion: string): void {
+    this.seccionConfig.set(seccion);
+    this.pestana.set('config');
+  }
+
+  moverSemana(dias: number): void {
+    const lunes = sumarDias(this.lunes(), dias), actual = lunesDe(new Date());
+    this.lunes.set(lunes > actual ? actual : lunes);
+  }
+
+  // ---------- Ámbito ----------
 
   elegirCliente(id: number | null): void {
     this.idCliente.set(id);
@@ -387,17 +211,12 @@ export class ControlAsistenciaComponent implements OnInit {
     this.idSubcartera.set(null);
     this.carteras.set([]);
     this.subcarteras.set([]);
-    this.agente.set('');
-    if (!id) {
-      return;
-    }
+    if (!id) return;
     this.carterasServicio.getPortfoliosByTenant(id).subscribe({
       next: c => {
         const ordenadas = [...c].sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
         this.carteras.set(ordenadas);
-        if (ordenadas.length === 1) {
-          this.elegirCartera(ordenadas[0].id);
-        }
+        if (ordenadas.length === 1) this.elegirCartera(ordenadas[0].id);
       },
       error: () => this.toast.error('No se pudieron cargar las carteras')
     });
@@ -407,87 +226,18 @@ export class ControlAsistenciaComponent implements OnInit {
     this.idCartera.set(id);
     this.idSubcartera.set(null);
     this.subcarteras.set([]);
-    this.agente.set('');
-    if (!id) {
-      return;
-    }
+    if (!id) return;
     this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
       next: s => {
-        const ordenadas = [...s].sort((a, b) =>
-          a.subPortfolioName.localeCompare(b.subPortfolioName));
+        const ordenadas = [...s].sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
         this.subcarteras.set(ordenadas);
-        if (ordenadas.length === 1) {
-          this.elegirSubcartera(ordenadas[0].id);
-        }
+        if (ordenadas.length === 1) this.elegirSubcartera(ordenadas[0].id);
       },
       error: () => this.toast.error('No se pudieron cargar las subcarteras')
     });
   }
 
-  /** Cambiar de subcartera vacía la persona elegida: el roster es otro. */
   elegirSubcartera(id: number | null): void {
     this.idSubcartera.set(id);
-    this.agente.set('');
-    this.reporte.set(null);
-    this.roster.set([]);
   }
-
-  /**
-   * Descarga el Excel. Lo arma el backend y no el navegador: el formato tiene
-   * que coincidir con el de la hoja que RR.HH. ya lee, colores incluidos, y eso
-   * se mantiene en un solo sitio.
-   */
-  exportar(): void {
-    this.servicio.excel(this.desde(), this.hasta(), {
-      idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera()
-    }).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = `Asistencia_${this.desde()}_${this.hasta()}.xlsx`;
-        enlace.click();
-        URL.revokeObjectURL(url);
-      },
-      error: () => this.toast.error('No se pudo generar el Excel')
-    });
-  }
-
-  /** El botón «Semana anterior» del dashboard mueve la semana, que vive aquí. */
-  volverASemanaPorDefecto(): void {
-    this.semana.set(semanaPorDefecto().desde);
-  }
-
-  retrocederSemana(): void {
-    this.moverSemana(-7);
-  }
-
-  moverSemana(dias: number): void {
-    this.irASemana(sumarDias(this.semana(), dias));
-  }
-
-  /** Cualquier día lleva a su semana; el futuro no se mira, la última es la actual. */
-  irASemana(fecha: string): void {
-    if (!fecha) {
-      return;
-    }
-    const lunes = lunesDe(new Date(fecha + 'T00:00:00'));
-    const actual = lunesDe(new Date());
-    this.semana.set(lunes > actual ? actual : lunes);
-  }
-
-  abrirCalendario(campo: HTMLInputElement): void {
-    campo.value = this.semana();
-    try {
-      campo.showPicker();
-    } catch {
-      campo.focus();
-    }
-  }
-
-  /** «14/09», como en el resto del módulo. */
-  corta(fecha: string): string {
-    return `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
-  }
-
 }

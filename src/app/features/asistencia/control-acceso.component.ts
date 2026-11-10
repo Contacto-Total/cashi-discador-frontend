@@ -1,13 +1,23 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer } from '@angular/platform-browser';
+import { LucideAngularModule } from 'lucide-angular';
+import * as XLSX from 'xlsx';
+import { BotonDirective } from '../../shared/ui/boton.directive';
+import { TarjetaDirective } from '../../shared/ui/tarjeta.directive';
 import { AsistenciaService } from './asistencia.service';
-import { ESTILOS } from './asistencia.estilos';
 import { PanelAcceso, RechazoDia } from './asistencia.models';
 import { SPRITE_LOGOS } from './logos-acceso';
+import {
+  BARRA, BARRA_ESTADO, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CABECERA, CABECERA_TEXTO, CAMPO, SUBTITULO, TITULO, ETIQUETA, FILTROS, FUERTE, HERRAMIENTAS,
+  INDICADORES, LISTA, PANTALLA, PILL, PRINCIPAL, REJILLA, REJILLA_SOLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TD_NUM, TH, TH_NUM, THEAD, TR, VACIO, ZONA
+} from './ui/clases';
+import { filasQueEntran } from './ui/filas-por-alto';
+import { IndicadorComponent } from './ui/indicador.component';
+import { PiePaginaComponent } from './ui/pie-pagina.component';
+import { SegmentadoComponent } from './ui/segmentado.component';
 
-/** Un celular o tablet en el periodo: sus días sumados, con la hora del último intento. */
+/** Un celular o tablet en el periodo: sus días sumados, con el día y la hora del último intento. */
 interface Rechazo {
   dia: string;
   hora: string;
@@ -20,373 +30,229 @@ interface Rechazo {
   intentos: number;
 }
 
-/** El logo que le toca a cada cosa; lo que no tiene logo propio va con un icono genérico. */
+/** Una computadora con la que se entró en el periodo: usuario, sistema, navegador e IP. */
+interface Equipo {
+  dia: string;
+  hora: string;
+  usuario: string;
+  nombre: string | null;
+  sistema: string;
+  navegador: string | null;
+  ip: string | null;
+  ingresos: number;
+}
+
+type Familia = 'Android' | 'Apple' | 'Tablet';
+
+/** El logo de cada cosa; lo que no tiene logo propio va con un icono de línea gris. */
 const LOGO: Record<string, string> = {
-  Android: 'android', iPhone: 'apple', iPad: 'apple', Apple: 'apple', Tablet: 'tablet',
-  Chrome: 'chrome', Safari: 'safari', Firefox: 'firefox',
-  WINDOWS: 'windows', MAC: 'apple', LINUX: 'linux'
+  Android: 'android', Apple: 'apple', iPhone: 'apple', iPad: 'apple', WINDOWS: 'windows', MAC: 'apple', LINUX: 'linux',
+  Chrome: 'chrome', Safari: 'safari', Firefox: 'firefox'
 };
-
-const SISTEMAS = [
-  { clave: 'WINDOWS', nombre: 'Windows' },
-  { clave: 'MAC', nombre: 'Mac' },
-  { clave: 'LINUX', nombre: 'Linux' }
-] as const;
-
-/** iPhone e iPad van juntos como Apple; «Tablet» son las tablets Android y otras. */
-const GRUPOS = [
-  { nombre: 'Android', de: ['Android'], color: 'var(--g-1)' },
-  { nombre: 'Apple', de: ['iPhone', 'iPad'], color: 'var(--g-2)' },
-  { nombre: 'Tablet', de: ['Tablet'], color: 'var(--g-3)' }
-] as const;
-
-const POR_PAGINA = 5;
+const SISTEMA: Record<string, string> = { WINDOWS: 'Windows', MAC: 'Mac', LINUX: 'Linux', OTRO: 'Otro' };
 
 /**
- * Control de Acceso.
- *
- * Cashi solo se abre desde una computadora o laptop. Arriba, cómo va la regla;
- * abajo, los celulares y tablets que lo intentaron.
- *
- * El backend manda los últimos 30 días por equipo y día; el periodo, el filtro
- * y los totales se arman aquí.
+ * Control de acceso: con qué equipos se entra a Cashi. Arriba, cuatro indicadores; abajo, los celulares
+ * y tablets rechazados o las computadoras permitidas, en una tabla paginada por el alto de la tarjeta.
+ * El backend manda los últimos 30 días por equipo y día; el periodo, el filtro y los totales se arman aquí.
  */
 @Component({
   selector: 'app-control-acceso',
   standalone: true,
-  host: { class: 'cashi-asistencia' },
-  imports: [CommonModule, FormsModule],
-  styles: [`
-    :host {
-      display: block;
-      --texto: #0f172a; --texto-medio: #334155; --apagado: #5f6c80; --tenue: #8491a3;
-      --superficie: #ffffff; --neutro-fondo: #f1f3f6; --borde-control: #8491a3; --acento: #2563eb;
-      --ok-punto: #16a34a; --tarde-fondo: #fef6e0; --tarde-texto: #92400e; --tarde-punto: #f59e0b;
-      --falta-punto: #dc2626;
-      --g-1: var(--texto);
-      --g-2: color-mix(in srgb, var(--texto) 55%, var(--superficie));
-      --g-3: color-mix(in srgb, var(--texto) 25%, var(--superficie));
-    }
-    :host-context(.dark) {
-      --texto: #f1f5f9; --texto-medio: #e2e8f0; --apagado: #94a3b8; --tenue: #64748b;
-      --superficie: #0f172a; --neutro-fondo: #1e293b; --borde-control: #475569; --acento: #60a5fa;
-      --ok-punto: #22c55e; --tarde-fondo: #451a03; --tarde-texto: #fcd34d; --tarde-punto: #f59e0b;
-      --falta-punto: #ef4444;
-    }
-    .aparecer { animation: aparecer .18s ease-out }
-    @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
-
-    .kpis { display: grid; gap: 16px; margin-bottom: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    @media (max-width: 980px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) { .kpis { grid-template-columns: 1fr; } }
-    .banda { margin-top: 12px; min-height: 50px; }
-    .pie { margin-top: auto; padding-top: 8px; font-size: 11.5px; color: var(--apagado); }
-
-    .estado-regla { display: inline-flex; align-items: center; gap: 7px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
-    .estado-regla::before { content: ""; width: 10px; height: 10px; border-radius: 999px; background: var(--ok-punto);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok-punto) 22%, transparent); }
-    .estado-regla.pronto::before { background: var(--tenue); box-shadow: none; }
-    .estado-regla.pronto { color: var(--apagado); }
-
-    .estados { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-    .fila-estado { display: grid; grid-template-columns: 124px 1fr 24px; align-items: center; gap: 8px;
-      font-size: 11.5px; color: var(--apagado); }
-    .nombre-estado { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-    .barra-estado { height: 8px; border-radius: 999px; background: var(--neutro-fondo); overflow: hidden; }
-    .barra-estado b { display: block; height: 100%; border-radius: 999px;
-      background: color-mix(in srgb, var(--texto) 45%, var(--superficie)); }
-    .fila-estado strong { text-align: right; color: var(--texto) !important; font-variant-numeric: tabular-nums; }
-
-    .tendencia { display: block; width: 100%; height: 46px; overflow: visible; }
-    .tendencia .area { fill: color-mix(in srgb, var(--acento) 12%, transparent); }
-    .tendencia .linea { fill: none; stroke: var(--acento); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-    .tendencia .punto { fill: var(--superficie); stroke: var(--acento); stroke-width: 1.6; }
-    .eje { position: relative; height: 13px; margin-top: 4px; font-size: 10px; color: var(--tenue); font-variant-numeric: tabular-nums; }
-    .eje span { position: absolute; top: 0; white-space: nowrap; }
-    .eje .ini { left: 0; }
-    .eje .fin { right: 0; }
-
-    .barra-partida { display: flex; gap: 2px; height: 12px; margin: 12px 0; border-radius: 999px; overflow: hidden; }
-    .barra-partida i { display: block; height: 100%; }
-    .leyenda-partida { display: flex; flex-direction: column; gap: 6px; }
-    .leyenda-partida > span { display: grid; grid-template-columns: 8px 13px 1fr auto 34px; align-items: center; gap: 7px;
-      font-size: 11.5px; color: var(--apagado); }
-    .leyenda-partida > span > i { width: 8px; height: 8px; border-radius: 2px; }
-    .leyenda-partida strong { color: var(--texto) !important; font-variant-numeric: tabular-nums; text-align: right; }
-    .leyenda-partida small { text-align: right; color: var(--tenue); font-size: 9.5px; font-variant-numeric: tabular-nums; }
-
-    .marca-so { display: inline-flex; align-items: center; gap: 7px; }
-    .marca-so svg { flex: none; color: var(--texto-medio); }
-    .marca-so small { display: block; font-size: 11px; color: var(--tenue); }
-    .persona-celda { display: flex; flex-direction: column; line-height: 1.35; }
-    .persona-celda small { font-size: 11px; color: var(--tenue); }
-    .ip { font-variant-numeric: tabular-nums; color: var(--texto-medio); }
-    .origen-celda { display: flex; align-items: center; gap: 8px; }
-    .origen { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px;
-      font-size: 11px; font-weight: 700; background: var(--tarde-fondo); color: var(--tarde-texto); }
-    .intentos-min { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .intentos-min::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: var(--borde-control); }
-    .intentos-min.medio::before { background: var(--tarde-punto); }
-    .intentos-min.alto::before { background: var(--falta-punto); }
-    .secundario { font-size: 11.5px; color: var(--apagado); }
-  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: PANTALLA },
+  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, IndicadorComponent, SegmentadoComponent, PiePaginaComponent],
   template: `
-    <div class="pointer-events-none absolute h-0 w-0 overflow-hidden" aria-hidden="true" [innerHTML]="sprite"></div>
+    <div class="pointer-events-none absolute size-0 overflow-hidden" aria-hidden="true" [innerHTML]="sprite"></div>
 
-    <ng-template #icono let-nombre let-tam="tam">
-      @switch (logoDe(nombre)) {
-        @case ('tablet') {
-          <svg [attr.width]="tam" [attr.height]="tam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 4a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v16a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1v-16z" /><path d="M11 17a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-          </svg>
-        }
-        @case ('otro') {
-          <svg [attr.width]="tam" [attr.height]="tam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M3.6 9h16.8" /><path d="M3.6 15h16.8" />
-            <path d="M11.5 3a17 17 0 0 0 0 18" /><path d="M12.5 3a17 17 0 0 1 0 18" />
-          </svg>
-        }
-        @default {
-          <svg [attr.width]="tam" [attr.height]="tam" aria-hidden="true"><use [attr.href]="'#logo-' + logoDe(nombre)" /></svg>
-        }
+    <ng-template #logo let-nombre>
+      @if (logoDe(nombre); as l) {
+        <svg class="size-[1.125rem] flex-none p-[.0625rem]" aria-hidden="true"><use [attr.href]="'#logo-' + l" /></svg>
+      } @else {
+        <span class="grid size-[1.125rem] flex-none place-items-center text-muted-foreground">
+          <lucide-angular [name]="nombre === 'Tablet' ? 'tablet' : 'globe'" [size]="16" class="flex"></lucide-angular>
+        </span>
       }
     </ng-template>
 
-    <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
-
-      <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-col gap-[3px]">
-            <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Control de Acceso</h1>
-            <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Cashi solo se abre desde una computadora o laptop</p>
+    <div [class]="REJILLA + ' ' + REJILLA_SOLA">
+      <section appTarjeta [class]="PRINCIPAL">
+        <div [class]="CABECERA">
+          <div [class]="CABECERA_TEXTO">
+            <p role="heading" aria-level="1" [class]="TITULO">Control de acceso</p>
+            <p [class]="SUBTITULO">Equipos con los que se entra a Cashi</p>
           </div>
-          <button type="button" [class]="estilos.botonPrimario" disabled aria-disabled="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            Registrar equipo remoto
-            <span class="rounded-full bg-white/20 px-2 py-[1px] text-[11px] font-bold dark:bg-[#0f172a]/15">Pronto</span>
-          </button>
-        </div>
-
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="periodo-acceso">Periodo</label>
-            <select id="periodo-acceso" [class]="estilos.campo + ' !w-[210px]'"
-                    [ngModel]="periodo()" (ngModelChange)="periodo.set(+$event); pagina.set(1)">
-              <option [ngValue]="1">Hoy</option>
-              <option [ngValue]="7">Últimos 7 días</option>
-              <option [ngValue]="30">Últimos 30 días</option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="dispositivo-acceso">Dispositivo</label>
-            <select id="dispositivo-acceso" [class]="estilos.campo + ' !w-[210px]'"
-                    [ngModel]="dispositivo()" (ngModelChange)="dispositivo.set($event); pagina.set(1)">
-              <option value="">Todos</option>
-              <option value="Android">Android</option>
-              <option value="Apple">Apple (iPhone y iPad)</option>
-              <option value="Tablet">Tablet</option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="buscar-acceso">Buscar</label>
-            <input id="buscar-acceso" type="search" placeholder="Usuario o IP" [class]="estilos.campo + ' !w-[158px]'"
-                   [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event); pagina.set(1)">
+          <div [class]="FILTROS">
+            <div [class]="CAMPO">
+              <label for="ca-periodo" [class]="ETIQUETA">Periodo</label>
+              <select id="ca-periodo" [class]="LISTA" (change)="periodo.set(+$any($event.target).value); pagina.set(1)">
+                @for (p of PERIODOS; track p.dias) { <option [value]="p.dias" [selected]="p.dias === periodo()">{{ p.texto }}</option> }
+              </select>
+            </div>
+            <div [class]="CAMPO">
+              <label for="ca-disp" [class]="ETIQUETA">Dispositivo</label>
+              <select id="ca-disp" [class]="LISTA" (change)="familia.set($any($event.target).value); pagina.set(1)">
+                <option value="" [selected]="!familia()">Todos</option>
+                <option value="Android" [selected]="familia() === 'Android'">Android</option>
+                <option value="Apple" [selected]="familia() === 'Apple'">Apple (iPhone y iPad)</option>
+                <option value="Tablet" [selected]="familia() === 'Tablet'">Tablet</option>
+              </select>
+            </div>
+            <div [class]="CAMPO">
+              <label for="ca-q" [class]="ETIQUETA">Buscar</label>
+              <div [class]="BUSCAR">
+                <span [class]="BUSCAR_ICONO"><lucide-angular name="search" [size]="16" class="flex"></lucide-angular></span>
+                <input id="ca-q" type="search" placeholder="Usuario o IP" [class]="BUSCAR_CAMPO" [value]="busqueda()"
+                       (input)="busqueda.set($any($event.target).value); pagina.set(1)">
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="px-7 pb-12 pt-5">
-        @if (cargando() && !datos()) {
-          <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando…</p>
-        } @else if (error()) {
-          <div [class]="estilos.vacio">
-            <p class="text-[13.5px] font-bold">No se pudo cargar Control de Acceso</p>
-            <button type="button" [class]="estilos.botonSecundario + ' mt-3'" (click)="cargar()">Reintentar</button>
+        @if (error()) {
+          <div [class]="VACIO">
+            No se pudo cargar Control de acceso
+            <div class="mt-[.75rem]"><button type="button" appBoton="secundario" appBotonAlto="chico" (click)="cargar()">Reintentar</button></div>
           </div>
+        } @else if (cargando() && !datos()) {
+          <p class="m-0 text-muted-foreground">Cargando…</p>
         } @else {
-          <div class="aparecer">
-            <div class="kpis">
-              <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-[9px]">
-                  <span [class]="estilos.icono">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>
-                  </span>
-                  <h3 [class]="estilos.rotulo">Equipos permitidos</h3>
-                </div>
-                <span class="estado-regla">Activo</span>
-                <div class="estados">
-                  @for (s of sistemas(); track s.nombre) {
-                    <div class="fila-estado">
-                      <span class="nombre-estado">
-                        <ng-container *ngTemplateOutlet="icono; context: { $implicit: s.clave, tam: 13 }" />{{ s.nombre }}
-                      </span>
-                      <span class="barra-estado"><b [style.width.%]="s.pct"></b></span>
-                      <strong>{{ s.n }}</strong>
-                    </div>
-                  }
-                </div>
-                <p class="pie">Equipos que entraron en el periodo</p>
-              </div>
+          <div [class]="INDICADORES">
+            <app-indicador [valor]="equipos().length" rotulo="Equipos permitidos" [detalle]="detalleSistemas()" />
+            <app-indicador [valor]="intentos()" [unidad]="intentos() === 1 ? 'intento' : 'intentos'" rotulo="Rechazados"
+                           [detalle]="usuarios() === 1 ? '1 usuario con sesión' : usuarios() + ' usuarios con sesión'" />
+            <app-indicador [valor]="rechazos().length" [unidad]="rechazos().length === 1 ? 'dispositivo' : 'dispositivos'" rotulo="Por dispositivo" [detalle]="detalleFamilias()" />
+            <app-indicador valor="Pronto" rotulo="Acceso remoto" detalle="Equipos para trabajar desde casa" />
+          </div>
 
-              <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-[9px]">
-                  <span [class]="estilos.icono">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="m9.5 9.5 5 5M14.5 9.5l-5 5"/></svg>
-                  </span>
-                  <h3 [class]="estilos.rotulo">Rechazados</h3>
-                </div>
-                <div [class]="estilos.cifra">{{ totalIntentos() }}<small [class]="estilos.unidad">{{ totalIntentos() === 1 ? 'intento' : 'intentos' }}</small></div>
-                <div class="banda">
-                  @let t = tendencia();
-                  <svg class="tendencia" [attr.viewBox]="'0 0 ' + t.ancho + ' ' + t.alto" preserveAspectRatio="none" role="img"
-                       [attr.aria-label]="t.etiqueta">
-                    <path [attr.d]="t.area" class="area" />
-                    <path [attr.d]="t.linea" class="linea" vector-effect="non-scaling-stroke" />
-                    @for (p of t.puntos; track p.dia) {
-                      <circle [attr.cx]="p.x" [attr.cy]="p.y" r="2.6" class="punto"><title>{{ p.titulo }}</title></circle>
-                    }
-                  </svg>
-                  @if (t.puntos.length > 1) {
-                    <div class="eje"><span class="ini">{{ t.puntos[0].dm }}</span><span class="fin">{{ t.puntos[t.puntos.length - 1].dm }}</span></div>
-                  }
-                </div>
-                <p class="pie">{{ filtrados().length }} {{ filtrados().length === 1 ? 'dispositivo' : 'dispositivos' }} · {{ conUsuario() }} con usuario</p>
-              </div>
+          <div [class]="HERRAMIENTAS">
+            <app-segmentado [opciones]="[{ clave: 'rec', texto: 'Dispositivos rechazados', n: rechazos().length }, { clave: 'ing', texto: 'Equipos permitidos', n: equipos().length }]"
+                            [valor]="vista()" (cambiar)="vista.set($any($event)); pagina.set(1)" />
+          </div>
 
-              <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-[9px]">
-                  <span [class]="estilos.icono">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><rect x="5" y="11" width="3.5" height="6" rx="1"/><rect x="10.2" y="7" width="3.5" height="10" rx="1"/><rect x="15.4" y="4" width="3.5" height="13" rx="1"/></svg>
-                  </span>
-                  <h3 [class]="estilos.rotulo">Por dispositivo</h3>
-                </div>
-                <div class="barra-partida" role="img" [attr.aria-label]="etiquetaTipos()">
-                  @for (g of porTipo(); track g.nombre) {
-                    @if (g.n) { <i [style.flex]="g.n" [style.background]="g.color" [attr.title]="g.nombre + ' · ' + g.n"></i> }
-                  }
-                  @if (!totalTipos()) { <i style="flex:1; background:var(--neutro-fondo)"></i> }
-                </div>
-                <div class="leyenda-partida">
-                  @for (g of porTipo(); track g.nombre) {
-                    <span>
-                      <i [style.background]="g.color"></i>
-                      <ng-container *ngTemplateOutlet="icono; context: { $implicit: g.nombre, tam: 13 }" />
-                      {{ g.nombre }}<strong>{{ g.n }}</strong><small>{{ g.pct }}%</small>
-                    </span>
-                  }
-                </div>
-                <p class="pie">Intentos en el periodo</p>
-              </div>
-
-              <div [class]="estilos.tarjeta">
-                <div class="mb-2 flex items-center gap-[9px]">
-                  <span [class]="estilos.icono">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-                  </span>
-                  <h3 [class]="estilos.rotulo">Acceso remoto</h3>
-                </div>
-                <span class="estado-regla pronto">Pronto</span>
-                <div class="banda"></div>
-                <p class="pie">Por VPN</p>
-              </div>
-            </div>
-
-            <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
-              <h2 [class]="estilos.titulo + ' !m-0'">Dispositivos rechazados</h2>
-              <span class="secundario">{{ filtrados().length }} {{ filtrados().length === 1 ? 'dispositivo' : 'dispositivos' }} en el periodo</span>
-            </div>
-            <div [class]="estilos.panel">
-              <table class="w-full border-collapse">
-                <caption class="sr-only">Celulares y tablets que intentaron abrir Cashi</caption>
-                <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
-                  <tr>
-                    <th scope="col" [class]="estilos.th">Último intento</th>
-                    <th scope="col" [class]="estilos.th">Usuario</th>
-                    <th scope="col" [class]="estilos.th">Dispositivo</th>
-                    <th scope="col" [class]="estilos.th">Navegador</th>
-                    <th scope="col" [class]="estilos.th">IP</th>
-                    <th scope="col" [class]="estilos.th">Intentos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (r of visibles(); track $index) {
-                    <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#f4f6f9] dark:border-slate-800 dark:hover:bg-slate-800/60">
-                      <td [class]="estilos.td">{{ cuando(r) }}</td>
-                      <td [class]="estilos.td">
-                        @if (r.usuario) {
-                          <span class="persona-celda">{{ r.nombre ?? r.usuario }}<small>{{ r.usuario }}</small></span>
-                        } @else {
-                          <span class="secundario">Sin iniciar sesión</span>
+          <div #zona [class]="ZONA">
+            @if (!filasVista()) {
+              <div [class]="VACIO">{{ vista() === 'rec' ? 'Sin rechazos en el periodo' : 'Sin resultados' }}</div>
+            } @else {
+              <div class="flex flex-[1_0_auto] flex-col">
+                <div #caja [class]="TABLA_CAJA">
+                  <table [class]="TABLA">
+                    @if (vista() === 'rec') {
+                      <thead [class]="THEAD"><tr [class]="TR">
+                        <th [class]="TH">Último intento</th><th [class]="TH">Usuario</th><th [class]="TH">Dispositivo</th>
+                        <th [class]="TH">Navegador</th><th [class]="TH">IP</th><th [class]="TH_NUM">Intentos</th>
+                      </tr></thead>
+                      <tbody>
+                        @for (r of paginaRechazos(); track $index) {
+                          <tr [class]="TR">
+                            <td [class]="TD_1">{{ dm(r.dia) }}<span [class]="SEC">{{ r.hora }}</span></td>
+                            <td [class]="TD"><ng-container *ngTemplateOutlet="quien; context: { $implicit: r.usuario, nombre: r.nombre }" /></td>
+                            <td [class]="TD">
+                              <span class="inline-flex items-center gap-2">
+                                <ng-container *ngTemplateOutlet="logo; context: { $implicit: familiaDe(r) }" />
+                                <span class="min-w-0">{{ tipoDe(r) }}@if (r.modelo) {<span class="ml-[.375rem] text-muted-foreground">{{ r.modelo }}</span>}</span>
+                              </span>
+                            </td>
+                            <td [class]="TD"><ng-container *ngTemplateOutlet="navegador; context: { $implicit: r.navegador }" /></td>
+                            <td [class]="TD"><ng-container *ngTemplateOutlet="ip; context: { $implicit: r.ip }" /></td>
+                            <td [class]="TD_NUM">
+                              <span class="inline-flex items-center gap-[.375rem] font-semibold text-foreground before:size-2 before:rounded-full before:content-['']"
+                                    [class]="r.intentos >= 10 ? 'before:bg-(--ro-pt)' : r.intentos >= 3 ? 'before:bg-(--am-pt)' : 'before:bg-muted-foreground'">{{ r.intentos }}</span>
+                            </td>
+                          </tr>
                         }
-                      </td>
-                      <td [class]="estilos.td">
-                        <span class="marca-so">
-                          <ng-container *ngTemplateOutlet="icono; context: { $implicit: r.dispositivo, tam: 15 }" />
-                          <span>{{ r.dispositivo }}<small>{{ r.modelo }}</small></span>
-                        </span>
-                      </td>
-                      <td [class]="estilos.td">
-                        <span class="marca-so">
-                          <ng-container *ngTemplateOutlet="icono; context: { $implicit: r.navegador, tam: 15 }" />
-                          {{ r.navegador === 'Samsung' ? 'Samsung Internet' : r.navegador }}
-                        </span>
-                      </td>
-                      <td [class]="estilos.td">
-                        <span class="origen-celda">
-                          <span class="ip">{{ r.ip }}</span>
-                          @if (r.ip && r.ip === datos()?.ipOficina) { <span class="origen">Oficina</span> }
-                        </span>
-                      </td>
-                      <td [class]="estilos.td">
-                        <span class="intentos-min" [class.alto]="r.intentos >= 10" [class.medio]="r.intentos >= 3 && r.intentos < 10"
-                              [attr.title]="r.intentos + (r.intentos === 1 ? ' intento' : ' intentos')">{{ r.intentos }}</span>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr><td colspan="6" class="secundario py-7 text-center">Sin rechazos en el periodo</td></tr>
-                  }
-                </tbody>
-              </table>
-              @if (paginas() > 1) {
-                <div class="flex items-center justify-between gap-3 border-t border-[#f1f3f6] px-3 py-2.5 dark:border-slate-800">
-                  <span class="secundario">{{ (pagina() - 1) * porPagina + 1 }}–{{ (pagina() - 1) * porPagina + visibles().length }} de {{ filtrados().length }}</span>
-                  <div class="flex gap-1.5">
-                    <button type="button" [class]="estilos.botonIcono + ' !h-8 !min-w-8'" aria-label="Página anterior"
-                            [disabled]="pagina() === 1" (click)="pagina.set(pagina() - 1)">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
-                    <button type="button" [class]="estilos.botonIcono + ' !h-8 !min-w-8'" aria-label="Página siguiente"
-                            [disabled]="pagina() === paginas()" (click)="pagina.set(pagina() + 1)">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                    </button>
-                  </div>
+                      </tbody>
+                    } @else {
+                      <thead [class]="THEAD"><tr [class]="TR">
+                        <th [class]="TH">Usuario</th><th [class]="TH">Sistema</th><th [class]="TH">Navegador</th>
+                        <th [class]="TH">IP</th><th [class]="TH">Último ingreso</th><th [class]="TH_NUM">Ingresos</th>
+                      </tr></thead>
+                      <tbody>
+                        @for (e of paginaEquipos(); track $index) {
+                          <tr [class]="TR">
+                            <td [class]="TD_1"><ng-container *ngTemplateOutlet="quien; context: { $implicit: e.usuario, nombre: e.nombre }" /></td>
+                            <td [class]="TD">
+                              <span class="inline-flex items-center gap-2">
+                                <ng-container *ngTemplateOutlet="logo; context: { $implicit: e.sistema }" />{{ sistema(e.sistema) }}
+                              </span>
+                            </td>
+                            <td [class]="TD"><ng-container *ngTemplateOutlet="navegador; context: { $implicit: e.navegador }" /></td>
+                            <td [class]="TD"><ng-container *ngTemplateOutlet="ip; context: { $implicit: e.ip }" /></td>
+                            <td [class]="TD">{{ dm(e.dia) }} {{ e.hora }}</td>
+                            <td [class]="TD_NUM">{{ e.ingresos }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    }
+                  </table>
                 </div>
-              }
-            </div>
+                <app-pie-pagina [total]="filasVista()" [pagina]="paginaActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+              </div>
+            }
           </div>
         }
-      </div>
+      </section>
     </div>
+
+    <div appTarjeta [class]="BARRA">
+      <span [class]="BARRA_ESTADO">{{ intentos() === 1 ? '1 intento rechazado' : intentos() + ' intentos rechazados' }}, {{ usuarios() === 1 ? '1 usuario' : usuarios() + ' usuarios' }}</span>
+      <button type="button" appBoton="secundario" [class]="BOTON_BARRA" disabled>
+        Registrar equipo remoto <span [class]="PILL.neu">Pronto</span>
+      </button>
+      <button type="button" appBoton="secundario" [class]="BOTON_BARRA" (click)="excel()" [disabled]="!filasVista()">
+        <lucide-angular name="download" [size]="16" class="flex"></lucide-angular>Descargar Excel
+      </button>
+    </div>
+
+    <ng-template #quien let-usuario let-nombre="nombre">
+      @if (usuario) {
+        <span [class]="FUERTE">{{ nombre ?? usuario }}</span><span [class]="SEC">{{ usuario }}</span>
+      } @else {
+        <span [class]="SEC">Sin sesión</span>
+      }
+    </ng-template>
+    <ng-template #navegador let-nav>
+      <span class="inline-flex items-center gap-2">
+        <ng-container *ngTemplateOutlet="logo; context: { $implicit: nombreNavegador(nav) }" />{{ nav === 'Samsung' ? 'Samsung Internet' : (nav ?? '—') }}
+      </span>
+    </ng-template>
+    <ng-template #ip let-ip>
+      <span class="mr-2 tabular-nums">{{ ip ?? '—' }}</span>@if (ip && ip === datos()?.ipOficina) {<span [class]="PILL.neu">Oficina</span>}
+    </ng-template>
   `
 })
-export class ControlAccesoComponent implements OnInit {
+export class ControlAccesoComponent implements OnInit, AfterViewChecked, OnDestroy {
   private readonly servicio = inject(AsistenciaService);
-
-  protected readonly estilos = ESTILOS;
-  protected readonly porPagina = POR_PAGINA;
   /** Contenido fijo del propio front (los logos), no datos de nadie. */
   protected readonly sprite = inject(DomSanitizer).bypassSecurityTrustHtml(SPRITE_LOGOS);
+
+  protected readonly PERIODOS = [{ dias: 1, texto: 'Hoy' }, { dias: 7, texto: 'Últimos 7 días' }, { dias: 30, texto: 'Últimos 30 días' }];
+  protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly PRINCIPAL = PRINCIPAL;
+  protected readonly CABECERA = CABECERA; protected readonly CABECERA_TEXTO = CABECERA_TEXTO; protected readonly TITULO = TITULO; protected readonly SUBTITULO = SUBTITULO; protected readonly FILTROS = FILTROS; protected readonly CAMPO = CAMPO;
+  protected readonly ETIQUETA = ETIQUETA; protected readonly LISTA = LISTA; protected readonly BUSCAR = BUSCAR;
+  protected readonly BUSCAR_ICONO = BUSCAR_ICONO; protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; protected readonly INDICADORES = INDICADORES;
+  protected readonly HERRAMIENTAS = HERRAMIENTAS; protected readonly ZONA = ZONA; protected readonly VACIO = VACIO;
+  protected readonly TABLA_CAJA = TABLA_CAJA; protected readonly THEAD = THEAD; protected readonly TR = TR; protected readonly TABLA = TABLA; protected readonly TH = TH; protected readonly TH_NUM = TH_NUM;
+  protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly TD_NUM = TD_NUM; protected readonly SEC = SEC;
+  protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO;
+  /** Botones de la barra: 1rem a los lados; deshabilitado queda gris y sin borde, como en el artifact. */
+  protected readonly BOTON_BARRA = 'px-4! disabled:opacity-100 disabled:border-transparent! disabled:bg-muted disabled:text-muted-foreground! disabled:shadow-none';
 
   readonly datos = signal<PanelAcceso | null>(null);
   readonly cargando = signal(false);
   readonly error = signal(false);
 
   readonly periodo = signal(7);
-  readonly dispositivo = signal('');
+  readonly familia = signal<'' | Familia>('');
   readonly busqueda = signal('');
+  readonly vista = signal<'rec' | 'ing'>('rec');
   readonly pagina = signal(1);
+  readonly porPagina = signal(8);
+
+  @ViewChild('zona') private zona?: ElementRef<HTMLElement>;
+  @ViewChild('caja') private caja?: ElementRef<HTMLElement>;
+  private observador?: ResizeObserver;
+  private observada?: HTMLElement;
 
   ngOnInit(): void {
     this.cargar();
@@ -397,125 +263,137 @@ export class ControlAccesoComponent implements OnInit {
     this.cargando.set(true);
     this.error.set(false);
     this.servicio.controlAcceso(30).subscribe({
-      next: d => {
-        this.datos.set(d);
-        this.cargando.set(false);
-      },
-      error: () => {
-        this.error.set(true);
-        this.cargando.set(false);
-      }
+      next: d => { this.datos.set(d); this.cargando.set(false); },
+      error: () => { this.error.set(true); this.cargando.set(false); }
     });
+  }
+
+  /** Se mide después de pintar: durante el cambio de pestaña conviven las dos tablas y la cuenta saldría corta. */
+  ngAfterViewChecked(): void {
+    const zona = this.zona?.nativeElement;
+    if (zona !== this.observada) {
+      this.observador?.disconnect();
+      this.observada = zona;
+      if (zona) {
+        this.observador = new ResizeObserver(() => this.medirLuego());
+        this.observador.observe(zona);
+      }
+    }
+    this.medirLuego();
+  }
+
+  ngOnDestroy(): void {
+    this.observador?.disconnect();
+    cancelAnimationFrame(this.cuadro);
+  }
+
+  private cuadro = 0;
+  private medirLuego(): void {
+    cancelAnimationFrame(this.cuadro);
+    this.cuadro = requestAnimationFrame(() => this.ajustarFilas());
+  }
+
+  /** Las filas por página salen del alto que queda; si cambian, se repinta una vez. */
+  private ajustarFilas(): void {
+    const zona = this.zona?.nativeElement, caja = this.caja?.nativeElement;
+    if (!zona || !caja) return;
+    const n = filasQueEntran(zona, caja);
+    if (n && n !== this.porPagina()) this.porPagina.set(n);
   }
 
   private readonly hoy = computed(() => this.datos()?.hoy ?? new Date().toISOString().slice(0, 10));
   private readonly desde = computed(() => menosDias(this.hoy(), this.periodo() - 1));
+  private readonly buscado = computed(() => this.busqueda().trim().toLowerCase());
 
-  /** Los rechazos del periodo, un renglón por equipo. */
-  readonly filtrados = computed<Rechazo[]>(() => {
-    const desde = this.desde();
-    const tipo = this.dispositivo();
-    const q = this.busqueda().trim().toLowerCase();
-
+  /** Los rechazos del periodo, un renglón por equipo, del más nuevo al más viejo. */
+  readonly rechazos = computed<Rechazo[]>(() => {
+    const desde = this.desde(), fam = this.familia(), q = this.buscado();
     const grupos = new Map<string, Rechazo>();
     for (const r of this.datos()?.rechazos ?? []) {
-      if (r.dia < desde) {
-        continue;
-      }
-      if (tipo && !(r.dispositivo === tipo || (tipo === 'Apple' && (r.dispositivo === 'iPhone' || r.dispositivo === 'iPad')))) {
-        continue;
-      }
-      if (q && !(r.usuario ?? '').toLowerCase().includes(q) && !(r.nombre ?? '').toLowerCase().includes(q)
-          && !(r.ip ?? '').includes(q)) {
-        continue;
-      }
+      if (r.dia < desde || (fam && this.familiaDe(r) !== fam)) continue;
+      if (q && ![r.usuario, r.nombre, r.ip].some(x => (x ?? '').toLowerCase().includes(q))) continue;
       const clave = [r.usuario, r.dispositivo, r.modelo, r.navegador, r.ip].join('|');
       const actual = grupos.get(clave);
-      if (!actual) {
-        grupos.set(clave, { ...r, hora: r.ultimo });
-      } else {
+      if (!actual) grupos.set(clave, { ...r, hora: r.ultimo });
+      else {
         actual.intentos += r.intentos;
-        if (r.dia + r.ultimo > actual.dia + actual.hora) {
-          actual.dia = r.dia;
-          actual.hora = r.ultimo;
-        }
+        if (r.dia + r.ultimo > actual.dia + actual.hora) { actual.dia = r.dia; actual.hora = r.ultimo; }
       }
     }
     return [...grupos.values()].sort((a, b) => (b.dia + b.hora).localeCompare(a.dia + a.hora));
   });
 
-  readonly totalIntentos = computed(() => this.filtrados().reduce((t, r) => t + r.intentos, 0));
-  readonly conUsuario = computed(() => new Set(this.filtrados().filter(r => r.usuario).map(r => r.usuario)).size);
-
-  /** Un punto por día (hasta 7), con el área suave debajo. */
-  readonly tendencia = computed(() => {
-    const dias = Math.min(7, this.periodo());
-    const lista = this.filtrados();
-    const crudos = (this.datos()?.rechazos ?? []);
-    const claves = new Set(lista.map(r => [r.usuario, r.dispositivo, r.modelo, r.navegador, r.ip].join('|')));
-    const porDia = Array.from({ length: dias }, (_, i) => {
-      const d = menosDias(this.hoy(), dias - 1 - i);
-      const n = crudos.filter(r => r.dia === d && claves.has([r.usuario, r.dispositivo, r.modelo, r.navegador, r.ip].join('|')))
-        .reduce((t, r) => t + r.intentos, 0);
-      return { dia: d, n };
-    });
-    const max = Math.max(1, ...porDia.map(p => p.n));
-    const ancho = 240, alto = 46, pad = 4;
-    const puntos = porDia.map((p, k) => ({
-      dia: p.dia,
-      dm: dm(p.dia),
-      titulo: `${dm(p.dia)} · ${p.n}`,
-      x: +(porDia.length === 1 ? ancho / 2 : pad + k * (ancho - 2 * pad) / (porDia.length - 1)).toFixed(1),
-      y: +(alto - pad - (p.n / max) * (alto - 2 * pad)).toFixed(1)
-    }));
-    const linea = puntos.map((p, k) => `${k ? 'L' : 'M'}${p.x},${p.y}`).join(' ');
-    const area = `${linea} L${puntos[puntos.length - 1].x},${alto} L${puntos[0].x},${alto} Z`;
-    const etiqueta = 'Intentos por día: ' + porDia.map(p => `${dm(p.dia)} ${p.n}`).join(', ');
-    return { ancho, alto, puntos, linea, area, etiqueta };
-  });
-
-  readonly porTipo = computed(() => {
-    const lista = this.filtrados();
-    const grupos = GRUPOS.map(g => ({
-      nombre: g.nombre,
-      color: g.color,
-      n: lista.filter(r => (g.de as readonly string[]).includes(r.dispositivo)).reduce((s, r) => s + r.intentos, 0)
-    }));
-    const total = Math.max(1, grupos.reduce((t, g) => t + g.n, 0));
-    return grupos.map(g => ({ ...g, pct: Math.round(g.n / total * 100) }));
-  });
-  readonly totalTipos = computed(() => this.porTipo().reduce((t, g) => t + g.n, 0));
-  readonly etiquetaTipos = computed(() => this.porTipo().map(g => `${g.nombre} ${g.n}`).join(', '));
-
-  /** Equipos que entraron en el periodo: personas distintas por sistema. */
-  readonly sistemas = computed(() => {
-    const desde = this.desde();
-    const ingresos = (this.datos()?.ingresos ?? []).filter(i => i.dia >= desde);
-    const cuentas = SISTEMAS.map(s => ({
-      clave: s.clave,
-      nombre: s.nombre,
-      n: new Set(ingresos.filter(i => i.sistema === s.clave).map(i => i.usuario)).size
-    }));
-    const total = Math.max(1, cuentas.reduce((t, c) => t + c.n, 0));
-    return cuentas.map(c => ({ ...c, pct: +(c.n / total * 100).toFixed(1) }));
-  });
-
-  readonly paginas = computed(() => Math.max(1, Math.ceil(this.filtrados().length / POR_PAGINA)));
-  readonly visibles = computed(() => {
-    const pagina = Math.min(this.pagina(), this.paginas());
-    const ini = (pagina - 1) * POR_PAGINA;
-    return this.filtrados().slice(ini, ini + POR_PAGINA);
-  });
-
-  cuando(r: Rechazo): string {
-    if (r.dia === this.hoy()) {
-      return `Hoy ${r.hora}`;
+  /** Las computadoras con las que se entró en el periodo, un renglón por equipo. */
+  readonly equipos = computed<Equipo[]>(() => {
+    const desde = this.desde(), q = this.buscado();
+    const grupos = new Map<string, Equipo>();
+    for (const i of this.datos()?.ingresos ?? []) {
+      if (i.dia < desde) continue;
+      if (q && ![i.usuario, i.nombre, i.ip].some(x => (x ?? '').toLowerCase().includes(q))) continue;
+      const clave = [i.usuario, i.sistema, i.navegador, i.ip].join('|');
+      const actual = grupos.get(clave);
+      if (!actual) grupos.set(clave, { dia: i.dia, hora: i.ultimo, usuario: i.usuario, nombre: i.nombre, sistema: i.sistema, navegador: i.navegador, ip: i.ip, ingresos: i.ingresos });
+      else {
+        actual.ingresos += i.ingresos;
+        if (i.dia + i.ultimo > actual.dia + actual.hora) { actual.dia = i.dia; actual.hora = i.ultimo; }
+      }
     }
-    return r.dia === menosDias(this.hoy(), 1) ? `Ayer ${r.hora}` : `${dm(r.dia)} ${r.hora}`;
+    return [...grupos.values()].sort((a, b) => (b.dia + b.hora).localeCompare(a.dia + a.hora));
+  });
+
+  readonly intentos = computed(() => this.rechazos().reduce((t, r) => t + r.intentos, 0));
+  readonly usuarios = computed(() => new Set(this.rechazos().filter(r => r.usuario).map(r => r.usuario)).size);
+  readonly detalleSistemas = computed(() => ['WINDOWS', 'MAC', 'LINUX']
+    .map(s => [SISTEMA[s], this.equipos().filter(e => e.sistema === s).length] as const)
+    .filter(([, n]) => n).map(([s, n]) => `${s} ${n}`).join(', ') || 'Sin ingresos en el periodo');
+  readonly detalleFamilias = computed(() => (['Android', 'Apple', 'Tablet'] as Familia[])
+    .map(f => `${f} ${this.rechazos().filter(r => this.familiaDe(r) === f).length}`).join(', '));
+
+  readonly filasVista = computed(() => this.vista() === 'rec' ? this.rechazos().length : this.equipos().length);
+  readonly paginaActual = computed(() => Math.min(Math.max(1, this.pagina()), Math.max(1, Math.ceil(this.filasVista() / this.porPagina()))));
+  readonly paginaRechazos = computed(() => this.cortar(this.rechazos()));
+  readonly paginaEquipos = computed(() => this.cortar(this.equipos()));
+
+  private cortar<T>(filas: T[]): T[] {
+    const ini = (this.paginaActual() - 1) * this.porPagina();
+    return filas.slice(ini, ini + this.porPagina());
   }
 
-  logoDe(nombre: string | null): string {
-    return (nombre && LOGO[nombre]) || 'otro';
+  /** iPhone e iPad van juntos como Apple; «Tablet» son las tablets Android y otras. */
+  familiaDe(r: { dispositivo: string }): Familia | 'Otro' {
+    return r.dispositivo === 'Android' ? 'Android' : r.dispositivo === 'iPhone' || r.dispositivo === 'iPad' ? 'Apple' : r.dispositivo === 'Tablet' ? 'Tablet' : 'Otro';
+  }
+
+  tipoDe(r: { dispositivo: string }): string {
+    return r.dispositivo === 'Android' || r.dispositivo === 'iPhone' ? 'Celular' : r.dispositivo === 'iPad' || r.dispositivo === 'Tablet' ? 'Tablet' : 'Otro';
+  }
+
+  logoDe(nombre: string | null): string | null {
+    return (nombre && LOGO[nombre]) || null;
+  }
+
+  nombreNavegador(nav: string | null): string | null {
+    return nav ? nav.replace(/ \d+$/, '') : null;
+  }
+
+  sistema(clave: string): string {
+    return SISTEMA[clave] ?? clave;
+  }
+
+  dm(iso: string): string {
+    return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+  }
+
+  /** La tabla que se ve, con todas sus filas del periodo y el filtro. */
+  excel(): void {
+    const filas = this.vista() === 'rec'
+      ? this.rechazos().map(r => ({ 'Último intento': `${this.dm(r.dia)} ${r.hora}`, Usuario: r.usuario ?? 'Sin sesión', Nombre: r.nombre ?? '',
+        Dispositivo: this.tipoDe(r), Modelo: r.modelo ?? '', Navegador: r.navegador ?? '', IP: r.ip ?? '', Intentos: r.intentos }))
+      : this.equipos().map(e => ({ Usuario: e.usuario, Nombre: e.nombre ?? '', Sistema: this.sistema(e.sistema), Navegador: e.navegador ?? '',
+        IP: e.ip ?? '', 'Último ingreso': `${this.dm(e.dia)} ${e.hora}`, Ingresos: e.ingresos }));
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filas), this.vista() === 'rec' ? 'Rechazados' : 'Permitidos');
+    XLSX.writeFile(libro, 'Control_de_acceso.xlsx');
   }
 }
 
@@ -523,8 +401,4 @@ function menosDias(iso: string, n: number): string {
   const d = new Date(iso + 'T12:00:00');
   d.setDate(d.getDate() - n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function dm(iso: string): string {
-  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 }

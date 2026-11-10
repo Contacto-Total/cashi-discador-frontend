@@ -84,6 +84,20 @@ export interface AsistenciaDia {
   entradaAutorizada?: string | null;
   /** La semana de ese día ya está cerrada: no admite solicitudes. */
   semanaCerrada?: boolean | null;
+  /** Las horas trabajadas repartidas entre la oficina y lo remoto: suman las trabajadas. */
+  minutosPresenciales?: number | null;
+  horasPresenciales?: string | null;
+  minutosRemotos?: number | null;
+  horasRemotas?: string | null;
+  /** Por qué el día es remoto: MODALIDAD, SABADO o SOLICITUD; null si es presencial. */
+  origenRemoto?: 'MODALIDAD' | 'SABADO' | 'SOLICITUD' | null;
+  /** La solicitud de teletrabajo del día y, si es por horas, la parte en la oficina y la remota. */
+  idTeletrabajo?: number | null;
+  estadoTeletrabajo?: EstadoJustificacion | null;
+  oficinaDesde?: string | null;
+  oficinaHasta?: string | null;
+  remotoDesde?: string | null;
+  remotoHasta?: string | null;
 }
 
 /** El corte con el que RR.HH. decide el bono: de lunes a viernes. */
@@ -103,6 +117,11 @@ export interface SemanaAgente {
   horasTrabajadas: string;
   minutosJornada: number;
   jornada: string;
+  /** Las horas trabajadas de la semana repartidas: suman minutosTrabajados. */
+  minutosPresenciales?: number;
+  horasPresenciales?: string;
+  minutosRemotos?: number;
+  horasRemotas?: string;
   minutosExceso: number;
   exceso: string;
   superoToleranciaDiaria: boolean;
@@ -206,6 +225,11 @@ export interface Justificacion {
   /** Solo en un permiso por horas: las horas que sí trabaja ese día. */
   trabajaDesde?: string | null;
   trabajaHasta?: string | null;
+  /** Teletrabajo por horas: la parte remota y la parte en la oficina. */
+  remotoDesde?: string | null;
+  remotoHasta?: string | null;
+  oficinaDesde?: string | null;
+  oficinaHasta?: string | null;
   /** Solo en una recuperación: minutos más a la salida cada día y el día que recupera. */
   minutosExtra: number | null;
   fechaOrigen: string | null;
@@ -215,6 +239,8 @@ export interface Justificacion {
   solicitadaPor: string | null;
   solicitadaEn: string | null;
   revisadaPor: string | null;
+  /** Quien la revisó: la supervisora ve aparte las que revisó ella. */
+  idUsuarioRevisa?: number | null;
   revisadaEn: string | null;
   resueltaPor: string | null;
   resueltaEn: string | null;
@@ -239,6 +265,9 @@ export interface SolicitudPrevista {
   minutos: number | null;
   /** Los días de trabajo que cubre. */
   dias: number;
+  /** Teletrabajo por horas: lo de su horario que no cubre y el aviso como se le muestra. */
+  sinCubrir?: { desde: string; hasta: string }[];
+  aviso?: string | null;
 }
 
 // ==================== CALENDARIO ====================
@@ -599,7 +628,7 @@ export interface PersonalAsistencia {
 
 /** Un hito de la ficha: el ingreso, cada cambio de subcartera y el cese. */
 export interface MovimientoPersonal {
-  tipo: 'ingreso' | 'cambio' | 'cese';
+  tipo: 'ingreso' | 'cambio' | 'modalidad' | 'cese';
   fecha: string;
   titulo: string;
   detalle: string;
@@ -632,6 +661,8 @@ export interface FichaPersonal {
   cartera: string | null;
   idSubcartera: number | null;
   subcartera: string | null;
+  /** PRESENCIAL o TELETRABAJO, hoy (o en su último día). */
+  modalidad: 'PRESENCIAL' | 'TELETRABAJO' | null;
   movimientos: MovimientoPersonal[];
 }
 
@@ -652,6 +683,8 @@ export interface DatosPersonal {
   idUsuario: number | null;
   fechaIngreso: string;
   idSubcartera: number | null;
+  /** Solo al registrar; sin ella, presencial. */
+  modalidad?: 'PRESENCIAL' | 'TELETRABAJO' | null;
 }
 
 /** Un usuario asesor de Cashi sin ficha, para vincular. */
@@ -809,10 +842,17 @@ export interface RechazoDia {
   intentos: number;
 }
 
+/** Los ingresos de un mismo equipo en un día: usuario, sistema, navegador e IP. */
 export interface IngresoDia {
   dia: string;
   usuario: string;
+  nombre: string | null;
   sistema: 'WINDOWS' | 'MAC' | 'LINUX' | 'OTRO';
+  navegador: string | null;
+  ip: string | null;
+  /** HH:mm del último ingreso de ese día. */
+  ultimo: string;
+  ingresos: number;
 }
 
 export interface PanelAcceso {
