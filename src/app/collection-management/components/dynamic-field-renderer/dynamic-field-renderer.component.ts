@@ -210,6 +210,9 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
                   [deuda]="deuda()"
                   [contextoDescuento]="contextoDescuento()"
                   [maxInstallments]="6"
+                  [canalesPago]="canalesPago()"
+                  [canalPagoId]="canalPagoId()"
+                  (canalPagoChange)="canalPagoChange.emit($event)"
                   (scheduleChange)="onPaymentScheduleChange(field.id, $event)"
                   (customAmountSelected)="onCustomAmountSelected($event)"
                 />
@@ -397,6 +400,10 @@ export class DynamicFieldRendererComponent {
   deuda = input<string | null>(null);
   /** Cliente y subcartera, para revisar el descuento máximo en el cronograma */
   contextoDescuento = input<ContextoDescuento | null>(null);
+  /** Canal de pago (REQ-074): va dentro del cronograma de la promesa. Vacío: no se muestra. */
+  canalesPago = input<{ id: number; nombre: string }[]>([]);
+  canalPagoId = input<number | null>(null);
+  canalPagoChange = output<number | null>();
 
   // Field data with two-way binding
   fieldData = signal<DynamicFieldData>({});

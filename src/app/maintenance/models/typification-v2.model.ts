@@ -188,6 +188,16 @@ export interface EvaluacionDescuento {
   montoMinimoCuota: number | null;
 }
 
+/** Canal por el que el cliente paga o pagará, de una subcartera (REQ-074). */
+export interface CanalPagoDTO {
+  id: number;
+  nombre: string;
+  activo: boolean;
+  orden: number;
+  /** Alguna gestión lo eligió: al quitarlo queda desactivado. */
+  enUso: boolean;
+}
+
 // Modelos para el sistema de opciones con toggles
 export interface CampoOpcionDTO {
   id?: number;

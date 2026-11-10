@@ -32,17 +32,22 @@
       </div>
     </app-page-header>
 
-    <!-- Pestañas solo si la subcartera tiene una lista que piden las opciones de una rama. -->
-    @if (lista(); as l) {
-      <div class="mb-3 grid w-[min(100%,20rem)] flex-none grid-cols-2 gap-[.1875rem] rounded-lg bg-muted p-[.1875rem]" role="group" aria-label="Qué se configura">
-        <button type="button" [class]="PESTANA" [ngClass]="pestana() === 'arbol' ? PESTANA_ACTIVA : PESTANA_REPOSO"
-                [attr.aria-pressed]="pestana() === 'arbol'" (click)="pestana.set('arbol'); abierta.set(null)">Árbol</button>
-        <button type="button" [class]="PESTANA" [ngClass]="pestana() === 'lista' ? PESTANA_ACTIVA : PESTANA_REPOSO"
-                [attr.aria-pressed]="pestana() === 'lista'" (click)="pestana.set('lista'); abierta.set(null)">{{ l.etiqueta }}</button>
+    <!-- Árbol y canales de pago siempre; la lista de la rama solo si la subcartera tiene una. -->
+    @if (datosActual()) {
+      <div class="mb-3 grid flex-none gap-[.1875rem] rounded-lg bg-muted p-[.1875rem]" role="group" aria-label="Qué se configura"
+           [ngClass]="lista() ? 'w-[min(100%,30rem)] grid-cols-3' : 'w-[min(100%,20rem)] grid-cols-2'">
+        <button type="button" [class]="PESTANA" [ngClass]="vista() === 'arbol' ? PESTANA_ACTIVA : PESTANA_REPOSO"
+                [attr.aria-pressed]="vista() === 'arbol'" (click)="pestana.set('arbol'); abierta.set(null)">Árbol</button>
+        @if (lista(); as l) {
+          <button type="button" [class]="PESTANA" [ngClass]="vista() === 'lista' ? PESTANA_ACTIVA : PESTANA_REPOSO"
+                  [attr.aria-pressed]="vista() === 'lista'" (click)="pestana.set('lista'); abierta.set(null)">{{ l.etiqueta }}</button>
+        }
+        <button type="button" [class]="PESTANA" [ngClass]="vista() === 'canales' ? PESTANA_ACTIVA : PESTANA_REPOSO"
+                [attr.aria-pressed]="vista() === 'canales'" (click)="pestana.set('canales'); abierta.set(null)">Canales de pago</button>
       </div>
     }
 
-    @if (pestana() === 'arbol' || !lista()) {
+    @if (vista() === 'arbol') {
       <div [class]="REJILLA + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
         <span>Tipificación</span>
         <span class="text-right">Campos</span>
@@ -50,10 +55,19 @@
         <span class="text-center">Habilitada</span>
         <span></span>
       </div>
-    } @else {
+    } @else if (vista() === 'lista') {
       <div [class]="REJILLA_LISTA + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
         <span>Código</span>
         <span>Nombre</span>
+        <span class="text-center">Activo</span>
+        <span></span>
+      </div>
+    } @else {
+      <p class="m-0 mb-2 flex-none px-2 text-[.8125rem] text-muted-foreground">
+        El asesor elige uno al tipificar una promesa de pago o una cancelación.
+      </p>
+      <div [class]="REJILLA_CANALES + ' flex-none border-b border-border pt-[.25rem] pb-2 text-[.75rem] font-medium text-muted-foreground'">
+        <span>Canal</span>
         <span class="text-center">Activo</span>
         <span></span>
       </div>
@@ -71,7 +85,7 @@
         <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">No hay subcarteras configuradas</p>
       }
 
-      @if (pestana() === 'arbol' || !lista()) {
+      @if (vista() === 'arbol') {
         @for (f of filas(); track clave(f); let primera = $first) {
           @if (f.lista) {
             <!-- La lista que esta rama pide antes del detalle: no se habilita ni se personaliza; el lápiz lleva a sus motivos. -->
@@ -232,6 +246,27 @@
           }
           }
         }
+      } @else if (vista() === 'canales') {
+        <!-- Canales de pago de la subcartera (REQ-074). Se guardan con la barra de abajo. -->
+        @for (v of [version()]; track v) {
+          @for (c of canales(); track $index; let i = $index) {
+            <div [class]="REJILLA_CANALES + ' min-h-[2.9375rem] rounded-[.625rem] py-[.4375rem] hover:bg-muted/55'">
+              <input type="text" maxlength="100" autocomplete="off" placeholder="Nombre del canal" [class]="CAMPO_FILA"
+                     [ngClass]="[canalMal(canales(), c, i) ? 'border-(--ro-pt)!' : 'border-(--campo-ln)!', c.activo ? '' : 'text-muted-foreground!']"
+                     [attr.value]="c.nombre" [attr.aria-label]="'Nombre del canal ' + (i + 1)" (input)="escribirCanal(i, $any($event.target).value)">
+              <button type="button" role="switch" [class]="INTERRUPTOR" [ngClass]="c.activo ? 'bg-brand after:translate-x-3.5' : 'bg-(--campo-ln)'"
+                      [attr.aria-checked]="c.activo" [attr.aria-label]="'Activo: ' + (c.nombre || 'canal ' + (i + 1))" (click)="alternarCanal(i)"></button>
+              <button type="button" [class]="ICONO + ' hover:bg-(--ro-bg) hover:text-(--ro)'" [attr.aria-label]="'Quitar ' + (c.nombre || 'canal ' + (i + 1))"
+                      [title]="c.enUso ? 'Ya se usó en gestiones: se desactiva' : 'Quitar'" (click)="quitarCanal(i)">
+                <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+              </button>
+            </div>
+          } @empty {
+            <p class="m-0 mt-[.875rem] px-2 text-[.875rem] text-muted-foreground">
+              Esta subcartera no tiene canales de pago. Mientras no tenga, el asesor no ve el campo.
+            </p>
+          }
+        }
       } @else {
         <!-- Lista de la subcartera (por ejemplo, los motivos de no pago). Se guarda con la barra de abajo. -->
         @for (v of [version()]; track v) {
@@ -257,7 +292,11 @@
     <!-- Pie de la tarjeta: lo que se agrega en la pestaña abierta queda fijo bajo la lista, que se desplaza por encima. -->
     @if (datosActual()) {
       <div class="flex flex-none flex-wrap gap-2 border-t border-border pt-4">
-        @if (pestana() === 'arbol' || !lista()) {
+        @if (vista() === 'canales') {
+          <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="agregarCanal()">
+            <lucide-angular name="plus" [size]="16"></lucide-angular>Agregar canal
+          </button>
+        } @else if (vista() === 'arbol') {
           <button type="button" appBoton="secundario" appBotonAlto="chico" (click)="openCreateRootDialog()">
             <lucide-angular name="plus" [size]="16"></lucide-angular>Agregar tipificación
           </button>
