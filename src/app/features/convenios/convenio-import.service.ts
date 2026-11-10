@@ -69,6 +69,42 @@ export interface ConvenioImportResult {
   conveniosImportados: ConvenioImportado[];
 }
 
+export interface ConvenioActivo {
+  id: number;
+  documento: string;
+  periodoOrigen: string | null;
+  origen: string;
+  idAgenteOrigen: number | null;
+  nombreOrigen: string | null;
+  idAgenteResponsable: number | null;
+  nombreResponsable: string | null;
+  fechaCambio: string;
+}
+
+export interface AsesorConvenio {
+  id: number;
+  nombre: string;
+  subcartera: string | null;
+}
+
+export interface ConvenioTrasladoHistorial {
+  id: number;
+  idAgenteAnterior: number | null;
+  nombreAnterior: string | null;
+  idAgenteNuevo: number;
+  nombreNuevo: string | null;
+  fechaTraslado: string;
+  motivo: string | null;
+  registradoPor: string | null;
+}
+
+export interface ConvenioTrasladoRequest {
+  idConvenio: number;
+  idAgenteNuevo: number;
+  fechaTraslado: string;
+  motivo: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -107,5 +143,21 @@ export class ConvenioImportService {
     });
 
     return this.http.post<ConvenioImportResult>(`${this.apiUrl}/import`, formData);
+  }
+
+  obtenerConveniosActivos(texto: string): Observable<ConvenioActivo[]> {
+    return this.http.get<ConvenioActivo[]>(`${this.apiUrl}/activos`, { params: { texto } });
+  }
+
+  obtenerAsesores(): Observable<AsesorConvenio[]> {
+    return this.http.get<AsesorConvenio[]>(`${this.apiUrl}/asesores`);
+  }
+
+  obtenerHistorialTraslados(idConvenio: number): Observable<ConvenioTrasladoHistorial[]> {
+    return this.http.get<ConvenioTrasladoHistorial[]>(`${this.apiUrl}/${idConvenio}/traslados`);
+  }
+
+  trasladarConvenio(request: ConvenioTrasladoRequest): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/traslados`, request);
   }
 }
