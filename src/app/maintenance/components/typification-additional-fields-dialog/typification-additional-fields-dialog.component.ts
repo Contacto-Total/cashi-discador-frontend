@@ -5,13 +5,14 @@ import { LucideAngularModule } from 'lucide-angular';
 import { HttpClient } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
 import {
-  CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, FilaReglaDescuento, ReglaDescuento, RestriccionFecha,
-  TipoLimiteDescuento
+  AutorizadorExcepcion, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, FilaReglaDescuento, ReglaDescuento,
+  RestriccionFecha, TipoLimiteDescuento
 } from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { environment } from '../../../../environments/environment';
 import { TUI, TUI_ANIM, tuiSwitch, tuiPerilla } from '../typification-ui';
+import { AutorizadoresExcepcionDialogComponent, ContextoAutorizadores } from './autorizadores-excepcion-dialog.component';
 
 interface ConfiguracionCabecera {
   codigo: string;
@@ -46,7 +47,7 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
 @Component({
   selector: 'app-typification-additional-fields-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, A11yModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, A11yModule, AutorizadoresExcepcionDialogComponent],
   template: `
     <div [class]="ui.fondo" (click)="handleCancel()">
       <div [class]="ui.panel + ' max-w-[980px]'" role="dialog" aria-modal="true" aria-labelledby="mf-titulo"
@@ -117,10 +118,17 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                 </div>
               </div>
               @if (opciones().length > 0) {
-                <span class="pb-[9px] text-[12px] text-[#5f6c80] dark:text-slate-400">
-                  <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ getOpcionesHabilitadasCount() }}</b> de
-                  <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ opciones().length }}</b> montos habilitados
-                </span>
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
+                    <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ getOpcionesHabilitadasCount() }}</b> de
+                    <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ opciones().length }}</b> montos habilitados
+                  </span>
+                  <button type="button" (click)="abrirAutorizadores('lista')" [class]="ui.secundario">
+                    <lucide-angular name="user-check" [size]="16"></lucide-angular>
+                    Autorizadores
+                    <span [class]="ui.chipGris + ' tabular-nums'">{{ autorizadoresActivos().length }}</span>
+                  </button>
+                </div>
               }
             </div>
 
@@ -365,6 +373,91 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                               </table>
                             </div>
 
+                            <!-- Niveles de autorización: quién aprueba según cuánto pasa el máximo sin aprobación -->
+                            <div class="flex flex-col gap-2.5 rounded-[10px] border border-[#e6e9ee] bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                              <span class="text-[12.5px] font-bold text-[#0f172a] dark:text-slate-100">Niveles de autorización</span>
+                              <span [class]="ui.ayuda">
+                                Si el descuento pasa el máximo sin aprobación, la promesa pasa a evaluación indicando quién autoriza
+                                según el descuento. Si no se cumplen las cuotas o el monto mínimo por cuota, se guarda como monto libre,
+                                también en evaluación; si solo fallan las cuotas, autoriza el primer nivel. El asesor no ve ningún aviso.
+                              </span>
+                              @for (fila of regla.filas; track $index; let fi = $index) {
+                                @if (fi > 0) {
+                                  <div class="border-t border-dashed border-[#e6e9ee] dark:border-slate-700"></div>
+                                }
+                                <div class="flex flex-col gap-1.5">
+                                  @if (regla.segmento) {
+                                    <span class="text-[12px] font-bold text-[#334155] dark:text-slate-200">{{ rotuloFila(regla, fila) }}</span>
+                                  }
+                                  @if (fila.niveles.length > 0) {
+                                    <div class="overflow-x-auto">
+                                      <table class="w-full min-w-[520px] border-separate border-spacing-0 text-left">
+                                        <thead>
+                                          <tr>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Descuento</th>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Hasta {{ regla.tipo === 'PORCENTAJE' ? '(%)' : '(S/)' }}</th>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Autoriza</th>
+                                            <th class="w-8 pb-1.5"><span class="sr-only">Quitar</span></th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          @for (n of fila.niveles; track $index; let ni = $index) {
+                                            @let desde = desdeNivel(fila, ni);
+                                            <tr>
+                                              <td class="whitespace-nowrap py-1 pr-2.5 text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                                                @if (desde === null) {
+                                                  <span class="font-semibold text-[#b45309] dark:text-amber-300">El nivel anterior no tiene tope</span>
+                                                } @else {
+                                                  Más de {{ limiteTexto(regla, desde) }}
+                                                }
+                                              </td>
+                                              <td class="w-[170px] py-1 pr-2.5">
+                                                <span [class]="numCaja">
+                                                  <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">hasta {{ regla.tipo === 'PORCENTAJE' ? '%' : 'S/' }}</span>
+                                                  <input type="number" min="0" [attr.max]="regla.tipo === 'PORCENTAJE' ? 100 : null" step="1"
+                                                         placeholder="Sin tope" [value]="n.hasta ?? ''"
+                                                         (change)="onNivelHastaChange(opcion.codigoOpcion, fi, ni, $event)"
+                                                         [attr.aria-label]="'Descuento hasta, nivel ' + (ni + 1) + ' ' + rotuloFila(regla, fila)"
+                                                         [class]="numInput"/>
+                                                </span>
+                                              </td>
+                                              <td class="py-1 pr-2.5">
+                                                <select (change)="onNivelAutorizadorChange(opcion.codigoOpcion, fi, ni, $event)"
+                                                        [attr.aria-label]="'Quién autoriza el nivel ' + (ni + 1) + ' ' + rotuloFila(regla, fila)"
+                                                        [class]="ui.inputSm + ' h-[30px] w-full min-w-[240px]'">
+                                                  @if (n.idAutorizador === null) {
+                                                    <option value="" selected>Elegir autorizador</option>
+                                                  }
+                                                  @for (a of autorizadoresParaNivel(n.idAutorizador); track a.id) {
+                                                    <option [value]="a.id" [selected]="a.id === n.idAutorizador">{{ etiquetaAutorizador(a) }}</option>
+                                                  }
+                                                  <option value="nuevo">+ Nuevo autorizador…</option>
+                                                </select>
+                                              </td>
+                                              <td class="w-8 py-1">
+                                                <button type="button" (click)="quitarNivel(opcion.codigoOpcion, fi, ni)"
+                                                        [attr.aria-label]="'Quitar nivel ' + (ni + 1)" [class]="ui.iconBtnPeligro">
+                                                  <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          }
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  } @else {
+                                    <span [class]="ui.ayuda">Sin niveles: el descuento pasa a evaluación sin indicar quién autoriza.</span>
+                                  }
+                                  <div>
+                                    <button type="button" (click)="agregarNivel(opcion.codigoOpcion, fi)" [class]="ui.textoBtn">
+                                      <lucide-angular name="plus" [size]="14"></lucide-angular>
+                                      Agregar nivel
+                                    </button>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+
                             <div class="flex flex-wrap items-center justify-between gap-2">
                               @if (regla.segmento === 'ANIO' && aniosLibres(regla, null).length > 0) {
                                 <button type="button" (click)="agregarAnio(opcion.codigoOpcion)" [class]="ui.textoBtn">
@@ -438,6 +531,18 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
         </div>
       </div>
     </div>
+
+    @if (autorizadoresAbierto() && contextoAutorizadores(); as ctx) {
+      <app-autorizadores-excepcion-dialog
+        [contexto]="ctx"
+        [autorizadores]="autorizadores()"
+        [modoInicial]="autorizadoresModo()"
+        [usosSinGuardar]="usosSinGuardar"
+        (actualizado)="autorizadores.set($event)"
+        (creado)="onAutorizadorCreado($event)"
+        (close)="cerrarAutorizadores()">
+      </app-autorizadores-excepcion-dialog>
+    }
   `,
   styles: [TUI_ANIM]
 })
@@ -478,10 +583,21 @@ export class TypificationAdditionalFieldsDialogComponent {
   guardando = signal<boolean>(false);
   segmentacion = signal<Segmentacion>(SIN_SEGMENTACION);
 
+  /** Autorizadores de la subcartera elegida, para los niveles de autorización. */
+  autorizadores = signal<AutorizadorExcepcion[]>([]);
+  readonly autorizadoresActivos = computed(() => this.autorizadores().filter(a => a.activo));
+  autorizadoresAbierto = signal(false);
+  autorizadoresModo = signal<'lista' | 'form'>('lista');
+  /** Nivel desde el que se pidió «Nuevo autorizador…»: el creado se le asigna. */
+  private nivelPendiente: { codigoOpcion: string; fi: number; ni: number } | null = null;
+  /** Lo escrito en cada tipo de límite mientras no se guarde: volver al tipo anterior lo recupera. */
+  private memoriaTipo = new Map<string, FilaReglaDescuento[]>();
+
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
   private cabecerasUrl = `${environment.apiUrl}/configuracion-cabeceras`;
   private descuentoUrl = `${environment.apiUrl}/v2/descuento-maximo`;
+  private autorizadoresUrl = `${environment.apiUrl}/v2/autorizadores-excepcion`;
 
   /** Cliente de la pantalla: fijo mientras el diálogo está abierto. */
   private readonly inicial = computed(() =>
@@ -494,6 +610,10 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.subcarteras().filter(s => s.cliente === this.clienteActual() && s.cartera === this.carteraActual()));
   private readonly seleccion = computed(() =>
     this.subcarteras().find(s => s.subId === this.selectedSubPortfolioId()) ?? null);
+  readonly contextoAutorizadores = computed<ContextoAutorizadores | null>(() => {
+    const s = this.seleccion();
+    return s ? { subId: s.subId, cliente: s.cliente, cartera: s.cartera, subcartera: s.subcartera } : null;
+  });
 
   // Computed: opciones con nombres visuales traducidos
   opcionesConNombres = computed<OpcionVista[]>(() => {
@@ -551,6 +671,14 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.sinCronograma.set(false);
     this.guardando.set(false);
     this.segmentacion.set(SIN_SEGMENTACION);
+    this.limpiarAutorizadores();
+  }
+
+  private limpiarAutorizadores() {
+    this.autorizadores.set([]);
+    this.autorizadoresAbierto.set(false);
+    this.nivelPendiente = null;
+    this.memoriaTipo.clear();
   }
 
   /** Se parte de la subcartera abierta en la pantalla. */
@@ -599,6 +727,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.cabeceras.set([]);
     this.errorMessage.set('');
     this.segmentacion.set(SIN_SEGMENTACION);
+    this.limpiarAutorizadores();
     this.selectedSubPortfolioId.set(subPortfolioId);
     if (subPortfolioId) {
       this.elegirSub(subPortfolioId);
@@ -609,7 +738,18 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.selectedSubPortfolioId.set(subPortfolioId);
     this.loadCabeceras(subPortfolioId);
     this.loadSegmentacion();
+    this.loadAutorizadores(subPortfolioId);
     this.loadOpcionesAutomatically();
+  }
+
+  private loadAutorizadores(subPortfolioId: number) {
+    this.http.get<AutorizadorExcepcion[]>(this.autorizadoresUrl, { params: { idSubcartera: subPortfolioId } }).subscribe({
+      next: (lista) => {
+        if (this.selectedSubPortfolioId() !== subPortfolioId) return;
+        this.autorizadores.set(lista ?? []);
+      },
+      error: (error) => console.warn('[DIALOG] Error loading autorizadores:', error)
+    });
   }
 
   private loadCabeceras(subPortfolioId: number) {
@@ -794,7 +934,11 @@ export class TypificationAdditionalFieldsDialogComponent {
   // ---------------------------------------------------------------- Descuento máximo
 
   private filaVacia(valor: string | null): FilaReglaDescuento {
-    return { valor, descuentoMaximo: null, maxCuotas: null, montoMinimoCuota: null };
+    return { valor, descuentoMaximo: null, maxCuotas: null, montoMinimoCuota: null, niveles: [] };
+  }
+
+  private copiarFila(f: FilaReglaDescuento): FilaReglaDescuento {
+    return { ...f, niveles: (f.niveles ?? []).map(n => ({ ...n })) };
   }
 
   /** Regla que se muestra cuando la tarjeta todavía no tiene una: todo por definir. */
@@ -810,7 +954,7 @@ export class TypificationAdditionalFieldsDialogComponent {
    */
   private normalizarRegla(o: CampoOpcionDTO): CampoOpcionDTO {
     if (o.codigoOpcion === 'personalizado' || !o.reglaDescuento) return o;
-    const r: ReglaDescuento = { ...o.reglaDescuento, filas: [...(o.reglaDescuento.filas ?? [])] };
+    const r: ReglaDescuento = { ...o.reglaDescuento, filas: (o.reglaDescuento.filas ?? []).map(f => this.copiarFila(f)) };
     const busca = (v: string | null) => r.filas.find(f => f.valor === v);
     if (this.segmentacion().antiguaNueva) {
       r.segmento = 'ANTIGUA_NUEVA';
@@ -837,18 +981,27 @@ export class TypificationAdditionalFieldsDialogComponent {
     const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
     if (!opcion) return;
     const base = this.reglaDe(opcion);
-    const r: ReglaDescuento = { ...base, filas: base.filas.map(f => ({ ...f })) };
+    const r: ReglaDescuento = { ...base, filas: base.filas.map(f => this.copiarFila(f)) };
     cambio(r);
     opcion.reglaDescuento = r;
     this.opciones.set([...opciones]);
   }
 
+  /**
+   * Un 85 en % no significa S/ 85: al cambiar de tipo, el descuento y los niveles empiezan vacíos (las
+   * cuotas y el mínimo por cuota se mantienen). Mientras no se guarde, volver al tipo anterior lo recupera.
+   */
   onTipoChange(codigoOpcion: string, tipo: TipoLimiteDescuento) {
     this.editarRegla(codigoOpcion, r => {
       if (r.tipo === tipo) return;
+      this.memoriaTipo.set(codigoOpcion + '|' + r.tipo, r.filas.map(f => this.copiarFila(f)));
+      const previas = this.memoriaTipo.get(codigoOpcion + '|' + tipo) ?? [];
       r.tipo = tipo;
-      // Un 85 en % no significa S/ 85: el límite se vuelve a escribir
-      r.filas.forEach(f => f.descuentoMaximo = null);
+      r.filas.forEach(f => {
+        const p = previas.find(x => x.valor === f.valor);
+        f.descuentoMaximo = p ? p.descuentoMaximo : null;
+        f.niveles = p ? p.niveles.map(n => ({ ...n })) : [];
+      });
     });
   }
 
@@ -918,7 +1071,7 @@ export class TypificationAdditionalFieldsDialogComponent {
         // Sobre su propio monto, la referencia es la tarjeta misma
         campoReferencia: regla.campoReferencia && regla.campoReferencia.toLowerCase() === (o.campoTablaDinamica || '').toLowerCase()
           ? null : regla.campoReferencia,
-        filas: regla.filas.map(f => ({ ...f }))
+        filas: regla.filas.map(f => this.copiarFila(f))
       };
       n++;
     }
@@ -958,7 +1111,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     return '';
   }
 
-  private limiteTexto(regla: ReglaDescuento, v: number): string {
+  limiteTexto(regla: ReglaDescuento, v: number): string {
     return regla.tipo === 'PORCENTAJE' ? `${v}%` : `S/ ${v.toLocaleString('es-PE')}`;
   }
 
@@ -966,17 +1119,20 @@ export class TypificationAdditionalFieldsDialogComponent {
     return this.reglaDe(o).filas.every(f => f.descuentoMaximo == null);
   }
 
-  /** Resumen del límite junto al nombre de la tarjeta. */
+  /** Resumen del límite junto al nombre de la tarjeta, con cuántos niveles de autorización tiene. */
   resumen(o: OpcionVista): string {
     const r = this.reglaDe(o);
     if (r.filas.every(f => f.descuentoMaximo == null)) return 'Descuento por definir';
+    const n = Math.max(0, ...r.filas.map(f => f.niveles?.length ?? 0));
+    const niveles = n ? ` · ${n} ${n === 1 ? 'nivel' : 'niveles'}` : '';
     const sobre = r.campoReferencia ? ' sobre ' + this.nombreCampo(r.campoReferencia) : '';
-    if (r.segmento === 'ANTIGUA_NUEVA') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ': antigua y nueva';
-    if (r.segmento === 'ANIO') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ' por año de castigo';
+    if (r.segmento === 'ANTIGUA_NUEVA') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ': antigua y nueva' + niveles;
+    if (r.segmento === 'ANIO') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ' por año de castigo' + niveles;
     const lim = r.filas[0].descuentoMaximo as number;
-    return r.campoReferencia
+    if (lim === 0) return 'Sin descuento directo' + niveles;
+    return (r.campoReferencia
       ? `Hasta ${this.limiteTexto(r, lim)} bajo ${this.nombreCampo(r.campoReferencia)}`
-      : `Hasta ${this.limiteTexto(r, lim)} de descuento`;
+      : `Hasta ${this.limiteTexto(r, lim)} de descuento`) + niveles;
   }
 
   ayuda(o: OpcionVista): string {
@@ -991,9 +1147,109 @@ export class TypificationAdditionalFieldsDialogComponent {
     }
     const lim = r.filas[0]?.descuentoMaximo;
     if (lim == null) return `Por definir: mientras no tenga límite, todo descuento sobre ${o.visualName} pasa a evaluación.`;
+    if (lim === 0) return `Cualquier promesa menor que ${o.visualName} pasa a evaluación.${cuando}`;
     return r.tipo === 'PORCENTAJE'
       ? `Sin aprobación, la promesa puede bajar hasta el ${100 - lim}% de ${sobre}.${cuando} Un descuento mayor pasa a evaluación.`
       : `Sin aprobación, la promesa puede bajar hasta ${sobre} menos ${this.limiteTexto(r, lim)}.${cuando} Un descuento mayor pasa a evaluación.`;
+  }
+
+  // ---------------------------------------------------------------- Niveles y autorizadores
+
+  /** Desde dónde empieza un nivel: el máximo sin aprobación o el tope del anterior (null = sin tope). */
+  desdeNivel(fila: FilaReglaDescuento, ni: number): number | null {
+    return ni === 0 ? (fila.descuentoMaximo ?? 0) : fila.niveles[ni - 1].hasta;
+  }
+
+  /** Activos, más el ya elegido aunque esté desactivado. */
+  autorizadoresParaNivel(actual: number | null): AutorizadorExcepcion[] {
+    return this.autorizadores().filter(a => a.activo || a.id === actual);
+  }
+
+  etiquetaAutorizador(a: AutorizadorExcepcion): string {
+    return a.nombre + (a.cargo ? ' · ' + a.cargo : '');
+  }
+
+  agregarNivel(codigoOpcion: string, fi: number) {
+    this.editarRegla(codigoOpcion, r => r.filas[fi].niveles.push({ hasta: null, idAutorizador: null }));
+  }
+
+  quitarNivel(codigoOpcion: string, fi: number, ni: number) {
+    this.editarRegla(codigoOpcion, r => r.filas[fi].niveles.splice(ni, 1));
+  }
+
+  onNivelHastaChange(codigoOpcion: string, fi: number, ni: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const texto = input.value.trim();
+    let valor: number | null = texto === '' ? null : Number(texto);
+    if (valor !== null && (isNaN(valor) || valor < 0)) valor = null;
+    this.editarRegla(codigoOpcion, r => {
+      if (valor !== null && r.tipo === 'PORCENTAJE') valor = Math.min(100, valor);
+      r.filas[fi].niveles[ni].hasta = valor;
+    });
+    input.value = valor === null ? '' : String(valor);
+  }
+
+  onNivelAutorizadorChange(codigoOpcion: string, fi: number, ni: number, event: Event) {
+    const select = event.target as HTMLSelectElement;
+    if (select.value === 'nuevo') {
+      // El select vuelve a lo que tenía; si se registra uno nuevo, se asigna aquí
+      const actual = this.opciones().find(o => o.codigoOpcion === codigoOpcion)?.reglaDescuento?.filas[fi]?.niveles[ni]?.idAutorizador;
+      select.value = actual != null ? String(actual) : '';
+      this.nivelPendiente = { codigoOpcion, fi, ni };
+      this.abrirAutorizadores('form');
+      return;
+    }
+    const id = select.value ? Number(select.value) : null;
+    this.editarRegla(codigoOpcion, r => r.filas[fi].niveles[ni].idAutorizador = id);
+  }
+
+  abrirAutorizadores(modo: 'lista' | 'form') {
+    if (modo === 'lista') this.nivelPendiente = null;
+    this.autorizadoresModo.set(modo);
+    this.autorizadoresAbierto.set(true);
+  }
+
+  cerrarAutorizadores() {
+    this.autorizadoresAbierto.set(false);
+    this.nivelPendiente = null;
+  }
+
+  onAutorizadorCreado(a: AutorizadorExcepcion) {
+    const p = this.nivelPendiente;
+    this.nivelPendiente = null;
+    if (!p) return;
+    this.editarRegla(p.codigoOpcion, r => {
+      const nivel = r.filas[p.fi]?.niveles[p.ni];
+      if (nivel) nivel.idAutorizador = a.id;
+    });
+  }
+
+  /** Tarjetas de esta pantalla, aún sin guardar, en las que el autorizador es un nivel. */
+  readonly usosSinGuardar = (id: number): string[] => this.opcionesConNombres()
+    .filter(o => o.codigoOpcion !== 'personalizado'
+      && (o.reglaDescuento?.filas ?? []).some(f => (f.niveles ?? []).some(n => n.idAutorizador === id)))
+    .map(o => o.visualName);
+
+  /** Lo que el backend rechazaría, avisado antes de enviar. */
+  private validarNiveles(): string | null {
+    for (const o of this.opcionesConNombres()) {
+      const r = o.reglaDescuento;
+      if (o.codigoOpcion === 'personalizado' || !r) continue;
+      for (const f of r.filas) {
+        const donde = o.visualName + (r.segmento ? ` (${this.rotuloFila(r, f)})` : '');
+        let anterior = f.descuentoMaximo;
+        for (let i = 0; i < (f.niveles ?? []).length; i++) {
+          const n = f.niveles[i];
+          if (n.idAutorizador === null) return `Elige quién autoriza cada nivel de ${donde}.`;
+          if (i > 0 && f.niveles[i - 1].hasta === null) return `En ${donde} hay un nivel después de uno sin tope.`;
+          if (n.hasta !== null && anterior !== null && n.hasta <= anterior) {
+            return `En ${donde}, cada nivel debe autorizar más descuento que el anterior.`;
+          }
+          if (n.hasta !== null) anterior = n.hasta;
+        }
+      }
+    }
+    return null;
   }
 
   getOpcionesHabilitadasCount(): number {
@@ -1020,6 +1276,11 @@ export class TypificationAdditionalFieldsDialogComponent {
     if (!campoId || opcionesActuales.length === 0 || this.guardando()) {
       return;
     }
+    const invalido = this.validarNiveles();
+    if (invalido) {
+      this.toast.error(invalido);
+      return;
+    }
 
     const request: ConfigurarOpcionesCampoRequest = {
       idCampo: campoId,
@@ -1044,7 +1305,10 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.typificationService.configurarOpciones(request).subscribe({
       next: (opcionesActualizadas) => {
         this.guardando.set(false);
+        this.memoriaTipo.clear();
         this.opciones.set(opcionesActualizadas.map(o => this.normalizarRegla(o)));
+        const sub = this.selectedSubPortfolioId();
+        if (sub) this.loadAutorizadores(sub);
         this.save.emit();
       },
       error: (error) => {
@@ -1052,7 +1316,8 @@ export class TypificationAdditionalFieldsDialogComponent {
         // en pantalla: el guardado fallaba sin avisar.
         console.error('Error saving options:', error);
         this.guardando.set(false);
-        this.toast.error('Error al guardar la configuración de montos');
+        const mensaje = error?.status === 400 && typeof error?.error?.message === 'string' ? error.error.message : null;
+        this.toast.error(mensaje || 'Error al guardar la configuración de montos');
       }
     });
   }

@@ -7,7 +7,7 @@ import {
   DynamicFieldData
 } from '../../../maintenance/models/field-config.model';
 import { ManagementClassification } from '../../models/system-config.model';
-import { PaymentScheduleComponent, AmountOption, ContextoDescuento } from '../../../shared/components/payment-schedule/payment-schedule.component';
+import { PaymentScheduleComponent, AmountOption } from '../../../shared/components/payment-schedule/payment-schedule.component';
 import { PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 
 @Component({
@@ -208,7 +208,6 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
                   [availableAmounts]="paymentAmountOptions()"
                   [simboloMoneda]="simboloMoneda()"
                   [deuda]="deuda()"
-                  [contextoDescuento]="contextoDescuento()"
                   [maxInstallments]="6"
                   [canalesPago]="canalesPago()"
                   [canalPagoId]="canalPagoId()"
@@ -399,6 +398,7 @@ export class DynamicFieldRendererComponent {
   /** Deuda de los montos (cliente con varias deudas) */
   deuda = input<string | null>(null);
 <<<<<<< HEAD
+<<<<<<< HEAD
   /** Canal de pago (REQ-074): va dentro del cronograma de la promesa. Vacío: no se muestra. */
   canalesPago = input<{ id: number; nombre: string }[]>([]);
   canalPagoId = input<number | null>(null);
@@ -407,6 +407,8 @@ export class DynamicFieldRendererComponent {
   /** Cliente y subcartera, para revisar el descuento máximo en el cronograma */
   contextoDescuento = input<ContextoDescuento | null>(null);
 >>>>>>> 6860f9cd (feat(montos): configurar descuento máximo por tarjeta y revisarlo en el cronograma)
+=======
+>>>>>>> b29d3d50 (feat(montos): autorizadores y niveles en Configurar montos; el cronograma ya no muestra avisos de descuento)
 
   // Field data with two-way binding
   fieldData = signal<DynamicFieldData>({});
