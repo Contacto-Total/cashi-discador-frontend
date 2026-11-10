@@ -1601,7 +1601,6 @@ interface BorradorDeuda {
                 [customerAmounts]="finalPaymentAmounts()"
                 [simboloMoneda]="simboloMoneda()"
                 [deuda]="cuentaSeleccionada()"
-                [contextoDescuento]="contextoDescuento()"
                 [canalesPago]="pideCanalPago() ? canalesPago() : []"
                 [canalPagoId]="canalPagoId()"
                 (canalPagoChange)="canalPagoId.set($event)"
