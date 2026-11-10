@@ -7,7 +7,7 @@ import {
   DynamicFieldData
 } from '../../../maintenance/models/field-config.model';
 import { ManagementClassification } from '../../models/system-config.model';
-import { PaymentScheduleComponent, AmountOption, ContextoDescuento } from '../../../shared/components/payment-schedule/payment-schedule.component';
+import { PaymentScheduleComponent, AmountOption } from '../../../shared/components/payment-schedule/payment-schedule.component';
 import { PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 
 @Component({
@@ -208,7 +208,6 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
                   [availableAmounts]="paymentAmountOptions()"
                   [simboloMoneda]="simboloMoneda()"
                   [deuda]="deuda()"
-                  [contextoDescuento]="contextoDescuento()"
                   [maxInstallments]="6"
                   (scheduleChange)="onPaymentScheduleChange(field.id, $event)"
                   (customAmountSelected)="onCustomAmountSelected($event)"
@@ -395,8 +394,6 @@ export class DynamicFieldRendererComponent {
   simboloMoneda = input<string>('S/');
   /** Deuda de los montos (cliente con varias deudas) */
   deuda = input<string | null>(null);
-  /** Cliente y subcartera, para revisar el descuento máximo en el cronograma */
-  contextoDescuento = input<ContextoDescuento | null>(null);
 
   // Field data with two-way binding
   fieldData = signal<DynamicFieldData>({});
