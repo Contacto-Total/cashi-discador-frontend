@@ -15,9 +15,8 @@ import { RECUPERACION, TIPOS_DE_CALENDARIO, hoy, lunesDe, sumarDias } from './as
 import { Visor } from './visor-archivo.component';
 import {
   BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, CABECERA, CABECERA_TEXTO, CAMPO, ETIQUETA, FILTROS, FUERTE, INDICADORES, LISTA, PANTALLA, PILL,
-  PRINCIPAL, REJILLA, SEC, SUBTITULO, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TITULO, TR, TonoPill, VACIO, VACIO_CHICO, ZONA
-} from './ui/clases';
-import { MINI, VOLVER } from './ui/ficha-clases';
+  PRINCIPAL, REJILLA, SEC, SUBTITULO, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TITULO, TR, TonoPill, VACIO, VACIO_CHICO, ZONA, CHIP } from './ui/clases';
+import { MINI } from './ui/ficha-clases';
 import { MedidorTabla } from './ui/medidor-tabla';
 import { Casilla, EXT, casillaDe, claseCasilla, diaCorto, diasDeLaSemana } from './ui/semana-celdas';
 import { HorasSemanaComponent } from './ui/horas-semana.component';
@@ -210,7 +209,7 @@ const ESTADO_SOLICITUD: Record<string, [string, TonoPill]> = {
         } @else if (abierta(); as s) {
           <section appTarjeta [class]="COLUMNA_TARJETA" [attr.aria-label]="'Solicitud de ' + s.nombreAgente">
             <div class="mb-[.75rem] flex items-center">
-              <button type="button" [class]="VOLVER" (click)="cerrarDetalle()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Solicitudes</button>
+              <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="cerrarDetalle()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Solicitudes</button>
             </div>
             <p role="heading" aria-level="2" [class]="COLUMNA_TITULO">{{ s.nombreAgente }}</p>
             <div [class]="DESLIZA">
@@ -250,7 +249,7 @@ const ESTADO_SOLICITUD: Record<string, [string, TonoPill]> = {
 
     <div appTarjeta [class]="BARRA">
       <span [class]="porRevisar().length ? BARRA_ESTADO_HAY : BARRA_ESTADO">{{ porRevisar().length === 1 ? '1 solicitud por revisar' : porRevisar().length + ' solicitudes por revisar' }}</span>
-      <button type="button" appBoton [class]="'px-4! ' + BOTON_APAGADO" [disabled]="formulario() || !personas().length" (click)="abrirRegistro()">Registrar solicitud</button>
+      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC + ' ' + BOTON_APAGADO" [disabled]="formulario() || !personas().length" (click)="abrirRegistro()">Registrar solicitud</button>
     </div>
   `
 })
@@ -268,7 +267,7 @@ export class AsistenciaEquipoComponent implements OnInit, OnDestroy {
   protected readonly TABLA_CAJA = TABLA_CAJA; protected readonly TABLA = TABLA; protected readonly THEAD = THEAD; protected readonly TR = TR;
   protected readonly TH = TH; protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE;
   protected readonly PILL = PILL; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY;
-  protected readonly MINI = MINI; protected readonly VOLVER = VOLVER; protected readonly COLUMNA = COLUMNA; protected readonly COLUMNA_TARJETA = COLUMNA_TARJETA;
+  protected readonly MINI = MINI; protected readonly COLUMNA = COLUMNA; protected readonly COLUMNA_TARJETA = COLUMNA_TARJETA;
   protected readonly COLUMNA_TITULO = COLUMNA_TITULO; protected readonly DESLIZA = DESLIZA; protected readonly LISTA_FILAS = LISTA_FILAS; protected readonly FILA = FILA;
   protected readonly ITEM_BOTON = ITEM_BOTON; protected readonly ITEM_TITULO = ITEM_TITULO; protected readonly ITEM_LINEA = ITEM_LINEA; protected readonly ITEM_PILL = ITEM_PILL;
   protected readonly DETALLE_SUB = DETALLE_SUB; protected readonly AVISO = AVISO;
@@ -285,8 +284,7 @@ export class AsistenciaEquipoComponent implements OnInit, OnDestroy {
   protected readonly BOTON_APAGADO = 'disabled:[background-image:none]! disabled:bg-muted! disabled:text-muted-foreground! disabled:opacity-100! disabled:border-transparent!';
   /** Datos del detalle de una solicitud: la cifra en negrita y su línea gris. */
   /** Filtro en forma de píldora: el elegido, en gris con borde. */
-  protected readonly CHIP = 'inline-flex cursor-pointer items-center gap-[.375rem] rounded-full border! border-solid! border-border! bg-card px-3! py-1! [font-family:inherit] text-[.75rem] leading-[1.5] font-semibold text-(--ink2) '
-    + 'transition-colors duration-150 hover:bg-muted dark:bg-muted dark:hover:bg-border aria-pressed:border-(--campo-ln)! aria-pressed:bg-sidebar-accent aria-pressed:text-foreground';
+  protected readonly CHIP = CHIP;
   protected readonly EXT = EXT;
   protected readonly diaCorto = diaCorto;
 

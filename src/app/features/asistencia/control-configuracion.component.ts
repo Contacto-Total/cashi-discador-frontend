@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, TemplateRef, ViewChild, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, TemplateRef, ViewChild, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { catchError, forkJoin, of } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
@@ -8,17 +8,20 @@ import { NombrePropioPipe } from '../../shared/ui/nombre-propio.pipe';
 import { TarjetaDirective } from '../../shared/ui/tarjeta.directive';
 import { AsistenciaService } from './asistencia.service';
 import {
-  AmbitoAsistencia, DiaCalendario, HorarioBase, PerfilAsistencia, PersonalAsistencia, PoliticaAsistencia, TipoDia, VacacionesAsesor
+  AmbitoAsistencia, DiaCalendario, HorarioBase, PerfilAsistencia, PersonalAsistencia, PoliticaAsistencia, TipoDia, VacacionesAsesor, Inhabilitacion
 } from './asistencia.models';
 import { TIPOS_DE_CALENDARIO, hoy, lunesDe, sumarDias } from './asistencia.estilos';
-import { AsistenciaInhabilitacionesComponent } from './asistencia-inhabilitaciones.component';
+import { ControlInhabilitacionesComponent } from './control-inhabilitaciones.component';
 import {
-  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BARRA_ESTADO_MAL, CAMPO, ENTRADA, ETIQUETA, FUERTE, LISTA, PILL, PRINCIPAL, REJILLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TR, VACIO, ZONA
-} from './ui/clases';
-import { MINI, MINI_ICONO } from './ui/ficha-clases';
+  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BARRA_ESTADO_MAL, CAMPO, ENTRADA, ETIQUETA, FUERTE, LISTA, PILL, PRINCIPAL, REJILLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TR, VACIO, ZONA, CHIP } from './ui/clases';
+import { MINI } from './ui/ficha-clases';
 import { BOTON_APAGADO, BOTON_SEC } from './ui/control-comun';
 import { MedidorTabla } from './ui/medidor-tabla';
+import { VisorCertificadoComponent } from './ui/visor-certificado.component';
+import { Visor } from './visor-archivo.component';
 import { PiePaginaComponent } from './ui/pie-pagina.component';
+import { SegmentadoComponent } from './ui/segmentado.component';
+import { FilaArchivo, ImportarArchivoComponent, bajarPlantilla, fechaDeCelda, sinTildes } from './ui/importar-archivo.component';
 import { DIAS_LARGOS } from './ui/solicitud-clases';
 
 type Seccion = 'reglas' | 'base' | 'cal' | 'vac' | 'inh';
@@ -34,6 +37,20 @@ const enPalabras = (m: number): string => {
 };
 
 /** Una subcartera con sus reglas y la jornada con la que se dibujan. */
+/** Un día leído del archivo de importación, ya validado. */
+interface DiaImportado {
+  n: number;
+  fecha: string | null;
+  textoFecha: string;
+  nombre: string;
+  idTipoDia: number | null;
+  tipo: string;
+  idSubcartera: number | null;
+  ambito: string;
+  ya: boolean;
+  error: string;
+}
+
 interface ReglaSub {
   id: number;
   nombre: string;
@@ -45,14 +62,14 @@ interface ReglaSub {
 
 /**
  * Configuración de Control de asistencia: las reglas de cada subcartera, el horario base, el calendario y
- * las vacaciones. Reglas y horario se cambian en su sitio y se guardan desde la barra; rigen desde el lunes.
+ * las vacaciones y las inhabilitaciones. Reglas y horario se cambian en su sitio y se guardan desde la barra; rigen desde el lunes.
  */
 @Component({
   selector: 'app-control-configuracion',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
-  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, NombrePropioPipe, PiePaginaComponent, AsistenciaInhabilitacionesComponent],
+  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, NombrePropioPipe, PiePaginaComponent, SegmentadoComponent, ImportarArchivoComponent, ControlInhabilitacionesComponent, VisorCertificadoComponent],
   template: `
     <ng-template #icono let-n let-tono="tono" let-chico="chico">
       <span [class]="'grid flex-none place-items-center rounded-[.5rem] ' + (chico ? 'size-6' : 'size-[1.875rem]')"
@@ -78,7 +95,7 @@ interface ReglaSub {
       </div>
     </ng-template>
 
-    <div [class]="REJILLA + ' grid-cols-[minmax(0,1fr)]'">
+    <div [class]="REJILLA + (seccion() === 'inh' && sustento() ? ' grid-cols-[minmax(0,1fr)_min(calc(28cqw_-_.42rem),22rem)]' : ' grid-cols-[minmax(0,1fr)]')">
       <section appTarjeta [class]="PRINCIPAL">
         <ng-container *ngTemplateOutlet="cabecera()" />
         <div class="mb-4 flex flex-none flex-wrap items-center gap-3">
@@ -98,7 +115,7 @@ interface ReglaSub {
                   <div class="flex items-center gap-3">
                     <span class="mr-auto"><span class="block text-[1rem] font-bold text-foreground">{{ r.nombre | nombrePropio }}</span>
                       <small class="text-[.75rem] text-muted-foreground">{{ r.politica?.programada ? 'Cambio desde el ' + corta(r.politica!.programada!.vigenteDesde ?? '') : 'Jornada de ' + r.entrada + ' a ' + r.salida }}</small></span>
-                    @if (cambiadaRegla(r.id)) { <button type="button" [class]="MINI" (click)="revertirRegla(r.id)"><lucide-angular name="undo-2" [size]="16" class="flex"></lucide-angular>Revertir</button> }
+                    @if (cambiadaRegla(r.id)) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="revertirRegla(r.id)"><lucide-angular name="undo-2" [size]="16" class="flex"></lucide-angular>Revertir</button> }
                   </div>
                   <ng-container *ngTemplateOutlet="pista; context: { $implicit: r, chica: false }" />
                   <div class="grid flex-1 grid-cols-3 border-t border-(--line2) @max-[44.001rem]/p5:grid-cols-1">
@@ -129,7 +146,7 @@ interface ReglaSub {
                       <div class="flex items-center gap-3">
                         <span class="mr-auto flex flex-wrap items-baseline"><span class="block text-[.9375rem] font-bold text-foreground">{{ r.nombre | nombrePropio }}</span>
                           <small class="ml-2 text-[.75rem] text-muted-foreground">{{ r.politica?.programada ? 'Cambio desde el ' + corta(r.politica!.programada!.vigenteDesde ?? '') : segundaLinea(r) }}</small></span>
-                        @if (cambiadaRegla(r.id)) { <button type="button" [class]="MINI" (click)="revertirRegla(r.id)"><lucide-angular name="undo-2" [size]="16" class="flex"></lucide-angular>Revertir</button> }
+                        @if (cambiadaRegla(r.id)) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="revertirRegla(r.id)"><lucide-angular name="undo-2" [size]="16" class="flex"></lucide-angular>Revertir</button> }
                       </div>
                       <ng-container *ngTemplateOutlet="pista; context: { $implicit: r, chica: true }" />
                       <div class="grid grid-cols-[minmax(6.5rem,8rem)_minmax(0,1fr)_minmax(0,1.15fr)] items-center gap-x-3 gap-y-2">
@@ -200,9 +217,9 @@ interface ReglaSub {
               <div class="grid min-h-[24rem] flex-[1_0_auto] grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-7 @max-[56.001rem]/p5:grid-cols-1">
                 <section class="flex min-h-0 flex-col">
                   <div class="mb-[.75rem] flex items-center gap-2">
-                    <button type="button" [class]="MINI_ICONO" (click)="moverMes(-1)" aria-label="Mes anterior"><lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular></button>
+                    <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="moverMes(-1)" aria-label="Mes anterior"><lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular></button>
                     <span class="flex-1 text-[1rem] font-semibold text-foreground">{{ mesTitulo() }}</span>
-                    <button type="button" [class]="MINI_ICONO" (click)="moverMes(1)" aria-label="Mes siguiente"><lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular></button>
+                    <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="moverMes(1)" aria-label="Mes siguiente"><lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular></button>
                   </div>
                   <div class="grid flex-1 auto-rows-[minmax(3.25rem,1fr)] grid-cols-7 gap-1 [grid-template-rows:auto]">
                     @for (d of DIAS_MES; track d) { <span class="pb-1 text-center text-[.75rem] text-muted-foreground">{{ d }}</span> }
@@ -214,102 +231,136 @@ interface ReglaSub {
                     }
                   </div>
                 </section>
-                <section class="flex min-h-0 flex-col">
-                  @if (formDia(); as n) {
-                    <div class="mb-[.75rem] flex flex-col gap-[.75rem] rounded-[.75rem] border border-border bg-card px-4 py-[.875rem]">
-                      <div class="flex flex-wrap items-end gap-3">
-                        <div [class]="CAMPO + ' flex-[0_1_9.5rem]'"><label for="nc-f" [class]="ETIQUETA">Fecha</label><input id="nc-f" type="date" [class]="ENTRADA" [value]="n.fecha" (change)="ponerDia('fecha', $any($event.target).value)"></div>
-                        <div [class]="CAMPO + ' flex-[0_1_9.5rem]'"><label for="nc-t" [class]="ETIQUETA">Tipo</label>
-                          <select id="nc-t" [class]="LISTA" (change)="ponerDia('idTipoDia', +$any($event.target).value)">
-                            @for (t of tiposCalendario(); track t.id) { <option [value]="t.id" [selected]="t.id === n.idTipoDia">{{ t.nombre }}</option> }
-                          </select></div>
-                        <div [class]="CAMPO + ' flex-[0_1_9.5rem]'"><label for="nc-s" [class]="ETIQUETA">Ámbito</label>
-                          <select id="nc-s" [class]="LISTA" (change)="ponerDia('idSubcartera', +$any($event.target).value || null)">
-                            <option value="" [selected]="!n.idSubcartera">Toda la empresa</option>
-                            @for (s of subcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === n.idSubcartera">{{ s.nombre | nombrePropio }}</option> }
-                          </select></div>
-                        <div [class]="CAMPO + ' flex-[1_1_14rem]'"><label for="nc-n" [class]="ETIQUETA">Nombre o motivo</label><input id="nc-n" [class]="ENTRADA" [value]="n.nombre ?? ''" (input)="ponerDia('nombre', $any($event.target).value)"></div>
+                <!-- Al importar, el panel ocupa el lugar de la lista sin estirar la fila: el mes no se mueve. -->
+                <section class="relative flex min-h-0 flex-col">
+                  @if (importando()) {
+                    <div class="absolute inset-0 flex flex-col overflow-hidden bg-card @max-[56.001rem]/p5:static @max-[56.001rem]/p5:h-[30rem]">
+                      <div class="flex flex-none flex-wrap items-center gap-3 border-b border-(--line2) pb-[.625rem]">
+                        <span class="mr-auto text-[.875rem] font-bold text-foreground">Importar feriados</span>
+                        <app-segmentado [opciones]="[{ clave: 'nac', texto: 'Nacionales ' + mes().slice(0, 4) }, { clave: 'archivo', texto: 'Desde archivo' }]"
+                                        [valor]="origenImportar()" (cambiar)="origenImportar.set($any($event))" />
                       </div>
-                      @if (error()) { <p class="m-0 text-[.75rem] font-medium text-(--ro)">{{ error() }}</p> }
-                      <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" appBoton class="px-4!" [disabled]="guardando()" (click)="guardarDia()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Agregar</button>
-                        <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="formDia.set(null)">Cancelar</button>
-                      </div>
-                    </div>
-                  } @else if (importando()) {
-                    <div class="mb-[.75rem] flex flex-col gap-[.75rem] rounded-[.75rem] border border-border bg-card px-4 py-[.875rem]">
-                      <span class="text-[.875rem] font-bold">Feriados nacionales</span>
-                      <div>
-                        @for (f of feriados(); track f.fecha) {
-                          @let ya = yaMarcado(f.fecha);
-                          <label class="m-0! grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[.625rem] border-t border-(--line2) px-1 py-2 text-[.875rem] font-normal! first:border-t-0">
-                            <input type="checkbox" class="m-0! size-4! accent-(--verde-txt)" [checked]="ya || !quitados().has(f.fecha)" [disabled]="ya" (change)="alternarFeriado(f.fecha)">
-                            <span>{{ fechaLarga(f.fecha) }}</span><small class="text-[.75rem] text-muted-foreground">{{ f.nombre }}{{ ya ? ', ya está' : '' }}</small>
-                          </label>
+                      <div class="flex min-h-0 flex-1 flex-col overflow-y-auto py-2">
+                        @if (origenImportar() === 'nac') {
+                          @for (f of feriados(); track f.fecha) {
+                            @let ya = yaMarcado(f.fecha);
+                            <label [class]="FILA_IMPORTAR">
+                              <input type="checkbox" class="m-0! size-4! accent-(--verde-txt)" [checked]="ya || !quitados().has(f.fecha)" [disabled]="ya" (change)="alternarFeriado(f.fecha)">
+                              <span class="text-foreground">{{ fechaLarga(f.fecha) }}<span [class]="SEC">{{ DIAS_LARGOS[diaDe(f.fecha)] }}</span></span>
+                              <span class="min-w-0 truncate text-foreground">{{ f.nombre }}</span>
+                              <small class="text-[.75rem] text-muted-foreground">{{ ya ? 'Ya está' : '' }}</small>
+                            </label>
+                          } @empty {
+                            <div [class]="VACIO + ' my-auto'">Sin feriados nacionales para {{ mes().slice(0, 4) }}</div>
+                          }
+                        } @else if (archivoDias(); as a) {
+                          <div class="flex flex-none items-center gap-2 py-[.375rem]">
+                            <lucide-angular name="file-spreadsheet" [size]="16" class="flex text-muted-foreground"></lucide-angular>
+                            <span class="mr-auto min-w-0 truncate text-[.8125rem] font-semibold text-foreground">{{ a.nombre }}</span>
+                            <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="archivoDias.set(null)">Cambiar archivo</button>
+                          </div>
+                          @for (d of a.filas; track d.n) {
+                            <label [class]="FILA_IMPORTAR + (d.error || d.ya ? ' cursor-default!' : '')">
+                              <input type="checkbox" class="m-0! size-4! accent-(--verde-txt)" [checked]="!d.error && (d.ya || !quitadosArchivo().has(d.n))" [disabled]="!!d.error || d.ya" (change)="alternarFilaArchivo(d.n)">
+                              <span [class]="d.fecha ? 'text-foreground' : 'text-(--ro)'">{{ d.fecha ? fechaLarga(d.fecha) : d.textoFecha || '—' }}@if (d.fecha) {<span [class]="SEC">{{ DIAS_LARGOS[diaDe(d.fecha)] }}</span>}</span>
+                              <span class="min-w-0 text-foreground"><span class="block truncate">{{ d.nombre || '—' }}</span><span [class]="SEC + ' truncate'">{{ d.tipo }}, {{ d.ambito }}</span></span>
+                              <small class="text-right text-[.75rem]" [class]="d.error ? 'font-medium text-(--ro)' : 'text-muted-foreground'">{{ d.error || (d.ya ? 'Ya está' : '') }}</small>
+                            </label>
+                          }
+                        } @else {
+                          <div class="flex flex-1 flex-col py-2">
+                            <app-importar-archivo columnas="Fecha, Tipo (Feriado, Sin asignación o No laborable), Ámbito (Toda la empresa o el nombre de la subcartera) y Nombre o motivo"
+                                                  (leido)="leerDias($event)" (plantilla)="plantillaDias()" />
+                          </div>
                         }
                       </div>
-                      <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" appBoton class="px-4!" [disabled]="guardando()" (click)="importar()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Importar marcados</button>
+                      <div class="flex flex-none flex-wrap items-center gap-2 border-t border-(--line2) pt-[.625rem]">
+                        <span class="mr-auto text-[.75rem] text-muted-foreground">{{ porImportar().length === 1 ? '1 día por importar' : porImportar().length + ' días por importar' }}{{ conError() ? ', ' + conError() + ' con error' : '' }}</span>
                         <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="importando.set(false)">Cancelar</button>
+                        <button type="button" appBoton [class]="'px-4! ' + BOTON_APAGADO" [disabled]="guardando() || !porImportar().length" (click)="importar()"><lucide-angular name="upload" [size]="16" class="flex"></lucide-angular>Importar</button>
                       </div>
                     </div>
-                  }
-                  @if (!listaCal().length) {
-                    <div [class]="VACIO">Sin días marcados desde este mes</div>
                   } @else {
-                    <div class="flex flex-[1_0_auto] flex-col">
-                      <div #caja [class]="TABLA_CAJA">
-                        <table [class]="TABLA">
-                          <thead [class]="THEAD"><tr [class]="TR"><th [class]="TH">Fecha</th><th [class]="TH">Nombre o motivo</th><th [class]="TH"></th></tr></thead>
-                          <tbody>
-                            @for (c of paginaCal(); track c.id ?? c.fecha) {
-                              <tr [class]="TR">
-                                <td [class]="TD_1">{{ fechaLarga(c.fecha) }}<span [class]="SEC">{{ DIAS_LARGOS[diaDe(c.fecha)] }}</span></td>
-                                <td [class]="TD"><span class="font-semibold">{{ c.nombre || c.motivo }}</span><span [class]="SEC">{{ c.tipo }}, {{ c.idSubcartera ? (nombreSub(c.idSubcartera) | nombrePropio) : 'toda la empresa' }}</span></td>
-                                <td [class]="TD + ' text-right!'">
-                                  @if (c.fecha >= hoyTexto && !c.heredado && c.id) { <button type="button" [class]="MINI" [disabled]="guardando()" (click)="quitar(c)">Quitar</button> }
-                                </td>
-                              </tr>
-                            }
-                          </tbody>
-                        </table>
+                    @if (formDia(); as n) {
+                      <div class="mb-[.75rem] flex flex-col gap-[.75rem] rounded-[.75rem] border border-border bg-card px-4 py-[.875rem]">
+                        <div class="flex flex-wrap items-end gap-3">
+                          <div [class]="CAMPO + ' flex-[0_1_9.5rem]'"><label for="nc-f" [class]="ETIQUETA">Fecha</label><input id="nc-f" type="date" [class]="ENTRADA" [value]="n.fecha" (change)="ponerDia('fecha', $any($event.target).value)"></div>
+                          <div [class]="CAMPO + ' flex-[0_1_9.5rem]'"><label for="nc-t" [class]="ETIQUETA">Tipo</label>
+                            <select id="nc-t" [class]="LISTA" (change)="ponerDia('idTipoDia', +$any($event.target).value)">
+                              @for (t of tiposCalendario(); track t.id) { <option [value]="t.id" [selected]="t.id === n.idTipoDia">{{ t.nombre }}</option> }
+                            </select></div>
+                          <div [class]="CAMPO + ' flex-[0_1_9.5rem]'"><label for="nc-s" [class]="ETIQUETA">Ámbito</label>
+                            <select id="nc-s" [class]="LISTA" (change)="ponerDia('idSubcartera', +$any($event.target).value || null)">
+                              <option value="" [selected]="!n.idSubcartera">Toda la empresa</option>
+                              @for (s of subcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === n.idSubcartera">{{ s.nombre | nombrePropio }}</option> }
+                            </select></div>
+                          <div [class]="CAMPO + ' flex-[1_1_14rem]'"><label for="nc-n" [class]="ETIQUETA">Nombre o motivo</label><input id="nc-n" [class]="ENTRADA" [value]="n.nombre ?? ''" (input)="ponerDia('nombre', $any($event.target).value)"></div>
+                        </div>
+                        @if (error()) { <p class="m-0 text-[.75rem] font-medium text-(--ro)">{{ error() }}</p> }
+                        <div class="flex flex-wrap items-center gap-2">
+                          <button type="button" appBoton class="px-4!" [disabled]="guardando()" (click)="guardarDia()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Agregar</button>
+                          <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="formDia.set(null)">Cancelar</button>
+                        </div>
                       </div>
-                      <app-pie-pagina [total]="listaCal().length" [pagina]="paginaCalActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
-                    </div>
-                  }
-                  @if (!formDia() && !importando()) {
-                    <div class="mt-[.75rem] flex justify-end gap-2">
-                      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="abrirImportar()">Importar feriados</button>
-                      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="nuevoDia(hoyTexto)">Marcar día</button>
-                    </div>
+                    }
+                    @if (!listaCal().length) {
+                      <div [class]="VACIO">Sin días marcados desde este mes</div>
+                    } @else {
+                      <div class="flex flex-[1_0_auto] flex-col">
+                        <div #caja [class]="TABLA_CAJA">
+                          <table [class]="TABLA">
+                            <thead [class]="THEAD"><tr [class]="TR"><th [class]="TH">Fecha</th><th [class]="TH">Nombre o motivo</th><th [class]="TH"></th></tr></thead>
+                            <tbody>
+                              @for (c of paginaCal(); track c.id ?? c.fecha) {
+                                <tr [class]="TR">
+                                  <td [class]="TD_1">{{ fechaLarga(c.fecha) }}<span [class]="SEC">{{ DIAS_LARGOS[diaDe(c.fecha)] }}</span></td>
+                                  <td [class]="TD"><span class="font-semibold">{{ c.nombre || c.motivo }}</span><span [class]="SEC">{{ c.tipo }}, {{ c.idSubcartera ? (nombreSub(c.idSubcartera) | nombrePropio) : 'toda la empresa' }}</span></td>
+                                  <td [class]="TD + ' text-right!'">
+                                    @if (c.fecha >= hoyTexto && !c.heredado && c.id) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" [disabled]="guardando()" (click)="quitar(c)">Quitar</button> }
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                        <app-pie-pagina [total]="listaCal().length" [pagina]="paginaCalActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+                      </div>
+                    }
+                    @if (!formDia()) {
+                      <div class="mt-[.75rem] flex justify-end gap-2">
+                        <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="abrirImportar()">Importar feriados</button>
+                        <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="nuevoDia(hoyTexto)">Marcar día</button>
+                      </div>
+                    }
+
                   }
                 </section>
               </div>
             }
 
             @case ('vac') {
-              <div [class]="TABLA_CAJA.replace('flex-[1_0_auto]', 'flex-none')">
+              <div #caja [class]="TABLA_CAJA">
                 <table [class]="TABLA">
                   <thead [class]="THEAD"><tr [class]="TR">
                     <th [class]="TH">Asesor</th><th [class]="TH">Desde</th><th [class]="TH">Hasta</th><th [class]="TH + ' text-right!'">Días</th><th [class]="TH">Nota</th><th [class]="TH">Registró</th><th [class]="TH"></th>
                   </tr></thead>
                   <tbody>
-                    @for (v of vacaciones(); track v.id) {
+                    @for (v of paginaVac(); track v.id) {
                       <tr [class]="TR">
                         <td [class]="TD_1"><span [class]="FUERTE">{{ v.nombre }}</span></td>
                         <td [class]="TD">{{ fechaLarga(v.fechaDesde) }}</td><td [class]="TD">{{ fechaLarga(v.fechaHasta) }}</td>
                         <td [class]="TD + ' text-right!'">{{ v.dias }}</td>
                         <td [class]="RES">{{ v.nota || '—' }}</td><td [class]="TD">{{ v.registradoPor ?? '—' }}</td>
-                        <td [class]="TD + ' text-right!'">@if (v.editable && anulando() !== v.id) { <button type="button" [class]="MINI" (click)="anulando.set(v.id); error.set('')">Anular</button> }</td>
+                        <td [class]="TD + ' text-right!'">@if (v.editable && anulando() !== v.id) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="anulando.set(v.id); error.set('')">Anular</button> }</td>
                       </tr>
                       @if (anulando() === v.id) {
-                        <tr [class]="TR"><td colspan="7" class="border-0! pt-0! pr-0! pb-5! pl-[calc(.625rem+1px)]! whitespace-normal!">
+                        <tr [class]="TR" data-panel><td colspan="7" class="border-0! pt-0! pr-0! pb-5! pl-[calc(.625rem+1px)]! whitespace-normal!">
                           <div class="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-[.75rem] border border-border bg-card px-4 py-[.875rem]">
                             <div [class]="CAMPO + ' flex-[1_1_14rem]'"><label for="va-m" [class]="ETIQUETA">Motivo de la anulación</label><input id="va-m" [class]="ENTRADA" [value]="motivoAnular()" (input)="motivoAnular.set($any($event.target).value)"></div>
                             @if (error()) { <p class="m-0 basis-full text-[.75rem] font-medium text-(--ro)">{{ error() }}</p> }
                             <div class="flex flex-wrap items-center gap-2">
+                              <button type="button" appBoton="peligro" [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="anular(v)">Anular vacaciones</button>
                               <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="anulando.set(null)">Cancelar</button>
-                              <button type="button" appBoton class="h-[2.375rem]! px-4!" [disabled]="guardando()" (click)="anular(v)">Anular vacaciones</button>
                             </div>
                           </div>
                         </td></tr>
@@ -320,8 +371,11 @@ interface ReglaSub {
                   </tbody>
                 </table>
               </div>
+              @if (vacaciones().length) {
+                <app-pie-pagina [total]="vacaciones().length" [pagina]="paginaVacActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+              }
               @if (formVac(); as n) {
-                <div class="mt-[.75rem] flex flex-wrap items-end gap-x-4 gap-y-3 rounded-[.75rem] border border-border bg-card px-4 py-[.875rem]">
+                <div id="vac-form" class="mt-[.75rem] flex flex-none scroll-mb-3 flex-wrap items-end gap-x-4 gap-y-3 rounded-[.75rem] border border-border bg-card px-4 py-[.875rem]">
                   <div class="flex min-w-0 flex-[1_1_auto] flex-wrap items-end gap-3">
                     <div [class]="CAMPO + ' flex-[1_1_14rem]'"><label for="nv-u" [class]="ETIQUETA">Asesor</label>
                       <select id="nv-u" [class]="LISTA" (change)="ponerVac('idUsuario', +$any($event.target).value)">
@@ -333,23 +387,28 @@ interface ReglaSub {
                   </div>
                   @if (error()) { <p class="m-0 basis-full text-[.75rem] font-medium text-(--ro)">{{ error() }}</p> }
                   <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" appBoton [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="registrarVac()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Registrar</button>
                     <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="formVac.set(null)">Cancelar</button>
-                    <button type="button" appBoton class="h-[2.375rem]! px-4!" [disabled]="guardando()" (click)="registrarVac()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Registrar</button>
                   </div>
                 </div>
               } @else {
-                <div class="-mx-8 mt-[.75rem] flex items-center justify-end border-t border-(--line2) px-8 pt-[.75rem]">
+                <div class="mt-[.75rem] flex flex-none justify-end">
                   <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="abrirVac()">Registrar vacaciones</button>
                 </div>
               }
             }
 
             @case ('inh') {
-              <app-asistencia-inhabilitaciones [idSubcartera]="ambito().idSubcartera ?? null" />
+              <app-control-inhabilitaciones [idSubcartera]="ambito().idSubcartera ?? null" [sustentoAbierto]="sustento()?.id ?? null" (sustento)="verSustento($event)" />
             }
           }
         </div>
       </section>
+      @if (seccion() === 'inh' && sustento(); as su) {
+        <div class="flex min-h-0 min-w-0 flex-col self-stretch">
+          <app-visor-certificado titulo="Sustento" [archivo]="visorSustento.abierto()" [cargando]="visorSustento.cargando()" [nombre]="su.nombre ?? 'Sustento'" (cerrar)="cerrarSustento()" />
+        </div>
+      }
     </div>
 
     <div appTarjeta [class]="BARRA">
@@ -375,8 +434,9 @@ interface ReglaSub {
         @case ('vac') {
           <span [class]="BARRA_ESTADO">{{ vacaciones().length === 1 ? '1 registro de vacaciones' : vacaciones().length + ' registros de vacaciones' }}</span>
         }
-        @default {
-          <span [class]="BARRA_ESTADO"></span>
+        @case ('inh') {
+          @let v = inhabilitaciones()?.vigentes() ?? 0;
+          <span [class]="BARRA_ESTADO">{{ v === 1 ? '1 inhabilitación vigente' : v + ' inhabilitaciones vigentes' }}</span>
         }
       }
     </div>
@@ -400,13 +460,13 @@ export class ControlConfiguracionComponent implements OnDestroy {
   protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY; protected readonly BARRA_ESTADO_MAL = BARRA_ESTADO_MAL;
   protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA; protected readonly LISTA = LISTA; protected readonly ENTRADA = ENTRADA;
-  protected readonly MINI = MINI; protected readonly MINI_ICONO = MINI_ICONO; protected readonly BOTON_SEC = BOTON_SEC; protected readonly BOTON_APAGADO = BOTON_APAGADO;
+  protected readonly MINI = MINI; protected readonly BOTON_SEC = BOTON_SEC; protected readonly BOTON_APAGADO = BOTON_APAGADO;
   protected readonly DIAS_LARGOS = DIAS_LARGOS; protected readonly hora = hora; protected readonly fechaLarga = fechaLarga; protected readonly hoyTexto = hoy();
   protected readonly RES = TD.replace('whitespace-nowrap', 'whitespace-normal min-w-[8.5rem] max-w-[18rem]');
-  protected readonly CHIP = 'inline-flex cursor-pointer items-center gap-[.375rem] rounded-full border! border-solid! border-border! bg-card px-3! py-1! [font-family:inherit] text-[.75rem] leading-[1.5] font-semibold text-(--ink2) '
-    + 'transition-colors duration-150 hover:bg-muted dark:bg-muted dark:hover:bg-border aria-pressed:border-(--campo-ln)! aria-pressed:bg-sidebar-accent aria-pressed:text-foreground';
+  protected readonly CHIP = CHIP;
   protected readonly FILA_BASE = 'grid grid-cols-[6.5rem_7rem_7rem_minmax(0,1fr)_5.5rem] items-center gap-4 border-t border-(--line2) px-2 tabular-nums';
   protected readonly DIAS_MES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+  protected readonly FILA_IMPORTAR = 'm-0! grid cursor-pointer grid-cols-[auto_6.5rem_minmax(0,1fr)_auto] items-center gap-[.75rem] border-t border-(--line2) px-1 py-2 text-[.875rem] font-normal! first-of-type:border-t-0';
   protected readonly SECCIONES: { clave: Seccion; texto: string }[] = [
     { clave: 'reglas', texto: 'Reglas' }, { clave: 'base', texto: 'Horario base' }, { clave: 'cal', texto: 'Calendario' },
     { clave: 'vac', texto: 'Vacaciones' }, { clave: 'inh', texto: 'Inhabilitaciones' }
@@ -427,6 +487,7 @@ export class ControlConfiguracionComponent implements OnDestroy {
   protected readonly EJE_BASE = [420, 540, 660, 780, 900, 1020, 1140];
 
   readonly seccion = signal<Seccion>('reglas');
+  readonly inhabilitaciones = viewChild(ControlInhabilitacionesComponent);
   readonly cargando = signal(false);
   readonly guardando = signal(false);
   readonly error = signal('');
@@ -451,10 +512,28 @@ export class ControlConfiguracionComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.medidor.cerrar();
+    this.visorSustento.cerrar();
+  }
+
+  /** El sustento de una inhabilitación, en la columna de la derecha; el mismo botón lo cierra. */
+  readonly sustento = signal<{ id: number; nombre: string | null } | null>(null);
+  protected readonly visorSustento = new Visor();
+
+  verSustento(f: Inhabilitacion): void {
+    if (!f.idJustificacion || this.sustento()?.id === f.idJustificacion) { this.cerrarSustento(); return; }
+    this.sustento.set({ id: f.idJustificacion, nombre: f.sustento });
+    this.visorSustento.abrir(this.servicio.certificado(f.idJustificacion, f.sustento), f.sustento, () => { /* el visor dice que no se pudo */ });
+  }
+
+  cerrarSustento(): void {
+    this.sustento.set(null);
+    this.visorSustento.cerrar();
   }
 
   elegir(s: Seccion): void {
     this.seccion.set(s);
+    this.cerrarSustento();
+    this.pagina.set(1);
     this.error.set('');
   }
 
@@ -716,10 +795,16 @@ export class ControlConfiguracionComponent implements OnDestroy {
   readonly feriados = signal<{ fecha: string; nombre: string }[]>([]);
   /** Los feriados que se desmarcaron al importar. */
   readonly quitados = signal(new Set<string>());
+  /** De dónde se importa: los feriados nacionales del año o un archivo propio. */
+  readonly origenImportar = signal<'nac' | 'archivo'>('nac');
+  readonly archivoDias = signal<{ nombre: string; filas: DiaImportado[] } | null>(null);
+  /** Las filas del archivo que se desmarcaron. */
+  readonly quitadosArchivo = signal(new Set<number>());
   readonly pagina = signal(1);
   private readonly medidor = new MedidorTabla(() => ({
-    zona: this.zona?.nativeElement, caja: this.seccion() === 'cal' ? this.caja?.nativeElement : undefined, total: this.listaCal().length, amplia: false,
-    clave: `${this.mes()}|${this.listaCal().length}|${!!this.formDia()}|${this.importando()}`
+    zona: this.zona?.nativeElement, caja: this.seccion() === 'cal' || this.seccion() === 'vac' ? this.caja?.nativeElement : undefined,
+    total: this.seccion() === 'vac' ? this.vacaciones().length : this.listaCal().length, amplia: false,
+    clave: `${this.seccion()}|${this.mes()}|${this.listaCal().length}|${!!this.formDia()}|${this.importando()}|${this.vacaciones().length}|${!!this.formVac()}`
   }));
   readonly porPagina = this.medidor.porPagina;
   @ViewChild('zona') private zona?: ElementRef<HTMLElement>;
@@ -800,6 +885,8 @@ export class ControlConfiguracionComponent implements OnDestroy {
   abrirImportar(): void {
     this.formDia.set(null);
     this.quitados.set(new Set());
+    this.archivoDias.set(null);
+    this.quitadosArchivo.set(new Set());
     this.servicio.feriados(+this.mes().slice(0, 4)).subscribe({
       next: f => { this.feriados.set(f); this.importando.set(true); },
       error: () => this.toast.error('No se pudieron traer los feriados nacionales')
@@ -814,18 +901,66 @@ export class ControlConfiguracionComponent implements OnDestroy {
     this.quitados.update(s => { const c = new Set(s); c.has(fecha) ? c.delete(fecha) : c.add(fecha); return c; });
   }
 
-  /** Marca para toda la empresa los feriados que siguen marcados. */
+  /** Lo que se va a marcar: los feriados nacionales que siguen marcados o las filas válidas del archivo. */
+  readonly porImportar = computed<DiaCalendario[]>(() => {
+    if (this.origenImportar() === 'nac') {
+      const tipo = this.tiposCalendario().find(t => t.codigo === 'FERIADO');
+      return tipo ? this.feriados().filter(f => !this.yaMarcado(f.fecha) && !this.quitados().has(f.fecha))
+        .map(f => ({ fecha: f.fecha, idSubcartera: null, idTipoDia: tipo.id, nombre: f.nombre, motivo: f.nombre })) : [];
+    }
+    return (this.archivoDias()?.filas ?? []).filter(d => !d.error && !d.ya && !this.quitadosArchivo().has(d.n))
+      .map(d => ({ fecha: d.fecha!, idSubcartera: d.idSubcartera, idTipoDia: d.idTipoDia!, nombre: d.nombre, motivo: d.nombre }));
+  });
+  readonly conError = computed(() => this.origenImportar() === 'archivo' ? (this.archivoDias()?.filas ?? []).filter(d => d.error).length : 0);
+
+  alternarFilaArchivo(n: number): void {
+    this.quitadosArchivo.update(s => { const c = new Set(s); c.has(n) ? c.delete(n) : c.add(n); return c; });
+  }
+
+  /** Valida cada fila: fecha, tipo y ámbito conocidos, nombre puesto y que el día no esté ya marcado. */
+  leerDias(archivo: { nombre: string; filas: FilaArchivo[] }): void {
+    const tipos = this.tiposCalendario(), subs = this.perfil()?.subcarteras ?? [], vistas = new Set<string>();
+    const filas = archivo.filas.map((f, i): DiaImportado => {
+      const crudo = f['fecha'] ?? '', fecha = fechaDeCelda(crudo);
+      const nombre = String(f['nombre o motivo'] ?? f['nombre'] ?? f['motivo'] ?? '').trim();
+      const tTexto = sinTildes(String(f['tipo'] ?? '')), tipo = tTexto ? tipos.find(t => sinTildes(t.nombre) === tTexto || sinTildes(t.codigo.replace(/_/g, ' ')) === tTexto) : tipos.find(t => t.codigo === 'FERIADO');
+      const aTexto = sinTildes(String(f['ambito'] ?? '')), empresa = !aTexto || aTexto === 'toda la empresa';
+      const sub = empresa ? null : subs.find(x => sinTildes(x.nombre) === aTexto) ?? null;
+      const clave = `${fecha}|${sub?.id ?? ''}`, repetida = !!fecha && vistas.has(clave);
+      if (fecha) vistas.add(clave);
+      const error = !fecha ? 'Fecha no válida' : !tipo ? 'Tipo desconocido' : !empresa && !sub ? 'Subcartera desconocida' : !nombre ? 'Falta el nombre' : repetida ? 'Repetida en el archivo' : '';
+      return {
+        n: i, fecha, textoFecha: String(crudo), nombre, idTipoDia: tipo?.id ?? null, tipo: tipo?.nombre ?? String(f['tipo'] ?? ''), idSubcartera: sub?.id ?? null,
+        ambito: empresa ? 'toda la empresa' : sub ? sub.nombre : String(f['ambito']), error,
+        ya: !error && this.calendario().some(c => c.fecha === fecha && (c.idSubcartera ?? null) === (sub?.id ?? null))
+      };
+    });
+    this.quitadosArchivo.set(new Set());
+    this.archivoDias.set({ nombre: archivo.nombre, filas });
+  }
+
+  plantillaDias(): void {
+    const sub = this.subcarteras()[0]?.nombre ?? 'Tramo 3';
+    bajarPlantilla('Plantilla_calendario.xlsx', 'Calendario', [
+      ['Fecha', 'Tipo', 'Ámbito', 'Nombre o motivo'],
+      ['25/12/2026', 'Feriado', 'Toda la empresa', 'Navidad'],
+      ['31/12/2026', 'Sin asignación', sub, 'Sin cartera asignada'],
+      ['24/12/2026', 'No laborable', 'Toda la empresa', 'Día no laborable']
+    ]);
+  }
+
+  /** Marca lo que quedó marcado; lo que el servidor rechaza se cuenta aparte. */
   importar(): void {
-    const tipo = this.tiposCalendario().find(t => t.codigo === 'FERIADO');
-    const lista = this.feriados().filter(f => !this.yaMarcado(f.fecha) && !this.quitados().has(f.fecha));
-    if (!tipo || !lista.length) { this.importando.set(false); return; }
+    const lista = this.porImportar();
+    if (!lista.length) { this.importando.set(false); return; }
     this.guardando.set(true);
-    forkJoin(lista.map(f => this.servicio.marcarDia({ fecha: f.fecha, idSubcartera: null, idTipoDia: tipo.id, nombre: f.nombre, motivo: f.nombre }).pipe(catchError(() => of(null)))))
+    forkJoin(lista.map(d => this.servicio.marcarDia(d).pipe(catchError(() => of(null)))))
       .subscribe(r => {
         this.guardando.set(false);
         this.importando.set(false);
-        const bien = r.filter(Boolean).length;
-        this.toast.success(bien === 1 ? '1 feriado importado' : `${bien} feriados importados`);
+        const bien = r.filter(Boolean).length, mal = r.length - bien;
+        if (bien) this.toast.success(bien === 1 ? '1 día importado' : `${bien} días importados`);
+        if (mal) this.toast.error(mal === 1 ? '1 día no se pudo marcar' : `${mal} días no se pudieron marcar`);
         this.cargarCalendario(this.mes(), this.ambito().idSubcartera ?? null);
       });
   }
@@ -833,6 +968,8 @@ export class ControlConfiguracionComponent implements OnDestroy {
   // ==================== VACACIONES ====================
 
   readonly vacaciones = signal<VacacionesAsesor[]>([]);
+  readonly paginaVacActual = computed(() => Math.min(Math.max(1, this.pagina()), Math.max(1, Math.ceil(this.vacaciones().length / this.porPagina()))));
+  readonly paginaVac = computed(() => { const ini = (this.paginaVacActual() - 1) * this.porPagina(); return this.vacaciones().slice(ini, ini + this.porPagina()); });
   readonly gente = signal<PersonalAsistencia[]>([]);
   readonly formVac = signal<{ idUsuario: number; fechaDesde: string; fechaHasta: string; nota: string | null } | null>(null);
   readonly anulando = signal<number | null>(null);
@@ -852,6 +989,8 @@ export class ControlConfiguracionComponent implements OnDestroy {
     const lunes = sumarDias(lunesDe(new Date()), 7);
     this.error.set('');
     this.formVac.set({ idUsuario: this.gente()[0]?.idUsuario ?? 0, fechaDesde: lunes, fechaHasta: sumarDias(lunes, 4), nota: '' });
+    // Se abre al pie de la lista: se trae a la vista si la zona está desplazada o la pantalla es baja.
+    setTimeout(() => document.getElementById('vac-form')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50);
   }
 
   ponerVac(campo: 'idUsuario' | 'fechaDesde' | 'fechaHasta' | 'nota', valor: string | number): void {

@@ -1,3 +1,4 @@
+import { BotonDirective } from '../../../shared/ui/boton.directive';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Justificacion } from '../asistencia.models';
@@ -17,7 +18,7 @@ const corta = (f: string): string => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: '@container/pnl flex flex-col gap-[.875rem] pt-2' },
-  imports: [LucideAngularModule],
+  imports: [BotonDirective, LucideAngularModule],
   template: `
     @let s = solicitud();
     <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] gap-x-6 gap-y-3 border-b border-(--line2) pb-[.875rem] @max-[46.001rem]/pnl:grid-cols-[repeat(2,minmax(0,1fr))]">
@@ -28,7 +29,7 @@ const corta = (f: string): string => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
     @if (s.tieneArchivo) {
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p [class]="DETALLE_SUB + ' mr-auto'"><lucide-angular name="paperclip" [size]="14" class="inline-block align-[-.125rem] [&_svg]:size-[.875rem]"></lucide-angular> {{ s.archivoNombre || 'Adjunto' }}</p>
-        <button type="button" [class]="MINI + ' h-[2.375rem]!'" [attr.aria-pressed]="certificadoAbierto()" (click)="certificado.emit()">
+        <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI + ' h-[2.375rem]!'" [attr.aria-pressed]="certificadoAbierto()" (click)="certificado.emit()">
           {{ certificadoAbierto() ? 'Cerrar certificado' : 'Ver certificado' }}
         </button>
       </div>

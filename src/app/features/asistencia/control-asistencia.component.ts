@@ -1,3 +1,4 @@
+import { BotonDirective } from '../../shared/ui/boton.directive';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
@@ -11,7 +12,7 @@ import { AsistenciaService } from './asistencia.service';
 import { Justificacion } from './asistencia.models';
 import { hoy, lunesDe, sumarDias } from './asistencia.estilos';
 import { CABECERA, CABECERA_TEXTO, CAMPO, ETIQUETA, FILTROS, LISTA, PANTALLA, SUBTITULO, TITULO } from './ui/clases';
-import { MINI_ICONO } from './ui/ficha-clases';
+import { MINI } from './ui/ficha-clases';
 import { SegmentadoComponent } from './ui/segmentado.component';
 import { rangoSemana } from './ui/control-comun';
 import { ControlReporteComponent } from './control-reporte.component';
@@ -35,7 +36,7 @@ type Pestana = 'reporte' | 'dashboard' | 'solicitudes' | 'horario' | 'cierre' | 
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: PANTALLA + ' @container/p5' },
-  imports: [NgTemplateOutlet, LucideAngularModule, NombrePropioPipe, SegmentadoComponent, ControlReporteComponent, ControlSolicitudesComponent,
+  imports: [BotonDirective, NgTemplateOutlet, LucideAngularModule, NombrePropioPipe, SegmentadoComponent, ControlReporteComponent, ControlSolicitudesComponent,
             ControlRecuperacionesComponent, ControlCierreComponent, ControlAuditoriaComponent, ControlConfiguracionComponent],
   template: `
     <ng-template #cabecera>
@@ -74,11 +75,11 @@ type Pestana = 'reporte' | 'dashboard' | 'solicitudes' | 'horario' | 'cierre' | 
           <app-segmentado [opciones]="opciones()" [valor]="pestana()" (cambiar)="pestana.set($any($event))" />
           @if (pestana() === 'reporte' || pestana() === 'cierre') {
             <div class="ml-auto flex flex-none items-center gap-[.375rem]">
-              <button type="button" [class]="MINI_ICONO" (click)="moverSemana(-7)" aria-label="Semana anterior">
+              <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="moverSemana(-7)" aria-label="Semana anterior">
                 <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
               </button>
               <span class="min-w-[9.5rem] text-center text-[.875rem] font-semibold">{{ rango() }}</span>
-              <button type="button" [class]="MINI_ICONO" (click)="moverSemana(7)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
+              <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="moverSemana(7)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
                 <lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular>
               </button>
             </div>
@@ -116,9 +117,10 @@ export class ControlAsistenciaComponent implements OnInit {
   private readonly servicio = inject(AsistenciaService);
   private readonly toast = inject(ToastService);
 
+  protected readonly MINI = MINI;
   protected readonly CABECERA = CABECERA; protected readonly CABECERA_TEXTO = CABECERA_TEXTO; protected readonly TITULO = TITULO;
   protected readonly SUBTITULO = SUBTITULO; protected readonly FILTROS = FILTROS; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
-  protected readonly LISTA = LISTA; protected readonly MINI_ICONO = MINI_ICONO;
+  protected readonly LISTA = LISTA;
 
   readonly pestana = signal<Pestana>('reporte');
   /** El Reporte con una persona abierta: su detalle ocupa el lugar de las pestañas. */

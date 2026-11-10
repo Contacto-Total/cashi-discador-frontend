@@ -19,7 +19,7 @@ import {
   BARRA, BARRA_ESTADO, CABECERA, CABECERA_TEXTO, FUERTE, PANTALLA, PILL, PRINCIPAL, REJILLA,
   SEC, SUBTITULO, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TITULO, TR, TonoPill, VACIO, VACIO_CHICO, ZONA
 } from './ui/clases';
-import { MINI, MINI_ICONO } from './ui/ficha-clases';
+import { MINI } from './ui/ficha-clases';
 import { IndicadorComponent } from './ui/indicador.component';
 import { FormularioSolicitudComponent } from './ui/formulario-solicitud.component';
 import {
@@ -67,16 +67,16 @@ const ESTADO_SOLICITUD: Record<string, [string, TonoPill]> = {
           <div class="flex min-w-0 flex-nowrap items-center gap-x-3 gap-y-2">
             @if (enTeletrabajo()) { <span [class]="INSIGNIA">Teletrabajo</span> }
             <div class="flex flex-none items-center gap-[.375rem]">
-              <button type="button" [class]="MINI_ICONO + ' h-[2.375rem]!'" (click)="moverSemana(-1)" aria-label="Semana anterior">
+              <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' h-[2.375rem]!'" (click)="moverSemana(-1)" aria-label="Semana anterior">
                 <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
               </button>
               <span class="min-w-[9.5rem] text-center text-[.875rem] font-semibold">{{ rangoTexto() }}</span>
-              <button type="button" [class]="MINI_ICONO + ' h-[2.375rem]!'" (click)="moverSemana(1)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
+              <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' h-[2.375rem]!'" (click)="moverSemana(1)" [disabled]="esSemanaActual()" aria-label="Semana siguiente">
                 <lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular>
               </button>
             </div>
             @if (!esSemanaActual()) {
-              <button type="button" [class]="MINI + ' h-[2.375rem]!'" (click)="irAEstaSemana()">Esta semana</button>
+              <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI + ' h-[2.375rem]!'" (click)="irAEstaSemana()">Esta semana</button>
             }
           </div>
         </div>
@@ -197,7 +197,7 @@ const ESTADO_SOLICITUD: Record<string, [string, TonoPill]> = {
                         @if (s.estado === 'RECHAZADA') { <p [class]="AVISO.ro">Rechazada{{ s.motivoResolucion ? ': ' + s.motivoResolucion : '' }}</p> }
                         @if (s.modificable || yaPlanificada(s)) {
                           <div [class]="BOTONES">
-                            <button type="button" [class]="MINI" [disabled]="!s.modificable" [title]="s.modificable ? '' : (s.motivoNoModificable ?? '')" (click)="abrirSolicitud(s)">
+                            <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" [disabled]="!s.modificable" [title]="s.modificable ? '' : (s.motivoNoModificable ?? '')" (click)="abrirSolicitud(s)">
                               <lucide-angular name="pencil" [size]="14" class="flex"></lucide-angular>Modificar
                             </button>
                           </div>
@@ -216,7 +216,7 @@ const ESTADO_SOLICITUD: Record<string, [string, TonoPill]> = {
 
     <div appTarjeta [class]="BARRA">
       <span [class]="BARRA_ESTADO">{{ barraTexto() }}</span>
-      <button type="button" appBoton [class]="'px-4! ' + BOTON_APAGADO" [disabled]="formulario()" (click)="abrirSolicitud()">Nueva solicitud</button>
+      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC + ' ' + BOTON_APAGADO" [disabled]="formulario()" (click)="abrirSolicitud()">Nueva solicitud</button>
     </div>
   `
 })
@@ -230,12 +230,14 @@ export class MiAsistenciaComponent implements OnInit {
   protected readonly ZONA = ZONA; protected readonly TABLA_CAJA = TABLA_CAJA; protected readonly TABLA = TABLA; protected readonly THEAD = THEAD;
   protected readonly TR = TR; protected readonly TH = TH; protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly SEC = SEC;
   protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly VACIO = VACIO; protected readonly VACIO_CHICO = VACIO_CHICO;
-  protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly MINI = MINI; protected readonly MINI_ICONO = MINI_ICONO;
+  protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly MINI = MINI;
   protected readonly INSIGNIA = INSIGNIA; protected readonly COLUMNA = COLUMNA; protected readonly COLUMNA_TARJETA = COLUMNA_TARJETA;
   protected readonly COLUMNA_TITULO = COLUMNA_TITULO; protected readonly DESLIZA = DESLIZA; protected readonly LISTA_FILAS = LISTA_FILAS;
   protected readonly FILA = FILA; protected readonly ITEM = ITEM; protected readonly ITEM_BOTON = ITEM_BOTON; protected readonly ITEM_TITULO = ITEM_TITULO;
   protected readonly ITEM_LINEA = ITEM_LINEA; protected readonly ITEM_PILL = ITEM_PILL; protected readonly DETALLE = DETALLE;
   protected readonly DETALLE_TEXTO = DETALLE_TEXTO; protected readonly DETALLE_SUB = DETALLE_SUB; protected readonly AVISO = AVISO; protected readonly BOTONES = BOTONES;
+  /** Secundario en oscuro: el gris de los botones, como en el artifact. */
+  protected readonly BOTON_SEC = 'dark:bg-muted dark:hover:bg-border';
   /** Deshabilitado como en el molde: gris, sin el degradado ni la transparencia del botón común. */
   protected readonly BOTON_APAGADO = 'disabled:[background-image:none]! disabled:bg-muted! disabled:text-muted-foreground! disabled:opacity-100! disabled:border-transparent!';
   /** La segunda línea de la entrada cuando llegó tarde: en ámbar. */

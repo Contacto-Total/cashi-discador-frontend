@@ -150,6 +150,8 @@
 @keyframes cashi-halo { 0% { box-shadow: 0 0 0 0 rgb(16 185 129 / .5); } 70%, 100% { box-shadow: 0 0 0 13px rgb(16 185 129 / 0); } }
 @keyframes cashi-entra { from { background-color: var(--ok-bg); } to { background-color: transparent; } }
 @keyframes cashi-late { 50% { background-color: color-mix(in srgb, var(--ro-pt) 25%, transparent); } }
+/* Saludo del avatar de Personal al pasar el cursor: el dibujo se balancea una vez. */
+@keyframes cashi-saludo { 0%, 100% { transform: none; } 30% { transform: rotate(-9deg); } 60% { transform: rotate(7deg); } }
 
 /* Estado del asesor en el pie del menú. La luz que se enciende al pasar el cursor es un degradado
    radial cuyo radio se anima: para eso el radio tiene que ser una propiedad registrada, y su valor

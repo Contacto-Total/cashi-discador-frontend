@@ -1,3 +1,4 @@
+import { BotonDirective } from '../../../shared/ui/boton.directive';
 import { ChangeDetectionStrategy, Component, HostListener, computed, inject, input, output, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -5,10 +6,10 @@ import { LucideAngularModule } from 'lucide-angular';
 import { TarjetaDirective } from '../../../shared/ui/tarjeta.directive';
 import { descargarArchivo } from '../asistencia.estilos';
 import { ArchivoVisto } from '../visor-archivo.component';
-import { MINI_ICONO } from './ficha-clases';
+import { MINI } from './ficha-clases';
 
 /**
- * El certificado de una solicitud en la columna lateral, junto a la lista que se revisa: la foto o el PDF
+ * El certificado de una solicitud (o el sustento de una inhabilitación) en la columna lateral, junto a la lista que se revisa: la foto o el PDF
  * con su nombre, ampliar, descargar y cerrar. Ampliado ocupa la pantalla; se reduce con su botón o con Esc.
  */
 @Component({
@@ -16,18 +17,18 @@ import { MINI_ICONO } from './ficha-clases';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
-  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective],
+  imports: [BotonDirective, NgTemplateOutlet, LucideAngularModule, TarjetaDirective],
   template: `
-    <section appTarjeta class="flex min-h-0 flex-1 flex-col gap-[.75rem] px-5! py-[1.125rem]!" aria-label="Certificado">
+    <section appTarjeta class="flex min-h-0 flex-1 flex-col gap-[.75rem] px-5! py-[1.125rem]!" [attr.aria-label]="titulo()">
       <div class="flex items-center gap-[.375rem]">
-        <p class="m-0 mr-auto text-[.9375rem] leading-[1.5] font-bold text-foreground">Certificado</p>
-        <button type="button" [class]="MINI_ICONO" (click)="ampliado.set(true)" [disabled]="!archivo()" aria-label="Ampliar certificado" title="Ampliar">
+        <p class="m-0 mr-auto text-[.9375rem] leading-[1.5] font-bold text-foreground">{{ titulo() }}</p>
+        <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="ampliado.set(true)" [disabled]="!archivo()" aria-label="Ampliar certificado" title="Ampliar">
           <lucide-angular name="maximize-2" [size]="16" class="flex"></lucide-angular>
         </button>
-        <button type="button" [class]="MINI_ICONO" (click)="bajar()" [disabled]="!archivo()" aria-label="Descargar certificado" title="Descargar">
+        <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="bajar()" [disabled]="!archivo()" aria-label="Descargar certificado" title="Descargar">
           <lucide-angular name="download" [size]="16" class="flex"></lucide-angular>
         </button>
-        <button type="button" [class]="MINI_ICONO" (click)="cerrar.emit()" aria-label="Cerrar certificado" title="Cerrar">
+        <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="cerrar.emit()" aria-label="Cerrar certificado" title="Cerrar">
           <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>
         </button>
       </div>
@@ -41,10 +42,10 @@ import { MINI_ICONO } from './ficha-clases';
       <section class="fixed inset-0 z-[1500] flex flex-col items-center justify-center gap-[.75rem] bg-background p-6" role="dialog" aria-label="Certificado ampliado">
         <div class="flex w-[min(100%,calc((100vh-6.5rem)*210/270))] items-center gap-[.375rem]">
           <span class="mr-auto truncate text-[.875rem] font-medium text-foreground">{{ nombre() }}</span>
-          <button type="button" [class]="MINI_ICONO" (click)="bajar()" aria-label="Descargar certificado" title="Descargar">
+          <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="bajar()" aria-label="Descargar certificado" title="Descargar">
             <lucide-angular name="download" [size]="16" class="flex"></lucide-angular>
           </button>
-          <button type="button" [class]="MINI_ICONO" (click)="ampliado.set(false)" aria-label="Reducir certificado" title="Reducir">
+          <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" (click)="ampliado.set(false)" aria-label="Reducir certificado" title="Reducir">
             <lucide-angular name="minimize-2" [size]="16" class="flex"></lucide-angular>
           </button>
         </div>
@@ -71,8 +72,10 @@ import { MINI_ICONO } from './ficha-clases';
 })
 export class VisorCertificadoComponent {
   private readonly sanitizer = inject(DomSanitizer);
-  protected readonly MINI_ICONO = MINI_ICONO;
+ 
 
+  /** Lo que se ve: «Certificado» o «Sustento». */
+  readonly titulo = input('Certificado');
   readonly archivo = input<ArchivoVisto | null>(null);
   readonly cargando = input(false);
   /** El nombre del archivo, aunque todavía no haya llegado. */
@@ -80,6 +83,7 @@ export class VisorCertificadoComponent {
   readonly cerrar = output<void>();
 
   readonly ampliado = signal(false);
+  protected readonly MINI = MINI;
   protected readonly esPdf = computed(() => this.archivo()?.blob.type === 'application/pdf');
   /** La URL es de un blob que armó el propio front con la respuesta del backend. */
   protected readonly urlSegura = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.archivo()?.url ?? ''));
