@@ -1,23 +1,39 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../shared/services/toast.service';
+import { BotonDirective } from '../../shared/ui/boton.directive';
+import { NombrePropioPipe } from '../../shared/ui/nombre-propio.pipe';
+import { TarjetaDirective } from '../../shared/ui/tarjeta.directive';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { DatosPersonal, FichaPersonal, MovimientoPersonal, UsuarioLibre } from './asistencia.models';
-import { ESTILOS, hoy, lunesDe, sumarDias } from './asistencia.estilos';
-import { PaginadorComponent } from './paginador.component';
+import { DatosPersonal, FichaPersonal, UsuarioLibre } from './asistencia.models';
+import { hoy, lunesDe, sumarDias } from './asistencia.estilos';
 import { AVATARES_PERSONAL } from './avatares-personal';
+import {
+  BARRA, BARRA_ESTADO, BARRA_ESTADO_MAL, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CABECERA, CABECERA_TEXTO, CAMPO, ENTRADA, ETIQUETA, FILTROS,
+  FUERTE, HERRAMIENTAS, LISTA, PANTALLA, PILL, PRINCIPAL, REJILLA, REJILLA_FICHA, REJILLA_SOLA, SEC, SUBTITULO, TABLA, TABLA_CAJA,
+  TD, TD_1, TH, THEAD, TITULO, TR, VACIO, ZONA
+} from './ui/clases';
+import {
+  AVATAR, AVATAR_BOTON, AVATAR_SIN, AYUDA, CAMPOS, ERROR, MINI, MINI_ICONO, MINI_PELIGRO, NOTA, SECCION_TITULO, TR_ABRE, TR_ELEGIDA, USUARIO, USUARIO_SIN, VOLVER,
+  tonoSubcartera
+} from './ui/ficha-clases';
+import { filasQueEntran } from './ui/filas-por-alto';
+import { PiePaginaComponent } from './ui/pie-pagina.component';
+import { SegmentadoComponent } from './ui/segmentado.component';
 
-type Estado = 'ACTIVO' | 'CESADO' | '';
-type Seccion = 'laboral' | 'datos' | 'historial';
-type Modal = 'ficha' | 'form' | 'cese' | 'sub' | null;
+type Estado = 'ACTIVO' | 'CESADO';
+type Seccion = 'datos' | 'historial';
+type Accion = 'datos' | 'sub' | 'mod' | 'cese' | null;
+type Modalidad = 'PRESENCIAL' | 'TELETRABAJO';
 
-/** Los campos del formulario, en el orden en que se revisan. */
+/** Los campos del formulario de datos, en el orden en que se revisan. */
 interface Form {
   apellidos: string; nombres: string; tipoDocumento: 'DNI' | 'CE'; numeroDocumento: string;
   fechaNacimiento: string; nacionalidad: string; estadoCivil: string;
@@ -26,778 +42,532 @@ interface Form {
 }
 type Campo = keyof Form;
 
-/** Una subcartera con su gente activa, para el bloque de equipo. */
-interface Grupo { idSubcartera: number; subcartera: string; cartera: string; tono: string; gente: FichaPersonal[] }
+/** Una subcartera con su gente activa, para las tarjetas de arriba. */
+interface Grupo { id: number; subcartera: string; cartera: string; cliente: string; tono: string; gente: FichaPersonal[] }
 
-const POR_PAGINA = 10;
-const AREAS = ['a', 'b', 'c', 'd'];
 const MOTIVOS_CESE = ['Renuncia', 'Término de contrato', 'Abandono', 'Despido', 'Otro'];
 const ESTADOS_CIVILES = ['Soltero(a)', 'Casado(a)', 'Conviviente', 'Divorciado(a)', 'Viudo(a)'];
-const NACIONALIDADES = ['Peruana', 'Venezolana', 'Colombiana'];
-const DISTRITOS = ['San Juan de Lurigancho', 'Ate', 'Comas', 'San Martín de Porres', 'Los Olivos', 'Villa El Salvador', 'Surco', 'Lima'];
 const CAMPOS_ID: Record<Campo, string> = {
   apellidos: 'p-apellidos', nombres: 'p-nombres', tipoDocumento: 'p-tipodoc', numeroDocumento: 'p-numdoc',
   fechaNacimiento: 'p-nacimiento', nacionalidad: 'p-nacionalidad', estadoCivil: 'p-civil',
   telefonoMovil: 'p-movil', telefonoFijo: 'p-fijo', correo: 'p-correo',
   direccion: 'p-direccion', distrito: 'p-distrito', fechaIngreso: 'p-ingreso', idUsuario: 'p-usuario'
 };
-
-/** El color de cada subcartera, por su nombre: el mismo en todas las pantallas. */
-function tonoDe(subcartera: string | null): string {
-  const n = (subcartera ?? '').toUpperCase();
-  if (n.includes('PROPIO')) { return 'var(--c-1)'; }
-  if (n.includes('CASTIGO')) { return 'var(--c-2)'; }
-  if (/\b3\b/.test(n)) { return 'var(--c-3)'; }
-  if (/\b5\b/.test(n)) { return 'var(--c-4)'; }
-  return 'var(--tenue)';
-}
+/** Ancho mínimo de una tarjeta de subcartera: si no entran todas en una fila, quedan solo con nombre y cifra. */
+const ANCHO_TARJETA_REM = 9.5;
 
 /**
  * Personal: la ficha de cada persona por subcartera.
  *
- * Arriba, el equipo activo del ámbito; abajo, la tabla con activos y cesados.
- * La ficha lleva sus datos, su ingreso, su cese y los cambios de subcartera; de
- * ahí sale quién entra en el control de asistencia y desde cuándo.
+ * Arriba, una tarjeta por subcartera con su gente: la tarjeta filtra la lista y cada avatar abre la ficha.
+ * Abajo, la lista plana y paginada por el alto de la tarjeta. La ficha se abre en el panel de la derecha,
+ * con sus datos laborales y la acción al lado de cada uno; registrar a alguien ocupa la tarjeta principal.
  */
 @Component({
   selector: 'app-personal',
   standalone: true,
-  host: { class: 'cashi-asistencia' },
-  imports: [CommonModule, FormsModule, PaginadorComponent],
-  styles: [`
-    :host {
-      display: block;
-      --texto: #0f172a; --texto-medio: #334155; --apagado: #5f6c80; --tenue: #8491a3;
-      --superficie: #ffffff; --borde: #e6e9ee; --borde-suave: #f1f3f6; --borde-control: #8491a3; --hover: #f4f6f9;
-      --acento: #2563eb; --neutro-fondo: #f1f3f6;
-      --ok-punto: #16a34a; --tarde-fondo: #fef6e0; --tarde-texto: #92400e;
-      --falta-fondo: #fdecec; --falta-texto: #b91c1c; --falta-punto: #dc2626;
-      --primario: #0f172a; --primario-texto: #ffffff;
-      --c-1: #2a78d6; --c-2: #eb6834; --c-3: #1baf7a; --c-4: #eda100;
-    }
-    :host-context(.dark) {
-      --texto: #f1f5f9; --texto-medio: #e2e8f0; --apagado: #94a3b8; --tenue: #64748b;
-      --superficie: #0f172a; --borde: #1e293b; --borde-suave: #1e293b; --borde-control: #475569; --hover: #1e293b;
-      --acento: #60a5fa; --neutro-fondo: #1e293b;
-      --ok-punto: #22c55e; --tarde-fondo: #451a03; --tarde-texto: #fcd34d;
-      --falta-fondo: #450a0a; --falta-texto: #fca5a5; --falta-punto: #ef4444;
-      --primario: #ffffff; --primario-texto: #0f172a;
-      --c-1: #3987e5; --c-2: #d95926; --c-3: #199e70; --c-4: #c98500;
-    }
-    .aparecer { animation: aparecer .18s ease-out }
-    @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
-    .titulo-seccion { margin: 0; font-size: 15px; font-weight: 800; }
-    .secundario { font-size: 11.5px; color: var(--apagado); }
-
-    /* Equipo por subcartera: bento. La subcartera con más gente toma el bloque grande. */
-    .equipo { margin-bottom: 22px; }
-    .cabeza-equipo { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-    .franjas { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(120px, auto); }
-    .franjas.n1 { grid-template-columns: 1fr; grid-template-areas: "a"; }
-    .franjas.n2 { grid-template-columns: 3fr 2fr; grid-template-areas: "a b"; }
-    .franjas.n3 { grid-template-columns: 3fr 2fr; grid-template-areas: "a b" "a c"; }
-    .franjas.n4 { grid-template-columns: 2fr 1fr 1fr; grid-template-areas: "a b c" "a d d"; }
-    .bento-sub { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 14px;
-      background: color-mix(in srgb, var(--tono) 7%, var(--superficie)); border: 1px solid color-mix(in srgb, var(--tono) 28%, var(--borde)); }
-    .bento-sub.principal { padding: 20px 22px; }
-    .cabeza-bento { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-    .cabeza-bento strong { display: block; font-size: 14px; font-weight: 800; }
-    .cabeza-bento span { display: block; font-size: 11.5px; color: var(--apagado); }
-    .cifra-bento { font-size: 30px; line-height: 1; font-weight: 800; letter-spacing: -.03em; color: var(--texto); font-variant-numeric: tabular-nums; }
-    .bento-sub.principal .cifra-bento { font-size: 44px; }
-    .cifra-bento small { display: block; margin-top: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0; color: var(--apagado); text-align: right; }
-    /* La marca de la subcartera: un círculo grande del color, cortado por la esquina. */
-    .bento-sub::after { content: ""; position: absolute; right: -36px; bottom: -52px; width: 100px; height: 100px; border-radius: 999px;
-      background: color-mix(in srgb, var(--tono) 14%, transparent); pointer-events: none; }
-    .figuras { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fill, 42px); gap: 6px; margin-top: auto; }
-    .bento-sub.principal .figuras { grid-template-columns: repeat(auto-fill, 58px); gap: 8px; }
-    .figura { width: 42px; height: 42px; padding: 0; border: 0; border-radius: 999px; cursor: pointer; overflow: hidden;
-      color: color-mix(in srgb, var(--tono) 88%, #000); background: color-mix(in srgb, var(--tono) 18%, var(--superficie));
-      box-shadow: 0 0 0 2px var(--superficie), 0 0 0 3px color-mix(in srgb, var(--tono) 30%, var(--borde));
-      display: inline-flex; align-items: center; justify-content: center;
-      transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease; }
-    .bento-sub.principal .figura { width: 58px; height: 58px; }
-    .figura ::ng-deep svg, .iniciales-ficha ::ng-deep svg { width: 100%; height: 100%; display: block; flex: none; }
-    button.figura:hover, button.figura:focus-visible { transform: translateY(-4px) scale(1.08); z-index: 2;
-      box-shadow: 0 0 0 2px var(--superficie), 0 0 0 3.5px var(--tono), 0 8px 16px -4px color-mix(in srgb, var(--tono) 55%, transparent); }
-    button.figura:active { transform: translateY(-1px) scale(.98); transition-duration: .08s; }
-    button.figura:focus-visible { outline: 2px solid var(--acento); outline-offset: 3px; }
-    .figura.sin-usu { color: var(--tenue); background: var(--neutro-fondo); box-shadow: 0 0 0 2px var(--superficie), 0 0 0 3px var(--borde-control); }
-    .tip-avatar { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, calc(-100% - 12px));
-      padding: 7px 11px; border-radius: 9px; background: var(--primario); color: var(--primario-texto); box-shadow: 0 8px 22px rgba(15, 23, 42, .22);
-      font-size: 12px; line-height: 1.35; white-space: nowrap; animation: tip .14s ease; }
-    @keyframes tip { from { opacity: 0; transform: translate(-50%, calc(-100% - 8px)) } }
-    .tip-avatar strong { display: block; font-weight: 700; }
-    .tip-avatar span { display: flex; align-items: center; gap: 6px; font-size: 11px; opacity: .8; }
-    .tip-avatar span i { width: 7px; height: 7px; border-radius: 999px; background: var(--tono-tip, var(--tenue)); }
-    .tip-avatar::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
-    .leyenda-equipo { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: 11.5px; color: var(--apagado); }
-    @media (max-width: 760px) { .franjas.n2, .franjas.n3, .franjas.n4 { grid-template-columns: 1fr; grid-template-areas: none; } .bento-sub { grid-area: auto !important; } }
-
-    /* Una sola subcartera: una tarjeta por persona, centradas en su panel. */
-    .panel-solo { display: flex; flex-direction: column; gap: 16px; padding: 18px 20px 22px; border-radius: 14px;
-      background: color-mix(in srgb, var(--tono) 7%, var(--superficie)); border: 1px solid color-mix(in srgb, var(--tono) 28%, var(--borde)); }
-    .cabeza-solo { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
-    .cabeza-solo strong { font-size: 15px; font-weight: 800; }
-    .cabeza-solo span { font-size: 11.5px; color: var(--apagado); }
-    .tarjetas-equipo { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-    .tarjeta-persona { width: 200px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 12px 14px; border-radius: 14px; cursor: pointer;
-      background: var(--superficie); border: 1px solid color-mix(in srgb, var(--tono) 25%, var(--borde)); font: inherit; color: var(--texto); text-align: center;
-      transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease, border-color .2s ease; }
-    .tarjeta-persona:hover, .tarjeta-persona:focus-visible { transform: translateY(-3px); border-color: var(--tono);
-      box-shadow: 0 10px 20px -8px color-mix(in srgb, var(--tono) 50%, transparent); outline: none; }
-    .tarjeta-persona .figura { width: 56px; height: 56px; pointer-events: none; }
-    .tarjeta-persona strong { font-size: 13.5px; font-weight: 700; }
-    .tarjeta-persona small { font-size: 11.5px; color: var(--apagado); }
-    .tarjeta-persona .usu { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--tono) 14%, var(--superficie)); }
-    .tarjeta-persona.sin-usu .usu { background: var(--tarde-fondo); color: var(--tarde-texto); }
-    @media (prefers-reduced-motion: reduce) {
-      .figura, .tarjeta-persona, .tip-avatar { transition: none; animation: none; }
-      button.figura:hover, .tarjeta-persona:hover { transform: none; }
-    }
-
-    /* La tabla. */
-    .persona-celda { display: flex; flex-direction: column; line-height: 1.35; }
-    .persona-celda small { font-size: 11px; color: var(--tenue); font-variant-numeric: tabular-nums; }
-    .usuario-cashi { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
-    .usuario-cashi::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: var(--ok-punto); }
-    .sin-usuario { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
-      background: var(--tarde-fondo); color: var(--tarde-texto); }
-    tr.cesado td:not(.accion) { color: var(--apagado); }
-    .nota-pie { margin: 14px 2px 0; font-size: 11.5px; color: var(--apagado); max-width: 62ch; }
-
-    /* La ficha: mide siempre lo mismo, cambiar de pestaña no la estira. */
-    .caja-ficha { width: min(100%, 580px); height: min(88vh, 530px); }
-    .tabs-ficha { padding: 14px 20px 0; }
-    .tabs-ficha nav { display: flex; width: 100%; }
-    .tabs-ficha nav button { flex: 1; justify-content: center; }
-    .quien-ficha { display: flex; align-items: center; gap: 12px; }
-    .iniciales-ficha { width: 52px; height: 52px; border-radius: 999px; flex: none; overflow: hidden;
-      color: color-mix(in srgb, var(--tono) 88%, #000); background: color-mix(in srgb, var(--tono) 18%, var(--superficie));
-      box-shadow: 0 0 0 2px var(--superficie), 0 0 0 3px color-mix(in srgb, var(--tono) 35%, var(--borde)); }
-    .datos-ficha { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-    .dato-ficha { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 14px 10px; text-align: center;
-      border-radius: 12px; background: color-mix(in srgb, var(--tono) 7%, var(--superficie)); border: 1px solid color-mix(in srgb, var(--tono) 22%, var(--borde)); }
-    .dato-ficha small { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--apagado); }
-    .dato-ficha strong { font-size: 16px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-    .dato-ficha.sin-usu strong { font-size: 13px; color: var(--tarde-texto); }
-    @media (max-width: 460px) { .datos-ficha { grid-template-columns: 1fr; } }
-    .ambito-ficha { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .ambito-ficha span { color: var(--tenue); }
-    .ficha-datos { display: grid; grid-template-columns: 138px 1fr; gap: 9px 14px; margin: 0; font-size: 13px; }
-    .ficha-datos dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--apagado); padding-top: 2px; }
-    .ficha-datos dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-    .bloque-ficha { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--borde-suave); }
-    .bloque-ficha:last-child { border-bottom: 0; }
-    .bloque-ficha h4 { margin: 0; font-size: 12px; font-weight: 800; }
-    .campos-ficha { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
-    .campos-ficha div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .campos-ficha dt { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--apagado); }
-    .campos-ficha dd { margin: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-    .campos-ficha .ancho { grid-column: span 2; }
-    @media (max-width: 460px) { .campos-ficha { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .raya { color: var(--tenue); font-weight: 400; }
-    .linea-tiempo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-    .linea-tiempo li { position: relative; display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 0 0 16px; }
-    .linea-tiempo li::before { content: ""; position: absolute; left: 88px; top: 6px; width: 9px; height: 9px; border-radius: 999px;
-      background: var(--m-punto, var(--tenue)); box-shadow: 0 0 0 3px var(--superficie); z-index: 1; }
-    .linea-tiempo li::after { content: ""; position: absolute; left: 92px; top: 12px; bottom: 0; width: 1px; background: var(--borde); }
-    .linea-tiempo li:last-child::after { display: none; }
-    .linea-tiempo .fecha-mov { font-size: 12px; color: var(--apagado); font-variant-numeric: tabular-nums; padding-top: 1px; }
-    .linea-tiempo .detalle-mov { padding-left: 16px; }
-    .linea-tiempo .detalle-mov strong { display: block; font-size: 13px; }
-    .linea-tiempo .detalle-mov span { display: block; font-size: 12px; color: var(--apagado); }
-    .linea-tiempo li.ingreso { --m-punto: var(--ok-punto); }
-    .linea-tiempo li.cambio { --m-punto: var(--acento); }
-    .linea-tiempo li.cese { --m-punto: var(--falta-punto); }
-    .efecto { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--hover);
-      border: 1px solid var(--borde); font-size: 12px; color: var(--apagado); }
-    .efecto svg { flex: none; margin-top: 1px; }
-
-    /* El formulario: secciones con su título, dos columnas que se apilan. */
-    .seccion-form { display: flex; flex-direction: column; gap: 12px; }
-    .seccion-form > h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase;
-      letter-spacing: .05em; color: var(--apagado) !important; }
-    .seccion-form > h4::after { content: ""; flex: 1; height: 1px; background: var(--borde-suave); }
-    .campos-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .campos-3 { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; }
-    @media (max-width: 520px) { .campos-2, .campos-3 { grid-template-columns: 1fr; } }
-    .campo-grupo { display: flex; flex-direction: column; gap: 6px; }
-    .ayuda { margin: 0; font-size: 11.5px; color: var(--tenue); }
-    .error-campo { margin: 0; font-size: 11.5px; color: var(--falta-texto); }
-    .con-error input, .con-error select { border-color: var(--falta-texto) !important; }
-    .obligatorio { color: var(--falta-texto); margin-left: 2px; }
-    .resumen-errores { padding: 10px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--falta-punto) 40%, var(--superficie));
-      background: var(--falta-fondo); color: var(--falta-texto); font-size: 12.5px; }
-    .resumen-errores strong { display: block; margin-bottom: 3px; }
-    .resumen-errores ul { margin: 0; padding-left: 18px; }
-    .resumen-errores a { color: inherit !important; text-decoration: underline; }
-    .ambito-form { margin: 0; display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 8px;
-      background: var(--hover); border: 1px solid var(--borde); font-size: 13px; font-weight: 600; color: var(--texto); width: fit-content; }
-    .ambito-form span { color: var(--tenue); font-weight: 400; }
-  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: PANTALLA },
+  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, NombrePropioPipe, SegmentadoComponent, PiePaginaComponent],
   template: `
-    <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
+    <ng-template #avatar let-p let-clase="clase">
+      <span [class]="AVATAR + (p.idUsuario ? '' : AVATAR_SIN) + ' ' + clase" [style.color]="p.idUsuario ? tonoDe(p) : 'var(--muted-foreground)'"
+            [innerHTML]="avatarDe(p)" aria-hidden="true"></span>
+    </ng-template>
 
-      <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-col gap-[3px]">
-            <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Personal</h1>
-            <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
+    <div [class]="REJILLA + ' ' + (elegida() && !nuevo() ? REJILLA_FICHA : REJILLA_SOLA)">
+      <section appTarjeta [class]="PRINCIPAL">
+        @if (nuevo(); as n) {
+          <!-- ===================== Registrar persona ===================== -->
+          <div [class]="CABECERA">
+            <div [class]="CABECERA_TEXTO">
+              <p role="heading" aria-level="1" [class]="TITULO">Registrar persona</p>
+              <p [class]="SUBTITULO">Datos personales, contacto y datos laborales</p>
+            </div>
           </div>
-          <button type="button" [class]="estilos.botonPrimario" (click)="abrirForm(null)" [disabled]="!idSubcartera()"
-                  [attr.title]="idSubcartera() ? null : 'Elige una subcartera arriba para registrar'">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            Registrar personal
-          </button>
-        </div>
-
-        <!-- El ámbito, en los tres niveles con los que está montada la operación -->
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="f-cliente">Cliente</label>
-            <select id="f-cliente" [class]="estilos.campo + ' !w-[178px]'" [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
-              <option [ngValue]="null">Todos</option>
-              @for (c of clientes(); track c.id) { <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option> }
-            </select>
+          <div [class]="HERRAMIENTAS">
+            <button type="button" [class]="VOLVER" (click)="cancelarNuevo()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Personal</button>
           </div>
-          <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="f-cartera">Cartera</label>
-            <select id="f-cartera" [class]="estilos.campo + ' !w-[178px]'" [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)"
-                    [disabled]="!idCliente()">
-              <option [ngValue]="null">Todas</option>
-              @for (c of carteras(); track c.id) { <option [ngValue]="c.id">{{ c.portfolioName }}</option> }
-            </select>
-          </div>
-          <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="f-subcartera">Subcartera</label>
-            <select id="f-subcartera" [class]="estilos.campo + ' !w-[178px]'" [ngModel]="idSubcartera()" (ngModelChange)="elegirSubcartera($event)"
-                    [disabled]="!idCartera()">
-              <option [ngValue]="null">Todas</option>
-              @for (s of subcarteras(); track s.id) { <option [ngValue]="s.id">{{ s.subPortfolioName }}</option> }
-            </select>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label [class]="estilos.etiqueta" for="f-buscar">Buscar</label>
-            <input id="f-buscar" type="search" placeholder="Nombre, DNI o usuario" [class]="estilos.campo + ' !w-[260px]'"
-                   [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event); pagina.set(1)">
-          </div>
-        </div>
-      </div>
-
-      <div class="px-7 pb-12 pt-5">
-        @if (cargando() && !fichas().length) {
-          <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando…</p>
-        } @else if (error()) {
-          <div [class]="estilos.vacio">
-            <p class="text-[13.5px] font-bold">No se pudo cargar el personal</p>
-            <button type="button" [class]="estilos.botonSecundario + ' mt-3'" (click)="cargar()">Reintentar</button>
-          </div>
-        } @else {
-          <div class="aparecer">
-            <!-- Equipo por subcartera -->
-            <section class="equipo" aria-labelledby="titulo-equipo">
-              <div class="cabeza-equipo">
-                <h2 class="titulo-seccion" id="titulo-equipo">Equipo por subcartera</h2>
-                <span class="secundario">{{ activos().length }} {{ activos().length === 1 ? 'activo' : 'activos' }}</span>
+          <div [class]="ZONA">
+            <div class="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] items-start @max-[52.001rem]/tarjeta:grid-cols-[minmax(0,1fr)]">
+              <div class="flex min-w-0 flex-col gap-6">
+                <section class="flex flex-col gap-[.875rem]">
+                  <p role="heading" aria-level="2" [class]="SECCION_TITULO">Datos personales</p>
+                  <div [class]="CAMPOS"><ng-container *ngTemplateOutlet="camposPersonales" /></div>
+                </section>
+                <section class="flex flex-col gap-[.875rem]">
+                  <p role="heading" aria-level="2" [class]="SECCION_TITULO">Contacto</p>
+                  <div [class]="CAMPOS"><ng-container *ngTemplateOutlet="camposContacto" /></div>
+                </section>
               </div>
-              @let gs = grupos();
-              @if (gs.length === 1) {
-                @let g = gs[0];
-                <div class="franjas n1">
-                  <div class="panel-solo" [style.--tono]="g.tono">
-                    <div class="cabeza-solo"><strong>{{ g.subcartera }}</strong>
-                      <span>{{ g.cartera }} · {{ g.gente.length }} {{ g.gente.length === 1 ? 'persona' : 'personas' }}</span></div>
-                    <div class="tarjetas-equipo">
-                      @for (p of g.gente; track p.id) {
-                        <button type="button" class="tarjeta-persona" [class.sin-usu]="!p.idUsuario" (click)="verFicha(p)" [attr.aria-label]="nombreLista(p)">
-                          <span class="figura" [class.sin-usu]="!p.idUsuario" aria-hidden="true" [innerHTML]="avatar(p)"></span>
-                          <strong>{{ nombreCorto(p) }}</strong>
-                          <small>Desde el {{ dma(p.fechaIngreso) }}<br>{{ antiguedad(p) }}</small>
-                          <span class="usu">{{ p.usuario ?? 'Sin usuario de Cashi' }}</span>
-                        </button>
-                      }
+              <div class="ml-7 flex min-h-full min-w-0 flex-col gap-6 border-l border-(--line2) pl-7 @max-[52.001rem]/tarjeta:mt-6 @max-[52.001rem]/tarjeta:ml-0 @max-[52.001rem]/tarjeta:border-l-0 @max-[52.001rem]/tarjeta:pl-0">
+                <section class="flex flex-col gap-[.875rem]">
+                  <p role="heading" aria-level="2" [class]="SECCION_TITULO">Datos laborales</p>
+                  <div [class]="CAMPOS">
+                    <div [class]="CAMPO">
+                      <label for="n-cli" [class]="ETIQUETA">Cliente</label>
+                      <select id="n-cli" [class]="LISTA" (change)="nuevoCliente(+$any($event.target).value)">
+                        @for (c of clientes(); track c.id) { <option [value]="c.id" [selected]="c.id === n.idCliente">{{ nombreCliente(c) }}</option> }
+                      </select>
+                    </div>
+                    <div [class]="CAMPO">
+                      <label for="n-car" [class]="ETIQUETA">Cartera</label>
+                      <select id="n-car" [class]="LISTA" (change)="nuevaCartera(+$any($event.target).value)">
+                        @for (c of nCarteras(); track c.id) { <option [value]="c.id" [selected]="c.id === n.idCartera">{{ c.portfolioName | nombrePropio }}</option> }
+                      </select>
+                    </div>
+                    <div [class]="CAMPO">
+                      <label for="n-sub" [class]="ETIQUETA">Subcartera</label>
+                      <select id="n-sub" [class]="LISTA" (change)="ponerNuevo('idSubcartera', +$any($event.target).value)">
+                        @for (s of nSubcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === n.idSubcartera">{{ s.subPortfolioName | nombrePropio }}</option> }
+                      </select>
+                    </div>
+                    <div [class]="CAMPO">
+                      <label [for]="ids.fechaIngreso" [class]="ETIQUETA">Fecha de ingreso <span class="text-(--ro)">*</span></label>
+                      <input [id]="ids.fechaIngreso" type="date" [class]="ENTRADA" [value]="form().fechaIngreso" (change)="poner('fechaIngreso', $any($event.target).value)">
+                      <small [class]="AYUDA">Primer día de trabajo; desde aquí cuenta en asistencia.</small>
+                    </div>
+                    <div [class]="CAMPO">
+                      <label for="n-mod" [class]="ETIQUETA">Modalidad</label>
+                      <select id="n-mod" [class]="LISTA" (change)="ponerNuevo('modalidad', $any($event.target).value)">
+                        <option value="PRESENCIAL" [selected]="n.modalidad === 'PRESENCIAL'">Presencial</option>
+                        <option value="TELETRABAJO" [selected]="n.modalidad === 'TELETRABAJO'">Teletrabajo</option>
+                      </select>
+                      <small [class]="AYUDA">En teletrabajo sus horas cuentan como remotas.</small>
+                    </div>
+                    <div [class]="CAMPO">
+                      <label [for]="ids.idUsuario" [class]="ETIQUETA">Usuario de Cashi</label>
+                      <ng-container *ngTemplateOutlet="campoUsuario" />
+                      <small [class]="AYUDA">Con él se leen sus marcas; se puede vincular después.</small>
                     </div>
                   </div>
-                </div>
-              } @else if (gs.length) {
-                <div class="franjas" [ngClass]="'n' + (gs.length > 4 ? 4 : gs.length)">
-                  @for (g of gs; track g.idSubcartera; let i = $index) {
-                    <section class="bento-sub" [class.principal]="i === 0" [style.--tono]="g.tono" [style.grid-area]="areas[i]"
-                             [attr.aria-label]="g.subcartera + ': ' + g.gente.length + (g.gente.length === 1 ? ' persona' : ' personas')">
-                      <div class="cabeza-bento">
-                        <div><strong>{{ g.subcartera }}</strong><span>{{ g.cartera }}</span></div>
-                        <div class="cifra-bento">{{ g.gente.length }}<small>{{ sinUsuario(g) ? sinUsuario(g) + ' sin usuario' : (g.gente.length === 1 ? 'persona' : 'personas') }}</small></div>
+                </section>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <!-- ===================== Lista ===================== -->
+          <div [class]="CABECERA">
+            <div [class]="CABECERA_TEXTO">
+              <p role="heading" aria-level="1" [class]="TITULO">Personal</p>
+              <p [class]="SUBTITULO">Fichas por subcartera</p>
+            </div>
+            <div [class]="FILTROS">
+              <div [class]="CAMPO">
+                <label for="pe-cli" [class]="ETIQUETA">Cliente</label>
+                <select id="pe-cli" [class]="LISTA" (change)="elegirCliente(+$any($event.target).value || null)">
+                  <option value="" [selected]="!idCliente()">Todos</option>
+                  @for (c of clientes(); track c.id) { <option [value]="c.id" [selected]="c.id === idCliente()">{{ nombreCliente(c) }}</option> }
+                </select>
+              </div>
+              <div [class]="CAMPO">
+                <label for="pe-car" [class]="ETIQUETA">Cartera</label>
+                <select id="pe-car" [class]="LISTA" (change)="elegirCartera(+$any($event.target).value || null)">
+                  <option value="" [selected]="!idCartera()">Todas</option>
+                  @for (c of carteras(); track c.id) { <option [value]="c.id" [selected]="c.id === idCartera()">{{ c.portfolioName | nombrePropio }}</option> }
+                </select>
+              </div>
+              <div [class]="CAMPO">
+                <label for="pe-sub" [class]="ETIQUETA">Subcartera</label>
+                <select id="pe-sub" [class]="LISTA" (change)="elegirSubcartera(+$any($event.target).value || null)">
+                  <option value="" [selected]="!idSubcartera()">Todas</option>
+                  @for (s of subcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.subPortfolioName | nombrePropio }}</option> }
+                </select>
+              </div>
+            </div>
+          </div>
+
+          @if (error()) {
+            <div [class]="VACIO">No se pudo cargar Personal
+              <div class="mt-[.75rem]"><button type="button" appBoton="secundario" appBotonAlto="chico" (click)="cargar()">Reintentar</button></div>
+            </div>
+          } @else if (cargando() && !fichas().length) {
+            <p class="m-0 text-muted-foreground">Cargando…</p>
+          } @else {
+            @if (estado() === 'ACTIVO' && grupos().length) {
+              <div #tarjetas class="mb-4 grid flex-none gap-3"
+                   [style.grid-template-columns]="compacta() ? 'repeat(' + grupos().length + ',minmax(0,1fr))' : 'repeat(auto-fit,minmax(min(100%,' + ANCHO_TARJETA + 'rem),1fr))'">
+                @for (g of grupos(); track g.id) {
+                  @let sel = grupo() === g.id;
+                  @let uno = grupos().length === 1;
+                  <section [style.--t]="g.tono" (click)="uno ? null : alternarGrupo(g.id)"
+                           class="@container/sub relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-xl border border-solid border-[color-mix(in_oklab,var(--t)_28%,var(--border))] bg-[color-mix(in_oklab,var(--t)_7%,var(--card))] text-left text-foreground transition-[opacity,box-shadow] duration-150
+                                  after:pointer-events-none after:absolute after:rounded-full after:bg-(--t) after:opacity-[.16] after:content-['']"
+                           [class]="(compacta() ? 'px-[.75rem] py-[.625rem] after:-right-5 after:-bottom-7 after:size-14' : 'px-[.875rem] py-[.75rem] after:-right-6 after:-bottom-6 after:size-20')
+                                    + (uno ? '' : ' cursor-pointer') + (sel ? ' shadow-[0_0_0_2px_var(--t)]' : '') + (grupo() && !sel ? ' opacity-55 hover:opacity-100' : '')">
+                    <ng-template #cabeza>
+                      <div class="min-w-0">
+                        <span class="block truncate text-[.875rem] font-bold">{{ g.subcartera | nombrePropio }}</span>
+                        <small class="mt-[.125rem] block truncate text-[.75rem] text-muted-foreground">{{ subtituloGrupo(g) }}</small>
                       </div>
-                      <div class="figuras">
-                        @for (p of g.gente; track p.id) {
-                          <button type="button" class="figura" [class.sin-usu]="!p.idUsuario" [attr.aria-label]="nombreLista(p)" [innerHTML]="avatar(p)"
-                                  (click)="verFicha(p)" (mouseenter)="mostrarTip($event, p, g.tono)" (focus)="mostrarTip($event, p, g.tono)"
-                                  (mouseleave)="tip.set(null)" (blur)="tip.set(null)"></button>
+                      <div class="text-right text-[1.5rem] leading-none font-bold @max-[12.001rem]/sub:flex @max-[12.001rem]/sub:items-baseline @max-[12.001rem]/sub:gap-[.375rem] @max-[12.001rem]/sub:text-left">
+                        {{ g.gente.length }}<small class="mt-[.375rem] block min-w-0 truncate text-[.6875rem] leading-[1.2] font-medium text-muted-foreground">{{ detalleGrupo(g) }}</small>
+                      </div>
+                    </ng-template>
+                    @if (uno) {
+                      <div class="relative z-[1] flex items-start justify-between gap-3 @max-[12.001rem]/sub:flex-col @max-[12.001rem]/sub:gap-1"><ng-container *ngTemplateOutlet="cabeza" /></div>
+                    } @else {
+                      <button type="button" [attr.aria-pressed]="sel" [attr.aria-label]="sel ? 'Ver todas las subcarteras' : 'Ver solo ' + g.subcartera"
+                              (click)="$event.stopPropagation(); alternarGrupo(g.id)"
+                              class="relative z-[1] flex w-full cursor-pointer justify-between gap-3 rounded-[.375rem] border-0! bg-transparent p-0! text-left [font-family:inherit] text-inherit @max-[12.001rem]/sub:flex-col @max-[12.001rem]/sub:gap-1">
+                        <ng-container *ngTemplateOutlet="cabeza" />
+                      </button>
+                    }
+                    @if (!compacta()) {
+                      @let visibles = cuantosVen(g);
+                      <div class="relative z-[1] mt-auto flex flex-wrap overflow-hidden pt-[4px] pr-0 pb-[4px] pl-[3px]" [attr.data-grupo]="g.id"
+                           [class]="uno ? 'h-[calc(2.375rem+1.5rem+8px)] gap-1' : 'h-[calc(2.375rem+8px)] @max-[12.001rem]/sub:h-[calc(2rem+8px)]'">
+                        @for (p of g.gente.slice(0, visibles); track p.id) {
+                          <button type="button" [class]="AVATAR_BOTON + (uno ? ' flex w-24 flex-col items-center gap-[.3125rem]' : ' -mr-[.3125rem]')"
+                                  (click)="$event.stopPropagation(); verFicha(p)" [attr.aria-label]="nombreLista(p)" [attr.title]="nombreCorto(p) + (p.usuario ? ', ' + p.usuario : ', sin usuario de Cashi')">
+                            <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'size-[2.375rem]' }" />
+                            @if (uno) { <span class="max-w-full truncate text-[.75rem] font-medium text-(--ink2)">{{ nombreCorto(p) }}</span> }
+                          </button>
+                        }
+                        @if (visibles < g.gente.length) {
+                          <button type="button" (click)="$event.stopPropagation(); uno ? null : alternarGrupo(g.id)" [attr.aria-label]="(g.gente.length - visibles) + ' personas más'"
+                                  class="inline-grid size-[2.375rem] flex-none place-items-center rounded-full border-0! bg-card p-0! text-[.75rem] font-bold text-foreground shadow-[0_0_0_2px_var(--card),0_0_0_3px_color-mix(in_oklab,var(--t)_35%,transparent)] @max-[12.001rem]/sub:size-8"
+                                  [class]="uno ? 'ml-[1.8125rem] cursor-default' : 'cursor-pointer'">+{{ g.gente.length - visibles }}</button>
                         }
                       </div>
-                    </section>
+                    }
+                  </section>
+                }
+              </div>
+            }
+
+            <div [class]="HERRAMIENTAS">
+              <app-segmentado [opciones]="[{ clave: 'ACTIVO', texto: 'Activos', n: activos().length }, { clave: 'CESADO', texto: 'Cesados', n: cesados().length }]"
+                              [valor]="estado()" (cambiar)="estado.set($any($event)); pagina.set(1)" />
+              <div class="ml-auto flex items-center gap-3">
+                <div [class]="BUSCAR" class="flex-[0_1_18rem]">
+                  <span [class]="BUSCAR_ICONO"><lucide-angular name="search" [size]="16" class="flex"></lucide-angular></span>
+                  <input type="search" placeholder="Nombre, usuario o documento" aria-label="Buscar" [class]="BUSCAR_CAMPO" [value]="busqueda()"
+                         (input)="busqueda.set($any($event.target).value); pagina.set(1)">
+                </div>
+              </div>
+            </div>
+
+            <div #zona [class]="ZONA">
+              @if (!lista().length) {
+                <div [class]="VACIO">{{ busqueda().trim() ? 'Sin resultados' : estado() === 'CESADO' ? 'Sin personas cesadas' : 'Sin personas activas' }}</div>
+              } @else {
+                <div class="flex flex-[1_0_auto] flex-col">
+                  <div #caja [class]="TABLA_CAJA">
+                    <table [class]="TABLA">
+                      <thead [class]="THEAD"><tr [class]="TR">
+                        <th [class]="TH">Persona</th>
+                        @if (verSubcartera()) { <th [class]="TH">Subcartera</th> }
+                        <th [class]="TH">Usuario de Cashi</th>
+                        @if (!elegida()) { <th [class]="TH">Ingreso</th><th [class]="TH">Modalidad</th> }
+                        <th [class]="TH">Estado</th>
+                        <th [class]="TH"></th>
+                      </tr></thead>
+                      <tbody>
+                        @for (p of paginaLista(); track p.id) {
+                          @let ces = cesado(p);
+                          <tr [class]="TR + ' ' + TR_ABRE + (abierta() === p.id ? TR_ELEGIDA : '')" (click)="alternarFicha(p)" [attr.aria-selected]="abierta() === p.id">
+                            <td [class]="TD_1"><span [class]="FUERTE">{{ nombreLista(p) }}</span><span [class]="SEC">{{ p.tipoDocumento }} {{ p.numeroDocumento ?? '—' }}</span></td>
+                            @if (verSubcartera()) {
+                              <td [class]="TD">
+                                <span class="inline-flex items-center gap-[.4375rem] whitespace-nowrap"><i class="block size-2 flex-none rounded-full" [style.background]="tonoDe(p)"></i>{{ p.subcartera | nombrePropio }}</span>
+                                @if (!idCliente()) { <span [class]="SEC + ' ml-[.9375rem]'">{{ clienteCorto(p) }}</span> }
+                              </td>
+                            }
+                            <td [class]="TD"><span [class]="p.usuario ? USUARIO : USUARIO_SIN">{{ p.usuario ?? 'Sin vincular' }}</span></td>
+                            @if (!elegida()) {
+                              <td [class]="TD">{{ dma(p.fechaIngreso) }}<span [class]="SEC">{{ antiguedad(p) }}</span></td>
+                              <td [class]="TD"><span [class]="p.modalidad === 'TELETRABAJO' ? PILL.info : PILL.neu">{{ p.modalidad === 'TELETRABAJO' ? 'Teletrabajo' : 'Presencial' }}</span></td>
+                            }
+                            <td [class]="TD">
+                              @if (ces) { <span [class]="PILL.neu">Cesado el {{ dma(p.fechaCese).slice(0, 5) }}</span> }
+                              @else if (p.fechaCese) { <span [class]="PILL.am">Cesa el {{ dma(p.fechaCese).slice(0, 5) }}</span> }
+                              @else { <span [class]="PILL.ok">Activo</span> }
+                            </td>
+                            <td [class]="TD + ' w-8 pr-1! text-right!'"><lucide-angular name="chevron-right" [size]="16" class="inline-flex text-muted-foreground"></lucide-angular></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                  <app-pie-pagina [total]="lista().length" [pagina]="paginaActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+                </div>
+              }
+            </div>
+          }
+        }
+      </section>
+
+      @if (fichaPanel(); as p) {
+        <!-- ===================== Ficha en el panel derecho ===================== -->
+        <section appTarjeta class="flex min-h-0 min-w-0 flex-col self-stretch overflow-hidden p-0!" [attr.aria-label]="'Ficha de ' + p.nombres + ' ' + p.apellidos">
+          @let ces = cesado(p);
+          <div class="relative flex flex-none flex-col items-center gap-1 border-b border-(--line2) bg-card px-4 pt-5 pb-[.875rem] text-center">
+            <button type="button" id="cerrar-ficha" [class]="MINI_ICONO + ' absolute! top-[.625rem] right-[.625rem]'" (click)="cerrarFicha()" aria-label="Cerrar ficha" title="Cerrar">
+              <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>
+            </button>
+            <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'mb-[.375rem] size-16' }" />
+            <span class="text-[1rem] font-bold text-foreground">{{ p.nombres }} {{ p.apellidos }}</span>
+            <small class="text-[.75rem] text-muted-foreground">{{ p.tipoDocumento }} {{ p.numeroDocumento ?? '—' }}</small>
+          </div>
+          <div class="grid flex-none grid-cols-3 border-b border-(--line2)">
+            <div class="flex min-w-0 flex-col gap-[.125rem] px-2 py-3 text-center"><span class="text-[.6875rem] text-muted-foreground">Ingreso</span><span class="text-[.8125rem] font-semibold text-foreground [overflow-wrap:anywhere]">{{ dma(p.fechaIngreso) }}</span></div>
+            <div class="flex min-w-0 flex-col gap-[.125rem] border-l border-(--line2) px-2 py-3 text-center"><span class="text-[.6875rem] text-muted-foreground">Antigüedad</span><span class="text-[.8125rem] font-semibold text-foreground [overflow-wrap:anywhere]">{{ antiguedad(p) }}</span></div>
+            <div class="flex min-w-0 flex-col gap-[.125rem] border-l border-(--line2) px-2 py-3 text-center"><span class="text-[.6875rem] text-muted-foreground">Usuario</span><span class="text-[.8125rem] font-semibold [overflow-wrap:anywhere]" [class]="p.usuario ? 'text-foreground' : 'text-(--am)'">{{ p.usuario ?? 'Sin vincular' }}</span></div>
+          </div>
+
+          @if (accion(); as a) {
+            <div class="flex flex-none items-center gap-3 px-4 pt-[.875rem]">
+              <button type="button" [class]="VOLVER" (click)="accion.set(null)"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Ficha</button>
+              <span class="text-[.9375rem] font-bold text-foreground">{{ TITULO_ACCION[a] }}</span>
+            </div>
+            <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-3 pb-4">
+              <div class="flex min-w-0 flex-col gap-3">
+                <div class="grid grid-cols-[minmax(0,1fr)] gap-[.625rem]">
+                  @switch (a) {
+                    @case ('datos') {
+                      <ng-container *ngTemplateOutlet="camposPersonales" />
+                      <ng-container *ngTemplateOutlet="camposContacto" />
+                      <div [class]="CAMPO">
+                        <label [for]="ids.fechaIngreso" [class]="ETIQUETA">Fecha de ingreso <span class="text-(--ro)">*</span></label>
+                        <input [id]="ids.fechaIngreso" type="date" [class]="ENTRADA" [value]="form().fechaIngreso" (change)="poner('fechaIngreso', $any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label [for]="ids.idUsuario" [class]="ETIQUETA">Usuario de Cashi</label>
+                        <ng-container *ngTemplateOutlet="campoUsuario" />
+                      </div>
+                    }
+                    @case ('sub') {
+                      <div [class]="CAMPO">
+                        <label for="f-sub" [class]="ETIQUETA">Nueva subcartera</label>
+                        <select id="f-sub" [class]="LISTA" (change)="cambioSub.set(+$any($event.target).value)">
+                          @for (s of cambioSubcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === cambioSub()" [disabled]="s.id === p.idSubcartera">{{ rotuloSubcartera(s) }}{{ s.id === p.idSubcartera ? ' (actual)' : '' }}</option> }
+                        </select>
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-desde" [class]="ETIQUETA">Desde el lunes</label>
+                        <input id="f-desde" type="date" step="7" [class]="ENTRADA" [value]="cambioDesde()" (change)="cambioDesde.set($any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-mot" [class]="ETIQUETA">Motivo</label>
+                        <input id="f-mot" [class]="ENTRADA" placeholder="Queda en el historial" [value]="cambioMotivo()" (input)="cambioMotivo.set($any($event.target).value)">
+                      </div>
+                    }
+                    @case ('mod') {
+                      <div [class]="CAMPO">
+                        <label for="f-mod" [class]="ETIQUETA">Nueva modalidad</label>
+                        <select id="f-mod" [class]="LISTA" (change)="cambioModalidad.set($any($event.target).value)">
+                          @for (m of MODALIDADES; track m) {
+                            <option [value]="m" [selected]="m === cambioModalidad()" [disabled]="m === modalidadDe(p)">{{ nombreModalidad(m) }}{{ m === modalidadDe(p) ? ' (actual)' : '' }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-desde" [class]="ETIQUETA">Desde</label>
+                        <input id="f-desde" type="date" [class]="ENTRADA" [value]="cambioDesde()" (change)="cambioDesde.set($any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-mot" [class]="ETIQUETA">Motivo</label>
+                        <input id="f-mot" [class]="ENTRADA" placeholder="Queda en el historial" [value]="cambioMotivo()" (input)="cambioMotivo.set($any($event.target).value)">
+                      </div>
+                    }
+                    @case ('cese') {
+                      <div [class]="CAMPO">
+                        <label for="f-desde" [class]="ETIQUETA">Último día</label>
+                        <input id="f-desde" type="date" [class]="ENTRADA" [value]="cambioDesde()" (change)="cambioDesde.set($any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-mc" [class]="ETIQUETA">Motivo</label>
+                        <select id="f-mc" [class]="LISTA" (change)="ceseMotivo.set($any($event.target).value)">
+                          @for (m of MOTIVOS_CESE; track m) { <option [value]="m" [selected]="m === ceseMotivo()">{{ m }}</option> }
+                        </select>
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-mot" [class]="ETIQUETA">Comentario</label>
+                        <input id="f-mot" [class]="ENTRADA" [value]="cambioMotivo()" (input)="cambioMotivo.set($any($event.target).value)">
+                      </div>
+                    }
                   }
                 </div>
-                @if (haySinUsuario()) { <p class="leyenda-equipo">En gris: sin usuario de Cashi</p> }
-              } @else {
-                <p class="secundario !m-0">Sin personal con ese filtro.</p>
-              }
-            </section>
-
-            <!-- La tabla -->
-            <div class="mb-3 flex items-center justify-between gap-3">
-              <nav [class]="estilos.segmentos" aria-label="Estado">
-                @for (t of ESTADOS; track t.clave) {
-                  <button type="button" [class]="estilos.tab + ' ' + (estado() === t.clave ? estilos.tabActiva : estilos.tabApagada)"
-                          [attr.aria-current]="estado() === t.clave ? 'page' : null" (click)="estado.set(t.clave); pagina.set(1)">
-                    {{ t.texto }}
-                    @if (t.clave !== '') {
-                      <span [class]="estilos.cuenta + ' ' + (estado() === t.clave ? estilos.cuentaActiva : estilos.cuentaApagada)">
-                        {{ t.clave === 'ACTIVO' ? activos().length : cesados().length }}</span>
-                    }
+                @if (notaAccion(p); as nota) { <p [class]="NOTA">{{ nota }}</p> }
+                @if (errorAccion()) { <p [class]="ERROR" role="alert">{{ errorAccion() }}</p> }
+                <div class="flex flex-wrap items-center justify-start gap-2">
+                  <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="accion.set(null)">Cancelar</button>
+                  <button type="button" appBoton class="h-[2.375rem]! px-4!" [disabled]="guardando()" (click)="guardarAccion(p)">
+                    <lucide-angular name="check" [size]="16" class="flex"></lucide-angular>{{ a === 'cese' ? 'Registrar cese' : 'Guardar' }}
                   </button>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="flex flex-none flex-col border-b border-(--line2) px-4 py-1">
+              <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 py-[.375rem]">
+                <span class="text-[.8125rem] text-muted-foreground">Subcartera</span>
+                <div class="flex min-w-0 flex-col items-start gap-[.0625rem] text-[.8125rem] font-semibold text-foreground">
+                  <span class="inline-flex items-center gap-[.4375rem] whitespace-nowrap"><i class="block size-2 flex-none rounded-full" [style.background]="tonoDe(p)"></i>{{ p.subcartera | nombrePropio }}</span>
+                  <small class="ml-[.9375rem] text-[.6875rem] font-medium text-muted-foreground">{{ clienteCorto(p) }}</small>
+                </div>
+                @if (!ces) { <button type="button" [class]="MINI" (click)="abrirAccion(p, 'sub')">Cambiar</button> }
+              </div>
+              <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 border-t border-(--line2) py-[.375rem]">
+                <span class="text-[.8125rem] text-muted-foreground">Modalidad</span>
+                <div class="flex min-w-0 flex-col items-start"><span [class]="modalidadDe(p) === 'TELETRABAJO' ? PILL.info : PILL.neu">{{ nombreModalidad(modalidadDe(p)) }}</span></div>
+                @if (!ces) { <button type="button" [class]="MINI" (click)="abrirAccion(p, 'mod')">Cambiar</button> }
+              </div>
+              <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 border-t border-(--line2) py-[.375rem]">
+                <span class="text-[.8125rem] text-muted-foreground">Estado</span>
+                <div class="flex min-w-0 flex-col items-start">
+                  @if (ces) { <span [class]="PILL.neu">Cesado el {{ dma(p.fechaCese).slice(0, 5) }}</span> }
+                  @else if (p.fechaCese) { <span [class]="PILL.am">Cesa el {{ dma(p.fechaCese).slice(0, 5) }}</span> }
+                  @else { <span [class]="PILL.ok">Activo</span> }
+                </div>
+                @if (!p.fechaCese) { <button type="button" [class]="MINI_PELIGRO" (click)="abrirAccion(p, 'cese')">Registrar cese</button> }
+              </div>
+            </div>
+            <div class="mx-4 mt-[.875rem] flex flex-none items-center gap-2">
+              <div class="grid flex-1 grid-cols-2 gap-[.1875rem] rounded-[.5rem] bg-muted p-[.1875rem]" role="group">
+                @for (s of SECCIONES; track s.clave) {
+                  <button type="button" [attr.aria-pressed]="seccion() === s.clave" (click)="seccion.set(s.clave)"
+                          class="cursor-pointer rounded-[.375rem] border-0! bg-transparent px-2 py-[.375rem] [font-family:inherit] text-[.8125rem] font-medium text-(--ink2) aria-pressed:bg-(--seg-activo)! aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(0_0_0/.08)]">{{ s.texto }}</button>
                 }
-              </nav>
+              </div>
             </div>
-            <div [class]="estilos.panel">
-              <table class="w-full border-collapse">
-                <caption class="sr-only">Personal registrado</caption>
-                <thead class="border-b border-[#e6e9ee] dark:border-slate-800">
-                  <tr>
-                    <th scope="col" [class]="estilos.th">Nombre</th>
-                    <th scope="col" [class]="estilos.th">Subcartera</th>
-                    <th scope="col" [class]="estilos.th">Fecha de ingreso</th>
-                    <th scope="col" [class]="estilos.th">Antigüedad</th>
-                    <th scope="col" [class]="estilos.th">Usuario de Cashi</th>
-                    <th scope="col" [class]="estilos.th">Móvil</th>
-                    <th scope="col" [class]="estilos.th">Estado</th>
-                    <th scope="col" [class]="estilos.th"><span class="sr-only">Acciones</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (p of visibles(); track p.id) {
-                    <tr class="border-b border-[#f1f3f6] last:border-0 hover:bg-[#f4f6f9] dark:border-slate-800 dark:hover:bg-slate-800/60" [class.cesado]="cesado(p)">
-                      <td [class]="estilos.td">
-                        <span class="persona-celda"><strong class="font-semibold">{{ nombreLista(p) }}</strong>
-                          <small>{{ p.numeroDocumento ? p.tipoDocumento + ' ' + p.numeroDocumento : 'Sin documento' }}</small></span>
-                      </td>
-                      <td [class]="estilos.td">{{ p.subcartera ?? '—' }}</td>
-                      <td [class]="estilos.td">{{ dma(p.fechaIngreso) }}</td>
-                      <td [class]="estilos.td">{{ antiguedad(p) }}</td>
-                      <td [class]="estilos.td">
-                        @if (p.usuario) { <span class="usuario-cashi">{{ p.usuario }}</span> } @else { <span class="sin-usuario">Sin vincular</span> }
-                      </td>
-                      <td [class]="estilos.td">{{ p.telefonoMovil ?? '—' }}</td>
-                      <td [class]="estilos.td">
-                        @if (cesado(p)) { <span [class]="PASTILLA.neutro">Cesado {{ dma(p.fechaCese).slice(0, 5) }}</span> }
-                        @else if (p.fechaCese) { <span [class]="PASTILLA.tarde">Cesa {{ dma(p.fechaCese).slice(0, 5) }}</span> }
-                        @else { <span [class]="PASTILLA.ok">Activo</span> }
-                      </td>
-                      <td [class]="estilos.td + ' accion w-[1%] text-right'">
-                        <button type="button" [class]="estilos.botonChico" (click)="verFicha(p)">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                          Ver ficha
-                        </button>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr><td colspan="8" class="px-4 py-14 text-center">
-                      <strong class="block text-[13.5px]">Sin personal con ese filtro</strong>
-                      <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Cambia la subcartera o la búsqueda.</span>
-                    </td></tr>
+            <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-3 pb-4">
+              @if (seccion() === 'historial') {
+                <ol class="relative m-0 flex list-none flex-col gap-3 py-0 pr-0 pl-4 before:absolute before:top-[.375rem] before:bottom-[.375rem] before:left-1 before:w-px before:bg-border before:content-['']">
+                  @for (m of p.movimientos; track $index) {
+                    <li class="relative grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 text-[.8125rem] before:absolute before:top-[.3125rem] before:-left-4 before:size-[.5625rem] before:rounded-full before:border-2 before:border-solid before:content-['']"
+                        [class]="m.tipo === 'ingreso' ? 'before:border-(--ok-pt) before:bg-(--ok-pt)' : m.tipo === 'cese' ? 'before:border-(--ro-pt) before:bg-card' : 'before:border-muted-foreground before:bg-card'">
+                      <time class="text-[.75rem] text-muted-foreground">{{ dma(m.fecha) }}</time>
+                      <div><span class="block font-semibold text-foreground">{{ m.titulo }}</span><small class="block text-[.75rem] text-muted-foreground">{{ m.detalle }}</small></div>
+                    </li>
                   }
-                </tbody>
-              </table>
-              <app-paginador [total]="lista().length" [pagina]="pagina()" [porPagina]="porPagina" (cambiar)="pagina.set($event)" />
+                </ol>
+              } @else {
+                <div class="flex flex-col">
+                  @for (d of datosDe(p); track d[0]; let primero = $first) {
+                    <div class="flex justify-between gap-3 py-[.4375rem] text-[.8125rem]" [class]="primero ? '' : 'border-t border-(--line2)'">
+                      <span class="text-muted-foreground">{{ d[0] }}</span><span class="text-right font-semibold text-foreground">{{ d[1] }}</span>
+                    </div>
+                  }
+                </div>
+                <div class="flex justify-end pt-3">
+                  <button type="button" [class]="MINI" (click)="abrirAccion(p, 'datos')"><lucide-angular name="pencil" [size]="16" class="flex"></lucide-angular>Editar datos</button>
+                </div>
+              }
             </div>
-            <p class="nota-pie">Sin usuario de Cashi no sale en el reporte de asistencia.</p>
-          </div>
-        }
-      </div>
+          }
+        </section>
+      }
     </div>
 
-    @if (tip(); as t) {
-      <div class="tip-avatar" aria-hidden="true" [style.left.px]="t.x" [style.top.px]="t.y" [style.--tono-tip]="t.tono">
-        <strong>{{ t.nombre }}</strong><span><i></i>{{ t.detalle }}</span>
+    <div appTarjeta [class]="BARRA">
+      @if (nuevo()) {
+        <span [class]="errorForm() ? BARRA_ESTADO_MAL : BARRA_ESTADO">{{ errorForm() || 'Los campos con * son obligatorios' }}</span>
+        <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="cancelarNuevo()">Cancelar</button>
+        <button type="button" appBoton class="px-4!" [disabled]="guardando()" (click)="registrar()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Registrar</button>
+      } @else {
+        <span [class]="BARRA_ESTADO">{{ activos().length === 1 ? '1 persona activa' : activos().length + ' personas activas' }}{{ sinUsuario() ? ', ' + sinUsuario() + ' sin usuario de Cashi' : '' }}</span>
+        <button type="button" appBoton class="px-4!" (click)="abrirNuevo()">Registrar persona</button>
+      }
+    </div>
+
+    <!-- Campos compartidos por el registro y la edición -->
+    <ng-template #camposPersonales>
+      <div [class]="CAMPO">
+        <label [for]="ids.apellidos" [class]="ETIQUETA">Apellidos <span class="text-(--ro)">*</span></label>
+        <input [id]="ids.apellidos" autocomplete="off" [class]="ENTRADA" [value]="form().apellidos" (input)="poner('apellidos', $any($event.target).value)">
       </div>
-    }
-
-    @if (modal()) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrar()"></div>
-    }
-
-    <!-- Ficha de la persona -->
-    @if (modal() === 'ficha' && actual(); as p) {
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div [class]="caja + ' caja-ficha'" role="dialog" aria-modal="true" aria-labelledby="titulo-ficha">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div class="quien-ficha">
-              <span class="iniciales-ficha" [style.--tono]="tonoFicha(p)" [innerHTML]="avatar(p)"></span>
-              <div>
-                <h2 id="titulo-ficha" class="!m-0 text-[16px] font-extrabold">{{ p.nombres }} {{ p.apellidos }}</h2>
-                <p class="mt-0.5 text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                  {{ p.numeroDocumento ? p.tipoDocumento + ' ' + p.numeroDocumento : 'Sin documento' }} · {{ p.subcartera ?? '—' }}</p>
-              </div>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrar()" aria-label="Cerrar" id="cerrar-ficha">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-          <div class="tabs-ficha">
-            <nav [class]="estilos.segmentos" aria-label="Secciones de la ficha">
-              @for (s of SECCIONES; track s.clave) {
-                <button type="button" [class]="estilos.tab + ' ' + (seccion() === s.clave ? estilos.tabActiva : estilos.tabApagada)"
-                        [attr.aria-current]="seccion() === s.clave ? 'page' : null" (click)="seccion.set(s.clave)">{{ s.texto }}</button>
-              }
-            </nav>
-          </div>
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            @switch (seccion()) {
-              @case ('laboral') {
-                <div class="datos-ficha" [style.--tono]="tonoFicha(p)">
-                  <div class="dato-ficha"><small>Fecha de ingreso</small><strong>{{ dma(p.fechaIngreso) }}</strong></div>
-                  <div class="dato-ficha"><small>Antigüedad</small><strong>{{ antiguedad(p) }}</strong></div>
-                  <div class="dato-ficha" [class.sin-usu]="!p.usuario"><small>Usuario de Cashi</small><strong>{{ p.usuario ?? 'Sin vincular' }}</strong></div>
-                </div>
-                <div class="bloque-ficha">
-                  <dl class="ficha-datos">
-                    <dt>Estado</dt>
-                    <dd>
-                      @if (cesado(p)) { <span [class]="PASTILLA.neutro">Cesado</span> }
-                      @else if (p.fechaCese) { <span [class]="PASTILLA.tarde">Cesa</span> }
-                      @else { <span [class]="PASTILLA.ok">Activo</span> }
-                    </dd>
-                    <dt>Ámbito</dt>
-                    <dd><span class="ambito-ficha">{{ p.cliente ?? '—' }} <span>›</span> {{ p.cartera ?? '—' }} <span>›</span> {{ p.subcartera ?? '—' }}</span></dd>
-                    @if (p.fechaCese) {
-                      <dt>Último día</dt><dd>{{ dma(p.fechaCese) }} · {{ p.motivoCese }}</dd>
-                    }
-                  </dl>
-                </div>
-                <div class="bloque-ficha">
-                  <h4>Últimos movimientos</h4>
-                  <ng-container *ngTemplateOutlet="lineaTiempo; context: { $implicit: p.movimientos.slice(0, 3) }" />
-                </div>
-                @if (!p.usuario) {
-                  <p class="efecto">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-                    <span>Sin usuario de Cashi no sale en el reporte de asistencia.</span>
-                  </p>
-                }
-              }
-              @case ('datos') {
-                <div class="bloque-ficha">
-                  <h4>Datos personales</h4>
-                  <dl class="campos-ficha">
-                    <div><dt>Apellidos</dt><dd>{{ p.apellidos }}</dd></div>
-                    <div><dt>Nombres</dt><dd>{{ p.nombres }}</dd></div>
-                    <div><dt>Documento</dt><dd>@if (p.numeroDocumento) { {{ p.tipoDocumento }} {{ p.numeroDocumento }} } @else { <span class="raya">—</span> }</dd></div>
-                    <div><dt>Nacimiento</dt><dd>@if (p.fechaNacimiento) { {{ dma(p.fechaNacimiento) }} } @else { <span class="raya">—</span> }</dd></div>
-                    <div><dt>Nacionalidad</dt><dd>{{ p.nacionalidad ?? '—' }}</dd></div>
-                    <div><dt>Estado civil</dt><dd>{{ p.estadoCivil ?? '—' }}</dd></div>
-                  </dl>
-                </div>
-                <div class="bloque-ficha">
-                  <h4>Contacto</h4>
-                  <dl class="campos-ficha">
-                    <div><dt>Móvil</dt><dd>{{ p.telefonoMovil ?? '—' }}</dd></div>
-                    <div><dt>Teléfono fijo</dt><dd>@if (p.telefonoFijo) { {{ p.telefonoFijo }} } @else { <span class="raya">—</span> }</dd></div>
-                    <div><dt>Correo</dt><dd>@if (p.correo) { {{ p.correo }} } @else { <span class="raya">—</span> }</dd></div>
-                  </dl>
-                </div>
-                <div class="bloque-ficha">
-                  <h4>Domicilio</h4>
-                  <dl class="campos-ficha">
-                    <div class="ancho"><dt>Dirección</dt><dd>@if (p.direccion) { {{ p.direccion }} } @else { <span class="raya">—</span> }</dd></div>
-                    <div><dt>Distrito</dt><dd>@if (p.distrito) { {{ p.distrito }} } @else { <span class="raya">—</span> }</dd></div>
-                  </dl>
-                </div>
-              }
-              @case ('historial') {
-                <ng-container *ngTemplateOutlet="lineaTiempo; context: { $implicit: p.movimientos }" />
-              }
-            }
-          </div>
-          <footer class="flex flex-wrap justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="abrirForm(p)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              Editar datos
-            </button>
-            @if (!p.fechaCese) {
-              <button type="button" [class]="estilos.botonSecundario" (click)="abrirSub(p)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
-                Cambiar subcartera
-              </button>
-              <button type="button" [class]="estilos.botonPrimario" (click)="abrirCese(p)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-                Registrar cese
-              </button>
-            }
-          </footer>
-        </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.nombres" [class]="ETIQUETA">Nombres <span class="text-(--ro)">*</span></label>
+        <input [id]="ids.nombres" autocomplete="off" [class]="ENTRADA" [value]="form().nombres" (input)="poner('nombres', $any($event.target).value)">
       </div>
-    }
-
-    <ng-template #lineaTiempo let-movs>
-      <ol class="linea-tiempo">
-        @for (m of movs; track $index) {
-          <li [class]="m.tipo"><span class="fecha-mov">{{ dma(m.fecha) }}</span>
-            <span class="detalle-mov"><strong>{{ m.titulo }}</strong><span>{{ m.detalle }}</span></span></li>
-        }
-      </ol>
-    </ng-template>
-
-    <!-- Registrar / editar personal -->
-    @if (modal() === 'form') {
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div [class]="caja + ' w-[min(100%,680px)]'" role="dialog" aria-modal="true" aria-labelledby="titulo-form">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-form" class="!m-0 text-[15px] font-extrabold">{{ editando() ? 'Editar datos' : 'Registrar personal' }}</h2>
-              <p class="mt-0.5 text-[12.5px] text-[#5f6c80] dark:text-slate-400">Los campos con <span class="obligatorio">*</span> son obligatorios</p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrar()" aria-label="Cerrar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-          <form class="flex flex-1 flex-col gap-[18px] overflow-y-auto px-5 py-4" novalidate (ngSubmit)="guardarForm()" id="form-personal">
-            @if (resumenErrores().length) {
-              <div class="resumen-errores" tabindex="-1" id="resumen-errores">
-                <strong>Revisa {{ resumenErrores().length }} {{ resumenErrores().length === 1 ? 'campo' : 'campos' }}</strong>
-                <ul>@for (e of resumenErrores(); track e.campo) { <li><a href="#" (click)="$event.preventDefault(); enfocar(e.campo)">{{ e.mensaje }}</a></li> }</ul>
-              </div>
-            }
-            @if (errorForm()) { <div class="resumen-errores">{{ errorForm() }}</div> }
-
-            <section class="seccion-form">
-              <h4>Datos personales</h4>
-              <div class="campos-2">
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'apellidos', etiqueta: 'Apellidos', req: true, auto: 'family-name' }" />
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'nombres', etiqueta: 'Nombres', req: true, auto: 'given-name' }" />
-              </div>
-              <div class="campos-3">
-                <div class="campo-grupo">
-                  <label [class]="estilos.etiqueta" for="p-tipodoc">Documento</label>
-                  <select id="p-tipodoc" [class]="estilos.campo" [ngModel]="form().tipoDocumento" name="tipoDocumento"
-                          (ngModelChange)="poner('tipoDocumento', $event)">
-                    <option value="DNI">DNI</option><option value="CE">CE</option>
-                  </select>
-                </div>
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'numeroDocumento', etiqueta: 'Número', req: true, modo: 'numeric' }" />
-              </div>
-              <div class="campos-2">
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', req: true, tipo: 'date' }" />
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'nacionalidad', etiqueta: 'Nacionalidad', lista: 'nacionalidades' }" />
-                <datalist id="nacionalidades">@for (n of NACIONALIDADES; track n) { <option [value]="n"></option> }</datalist>
-              </div>
-              <div class="campos-2">
-                <div class="campo-grupo">
-                  <label [class]="estilos.etiqueta" for="p-civil">Estado civil</label>
-                  <select id="p-civil" [class]="estilos.campo" [ngModel]="form().estadoCivil" name="estadoCivil" (ngModelChange)="poner('estadoCivil', $event)">
-                    @for (e of ESTADOS_CIVILES; track e) { <option [value]="e">{{ e }}</option> }
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            <section class="seccion-form">
-              <h4>Contacto</h4>
-              <div class="campos-2">
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'telefonoMovil', etiqueta: 'Móvil', req: true, tipo: 'tel', modo: 'numeric', ph: '9XXXXXXXX' }" />
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'telefonoFijo', etiqueta: 'Teléfono fijo', tipo: 'tel', modo: 'numeric' }" />
-              </div>
-              <ng-container *ngTemplateOutlet="texto; context: { campo: 'correo', etiqueta: 'Correo', tipo: 'email', auto: 'email' }" />
-            </section>
-
-            <section class="seccion-form">
-              <h4>Domicilio</h4>
-              <ng-container *ngTemplateOutlet="texto; context: { campo: 'direccion', etiqueta: 'Dirección', auto: 'street-address' }" />
-              <div class="campos-2">
-                <ng-container *ngTemplateOutlet="texto; context: { campo: 'distrito', etiqueta: 'Distrito', lista: 'distritos' }" />
-                <datalist id="distritos">@for (d of DISTRITOS; track d) { <option [value]="d"></option> }</datalist>
-              </div>
-            </section>
-
-            <section class="seccion-form">
-              <h4>Datos laborales</h4>
-              <div class="campo-grupo">
-                <span [class]="estilos.etiqueta">Se registra en</span>
-                <p class="ambito-form">{{ ambitoForm()[0] }} <span>›</span> {{ ambitoForm()[1] }} <span>›</span> {{ ambitoForm()[2] }}</p>
-              </div>
-              <div class="campos-2">
-                <div class="campo-grupo" [class.con-error]="errores()['fechaIngreso']">
-                  <label [class]="estilos.etiqueta" for="p-ingreso">Fecha de ingreso<span class="obligatorio">*</span></label>
-                  <input id="p-ingreso" type="date" [class]="estilos.campo" name="fechaIngreso" [ngModel]="form().fechaIngreso"
-                         (ngModelChange)="poner('fechaIngreso', $event)" (blur)="validar('fechaIngreso')"
-                         [attr.aria-invalid]="errores()['fechaIngreso'] ? true : null" [attr.aria-describedby]="errores()['fechaIngreso'] ? 'err-p-ingreso' : 'ayuda-ingreso'">
-                  @if (errores()['fechaIngreso']; as e) { <p class="error-campo" id="err-p-ingreso">{{ e }}</p> }
-                  @else { <p class="ayuda" id="ayuda-ingreso">Su primer día de trabajo. Desde aquí cuenta en asistencia.</p> }
-                </div>
-              </div>
-              <div class="campo-grupo">
-                <label [class]="estilos.etiqueta" for="p-usuario">Usuario de Cashi</label>
-                <select id="p-usuario" [class]="estilos.campo" name="idUsuario" [ngModel]="form().idUsuario" (ngModelChange)="poner('idUsuario', $event)">
-                  <option [ngValue]="null">Vincular después</option>
-                  @for (u of usuariosDelForm(); track u.idUsuario) {
-                    <option [ngValue]="u.idUsuario">{{ u.usuario }}{{ u.nombre ? ' · ' + u.nombre : '' }}</option>
-                  }
-                </select>
-                <p class="ayuda">Con él se leen sus marcas. Si todavía no tiene, se vincula después.</p>
-              </div>
-            </section>
-          </form>
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cancelar</button>
-            <button type="submit" form="form-personal" [class]="estilos.botonPrimario" [disabled]="guardando()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-              {{ editando() ? 'Guardar cambios' : 'Registrar' }}
-            </button>
-          </footer>
-        </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.tipoDocumento" [class]="ETIQUETA">Documento</label>
+        <select [id]="ids.tipoDocumento" [class]="LISTA" (change)="poner('tipoDocumento', $any($event.target).value)">
+          <option value="DNI" [selected]="form().tipoDocumento === 'DNI'">DNI</option>
+          <option value="CE" [selected]="form().tipoDocumento === 'CE'">CE</option>
+        </select>
       </div>
-    }
-
-    <ng-template #texto let-campo="campo" let-etiqueta="etiqueta" let-req="req" let-tipo="tipo" let-modo="modo" let-auto="auto" let-ph="ph" let-lista="lista">
-      <div class="campo-grupo" [class.con-error]="errorDe(campo)">
-        <label [class]="estilos.etiqueta" [attr.for]="idDe(campo)">{{ etiqueta }}@if (req) {<span class="obligatorio">*</span>}</label>
-        <input [id]="idDe(campo)" [type]="tipo ?? 'text'" [class]="estilos.campo" [attr.inputmode]="modo ?? null" [attr.autocomplete]="auto ?? null"
-               [attr.placeholder]="ph ?? null" [attr.list]="lista ?? null" [name]="campo" [ngModel]="valor(campo)"
-               (ngModelChange)="poner(campo, $event)" (blur)="validar(campo)"
-               [attr.aria-invalid]="errorDe(campo) ? true : null" [attr.aria-describedby]="errorDe(campo) ? 'err-' + idDe(campo) : null">
-        @if (errorDe(campo); as e) { <p class="error-campo" [id]="'err-' + idDe(campo)">{{ e }}</p> }
+      <div [class]="CAMPO">
+        <label [for]="ids.numeroDocumento" [class]="ETIQUETA">Número <span class="text-(--ro)">*</span></label>
+        <input [id]="ids.numeroDocumento" inputmode="numeric" [attr.maxlength]="form().tipoDocumento === 'DNI' ? 8 : 12" [class]="ENTRADA" [value]="form().numeroDocumento" (input)="poner('numeroDocumento', $any($event.target).value)">
+      </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.fechaNacimiento" [class]="ETIQUETA">Fecha de nacimiento <span class="text-(--ro)">*</span></label>
+        <input [id]="ids.fechaNacimiento" type="date" [class]="ENTRADA" [value]="form().fechaNacimiento" (change)="poner('fechaNacimiento', $any($event.target).value)">
+      </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.nacionalidad" [class]="ETIQUETA">Nacionalidad</label>
+        <input [id]="ids.nacionalidad" [class]="ENTRADA" [value]="form().nacionalidad" (input)="poner('nacionalidad', $any($event.target).value)">
+      </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.estadoCivil" [class]="ETIQUETA">Estado civil</label>
+        <select [id]="ids.estadoCivil" [class]="LISTA" (change)="poner('estadoCivil', $any($event.target).value)">
+          @for (e of ESTADOS_CIVILES; track e) { <option [value]="e" [selected]="e === form().estadoCivil">{{ e }}</option> }
+        </select>
       </div>
     </ng-template>
-
-    <!-- Registrar cese -->
-    @if (modal() === 'cese' && actual(); as p) {
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div [class]="caja + ' w-[min(100%,440px)]'" role="dialog" aria-modal="true" aria-labelledby="titulo-cese">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-cese" class="!m-0 text-[15px] font-extrabold">Registrar cese</h2>
-              <p class="mt-0.5 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ p.nombres }} {{ p.apellidos }} · {{ p.subcartera }}</p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrar()" aria-label="Cerrar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            <div class="campo-grupo">
-              <label [class]="estilos.etiqueta" for="c-fecha">Último día de trabajo</label>
-              <input id="c-fecha" type="date" [class]="estilos.campo" [ngModel]="ceseFecha()" (ngModelChange)="ceseFecha.set($event); errorModal.set('')">
-            </div>
-            <div class="campo-grupo">
-              <label [class]="estilos.etiqueta" for="c-motivo">Motivo</label>
-              <select id="c-motivo" [class]="estilos.campo" [ngModel]="ceseMotivo()" (ngModelChange)="ceseMotivo.set($event)">
-                @for (m of MOTIVOS_CESE; track m) { <option [value]="m">{{ m }}</option> }
-              </select>
-            </div>
-            <div class="campo-grupo">
-              <label [class]="estilos.etiqueta" for="c-comentario">Comentario</label>
-              <input id="c-comentario" type="text" maxlength="300" [class]="estilos.campo" [ngModel]="ceseComentario()" (ngModelChange)="ceseComentario.set($event)">
-            </div>
-            <p class="efecto">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-              <span>Sale del reporte de asistencia después de su último día. Sus semanas anteriores no cambian.</span>
-            </p>
-            @if (errorModal()) { <p class="error-campo">{{ errorModal() }}</p> }
-          </div>
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="guardarCese(p)" [disabled]="guardando()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-              Registrar cese
-            </button>
-          </footer>
-        </div>
+    <ng-template #camposContacto>
+      <div [class]="CAMPO">
+        <label [for]="ids.telefonoMovil" [class]="ETIQUETA">Móvil <span class="text-(--ro)">*</span></label>
+        <input [id]="ids.telefonoMovil" inputmode="numeric" maxlength="9" [class]="ENTRADA" [value]="form().telefonoMovil" (input)="poner('telefonoMovil', $any($event.target).value)">
       </div>
-    }
-
-    <!-- Cambiar subcartera -->
-    @if (modal() === 'sub' && actual(); as p) {
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div [class]="caja + ' w-[min(100%,440px)]'" role="dialog" aria-modal="true" aria-labelledby="titulo-sub">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-sub" class="!m-0 text-[15px] font-extrabold">Cambiar subcartera</h2>
-              <p class="mt-0.5 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ p.nombres }} {{ p.apellidos }} · hoy en {{ p.subcartera }}</p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrar()" aria-label="Cerrar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            <div class="campos-2">
-              <div class="campo-grupo">
-                <label [class]="estilos.etiqueta" for="s-cartera">Cartera</label>
-                <select id="s-cartera" [class]="estilos.campo" [ngModel]="subCartera()" (ngModelChange)="elegirCarteraSub($event)">
-                  @for (c of subCarteras(); track c.id) { <option [ngValue]="c.id">{{ c.portfolioName }}</option> }
-                </select>
-              </div>
-              <div class="campo-grupo">
-                <label [class]="estilos.etiqueta" for="s-nueva">Nueva subcartera</label>
-                <select id="s-nueva" [class]="estilos.campo" [ngModel]="subNueva()" (ngModelChange)="subNueva.set($event); errorModal.set('')">
-                  @for (s of subSubcarteras(); track s.id) { <option [ngValue]="s.id">{{ s.subPortfolioName }}</option> }
-                </select>
-              </div>
-            </div>
-            <div class="campo-grupo">
-              <label [class]="estilos.etiqueta" for="s-desde">Desde</label>
-              <input id="s-desde" type="date" [class]="estilos.campo + ' !max-w-[200px]'" [ngModel]="subDesde()" (ngModelChange)="subDesde.set($event); errorModal.set('')">
-            </div>
-            <div class="campo-grupo">
-              <label [class]="estilos.etiqueta" for="s-motivo">Motivo</label>
-              <input id="s-motivo" type="text" maxlength="300" placeholder="Ej.: pasa a reforzar Tramo 5" [class]="estilos.campo"
-                     [ngModel]="subMotivo()" (ngModelChange)="subMotivo.set($event); errorModal.set('')">
-            </div>
-            <p class="efecto">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-              <span>Desde esa fecha usa el horario, las reglas y el calendario de la nueva subcartera.</span>
-            </p>
-            @if (errorModal()) { <p class="error-campo">{{ errorModal() }}</p> }
-          </div>
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="cerrar()">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="guardarSub(p)" [disabled]="guardando()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-              Guardar cambio
-            </button>
-          </footer>
-        </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.telefonoFijo" [class]="ETIQUETA">Teléfono fijo</label>
+        <input [id]="ids.telefonoFijo" [class]="ENTRADA" [value]="form().telefonoFijo" (input)="poner('telefonoFijo', $any($event.target).value)">
       </div>
-    }
+      <div [class]="CAMPO">
+        <label [for]="ids.correo" [class]="ETIQUETA">Correo</label>
+        <input [id]="ids.correo" type="email" [class]="ENTRADA" [value]="form().correo" (input)="poner('correo', $any($event.target).value)">
+      </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.direccion" [class]="ETIQUETA">Dirección</label>
+        <input [id]="ids.direccion" [class]="ENTRADA" [value]="form().direccion" (input)="poner('direccion', $any($event.target).value)">
+      </div>
+      <div [class]="CAMPO">
+        <label [for]="ids.distrito" [class]="ETIQUETA">Distrito</label>
+        <input [id]="ids.distrito" [class]="ENTRADA" [value]="form().distrito" (input)="poner('distrito', $any($event.target).value)">
+      </div>
+    </ng-template>
+    <ng-template #campoUsuario>
+      <select [id]="ids.idUsuario" [class]="LISTA" (change)="poner('idUsuario', +$any($event.target).value || null)">
+        <option value="" [selected]="!form().idUsuario">Sin vincular</option>
+        @for (u of usuariosDelForm(); track u.idUsuario) { <option [value]="u.idUsuario" [selected]="u.idUsuario === form().idUsuario">{{ u.usuario }}</option> }
+      </select>
+    </ng-template>
   `
 })
-export class PersonalComponent implements OnInit {
+export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
   private readonly servicio = inject(AsistenciaService);
   private readonly clientesServicio = inject(TenantService);
   private readonly carterasServicio = inject(PortfolioService);
   private readonly toast = inject(ToastService);
   private readonly sanitizer = inject(DomSanitizer);
 
-  protected readonly estilos = ESTILOS;
-  protected readonly areas = AREAS;
-  protected readonly porPagina = POR_PAGINA;
+  protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly REJILLA_FICHA = REJILLA_FICHA;
+  protected readonly PRINCIPAL = PRINCIPAL; protected readonly CABECERA = CABECERA; protected readonly CABECERA_TEXTO = CABECERA_TEXTO;
+  protected readonly TITULO = TITULO; protected readonly SUBTITULO = SUBTITULO; protected readonly FILTROS = FILTROS; protected readonly CAMPO = CAMPO;
+  protected readonly ETIQUETA = ETIQUETA; protected readonly LISTA = LISTA; protected readonly ENTRADA = ENTRADA; protected readonly BUSCAR = BUSCAR;
+  protected readonly BUSCAR_ICONO = BUSCAR_ICONO; protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; protected readonly HERRAMIENTAS = HERRAMIENTAS;
+  protected readonly ZONA = ZONA; protected readonly VACIO = VACIO; protected readonly TABLA_CAJA = TABLA_CAJA; protected readonly TABLA = TABLA;
+  protected readonly THEAD = THEAD; protected readonly TR = TR; protected readonly TH = TH; protected readonly TD = TD; protected readonly TD_1 = TD_1;
+  protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly BARRA = BARRA;
+  protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_MAL = BARRA_ESTADO_MAL;
+  protected readonly AVATAR = AVATAR; protected readonly AVATAR_SIN = AVATAR_SIN; protected readonly AVATAR_BOTON = AVATAR_BOTON;
+  protected readonly MINI = MINI; protected readonly MINI_ICONO = MINI_ICONO; protected readonly MINI_PELIGRO = MINI_PELIGRO; protected readonly VOLVER = VOLVER; protected readonly USUARIO = USUARIO;
+  protected readonly USUARIO_SIN = USUARIO_SIN; protected readonly TR_ABRE = TR_ABRE; protected readonly TR_ELEGIDA = TR_ELEGIDA;
+  protected readonly SECCION_TITULO = SECCION_TITULO; protected readonly CAMPOS = CAMPOS; protected readonly AYUDA = AYUDA;
+  protected readonly NOTA = NOTA; protected readonly ERROR = ERROR;
+  /** Secundario en oscuro: el gris de los botones, como en el artifact. */
+  protected readonly BOTON_SEC = 'dark:bg-muted dark:hover:bg-border';
+  protected readonly ANCHO_TARJETA = ANCHO_TARJETA_REM;
   protected readonly ids = CAMPOS_ID;
   protected readonly MOTIVOS_CESE = MOTIVOS_CESE;
   protected readonly ESTADOS_CIVILES = ESTADOS_CIVILES;
-  protected readonly NACIONALIDADES = NACIONALIDADES;
-  protected readonly DISTRITOS = DISTRITOS;
-  protected readonly ESTADOS: { clave: Estado; texto: string }[] = [
-    { clave: 'ACTIVO', texto: 'Activos' }, { clave: 'CESADO', texto: 'Cesados' }, { clave: '', texto: 'Todos' }
-  ];
-  protected readonly SECCIONES: { clave: Seccion; texto: string }[] = [
-    { clave: 'laboral', texto: 'Laboral' }, { clave: 'datos', texto: 'Datos personales' }, { clave: 'historial', texto: 'Historial' }
-  ];
-  protected readonly PASTILLA = {
-    ok: 'inline-flex items-center rounded-full bg-[#e8f5ec] px-[9px] py-[2px] text-[11.5px] font-bold text-[#166534] dark:bg-green-950/50 dark:text-green-300',
-    tarde: 'inline-flex items-center rounded-full bg-[#fef6e0] px-[9px] py-[2px] text-[11.5px] font-bold text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300',
-    neutro: 'inline-flex items-center rounded-full bg-[#f1f3f6] px-[9px] py-[2px] text-[11.5px] font-bold text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400'
-  };
-  protected readonly caja = 'pointer-events-auto flex max-h-[88vh] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900';
+  protected readonly MODALIDADES: Modalidad[] = ['PRESENCIAL', 'TELETRABAJO'];
+  protected readonly SECCIONES: { clave: Seccion; texto: string }[] = [{ clave: 'datos', texto: 'Datos personales' }, { clave: 'historial', texto: 'Historial' }];
+  protected readonly TITULO_ACCION: Record<Exclude<Accion, null>, string> = { datos: 'Editar datos', sub: 'Cambiar subcartera', mod: 'Cambiar modalidad', cese: 'Registrar cese' };
 
   /** Los avatares, ya confiados: son SVG propios, no vienen del usuario. */
   private readonly avatares: SafeHtml[] = AVATARES_PERSONAL.map(a =>
@@ -816,99 +586,56 @@ export class PersonalComponent implements OnInit {
   readonly idSubcartera = signal<number | null>(null);
   readonly busqueda = signal('');
   readonly estado = signal<Estado>('ACTIVO');
+  /** Subcartera elegida en las tarjetas de arriba (filtro de la lista). */
+  readonly grupo = signal<number | null>(null);
   readonly pagina = signal(1);
+  readonly porPagina = signal(8);
 
-  readonly modal = signal<Modal>(null);
-  readonly idActual = signal<number | null>(null);
-  readonly actual = computed(() => this.fichas().find(f => f.id === this.idActual()) ?? null);
-  readonly seccion = signal<Seccion>('laboral');
-  readonly tip = signal<{ nombre: string; detalle: string; x: number; y: number; tono: string } | null>(null);
+  readonly abierta = signal<number | null>(null);
+  readonly elegida = computed(() => this.fichas().find(f => f.id === this.abierta()) ?? null);
+  /** La ficha del panel derecho: la elegida, salvo mientras se registra a alguien. */
+  readonly fichaPanel = computed(() => this.nuevo() ? null : this.elegida());
+  readonly seccion = signal<Seccion>('datos');
+  readonly accion = signal<Accion>(null);
+  readonly errorAccion = signal('');
 
-  // ---------- Filtros ----------
+  // Cambio de subcartera, modalidad y cese (comparten fecha y motivo).
+  readonly cambioSubcarteras = signal<SubPortfolio[]>([]);
+  readonly cambioSub = signal<number | null>(null);
+  readonly cambioModalidad = signal<Modalidad>('TELETRABAJO');
+  readonly cambioDesde = signal('');
+  readonly cambioMotivo = signal('');
+  readonly ceseMotivo = signal(MOTIVOS_CESE[0]);
 
-  private readonly delAmbito = computed(() => {
-    const cli = this.idCliente(), car = this.idCartera(), sub = this.idSubcartera();
-    const q = this.busqueda().trim().toLowerCase();
-    return this.fichas().filter(p => (!cli || p.idCliente === cli) && (!car || p.idCartera === car) && (!sub || p.idSubcartera === sub)
-      && (!q || this.nombreLista(p).toLowerCase().includes(q) || (p.numeroDocumento ?? '').includes(q)
-        || (p.usuario ?? '').toLowerCase().includes(q)))
-      .sort((a, b) => this.nombreLista(a).localeCompare(this.nombreLista(b)));
-  });
-  readonly activos = computed(() => this.delAmbito().filter(p => !this.cesado(p)));
-  readonly cesados = computed(() => this.delAmbito().filter(p => this.cesado(p)));
-  readonly lista = computed(() => {
-    const e = this.estado();
-    return e === 'ACTIVO' ? this.activos() : e === 'CESADO' ? this.cesados() : this.delAmbito();
-  });
-  readonly visibles = computed(() => {
-    const ini = (this.pagina() - 1) * POR_PAGINA;
-    return this.lista().slice(ini, ini + POR_PAGINA);
-  });
-  readonly resumen = computed(() => {
-    const a = this.activos().length, c = this.cesados().length;
-    const sin = this.activos().filter(p => !p.idUsuario).length;
-    return `${a} ${a === 1 ? 'activo' : 'activos'} · ${c} ${c === 1 ? 'cesado' : 'cesados'}`
-      + (sin ? ` · ${sin} sin usuario de Cashi` : '');
-  });
-  readonly grupos = computed<Grupo[]>(() => {
-    const porSub = new Map<number, Grupo>();
-    for (const p of this.activos()) {
-      if (p.idSubcartera == null) { continue; }
-      const g = porSub.get(p.idSubcartera) ?? { idSubcartera: p.idSubcartera, subcartera: p.subcartera ?? '—',
-        cartera: p.cartera ?? '', tono: tonoDe(p.subcartera), gente: [] };
-      g.gente.push(p);
-      porSub.set(p.idSubcartera, g);
-    }
-    return [...porSub.values()].sort((a, b) => b.gente.length - a.gente.length);
-  });
-  readonly haySinUsuario = computed(() => this.activos().some(p => !p.idUsuario));
-
-  // ---------- Formulario ----------
-
-  readonly editando = signal<FichaPersonal | null>(null);
+  // Registro y edición de datos.
+  readonly nuevo = signal<{ idCliente: number | null; idCartera: number | null; idSubcartera: number | null; modalidad: Modalidad } | null>(null);
+  readonly nCarteras = signal<Portfolio[]>([]);
+  readonly nSubcarteras = signal<SubPortfolio[]>([]);
   readonly form = signal<Form>(this.formVacio());
-  readonly errores = signal<Partial<Record<Campo, string>>>({});
-  readonly resumenErrores = signal<{ campo: Campo; mensaje: string }[]>([]);
   readonly errorForm = signal('');
   readonly usuariosLibres = signal<UsuarioLibre[]>([]);
   readonly usuariosDelForm = computed(() => {
-    const e = this.editando();
+    const p = this.accion() === 'datos' ? this.elegida() : null;
     const libres = this.usuariosLibres();
-    return e?.idUsuario && e.usuario && !libres.some(u => u.idUsuario === e.idUsuario)
-      ? [{ idUsuario: e.idUsuario, usuario: e.usuario, nombre: null }, ...libres] : libres;
-  });
-  readonly ambitoForm = computed(() => {
-    const e = this.editando();
-    if (e) { return [e.cliente ?? '—', e.cartera ?? '—', e.subcartera ?? '—']; }
-    const cli = this.clientes().find(c => c.id === this.idCliente());
-    return [cli ? (cli.businessName || cli.tenantName) : '—',
-      this.carteras().find(c => c.id === this.idCartera())?.portfolioName ?? '—',
-      this.subcarteras().find(s => s.id === this.idSubcartera())?.subPortfolioName ?? '—'];
+    return p?.idUsuario && p.usuario && !libres.some(u => u.idUsuario === p.idUsuario)
+      ? [{ idUsuario: p.idUsuario, usuario: p.usuario, nombre: null }, ...libres] : libres;
   });
 
-  // ---------- Cese y cambio de subcartera ----------
-
-  readonly errorModal = signal('');
-  readonly ceseFecha = signal('');
-  readonly ceseMotivo = signal(MOTIVOS_CESE[0]);
-  readonly ceseComentario = signal('');
-  readonly subCarteras = signal<Portfolio[]>([]);
-  readonly subSubcarteras = signal<SubPortfolio[]>([]);
-  readonly subCartera = signal<number | null>(null);
-  readonly subNueva = signal<number | null>(null);
-  readonly subDesde = signal('');
-  readonly subMotivo = signal('');
+  // Medidas: cuántas filas entran, si las tarjetas caben en una fila y cuántos avatares se ven por tarjeta.
+  @ViewChild('zona') private zona?: ElementRef<HTMLElement>;
+  @ViewChild('caja') private caja?: ElementRef<HTMLElement>;
+  @ViewChild('tarjetas') private tarjetas?: ElementRef<HTMLElement>;
+  readonly compacta = signal(false);
+  private readonly visibles = signal<Record<number, number>>({});
+  private observador?: ResizeObserver;
+  private observadas: Element[] = [];
+  private cuadro = 0;
 
   ngOnInit(): void {
     this.cargar();
-    // Sin filtrar por `isActive`: el cliente real y varias de sus carteras
-    // figuran como inactivos y la pantalla se quedaría vacía.
+    // Sin filtrar por `isActive`: el cliente real y varias de sus carteras figuran como inactivos.
     this.clientesServicio.getAllTenants().subscribe({
-      next: c => {
-        const ordenados = [...c].sort((a, b) => (a.businessName || a.tenantName).localeCompare(b.businessName || b.tenantName));
-        this.clientes.set(ordenados);
-        if (ordenados.length === 1) { this.elegirCliente(ordenados[0].id); }
-      },
+      next: c => this.clientes.set([...c].sort((a, b) => this.nombreCliente(a).localeCompare(this.nombreCliente(b)))),
       error: () => this.toast.error('No se pudieron cargar los clientes')
     });
   }
@@ -922,14 +649,61 @@ export class PersonalComponent implements OnInit {
     });
   }
 
-  @HostListener('window:scroll')
-  ocultarTip(): void {
-    this.tip.set(null);
+  ngAfterViewChecked(): void {
+    const vigiladas = [this.zona?.nativeElement, this.tarjetas?.nativeElement].filter((e): e is HTMLElement => !!e);
+    if (vigiladas.length !== this.observadas.length || vigiladas.some((e, i) => e !== this.observadas[i])) {
+      this.observador?.disconnect();
+      this.observadas = vigiladas;
+      this.observador = new ResizeObserver(() => this.medirLuego());
+      vigiladas.forEach(e => this.observador!.observe(e));
+    }
+    this.medirLuego();
+  }
+
+  ngOnDestroy(): void {
+    this.observador?.disconnect();
+    cancelAnimationFrame(this.cuadro);
+  }
+
+  /** Se mide después de pintar, cuando el alto y el ancho ya son los finales. */
+  private medirLuego(): void {
+    cancelAnimationFrame(this.cuadro);
+    this.cuadro = requestAnimationFrame(() => this.medir());
+  }
+
+  private medir(): void {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const fila = this.tarjetas?.nativeElement;
+    if (fila) {
+      const n = this.grupos().length, gap = .75 * rem;
+      const compacta = n > 1 && fila.clientWidth < n * ANCHO_TARJETA_REM * rem + (n - 1) * gap;
+      if (compacta !== this.compacta()) { this.compacta.set(compacta); return; }
+      // Avatares que entran en una línea; si no entran todos, el último lugar es para «+N».
+      const vis: Record<number, number> = {};
+      fila.querySelectorAll<HTMLElement>('[data-grupo]').forEach(caja => {
+        const g = this.grupos().find(x => x.id === +caja.dataset['grupo']!);
+        const primero = caja.querySelector<HTMLElement>('button');
+        if (!g || !primero) return;
+        const uno = this.grupos().length === 1;
+        // Cada avatar ocupa su ancho menos el solape (con nombres, su casilla más el hueco); el «+N» toma el último lugar.
+        const paso = uno ? primero.offsetWidth + .25 * rem : primero.offsetWidth - .3125 * rem;
+        const caben = Math.max(1, Math.floor((caja.clientWidth - 3 + (uno ? .25 * rem : 0)) / paso));
+        vis[g.id] = g.gente.length <= caben ? g.gente.length : Math.max(1, caben - 1);
+      });
+      const antes = this.visibles();
+      if (Object.keys(vis).some(k => antes[+k] !== vis[+k]) || Object.keys(antes).length !== Object.keys(vis).length) this.visibles.set(vis);
+    }
+    const zona = this.zona?.nativeElement, caja = this.caja?.nativeElement;
+    if (zona && caja) {
+      const n = filasQueEntran(zona, caja);
+      if (n && n !== this.porPagina()) this.porPagina.set(n);
+    }
   }
 
   @HostListener('document:keydown.escape')
   alEscape(): void {
-    if (this.modal()) { this.cerrar(); }
+    if (this.accion()) this.accion.set(null);
+    else if (this.abierta()) this.cerrarFicha();
   }
 
   // ---------- Ámbito ----------
@@ -940,10 +714,15 @@ export class PersonalComponent implements OnInit {
     this.idSubcartera.set(null);
     this.carteras.set([]);
     this.subcarteras.set([]);
+    this.grupo.set(null);
     this.pagina.set(1);
-    if (!id) { return; }
+    if (!id) return;
     this.carterasServicio.getPortfoliosByTenant(id).subscribe({
-      next: c => this.carteras.set([...c].sort((a, b) => a.portfolioName.localeCompare(b.portfolioName))),
+      next: c => {
+        const ordenadas = [...c].sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
+        this.carteras.set(ordenadas);
+        if (ordenadas.length === 1) this.elegirCartera(ordenadas[0].id);
+      },
       error: () => this.toast.error('No se pudieron cargar las carteras')
     });
   }
@@ -952,13 +731,14 @@ export class PersonalComponent implements OnInit {
     this.idCartera.set(id);
     this.idSubcartera.set(null);
     this.subcarteras.set([]);
+    this.grupo.set(null);
     this.pagina.set(1);
-    if (!id) { return; }
+    if (!id) return;
     this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
       next: s => {
         const ordenadas = [...s].sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
         this.subcarteras.set(ordenadas);
-        if (ordenadas.length === 1) { this.idSubcartera.set(ordenadas[0].id); }
+        if (ordenadas.length === 1) this.idSubcartera.set(ordenadas[0].id);
       },
       error: () => this.toast.error('No se pudieron cargar las subcarteras')
     });
@@ -966,7 +746,61 @@ export class PersonalComponent implements OnInit {
 
   elegirSubcartera(id: number | null): void {
     this.idSubcartera.set(id);
+    this.grupo.set(null);
     this.pagina.set(1);
+  }
+
+  // ---------- Listas ----------
+
+  private readonly delAmbito = computed(() => {
+    const cli = this.idCliente(), car = this.idCartera(), sub = this.idSubcartera();
+    return this.fichas().filter(p => (!cli || p.idCliente === cli) && (!car || p.idCartera === car) && (!sub || p.idSubcartera === sub));
+  });
+  readonly activos = computed(() => this.delAmbito().filter(p => !this.cesado(p)));
+  readonly cesados = computed(() => this.delAmbito().filter(p => this.cesado(p)));
+  readonly sinUsuario = computed(() => this.activos().filter(p => !p.idUsuario).length);
+
+  /** Una tarjeta por subcartera con gente activa; la más grande primero. */
+  readonly grupos = computed<Grupo[]>(() => {
+    const porSub = new Map<number, Grupo>();
+    for (const p of this.activos()) {
+      if (p.idSubcartera == null) continue;
+      const g = porSub.get(p.idSubcartera) ?? { id: p.idSubcartera, subcartera: p.subcartera ?? '—', cartera: p.cartera ?? '',
+        cliente: this.clienteCorto(p), tono: this.tonoDe(p), gente: [] };
+      g.gente.push(p);
+      porSub.set(p.idSubcartera, g);
+    }
+    return [...porSub.values()]
+      .map(g => ({ ...g, gente: [...g.gente].sort((a, b) => this.nombreLista(a).localeCompare(this.nombreLista(b), 'es')) }))
+      .sort((a, b) => b.gente.length - a.gente.length || a.id - b.id);
+  });
+
+  /** La lista plana: por subcartera (en el orden de las tarjetas) y por apellido. */
+  readonly lista = computed(() => {
+    const q = this.busqueda().trim().toLowerCase();
+    const g = this.estado() === 'ACTIVO' && this.grupos().length > 1 ? this.grupo() : null;
+    const orden = this.grupos().map(x => x.id);
+    const pos = (id: number | null) => { const i = orden.indexOf(id ?? -1); return i < 0 ? orden.length : i; };
+    return (this.estado() === 'ACTIVO' ? this.activos() : this.cesados())
+      .filter(p => (!g || p.idSubcartera === g)
+        && (!q || this.nombreLista(p).toLowerCase().includes(q) || (p.numeroDocumento ?? '').includes(q) || (p.usuario ?? '').toLowerCase().includes(q)))
+      .sort((a, b) => pos(a.idSubcartera) - pos(b.idSubcartera) || this.nombreLista(a).localeCompare(this.nombreLista(b), 'es'));
+  });
+  /** La columna Subcartera solo cuando la lista mezcla subcarteras. */
+  readonly verSubcartera = computed(() => !(this.estado() === 'ACTIVO' && this.grupo()) && new Set(this.delAmbito().map(p => p.idSubcartera)).size > 1);
+  readonly paginaActual = computed(() => Math.min(Math.max(1, this.pagina()), Math.max(1, Math.ceil(this.lista().length / this.porPagina()))));
+  readonly paginaLista = computed(() => {
+    const ini = (this.paginaActual() - 1) * this.porPagina();
+    return this.lista().slice(ini, ini + this.porPagina());
+  });
+
+  alternarGrupo(id: number): void {
+    this.grupo.set(this.grupo() === id ? null : id);
+    this.pagina.set(1);
+  }
+
+  cuantosVen(g: Grupo): number {
+    return this.visibles()[g.id] ?? g.gente.length;
   }
 
   // ---------- Lectura ----------
@@ -983,6 +817,31 @@ export class PersonalComponent implements OnInit {
     return `${p.nombres.split(' ')[0]} ${p.apellidos.split(' ')[0]}`;
   }
 
+  nombreCliente(c: Tenant): string {
+    return c.tenantName || c.businessName;
+  }
+
+  /** El nombre corto del cliente de la ficha (el de la lista de clientes, no la razón social). */
+  clienteCorto(p: FichaPersonal): string {
+    const c = this.clientes().find(x => x.id === p.idCliente);
+    return c ? this.nombreCliente(c) : (p.cliente ?? '—');
+  }
+
+  tonoDe(p: FichaPersonal): string {
+    return tonoSubcartera(p.cliente, p.subcartera);
+  }
+
+  /** Segunda línea de una tarjeta: con todos los clientes a la vista, el cliente; con uno elegido, la cartera. */
+  subtituloGrupo(g: Grupo): string {
+    const car = new NombrePropioPipe().transform(g.cartera), sub = new NombrePropioPipe().transform(g.subcartera);
+    return this.idCliente() ? car : g.cliente + (car && car !== sub ? ', ' + car : '');
+  }
+
+  detalleGrupo(g: Grupo): string {
+    const sin = g.gente.filter(p => !p.idUsuario).length, tele = g.gente.filter(p => p.modalidad === 'TELETRABAJO').length;
+    return sin ? `${sin} sin usuario` : tele ? `${tele} en teletrabajo` : g.gente.length === 1 ? 'persona' : 'personas';
+  }
+
   dma(iso: string | null): string {
     return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—';
   }
@@ -991,9 +850,9 @@ export class PersonalComponent implements OnInit {
   antiguedad(p: FichaPersonal): string {
     const fin = new Date(`${this.cesado(p) ? p.fechaCese : hoy()}T12:00:00`);
     const ini = new Date(`${p.fechaIngreso}T12:00:00`);
-    if (fin < ini) { return '—'; }
+    if (fin < ini) return '—';
     let meses = (fin.getFullYear() - ini.getFullYear()) * 12 + fin.getMonth() - ini.getMonth();
-    if (fin.getDate() < ini.getDate()) { meses -= 1; }
+    if (fin.getDate() < ini.getDate()) meses -= 1;
     if (meses < 1) {
       const d = Math.round((fin.getTime() - ini.getTime()) / 86400000) + 1;
       return `${d} ${d === 1 ? 'día' : 'días'}`;
@@ -1002,37 +861,64 @@ export class PersonalComponent implements OnInit {
     return [a ? `${a} ${a === 1 ? 'año' : 'años'}` : '', m ? `${m} ${m === 1 ? 'mes' : 'meses'}` : ''].filter(Boolean).join(' ');
   }
 
-  avatar(p: FichaPersonal): SafeHtml {
+  edad(iso: string | null): string {
+    if (!iso) return '';
+    const a = new Date(`${hoy()}T12:00:00`), b = new Date(`${iso}T12:00:00`);
+    let e = a.getFullYear() - b.getFullYear();
+    if (a.getMonth() < b.getMonth() || (a.getMonth() === b.getMonth() && a.getDate() < b.getDate())) e--;
+    return `${e} años`;
+  }
+
+  avatarDe(p: FichaPersonal): SafeHtml {
     return this.avatares[p.id % this.avatares.length];
   }
 
-  tonoFicha(p: FichaPersonal): string {
-    return p.idUsuario ? tonoDe(p.subcartera) : 'var(--tenue)';
+  modalidadDe(p: FichaPersonal): Modalidad {
+    return p.modalidad === 'TELETRABAJO' ? 'TELETRABAJO' : 'PRESENCIAL';
   }
 
-  sinUsuario(g: Grupo): number {
-    return g.gente.filter(p => !p.idUsuario).length;
+  nombreModalidad(m: Modalidad): string {
+    return m === 'TELETRABAJO' ? 'Teletrabajo' : 'Presencial';
   }
 
-  mostrarTip(ev: Event, p: FichaPersonal, tono: string): void {
-    const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-    this.tip.set({ nombre: `${p.nombres.split(' ')[0]} ${p.apellidos}`, detalle: p.usuario ?? 'Sin usuario de Cashi',
-      x: r.left + r.width / 2, y: r.top, tono });
+  datosDe(p: FichaPersonal): [string, string][] {
+    return [
+      ['Nacimiento', p.fechaNacimiento ? `${this.dma(p.fechaNacimiento)}, ${this.edad(p.fechaNacimiento)}` : '—'],
+      ['Nacionalidad', p.nacionalidad ?? '—'],
+      ['Estado civil', p.estadoCivil ?? '—'],
+      ['Móvil', p.telefonoMovil ?? '—'],
+            ...(p.telefonoFijo ? [['Teléfono fijo', p.telefonoFijo] as [string, string]] : []),
+      ['Correo', p.correo ?? '—'],
+      ['Domicilio', [p.direccion, p.distrito].filter(Boolean).join(', ') || '—']
+    ];
   }
 
   // ---------- Ficha ----------
 
   verFicha(p: FichaPersonal): void {
-    this.tip.set(null);
-    this.idActual.set(p.id);
-    this.seccion.set('laboral');
-    this.modal.set('ficha');
-    setTimeout(() => document.getElementById('cerrar-ficha')?.focus());
+    this.estado.set(this.cesado(p) ? 'CESADO' : 'ACTIVO');
+    if (this.grupo() && this.grupo() !== p.idSubcartera) this.grupo.set(null);
+    this.abrir(p);
+    // La lista va a la página de esa persona.
+    const i = this.lista().findIndex(x => x.id === p.id);
+    if (i >= 0) this.pagina.set(Math.floor(i / this.porPagina()) + 1);
   }
 
-  cerrar(): void {
-    this.modal.set(null);
-    this.editando.set(null);
+  alternarFicha(p: FichaPersonal): void {
+    if (this.abierta() === p.id) this.cerrarFicha();
+    else this.abrir(p);
+  }
+
+  private abrir(p: FichaPersonal): void {
+    this.abierta.set(p.id);
+    this.seccion.set('datos');
+    this.accion.set(null);
+    this.errorAccion.set('');
+  }
+
+  cerrarFicha(): void {
+    this.abierta.set(null);
+    this.accion.set(null);
   }
 
   /** Después de guardar: la ficha nueva reemplaza a la vieja en la lista. */
@@ -1040,203 +926,235 @@ export class PersonalComponent implements OnInit {
     this.fichas.update(lista => lista.some(x => x.id === f.id) ? lista.map(x => x.id === f.id ? f : x) : [...lista, f]);
   }
 
-  // ---------- Formulario ----------
-
-  abrirForm(p: FichaPersonal | null): void {
-    this.editando.set(p);
-    this.form.set(p ? {
-      apellidos: p.apellidos, nombres: p.nombres, tipoDocumento: p.tipoDocumento, numeroDocumento: p.numeroDocumento ?? '',
-      fechaNacimiento: p.fechaNacimiento ?? '', nacionalidad: p.nacionalidad ?? '', estadoCivil: p.estadoCivil ?? ESTADOS_CIVILES[0],
-      telefonoMovil: p.telefonoMovil ?? '', telefonoFijo: p.telefonoFijo ?? '', correo: p.correo ?? '',
-      direccion: p.direccion ?? '', distrito: p.distrito ?? '', fechaIngreso: p.fechaIngreso, idUsuario: p.idUsuario
-    } : this.formVacio());
-    this.errores.set({});
-    this.resumenErrores.set([]);
-    this.errorForm.set('');
-    this.modal.set('form');
-    this.servicio.usuariosLibres().subscribe({ next: u => this.usuariosLibres.set(u), error: () => this.usuariosLibres.set([]) });
-    setTimeout(() => document.getElementById('p-apellidos')?.focus());
-  }
-
-  private formVacio(): Form {
-    return { apellidos: '', nombres: '', tipoDocumento: 'DNI', numeroDocumento: '', fechaNacimiento: '', nacionalidad: 'Peruana',
-      estadoCivil: ESTADOS_CIVILES[0], telefonoMovil: '', telefonoFijo: '', correo: '', direccion: '', distrito: '',
-      fechaIngreso: '', idUsuario: null };
-  }
-
-  idDe(campo: string): string {
-    return CAMPOS_ID[campo as Campo];
-  }
-
-  errorDe(campo: string): string | undefined {
-    return this.errores()[campo as Campo];
-  }
-
-  valor(campo: Campo): unknown {
-    return this.form()[campo];
-  }
-
-  poner(campo: Campo, valor: unknown): void {
-    this.form.update(f => ({ ...f, [campo]: valor }));
-    this.errorForm.set('');
-    if (this.errores()[campo]) { this.validar(campo); }
-  }
-
-  /** El mensaje de un campo, o null si está bien. Se revisa al salir de él y al guardar. */
-  private error_(campo: Campo): string | null {
-    const f = this.form();
-    const v = String(f[campo] ?? '').trim();
-    switch (campo) {
-      case 'apellidos': return v ? null : 'Escribe los apellidos';
-      case 'nombres': return v ? null : 'Escribe los nombres';
-      case 'numeroDocumento':
-        if (!v) { return 'Escribe el número de documento'; }
-        if (f.tipoDocumento === 'DNI' && !/^\d{8}$/.test(v)) { return 'El DNI tiene 8 dígitos'; }
-        if (f.tipoDocumento === 'CE' && !/^[A-Za-z0-9]{8,12}$/.test(v)) { return 'El carné de extranjería tiene de 8 a 12 letras o números'; }
-        return this.fichas().some(p => p.tipoDocumento === f.tipoDocumento && p.numeroDocumento === v && p.id !== this.editando()?.id)
-          ? 'Ya hay alguien registrado con ese documento' : null;
-      case 'fechaNacimiento': {
-        if (!v) { return 'Pon la fecha de nacimiento'; }
-        const edad = (new Date(`${hoy()}T12:00:00`).getTime() - new Date(`${v}T12:00:00`).getTime()) / (365.25 * 86400000);
-        return edad < 18 ? 'Debe ser mayor de edad' : null;
+  abrirAccion(p: FichaPersonal, a: Exclude<Accion, null>): void {
+    this.errorAccion.set('');
+    this.cambioMotivo.set('');
+    if (a === 'datos') {
+      this.form.set({
+        apellidos: p.apellidos, nombres: p.nombres, tipoDocumento: p.tipoDocumento, numeroDocumento: p.numeroDocumento ?? '',
+        fechaNacimiento: p.fechaNacimiento ?? '', nacionalidad: p.nacionalidad ?? '', estadoCivil: p.estadoCivil ?? ESTADOS_CIVILES[0],
+        telefonoMovil: p.telefonoMovil ?? '', telefonoFijo: p.telefonoFijo ?? '', correo: p.correo ?? '',
+        direccion: p.direccion ?? '', distrito: p.distrito ?? '', fechaIngreso: p.fechaIngreso, idUsuario: p.idUsuario
+      });
+      this.cargarUsuariosLibres();
+    } else if (a === 'sub') {
+      // Los cambios rigen desde un lunes: el próximo.
+      this.cambioDesde.set(sumarDias(lunesDe(new Date()), 7));
+      this.cambioSubcarteras.set([]);
+      this.cambioSub.set(null);
+      // Todas las subcarteras del cliente, de todas sus carteras, en un solo selector.
+      if (p.idCliente) {
+        this.carterasServicio.getPortfoliosByTenant(p.idCliente).pipe(
+          switchMap(c => c.length ? forkJoin(c.map(x => this.carterasServicio.getSubPortfoliosByPortfolio(x.id))) : of([] as SubPortfolio[][]))
+        ).subscribe({
+          next: listas => {
+            const todas = listas.flat().sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
+            this.cambioSubcarteras.set(todas);
+            this.cambioSub.set((todas.find(x => x.id !== p.idSubcartera) ?? todas[0])?.id ?? null);
+          },
+          error: () => this.toast.error('No se pudieron cargar las subcarteras')
+        });
       }
-      case 'telefonoMovil':
-        if (!v) { return 'Escribe el móvil'; }
-        return /^9\d{8}$/.test(v) ? null : 'El móvil tiene 9 dígitos y empieza con 9';
-      case 'correo': return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : 'Revisa el correo';
-      case 'fechaIngreso': return v ? null : 'Pon la fecha de ingreso';
-      default: return null;
+    } else if (a === 'mod') {
+      this.cambioModalidad.set(this.modalidadDe(p) === 'TELETRABAJO' ? 'PRESENCIAL' : 'TELETRABAJO');
+      this.cambioDesde.set(hoy());
+    } else {
+      this.cambioDesde.set(hoy());
+      this.ceseMotivo.set(MOTIVOS_CESE[0]);
+    }
+    this.accion.set(a);
+  }
+
+  /** Nombre de la subcartera; si otra del cliente se llama igual, con su cartera al lado. */
+  rotuloSubcartera(s: SubPortfolio): string {
+    const pipe = new NombrePropioPipe(), nombre = pipe.transform(s.subPortfolioName);
+    const repetido = this.cambioSubcarteras().some(x => x.id !== s.id && x.subPortfolioName === s.subPortfolioName);
+    return repetido ? `${nombre} (${pipe.transform(s.portfolioName)})` : nombre;
+  }
+
+  notaAccion(p: FichaPersonal): string {
+    switch (this.accion()) {
+      case 'sub': return 'Desde esa fecha usa el horario, las reglas y el calendario de la nueva subcartera.';
+      case 'mod': return this.cambioModalidad() === 'TELETRABAJO'
+        ? 'Desde esa fecha sus horas cuentan como remotas sin pedir solicitud.'
+        : 'Desde esa fecha sus horas cuentan como presenciales; para un día remoto pide Teletrabajo.';
+      case 'cese': return 'Sale del reporte de asistencia después de su último día. Sus semanas anteriores no cambian.';
+      default: return '';
     }
   }
 
-  validar(campo: Campo): string | null {
-    const msg = this.error_(campo);
-    this.errores.update(e => ({ ...e, [campo]: msg ?? undefined }));
-    return msg;
-  }
-
-  enfocar(campo: Campo): void {
-    document.getElementById(CAMPOS_ID[campo])?.focus();
-  }
-
-  guardarForm(): void {
-    const lista = (Object.keys(CAMPOS_ID) as Campo[])
-      .map(campo => ({ campo, mensaje: this.validar(campo) }))
-      .filter((x): x is { campo: Campo; mensaje: string } => !!x.mensaje);
-    this.resumenErrores.set(lista);
-    if (lista.length) {
-      setTimeout(() => document.getElementById('resumen-errores')?.focus());
-      return;
+  guardarAccion(p: FichaPersonal): void {
+    const a = this.accion();
+    if (!a) return;
+    if (a === 'datos') { this.guardarDatos(p); return; }
+    const desde = this.cambioDesde(), motivo = this.cambioMotivo().trim();
+    let error = '';
+    if (a === 'sub') {
+      const nueva = this.cambioSub();
+      error = !nueva ? 'Elige la nueva subcartera' : nueva === p.idSubcartera ? 'Ya está en esa subcartera'
+        : !desde ? 'Pon desde cuándo' : new Date(`${desde}T12:00:00`).getDay() !== 1 ? 'El cambio rige desde un lunes'
+        : !motivo ? 'Escribe el motivo: queda en el historial' : '';
+    } else if (a === 'mod') {
+      error = this.cambioModalidad() === this.modalidadDe(p) ? `Ya está en ${this.nombreModalidad(this.cambioModalidad()).toLowerCase()}`
+        : !desde ? 'Pon desde cuándo' : desde < p.fechaIngreso ? `No puede ser antes de su ingreso, el ${this.dma(p.fechaIngreso)}`
+        : !motivo ? 'Escribe el motivo: queda en el historial' : '';
+    } else {
+      error = !desde ? 'Pon el último día de trabajo' : desde < p.fechaIngreso ? 'El cese no puede ser antes del ingreso' : '';
     }
-    const f = this.form();
-    const limpio = (t: string) => t.trim() || null;
-    const datos: DatosPersonal = {
-      tipoDocumento: f.tipoDocumento, numeroDocumento: f.numeroDocumento.trim(), apellidos: f.apellidos.trim(), nombres: f.nombres.trim(),
-      fechaNacimiento: f.fechaNacimiento, nacionalidad: limpio(f.nacionalidad), estadoCivil: limpio(f.estadoCivil),
-      telefonoMovil: f.telefonoMovil.trim(), telefonoFijo: limpio(f.telefonoFijo), correo: limpio(f.correo),
-      direccion: limpio(f.direccion), distrito: limpio(f.distrito), idUsuario: f.idUsuario, fechaIngreso: f.fechaIngreso,
-      idSubcartera: this.editando() ? null : this.idSubcartera()
-    };
-    const e = this.editando();
+    this.errorAccion.set(error);
+    if (error) return;
     this.guardando.set(true);
-    (e ? this.servicio.editarFicha(e.id, datos) : this.servicio.registrarFicha(datos)).subscribe({
+    const peticion = a === 'sub' ? this.servicio.cambiarSubcartera(p.id, { idSubcartera: this.cambioSub()!, fechaDesde: desde, motivo })
+      : a === 'mod' ? this.servicio.cambiarModalidad(p.id, { modalidad: this.cambioModalidad(), fechaDesde: desde, motivo })
+      : this.servicio.registrarCese(p.id, { fecha: desde, motivo: this.ceseMotivo(), comentario: motivo || null });
+    peticion.subscribe({
       next: ficha => {
         this.guardando.set(false);
         this.reemplazar(ficha);
-        this.cerrar();
-        this.toast.success(e ? `Datos de ${this.nombreCorto(ficha)} guardados` : `${this.nombreCorto(ficha)} registrado en ${ficha.subcartera}`);
+        this.accion.set(null);
+        this.toast.success(a === 'sub' ? `${this.nombreCorto(ficha)} pasa a ${ficha.subcartera ?? 'la nueva subcartera'} desde el ${this.dma(desde).slice(0, 5)}`
+          : a === 'mod' ? `${this.nombreCorto(ficha)}: ${this.nombreModalidad(this.cambioModalidad()).toLowerCase()} desde el ${this.dma(desde).slice(0, 5)}`
+          : `Cese de ${this.nombreCorto(ficha)} registrado`);
       },
-      error: r => {
-        this.guardando.set(false);
-        this.errorForm.set(r?.error?.error ?? 'No se pudo guardar');
-      }
+      error: r => { this.guardando.set(false); this.errorAccion.set(r?.error?.error ?? 'No se pudo guardar'); }
     });
   }
 
-  // ---------- Cese ----------
+  // ---------- Registro y edición ----------
 
-  abrirCese(p: FichaPersonal): void {
-    this.idActual.set(p.id);
-    this.ceseFecha.set(hoy());
-    this.ceseMotivo.set(MOTIVOS_CESE[0]);
-    this.ceseComentario.set('');
-    this.errorModal.set('');
-    this.modal.set('cese');
-    setTimeout(() => document.getElementById('c-fecha')?.focus());
+  abrirNuevo(): void {
+    const cli = this.idCliente() ?? this.clientes()[0]?.id ?? null;
+    this.form.set(this.formVacio());
+    this.errorForm.set('');
+    this.nuevo.set({ idCliente: cli, idCartera: null, idSubcartera: null, modalidad: 'PRESENCIAL' });
+    this.cargarUsuariosLibres();
+    if (cli) this.nuevoCliente(cli, this.idCartera(), this.idSubcartera());
   }
 
-  guardarCese(p: FichaPersonal): void {
-    const f = this.ceseFecha();
-    const error = !f ? 'Pon el último día de trabajo' : f < p.fechaIngreso ? 'El cese no puede ser antes del ingreso' : '';
-    this.errorModal.set(error);
-    if (error) { return; }
-    this.guardando.set(true);
-    this.servicio.registrarCese(p.id, { fecha: f, motivo: this.ceseMotivo(), comentario: this.ceseComentario().trim() || null }).subscribe({
-      next: ficha => {
-        this.guardando.set(false);
-        this.reemplazar(ficha);
-        this.cerrar();
-        this.toast.success(`Cese de ${this.nombreCorto(ficha)} registrado`);
-      },
-      error: r => { this.guardando.set(false); this.errorModal.set(r?.error?.error ?? 'No se pudo registrar'); }
-    });
+  ponerNuevo(campo: 'idSubcartera' | 'modalidad', valor: number | Modalidad): void {
+    const n = this.nuevo();
+    if (n) this.nuevo.set({ ...n, [campo]: valor });
   }
 
-  // ---------- Cambio de subcartera ----------
+  cancelarNuevo(): void {
+    this.nuevo.set(null);
+    this.errorForm.set('');
+  }
 
-  abrirSub(p: FichaPersonal): void {
-    this.idActual.set(p.id);
-    this.subCarteras.set([]);
-    this.subSubcarteras.set([]);
-    this.subCartera.set(null);
-    this.subNueva.set(null);
-    // Los cambios rigen desde un lunes: el próximo.
-    this.subDesde.set(sumarDias(lunesDe(new Date()), 7));
-    this.subMotivo.set('');
-    this.errorModal.set('');
-    this.modal.set('sub');
-    if (!p.idCliente) { return; }
-    this.carterasServicio.getPortfoliosByTenant(p.idCliente).subscribe({
+  nuevoCliente(id: number, cartera: number | null = null, subcartera: number | null = null): void {
+    const n = this.nuevo();
+    if (!n) return;
+    this.nuevo.set({ ...n, idCliente: id, idCartera: null, idSubcartera: null });
+    this.nCarteras.set([]);
+    this.nSubcarteras.set([]);
+    this.carterasServicio.getPortfoliosByTenant(id).subscribe({
       next: c => {
         const ordenadas = [...c].sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
-        this.subCarteras.set(ordenadas);
-        const otra = ordenadas.find(x => x.id !== p.idCartera) ?? ordenadas[0];
-        if (otra) { this.elegirCarteraSub(otra.id); }
+        this.nCarteras.set(ordenadas);
+        const elegida = ordenadas.find(x => x.id === cartera) ?? ordenadas[0];
+        if (elegida) this.nuevaCartera(elegida.id, subcartera);
       },
       error: () => this.toast.error('No se pudieron cargar las carteras')
     });
   }
 
-  elegirCarteraSub(id: number): void {
-    this.subCartera.set(id);
-    this.subNueva.set(null);
+  nuevaCartera(id: number, subcartera: number | null = null): void {
+    const n = this.nuevo();
+    if (!n) return;
+    this.nuevo.set({ ...n, idCartera: id, idSubcartera: null });
     this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
       next: s => {
         const ordenadas = [...s].sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
-        this.subSubcarteras.set(ordenadas);
-        this.subNueva.set(ordenadas[0]?.id ?? null);
+        this.nSubcarteras.set(ordenadas);
+        const actual = this.nuevo();
+        if (actual) this.nuevo.set({ ...actual, idSubcartera: (ordenadas.find(x => x.id === subcartera) ?? ordenadas[0])?.id ?? null });
       },
       error: () => this.toast.error('No se pudieron cargar las subcarteras')
     });
   }
 
-  guardarSub(p: FichaPersonal): void {
-    const nueva = this.subNueva(), desde = this.subDesde(), motivo = this.subMotivo().trim();
-    const error = !nueva ? 'Elige la nueva subcartera' : nueva === p.idSubcartera ? 'Ya está en esa subcartera'
-      : !desde ? 'Pon desde cuándo' : new Date(`${desde}T12:00:00`).getDay() !== 1 ? 'El cambio rige desde un lunes'
-      : !motivo ? 'Escribe el motivo: queda en el historial' : '';
-    this.errorModal.set(error);
-    if (error || !nueva) { return; }
+  private cargarUsuariosLibres(): void {
+    this.servicio.usuariosLibres().subscribe({ next: u => this.usuariosLibres.set(u), error: () => this.usuariosLibres.set([]) });
+  }
+
+  private formVacio(): Form {
+    return { apellidos: '', nombres: '', tipoDocumento: 'DNI', numeroDocumento: '', fechaNacimiento: '', nacionalidad: 'Peruana',
+      estadoCivil: ESTADOS_CIVILES[0], telefonoMovil: '', telefonoFijo: '', correo: '', direccion: '', distrito: '',
+      fechaIngreso: sumarDias(lunesDe(new Date()), 7), idUsuario: null };
+  }
+
+  poner(campo: Campo, valor: unknown): void {
+    this.form.update(f => ({ ...f, [campo]: valor }));
+    this.errorForm.set('');
+    this.errorAccion.set('');
+  }
+
+  /** El primer error del formulario, en el orden de los campos; vacío si todo está bien. */
+  private errorDelForm(idActual: number | null): string {
+    const f = this.form();
+    const v = (c: Campo) => String(f[c] ?? '').trim();
+    if (!v('apellidos')) return 'Escribe los apellidos';
+    if (!v('nombres')) return 'Escribe los nombres';
+    const doc = v('numeroDocumento');
+    if (!doc) return 'Escribe el número de documento';
+    if (f.tipoDocumento === 'DNI' && !/^\d{8}$/.test(doc)) return 'El DNI tiene 8 dígitos';
+    if (f.tipoDocumento === 'CE' && !/^[A-Za-z0-9]{8,12}$/.test(doc)) return 'El carné de extranjería tiene de 8 a 12 letras o números';
+    if (this.fichas().some(p => p.tipoDocumento === f.tipoDocumento && p.numeroDocumento === doc && p.id !== idActual)) return 'Ya hay alguien registrado con ese documento';
+    if (!v('fechaNacimiento')) return 'Pon la fecha de nacimiento';
+    const edad = (new Date(`${hoy()}T12:00:00`).getTime() - new Date(`${v('fechaNacimiento')}T12:00:00`).getTime()) / (365.25 * 86400000);
+    if (edad < 18) return 'Debe ser mayor de edad';
+    if (!v('telefonoMovil')) return 'Escribe el móvil';
+    if (!/^9\d{8}$/.test(v('telefonoMovil'))) return 'El móvil tiene 9 dígitos y empieza con 9';
+    if (v('correo') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('correo'))) return 'Revisa el correo';
+    if (!v('fechaIngreso')) return 'Pon la fecha de ingreso';
+    return '';
+  }
+
+  private datosDelForm(idSubcartera: number | null, modalidad: Modalidad | null): DatosPersonal {
+    const f = this.form();
+    const limpio = (t: string) => t.trim() || null;
+    return {
+      tipoDocumento: f.tipoDocumento, numeroDocumento: f.numeroDocumento.trim(), apellidos: f.apellidos.trim(), nombres: f.nombres.trim(),
+      fechaNacimiento: f.fechaNacimiento, nacionalidad: limpio(f.nacionalidad), estadoCivil: limpio(f.estadoCivil),
+      telefonoMovil: f.telefonoMovil.trim(), telefonoFijo: limpio(f.telefonoFijo), correo: limpio(f.correo),
+      direccion: limpio(f.direccion), distrito: limpio(f.distrito), idUsuario: f.idUsuario, fechaIngreso: f.fechaIngreso,
+      idSubcartera, modalidad
+    };
+  }
+
+  registrar(): void {
+    const n = this.nuevo();
+    if (!n) return;
+    const error = this.errorDelForm(null) || (!n.idSubcartera ? 'Elige la subcartera' : '');
+    this.errorForm.set(error);
+    if (error) return;
     this.guardando.set(true);
-    this.servicio.cambiarSubcartera(p.id, { idSubcartera: nueva, fechaDesde: desde, motivo }).subscribe({
+    this.servicio.registrarFicha(this.datosDelForm(n.idSubcartera, n.modalidad)).subscribe({
       next: ficha => {
         this.guardando.set(false);
         this.reemplazar(ficha);
-        this.cerrar();
-        const nombre = this.subSubcarteras().find(s => s.id === nueva)?.subPortfolioName ?? '';
-        this.toast.success(`${this.nombreCorto(ficha)} pasa a ${nombre} desde el ${this.dma(desde).slice(0, 5)}`);
+        this.nuevo.set(null);
+        this.estado.set('ACTIVO');
+        this.abrir(ficha);
+        this.toast.success(`${this.nombreCorto(ficha)} registrado en ${ficha.subcartera}`);
       },
-      error: r => { this.guardando.set(false); this.errorModal.set(r?.error?.error ?? 'No se pudo guardar'); }
+      error: r => { this.guardando.set(false); this.errorForm.set(r?.error?.error ?? 'No se pudo registrar'); }
+    });
+  }
+
+  private guardarDatos(p: FichaPersonal): void {
+    const error = this.errorDelForm(p.id);
+    this.errorAccion.set(error);
+    if (error) return;
+    this.guardando.set(true);
+    this.servicio.editarFicha(p.id, this.datosDelForm(null, null)).subscribe({
+      next: ficha => {
+        this.guardando.set(false);
+        this.reemplazar(ficha);
+        this.accion.set(null);
+        this.toast.success(`Datos de ${this.nombreCorto(ficha)} guardados`);
+      },
+      error: r => { this.guardando.set(false); this.errorAccion.set(r?.error?.error ?? 'No se pudo guardar'); }
     });
   }
 }

@@ -1,1057 +1,501 @@
-import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { concatMap, from, toArray } from 'rxjs';
 import { ToastService } from '../../shared/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
+import { BotonDirective } from '../../shared/ui/boton.directive';
+import { NombrePropioPipe } from '../../shared/ui/nombre-propio.pipe';
+import { TarjetaDirective } from '../../shared/ui/tarjeta.directive';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { AsistenciaService } from './asistencia.service';
-import { AsistenciaDia, AsistenciaReporte, Justificacion, SolicitudPrevista, TipoDia } from './asistencia.models';
+import { AsistenciaDia, AsistenciaReporte, Justificacion, TipoDia } from './asistencia.models';
+import { RECUPERACION, TIPOS_DE_CALENDARIO, hoy, lunesDe, sumarDias } from './asistencia.estilos';
+import { Visor } from './visor-archivo.component';
 import {
-  ESTILOS, RECUPERACION, TIPOS_DE_CALENDARIO, avisoAnticipacion, avisoDeCierre, detalleRecuperacion,
-  fechaTexto, hoy, inicioDiasSinCompletar, lunesDe, primerDiaPermitido, sumarDias
-} from './asistencia.estilos';
-import { Visor, VisorArchivoComponent } from './visor-archivo.component';
-import { PaginadorComponent, pagina } from './paginador.component';
+  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, CABECERA, CABECERA_TEXTO, CAMPO, ETIQUETA, FILTROS, FUERTE, INDICADORES, LISTA, PANTALLA, PILL,
+  PRINCIPAL, REJILLA, SEC, SUBTITULO, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TITULO, TR, TonoPill, VACIO, VACIO_CHICO, ZONA
+} from './ui/clases';
+import { MINI, VOLVER } from './ui/ficha-clases';
+import { MedidorTabla } from './ui/medidor-tabla';
+import { Casilla, EXT, casillaDe, claseCasilla, diaCorto, diasDeLaSemana } from './ui/semana-celdas';
+import { HorasSemanaComponent } from './ui/horas-semana.component';
+import { FormularioSolicitudComponent, PersonaSolicitud } from './ui/formulario-solicitud.component';
+import { IndicadorComponent } from './ui/indicador.component';
+import { PiePaginaComponent } from './ui/pie-pagina.component';
+import { SegmentadoComponent } from './ui/segmentado.component';
+import {
+  AVISO, COLUMNA, COLUMNA_TARJETA, COLUMNA_TITULO, DESLIZA, DETALLE_SUB, DIAS_LARGOS, FILA, ITEM_BOTON, ITEM_LINEA, ITEM_PILL, ITEM_TITULO,
+  LISTA_FILAS
+} from './ui/solicitud-clases';
+import { VisorCertificadoComponent } from './ui/visor-certificado.component';
+import { DetalleSolicitudComponent } from './ui/detalle-solicitud.component';
+import { DecidirSolicitudComponent } from './ui/decidir-solicitud.component';
 
 const enHoras = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-/** Por debajo de esto, lo que faltó no es algo que pedir: es lo normal de entrar y salir a su hora. */
-const MINIMO_FALTANTE = 10;
+const minutosDe = (h: string | null | undefined): number => (h ? Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)) : 0);
+const hhmm = (h: string): string => h.slice(0, 5);
+const corta = (f: string): string => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-type TipoAlerta = 'MARCA' | 'PAUSA' | 'TARDANZA';
+type TipoAlerta = 'marcas' | 'pausa' | 'tarde';
 
 interface Alerta {
   idUsuario: number;
   nombre: string;
-  /** Para ordenar: la fecha del día, o la del sábado para la alerta de la semana. */
-  orden: string;
-  dia: string;
+  subcartera: string;
+  fecha: string;
   tipo: TipoAlerta;
-  alerta: string;
   detalle: string;
-  /** En un exceso de pausa: cuántos minutos se pasó. */
-  minutos?: number;
+  /** Lo que se pasó: minutos de pausa de más o de tardanza. */
+  exceso?: number;
 }
 
-const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
-  'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-/** Las marcas faltantes y excesos: rojo lo que no se registró, ámbar lo que se pasó. */
-const PASTILLA_ALERTA: Record<TipoAlerta, string> = {
-  MARCA: 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300',
-  PAUSA: 'bg-[#fef6e0] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300',
-  TARDANZA: 'bg-[#fef6e0] text-[#92400e] dark:bg-amber-950/50 dark:text-amber-300'
+const TIPO_ALERTA: Record<TipoAlerta, [string, TonoPill]> = {
+  marcas: ['Marcas sin registrar', 'am'],
+  pausa: ['Exceso de pausa', 'am'],
+  tarde: ['Tardanza', 'ro']
 };
 
+const ESTADO_SOLICITUD: Record<string, [string, TonoPill]> = {
+  PENDIENTE: ['Por revisar', 'am'],
+  REVISADA: ['Por aprobar', 'info'],
+  APROBADA: ['Aprobada', 'ok'],
+  RECHAZADA: ['Rechazada', 'ro']
+};
+
+
 /**
- * Asistencia del Equipo: la vista de la supervisora.
+ * Asistencia del equipo: la vista de la supervisora.
  *
- * Solo lo que necesita para gestionar a su gente: las alertas para el llamado
- * de atención —marcas sin registrar, pausas más largas de lo permitido y
- * límites de tardanza excedidos— y las justificaciones que esperan su revisión.
- * Corregir, aprobar y cerrar la semana es de RR.HH., en Control de Asistencia.
+ * Lo que necesita para gestionar a su gente: las alertas para el llamado de atención (marcas sin registrar,
+ * pausas más largas de lo permitido y tardanzas), la semana de cada uno y, en la columna, las solicitudes
+ * que esperan su revisión. Corregir, aprobar y cerrar la semana es de RR.HH., en Control de asistencia.
  *
- * Las alertas no tienen tabla propia: salen del mismo reporte que ve RR.HH.,
- * así una y otra nunca cuentan cosas distintas.
+ * Las alertas salen del mismo reporte que ve RR.HH., de las semanas que todavía no se cierran: una y otra
+ * pantalla nunca cuentan cosas distintas.
  */
 @Component({
   selector: 'app-asistencia-equipo',
   standalone: true,
-  host: { class: 'cashi-asistencia' },
-  imports: [CommonModule, FormsModule, LucideAngularModule, VisorArchivoComponent, PaginadorComponent],
-  styles: [`
-    :host { display: block; }
-    .aparecer { animation: aparecer .18s ease-out }
-    @keyframes aparecer { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
-    .ficha { display: grid; grid-template-columns: 118px 1fr; gap: 9px 14px; margin: 0; font-size: 13px }
-    .ficha dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5f6c80; padding-top: 2px }
-    .ficha dd { margin: 0 }
-    :host-context(.dark) .ficha dt { color: #94a3b8 }
-
-    /* Los cuatro indicadores miden lo mismo: cada dibujo cabe en unas dos líneas. */
-    .kpis { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)) }
-    @media (max-width: 980px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
-    @media (max-width: 640px) { .kpis { grid-template-columns: minmax(0, 1fr) } }
-    .kpi { display: flex; flex-direction: column; padding: 14px 16px; background: #fff; border: 1px solid #e6e9ee; border-radius: 12px; box-shadow: 0 1px 2px rgba(15,23,42,.04) }
-    .cabeza-kpi { display: flex; align-items: center; gap: 9px; margin-bottom: 8px }
-    .cabeza-kpi h3 { margin: 0; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5f6c80 !important }
-    :host-context(.dark) .cabeza-kpi h3 { color: #94a3b8 !important }
-    .icono-kpi { width: 28px; height: 28px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; background: #f1f3f6; color: #0f172a }
-    .cifra { font-size: 24px; font-weight: 800; line-height: 1.3; letter-spacing: -.02em; font-variant-numeric: tabular-nums }
-    .cifra small { margin-left: 6px; font-size: 12px; font-weight: 600; letter-spacing: normal; color: #5f6c80 }
-    .vacio-kpi { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 12.5px; font-weight: 600; color: #5f6c80 }
-    .vacio-kpi.ok { color: #166534 }
-    /* Asesores con alertas: dos columnas parejas; cada persona con su número de alertas. */
-    .nombres-kpi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 10px }
-    .nombre-kpi { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; height: 26px; padding: 0 4px 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #fdecec; color: #b91c1c }
-    .nombre-kpi span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-    .nombre-kpi b { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; font-size: 11px; background: color-mix(in srgb, #dc2626 16%, transparent); font-variant-numeric: tabular-nums }
-    .nombre-kpi.resto { justify-content: center; padding: 0 10px; background: #f1f3f6; color: #5f6c80 }
-    /* Marcas sin registrar: la semana, en ámbar los días con marcas sin registrar, y quiénes. */
-    .tira-kpi { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 10px }
-    .dia-kpi { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 6px; background: #e8f5ec; color: #166534; font-size: 10.5px; line-height: 1.2 }
-    .dia-kpi b { font-weight: 700 }
-    .dia-kpi.falta { background: #fef6e0; color: #92400e; box-shadow: inset 0 0 0 1px #f59e0b }
-    /* Nadie trabajó ese día (un feriado, un día que no llegó): gris, no verde. */
-    .dia-kpi.vacio { background: #f1f3f6; color: #5f6c80 }
-    .quienes-kpi { margin: 10px 0 0; font-size: 12.5px; color: #5f6c80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-    .quienes-kpi strong { font-weight: 600; color: #0f172a !important }
-    /* Excesos de pausa: los dos más grandes. */
-    .barras-pausa { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px }
-    .barras-pausa li { display: grid; grid-template-columns: 88px minmax(0, 1fr) 52px; align-items: center; gap: 8px; min-height: 26px }
-    .barras-pausa li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-    .barras-pausa li i { display: block; height: 8px; border-radius: 999px; background: #f59e0b }
-    .barras-pausa li em { font-style: normal; font-weight: 600; color: #92400e; text-align: right }
-    /* Solicitudes por revisar: nombre y tipo en una línea; dos como máximo. */
-    .lista-kpi { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px }
-    .lista-kpi li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; min-height: 26px }
-    .lista-kpi li > strong { font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-    .p-sol { display: inline-flex; flex: none; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: #eef2ff; color: #2563eb }
-
-    /* Alertas a la izquierda y solicitudes a la derecha. */
-    /* 14 px: en la maqueta el margen de las tarjetas (14) y el de los paneles (10) se funden. */
-    .paneles-equipo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: stretch; margin-top: 14px }
-    /* Los dos paneles miden lo mismo: el más corto se estira y el paginador se
-       queda al pie, así la fila no queda con un hueco al lado de la tabla larga. */
-    .paneles-equipo > section { display: flex; flex-direction: column }
-    .paneles-equipo .panel-crece { flex: 1; display: flex; flex-direction: column }
-    .paneles-equipo .panel-crece app-paginador { margin-top: auto }
-    @media (max-width: 1100px) { .paneles-equipo { grid-template-columns: minmax(0, 1fr) } }
-    .linea-dos { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: #5f6c80 }
-
-    :host-context(.dark) .kpi { background: #0f172a; border-color: #1e293b }
-    :host-context(.dark) .icono-kpi { background: #1e293b; color: #f1f5f9 }
-    :host-context(.dark) .cabeza-kpi h3, :host-context(.dark) .cifra small, :host-context(.dark) .vacio-kpi,
-    :host-context(.dark) .quienes-kpi, :host-context(.dark) .linea-dos { color: #94a3b8 }
-    :host-context(.dark) .quienes-kpi strong { color: #f1f5f9 !important }
-    :host-context(.dark) .vacio-kpi.ok { color: #86efac }
-    :host-context(.dark) .nombre-kpi { background: #450a0a; color: #fca5a5 }
-    :host-context(.dark) .nombre-kpi.resto { background: #1e293b; color: #94a3b8 }
-    :host-context(.dark) .dia-kpi { background: #052e16; color: #86efac }
-    :host-context(.dark) .dia-kpi.falta { background: #451a03; color: #fcd34d }
-    :host-context(.dark) .dia-kpi.vacio { background: #1e293b; color: #94a3b8 }
-    :host-context(.dark) .barras-pausa li em { color: #fcd34d }
-    :host-context(.dark) .p-sol { background: #1e293b; color: #60a5fa }
-  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: PANTALLA + ' @container/p5' },
+  imports: [LucideAngularModule, TarjetaDirective, BotonDirective, NombrePropioPipe, IndicadorComponent, SegmentadoComponent, PiePaginaComponent,
+            FormularioSolicitudComponent, VisorCertificadoComponent, HorasSemanaComponent, DetalleSolicitudComponent, DecidirSolicitudComponent],
   template: `
-    <div class="flex flex-col gap-4 border-b border-[#e6e9ee] bg-white px-7 py-5 dark:border-slate-800 dark:bg-slate-900">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 class="!m-0 text-[20px] font-extrabold tracking-[-0.01em]">Asistencia del Equipo</h1>
-          <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ resumen() }}</p>
-        </div>
-        <button type="button" [class]="estilos.botonPrimario" (click)="abrirRegistro()" [disabled]="!gente().length">
-          <lucide-angular name="plus" [size]="15" class="block"></lucide-angular>
-          Registrar solicitud
-        </button>
-      </div>
-
-      <div class="flex flex-wrap items-end gap-3">
-        <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="eq-cliente">Cliente</label>
-          <select id="eq-cliente" [class]="estilos.campo + ' !w-[178px]'"
-                  [ngModel]="idCliente()" (ngModelChange)="elegirCliente($event)">
-            <option [ngValue]="null">Elige uno</option>
-            @for (c of clientes(); track c.id) {
-              <option [ngValue]="c.id">{{ c.businessName || c.tenantName }}</option>
-            }
-          </select>
-        </div>
-        <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-        <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="eq-cartera">Cartera</label>
-          <select id="eq-cartera" [class]="estilos.campo + ' !w-[178px]'"
-                  [ngModel]="idCartera()" (ngModelChange)="elegirCartera($event)" [disabled]="!idCliente()">
-            <option [ngValue]="null">Elige una</option>
-            @for (c of carteras(); track c.id) {
-              <option [ngValue]="c.id">{{ c.portfolioName }}</option>
-            }
-          </select>
-        </div>
-        <span [class]="estilos.flechaAmbito" aria-hidden="true">›</span>
-        <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="eq-subcartera">Subcartera</label>
-          <select id="eq-subcartera" [class]="estilos.campo + ' !w-[178px]'"
-                  [ngModel]="idSubcartera()" (ngModelChange)="cambiarSubcartera($event)" [disabled]="!idCartera()">
-            <option [ngValue]="null">Elige una</option>
-            @for (s of subcarteras(); track s.id) {
-              <option [ngValue]="s.id">{{ s.subPortfolioName }}</option>
-            }
-          </select>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label [class]="estilos.etiqueta" for="eq-semana-antes">Semana</label>
-          <div class="flex h-[38px] items-center gap-2" role="group" aria-label="Semana">
-            <button type="button" id="eq-semana-antes" [class]="estilos.botonIcono" (click)="moverSemana(-1)"
-                    aria-label="Semana anterior">‹</button>
-            <strong class="min-w-[150px] text-center text-[13px] tabular-nums">{{ textoSemana() }}</strong>
-            <button type="button" [class]="estilos.botonIcono" (click)="moverSemana(1)"
-                    [disabled]="esSemanaActual()" aria-label="Semana siguiente">›</button>
+    <div [class]="REJILLA + ' grid-cols-[minmax(0,1fr)_min(calc(28cqw_-_.42rem),22rem)] @max-[48.001rem]/p5:grid-cols-[minmax(0,1fr)] @max-[48.001rem]/p5:grid-rows-[auto] @max-[48.001rem]/p5:overflow-y-auto'">
+      <section appTarjeta [class]="PRINCIPAL + ' @max-[48.001rem]/p5:min-h-[32rem]'">
+        <div [class]="CABECERA">
+          <div [class]="CABECERA_TEXTO">
+            <p role="heading" aria-level="1" [class]="TITULO">Asistencia del equipo</p>
+            <p [class]="SUBTITULO">Semana del {{ rangoSemana() }}</p>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="px-7 py-5">
-      <!-- El plazo del cierre: a la vista, no escondido en el formulario -->
-      <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-[#fbd391] bg-[#fef6e0] px-4 py-3 text-[12.5px] leading-normal text-[#92400e] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-           role="note">
-        <svg class="mt-px shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-        <p class="!m-0"><strong class="font-extrabold">{{ aviso.titulo }}:</strong> {{ aviso.texto }}@if (aviso.fecha) {<strong class="font-extrabold">{{ aviso.fecha }}</strong>}{{ aviso.resto }}</p>
-      </div>
-      @if (cargando()) {
-        <p class="py-16 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Cargando tu equipo…</p>
-      } @else if (!idSubcartera()) {
-        <div [class]="estilos.vacio">
-          <strong class="block text-[13.5px]">Elige una subcartera</strong>
-          <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-            Las alertas y las solicitudes son de los asesores de esa subcartera.
-          </span>
-        </div>
-      } @else {
-        <div class="aparecer">
-          <!-- Cada indicador con su dibujo: quién tiene alertas, en qué día faltan
-               marcas, cuánto se pasó cada pausa y qué solicitudes esperan. -->
-          <div class="kpis">
-            <div class="kpi">
-              <div class="cabeza-kpi">
-                <span class="icono-kpi"><lucide-angular name="bell" [size]="15" class="block"></lucide-angular></span>
-                <h3>Asesores con alertas</h3>
-              </div>
-              @if (!gente().length) {
-                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
-              } @else {
-                <div class="cifra">{{ conAlerta().length }}<small>de {{ gente().length }}</small></div>
-                @if (conAlerta().length) {
-                  <div class="nombres-kpi">
-                    @for (p of conNombre(); track p.idUsuario) {
-                      <span class="nombre-kpi" [title]="p.nombre + ': ' + p.cuantas + (p.cuantas === 1 ? ' alerta' : ' alertas')">
-                        <span>{{ corto(p.nombre) }}</span><b>{{ p.cuantas }}</b>
-                      </span>
-                    }
-                    @if (sinNombre().length) {
-                      <span class="nombre-kpi resto" [title]="nombresDe(sinNombre())">y {{ sinNombre().length }} más</span>
-                    }
-                  </div>
-                } @else {
-                  <p class="vacio-kpi ok"><lucide-angular name="check-circle" [size]="18" class="block"></lucide-angular>Sin alertas esta semana</p>
-                }
-              }
-            </div>
-
-            <div class="kpi">
-              <div class="cabeza-kpi">
-                <span class="icono-kpi"><lucide-angular name="pencil" [size]="15" class="block"></lucide-angular></span>
-                <h3>Marcas sin registrar</h3>
-              </div>
-              @if (!gente().length) {
-                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
-              } @else {
-                <div class="cifra">{{ cuenta('MARCA') }}</div>
-                @if (cuenta('MARCA')) {
-                  <div class="tira-kpi" [style.grid-template-columns]="'repeat(' + tira().length + ', minmax(0, 1fr))'"
-                       role="img" aria-label="Días de la semana; en ámbar los que tienen marcas sin registrar">
-                    @for (d of tira(); track d.fecha) {
-                      <span class="dia-kpi" [class.falta]="d.n > 0" [class.vacio]="d.vacio" [title]="d.titulo"><b>{{ d.letra }}</b><small>{{ d.numero }}</small></span>
-                    }
-                  </div>
-                  <p class="quienes-kpi" [title]="nombresSinMarcar()">
-                    @for (n of sinMarcarPartes(); track $index) {
-                      <strong>{{ n.nombre }}</strong>{{ n.sep }}
-                    }
-                    @if (sinMarcarResto()) { y {{ sinMarcarResto() }} más }
-                  </p>
-                } @else {
-                  <p class="vacio-kpi ok"><lucide-angular name="check-circle" [size]="18" class="block"></lucide-angular>Todas las marcas registradas</p>
-                }
-              }
-            </div>
-
-            <div class="kpi">
-              <div class="cabeza-kpi">
-                <span class="icono-kpi"><lucide-angular name="coffee" [size]="15" class="block"></lucide-angular></span>
-                <h3>Excesos de pausa</h3>
-              </div>
-              @if (!gente().length) {
-                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
-              } @else {
-                <div class="cifra">{{ cuenta('PAUSA') }}</div>
-                @if (pausas().length) {
-                  <ul class="barras-pausa">
-                    @for (x of pausas(); track $index) {
-                      <li>
-                        <span>{{ corto(x.nombre) }}</span>
-                        <i [style.width.%]="x.ancho"></i>
-                        <em>+{{ x.minutos }} min</em>
-                      </li>
-                    }
-                  </ul>
-                } @else {
-                  <p class="vacio-kpi ok"><lucide-angular name="check-circle" [size]="18" class="block"></lucide-angular>Pausas dentro de lo permitido</p>
-                }
-              }
-            </div>
-
-            <div class="kpi">
-              <div class="cabeza-kpi">
-                <span class="icono-kpi"><lucide-angular name="file-text" [size]="15" class="block"></lucide-angular></span>
-                <h3>Solicitudes por revisar</h3>
-              </div>
-              @if (!gente().length) {
-                <p class="vacio-kpi"><lucide-angular name="users" [size]="18" class="block"></lucide-angular>Sin asesores asignados</p>
-              } @else {
-                <div class="cifra">{{ porRevisar().length }}</div>
-                @if (porRevisar().length) {
-                  <ul class="lista-kpi">
-                    @for (j of porRevisar().slice(0, 2); track j.id) {
-                      <li [title]="(j.nombreAgente ?? '') + ': ' + diasDe(j)">
-                        <strong>{{ corto(j.nombreAgente ?? '') }}</strong><span class="p-sol">{{ j.tipo }}</span>
-                      </li>
-                    }
-                  </ul>
-                } @else {
-                  <p class="vacio-kpi"><lucide-angular name="inbox" [size]="18" class="block"></lucide-angular>Sin solicitudes por revisar</p>
-                }
-              }
-            </div>
-          </div>
-
-          <div class="paneles-equipo">
-          <!-- Alertas del equipo -->
-          <section aria-labelledby="titulo-alertas">
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
-              <div>
-                <h2 id="titulo-alertas" [class]="estilos.titulo + ' !mb-0'">Alertas del equipo</h2>
-                <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                  Marcas sin registrar, excesos de pausa y tardanzas
-                </p>
-              </div>
-              <nav [class]="estilos.segmentos" aria-label="Filtrar alertas">
-                @for (f of FILTROS; track f.clave) {
-                  <button type="button"
-                          [class]="estilos.tab + ' ' + (filtro() === f.clave ? estilos.tabActiva : estilos.tabApagada)"
-                          [attr.aria-current]="filtro() === f.clave ? 'page' : null"
-                          (click)="filtro.set(f.clave); paginaAlertas.set(1)">
-                    {{ f.texto }}
-                  </button>
-                }
-              </nav>
-            </div>
-            <div [class]="estilos.panel + ' panel-crece'">
-              <table class="w-full border-collapse">
-                <caption class="sr-only">Alertas de la semana, por asesor</caption>
-                <thead>
-                  <tr>
-                    <th scope="col" [class]="estilos.th">Asesor</th>
-                    <th scope="col" [class]="estilos.th">Fecha</th>
-                    <th scope="col" [class]="estilos.th">Alerta</th>
-                    <th scope="col" [class]="estilos.th">Detalle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (a of alertasDeLaPagina(); track $index) {
-                    <tr>
-                      <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold'">{{ a.nombre }}</td>
-                      <td [class]="estilos.td">{{ a.dia }}</td>
-                      <td [class]="estilos.td">
-                        <span class="inline-flex items-center rounded-full px-[9px] py-0.5 text-[11.5px] font-bold"
-                              [class]="PASTILLA_ALERTA[a.tipo]">{{ a.alerta }}</span>
-                      </td>
-                      <td [class]="estilos.td + ' secundario'">{{ a.detalle }}</td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="4" class="!px-3 !py-8 text-center">
-                        <lucide-angular [name]="!gente().length ? 'users' : 'check-circle'" [size]="26"
-                                        class="mx-auto mb-2 block text-[#8491a3] dark:text-slate-500"></lucide-angular>
-                        <strong class="block text-[13.5px]">
-                          {{ !gente().length ? 'Sin asesores asignados' : alertas().length ? 'Sin alertas para este filtro' : 'Sin alertas esta semana' }}
-                        </strong>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-              <app-paginador [total]="alertasVisibles().length" [pagina]="paginaAlertas()" [porPagina]="POR_PAGINA_ALERTAS"
-                             (cambiar)="paginaAlertas.set($event)" />
-            </div>
-          </section>
-
-          <!-- Solicitudes por revisar -->
-          <section aria-labelledby="titulo-just">
-            <div class="mb-3">
-              <h2 id="titulo-just" [class]="estilos.titulo + ' !mb-0'">Solicitudes por revisar</h2>
-              <p class="mt-[3px] text-[11.5px] text-[#5f6c80] dark:text-slate-400">
-                Revisión de la supervisora antes de la aprobación de RR.HH.
-              </p>
-            </div>
-            <div [class]="estilos.panel + ' panel-crece'">
-              <table class="w-full border-collapse">
-                <caption class="sr-only">Solicitudes que esperan tu revisión</caption>
-                <thead>
-                  <tr>
-                    <th scope="col" [class]="estilos.th">Asesor</th>
-                    <th scope="col" [class]="estilos.th">Tipo</th>
-                    <th scope="col" [class]="estilos.th">Certificado</th>
-                    <th scope="col" [class]="estilos.th"><span class="sr-only">Acción</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Al final, las de una semana cerrada: no se revisaron y ya no se revisan. -->
-                  @for (j of bandejaDeLaPagina(); track j.id) {
-                    <tr>
-                      <!-- La bandeja es angosta: a 1440 px el texto baja de línea antes que cortar el botón. -->
-                      <td [class]="estilos.td + ' max-w-[200px] truncate font-semibold !whitespace-normal'">
-                        {{ j.nombreAgente }}
-                        <span class="linea-dos">Solicitud del {{ j.solicitadaEn | date: 'dd/MM HH:mm' }}</span>
-                      </td>
-                      <td [class]="estilos.td + ' !whitespace-normal'">
-                        {{ j.tipo }}
-                        <span class="linea-dos">{{ diasDe(j) }}{{ j.semanaCerrada ? ' · semana cerrada' : '' }}</span>
-                        @if (detalleRecuperacion(j); as d) {
-                          <span class="block text-[11px] text-[#92400e] dark:text-amber-300">{{ d }}</span>
-                        }
-                      </td>
-                      <td [class]="estilos.td + ' !whitespace-normal'">
-                        @if (j.tieneArchivo) {
-                          <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)" [title]="j.archivoNombre ?? 'Ver'">
-                            <span class="min-w-0 truncate">{{ j.archivoNombre ?? 'Ver' }}</span>
-                          </button>
-                        } @else {
-                          <span class="text-[#8491a3] dark:text-slate-500">—</span>
-                        }
-                      </td>
-                      <td [class]="estilos.td + ' text-right'">
-                        <button type="button" [class]="estilos.botonChico" (click)="abrirRevision(j)">
-                          <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                          {{ j.semanaCerrada ? 'Ver' : 'Revisar' }}
-                        </button>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="4" class="!px-3 !py-8 text-center">
-                        <lucide-angular [name]="!gente().length ? 'users' : 'inbox'" [size]="26"
-                                        class="mx-auto mb-2 block text-[#8491a3] dark:text-slate-500"></lucide-angular>
-                        <strong class="block text-[13.5px]">{{ !gente().length ? 'Sin asesores asignados' : 'Sin solicitudes por revisar' }}</strong>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-              <app-paginador [total]="bandeja().length" [pagina]="paginaBandeja()" [porPagina]="POR_PAGINA_BANDEJA"
-                             (cambiar)="paginaBandeja.set($event)" />
-            </div>
-          </section>
-          </div>
-        </div>
-      }
-    </div>
-
-    <!-- Revisar justificación -->
-    @if (enRevision(); as j) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="cerrarRevision()"></div>
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,540px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-revisar">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-revisar" class="!m-0 text-[15px] font-extrabold">{{ j.semanaCerrada ? 'Solicitud sin revisar' : 'Revisar solicitud' }}</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                {{ j.nombreAgente }} · solicitada el {{ j.solicitadaEn | date: 'dd/MM HH:mm' }}
-              </p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="cerrarRevision()" aria-label="Cerrar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            <dl class="ficha">
-              <dt>Tipo</dt><dd>{{ j.tipo }}</dd>
-              <dt>Días</dt><dd>{{ diasDe(j) }}</dd>
-              @if (detalleRecuperacion(j); as d) {
-                <dt>Recuperación</dt><dd>{{ d }}</dd>
-              }
-              <dt>Comentario</dt><dd>{{ j.comentario || '—' }}</dd>
-              <dt>Adjunto</dt>
-              <dd>
-                @if (j.tieneArchivo) {
-                  <button type="button" [class]="estilos.adjunto" (click)="verCertificado(j)" [title]="j.archivoNombre ?? 'Ver adjunto'">
-                    <span class="min-w-0 truncate">{{ j.archivoNombre ?? 'Ver adjunto' }}</span>
-                  </button>
-                } @else {
-                  Este tipo no lo exige
-                }
-              </dd>
-            </dl>
-
-            @if (rechazando()) {
-              <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-motivo">Por qué se rechaza</label>
-                <textarea id="eq-motivo" rows="3" maxlength="300" [class]="estilos.area" placeholder="Ej.: no avisó y no trajo constancia"
-                          [ngModel]="motivo()" (ngModelChange)="motivo.set($event); faltaMotivo.set(false)"></textarea>
-                @if (faltaMotivo()) {
-                  <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">Escribe el motivo: es lo que verá el asesor.</p>
-                }
-              </div>
-            }
-          </div>
-
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <!-- De una semana cerrada solo se mira: el backend ya no deja revisarla. -->
-            @if (j.semanaCerrada) {
-              <span class="mr-auto self-center text-[11.5px] text-[#5f6c80] dark:text-slate-400">Sus días son de una semana cerrada: ya no se revisa</span>
-            } @else {
-              <button type="button" [class]="estilos.botonSecundario + ' mr-auto'" (click)="rechazar(j)"
-                      [disabled]="guardando()">
-                {{ rechazando() ? 'Confirmar rechazo' : 'Rechazar' }}
-              </button>
-              <button type="button" [class]="estilos.botonSecundario" (click)="cerrarRevision()">Cancelar</button>
-              <button type="button" [class]="estilos.botonPrimario" (click)="conforme(j)" [disabled]="guardando()">
-                Conforme, enviar a RR.HH.
-              </button>
-            }
-          </footer>
-        </div>
-      </div>
-    }
-
-    <!-- Registrar solicitud -->
-    @if (registrando()) {
-      <div class="fixed inset-0 z-40 bg-[rgba(2,6,23,0.35)] backdrop-blur-[5px]" (click)="registrando.set(false)"></div>
-      <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="pointer-events-auto flex max-h-[88vh] w-[min(100%,480px)] flex-col overflow-hidden rounded-[14px] border border-[#e6e9ee] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900"
-             role="dialog" aria-modal="true" aria-labelledby="titulo-registrar">
-          <header class="flex items-start justify-between gap-3 border-b border-[#e6e9ee] px-5 py-4 dark:border-slate-800">
-            <div>
-              <h2 id="titulo-registrar" class="!m-0 text-[15px] font-extrabold">Registrar solicitud</h2>
-              <p class="mt-[3px] text-[12.5px] text-[#5f6c80] dark:text-slate-400">
-                Para un asesor que no puede registrarla él mismo
-              </p>
-            </div>
-            <button type="button" [class]="estilos.botonIcono" (click)="registrando.set(false)" aria-label="Cerrar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </header>
-
-          <div class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="eq-quien">Para quién</label>
-              <select id="eq-quien" [class]="estilos.campo" [ngModel]="nueva.idUsuario" (ngModelChange)="elegirPersona($event)">
-                @for (p of gente(); track p.idUsuario) {
-                  <option [ngValue]="p.idUsuario">{{ p.nombreAgente }}</option>
-                }
+          <div [class]="FILTROS">
+            <div [class]="CAMPO">
+              <label for="eq-cli" [class]="ETIQUETA">Cliente</label>
+              <select id="eq-cli" [class]="LISTA" (change)="elegirCliente(+$any($event.target).value || null)">
+                <option value="" [selected]="!idCliente()">Todos</option>
+                @for (c of clientes(); track c.id) { <option [value]="c.id" [selected]="c.id === idCliente()">{{ nombreCliente(c) }}</option> }
               </select>
             </div>
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="eq-tipo">Tipo</label>
-              <select id="eq-tipo" [class]="estilos.campo" [ngModel]="nueva.idTipoDia" (ngModelChange)="elegirTipo($event)">
-                @for (t of tipos(); track t.id) {
-                  <option [ngValue]="t.id">{{ t.nombre }}</option>
-                }
+            <div [class]="CAMPO">
+              <label for="eq-car" [class]="ETIQUETA">Cartera</label>
+              <select id="eq-car" [class]="LISTA" (change)="elegirCartera(+$any($event.target).value || null)">
+                <option value="" [selected]="!idCartera()">Todas</option>
+                @for (c of carteras(); track c.id) { <option [value]="c.id" [selected]="c.id === idCartera()">{{ c.portfolioName | nombrePropio }}</option> }
               </select>
             </div>
+            <div [class]="CAMPO">
+              <label for="eq-sub" [class]="ETIQUETA">Subcartera</label>
+              <select id="eq-sub" [class]="LISTA" (change)="elegirSubcartera(+$any($event.target).value || null)">
+                <option value="" [selected]="!idSubcartera()">Todas</option>
+                @for (s of subcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === idSubcartera()">{{ s.subPortfolioName | nombrePropio }}</option> }
+              </select>
+            </div>
+          </div>
+        </div>
 
-            <!-- Permiso: primero para cuándo es. Cada caso trae solo lo que le toca. -->
-            @if (modo() === 'permiso') {
-              <div class="flex flex-col gap-1.5">
-                <span [class]="estilos.etiqueta" id="eq-rotulo-cuando">Para cuándo</span>
-                <div class="grid grid-cols-2 gap-2 max-[440px]:grid-cols-1" role="radiogroup" aria-labelledby="eq-rotulo-cuando">
-                  @for (o of CUANDO; track o.valor) {
-                    <button type="button" role="radio" [attr.aria-checked]="cuando() === o.valor"
-                            [class]="estilos.opcion + (cuando() === o.valor ? ' ' + estilos.opcionElegida : '')"
-                            (click)="elegirCuando(o.valor)">
-                      <strong class="text-[13px] font-bold">{{ o.titulo }}</strong>
-                      <small class="text-[11.5px] leading-[1.35] text-[#5f6c80] dark:text-slate-400">{{ o.pie }}</small>
+        <div class="mb-4 flex flex-none flex-wrap items-center gap-3">
+          <app-segmentado [opciones]="[{ clave: 'alertas', texto: 'Alertas', n: alertas().length }, { clave: 'semana', texto: 'Semana' }]"
+                          [valor]="vista()" (cambiar)="vista.set($any($event)); pagina.set(1)" />
+          @if (vista() === 'semana') {
+            <span class="ml-auto text-[.75rem] leading-[1.5] text-muted-foreground">{{ rangoSemana() }}</span>
+          }
+        </div>
+
+        <div [class]="INDICADORES + ' @max-[44.001rem]/p5:grid-cols-2'">
+          <app-indicador [valor]="conAlerta().length" [unidad]="'de ' + gente().length" rotulo="Asesores con alertas" [filtra]="true" tono="ro"
+                         [activo]="vista() === 'alertas' && !filtro()" (elegir)="filtrar(null)"
+                         [detalle]="conAlerta().length ? 'Más alertas: ' + corto(conAlerta()[0].nombre) : 'Sin alertas'" />
+          <app-indicador [valor]="cuenta('marcas')" rotulo="Marcas sin registrar" [filtra]="true" tono="am"
+                         [activo]="vista() === 'alertas' && filtro() === 'marcas'" (elegir)="filtrar('marcas')"
+                         [detalle]="cuenta('marcas') ? nombres('marcas') : 'Todo registrado'" />
+          <app-indicador [valor]="cuenta('pausa')" rotulo="Excesos de pausa" [filtra]="true" tono="am"
+                         [activo]="vista() === 'alertas' && filtro() === 'pausa'" (elegir)="filtrar('pausa')"
+                         [detalle]="cuenta('pausa') ? nombres('pausa') : 'Pausas dentro del tiempo'" />
+          <app-indicador [valor]="cuenta('tarde')" rotulo="Tardanzas" [filtra]="true" tono="ro"
+                         [activo]="vista() === 'alertas' && filtro() === 'tarde'" (elegir)="filtrar('tarde')"
+                         [detalle]="cuenta('tarde') ? nombres('tarde') : 'Todos a tiempo'" />
+        </div>
+
+        <div #zona [class]="ZONA">
+          @if (cargando() && !reporte()) {
+            <div [class]="VACIO">Cargando…</div>
+          } @else if (!filasVista()) {
+            <div [class]="VACIO">{{ vista() === 'alertas' ? 'Sin alertas' : 'Sin asesores' }}</div>
+          } @else {
+            <div class="flex flex-[1_0_auto] flex-col">
+              <div #caja [class]="TABLA_CAJA">
+                <table [class]="TABLA">
+                  @if (vista() === 'alertas') {
+                    <thead [class]="THEAD"><tr [class]="TR">
+                      <th [class]="TH">Asesor</th><th [class]="TH">Día</th><th [class]="TH">Alerta</th><th [class]="TH">Detalle</th>
+                    </tr></thead>
+                    <tbody>
+                      @for (a of paginaAlertas(); track $index) {
+                        <tr [class]="TR">
+                          <td [class]="TD_1"><span [class]="FUERTE">{{ a.nombre }}</span><span [class]="SEC">{{ a.subcartera | nombrePropio }}</span></td>
+                          <td [class]="TD">{{ diaLargo(a.fecha) }}</td>
+                          <td [class]="TD"><span [class]="PILL[tipoAlerta[a.tipo][1]]">{{ tipoAlerta[a.tipo][0] }}</span></td>
+                          <td [class]="TD">{{ a.detalle }}
+                            @if (a.exceso) { <span [class]="SEC">{{ a.tipo === 'tarde' ? enHoras(a.exceso) + ' tarde' : '+' + a.exceso + ' min' }}</span> }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  } @else {
+                    <thead [class]="THEAD"><tr [class]="TR">
+                      <th [class]="TH">Asesor</th>
+                      @for (f of diasSemana(); track f) {
+                        <th [class]="(f === hoyTexto ? TH_HOY : TH) + ' text-center! px-[.1875rem]!'">{{ diaCorto(f) }}</th>
+                      }
+                      <th [class]="TH + ' pl-6!'">Horas</th>
+                    </tr></thead>
+                    <tbody>
+                      @for (p of paginaSemana(); track p.idUsuario) {
+                        <tr [class]="TR" [style.height]="amplia() ? altoFila() + 'px' : null">
+                          <td [class]="amplia() ? TD_1_AMPLIA : TD_1"><span [class]="FUERTE">{{ p.nombre }}</span><span [class]="SEC">{{ p.subcartera | nombrePropio }}{{ p.teletrabajo ? ', teletrabajo' : '' }}</span></td>
+                          @for (c of p.casillas; track c.fecha) {
+                            <td [class]="(amplia() ? TD_AMPLIA : TD) + ' text-center! px-[.1875rem]!'">
+                              <span [class]="casillaClase(c)" [style.height]="amplia() ? 'calc(' + altoFila() + 'px - .875rem)' : null" [title]="c.titulo">
+                                <span [class]="amplia() ? 'text-[.875rem] font-semibold' : 'font-medium'">{{ c.cifra }}</span>
+                                @if (amplia() && c.marcas) { <small [class]="EXT + (c.estado && c.estado !== c.cifra ? '' : ' font-medium')">{{ c.marcas }}</small> }
+                                @if (amplia() && c.estado && c.estado !== c.cifra) { <small [class]="EXT + ' font-medium'">{{ c.estado }}</small> }
+                              </span>
+                            </td>
+                          }
+                          <td [class]="(amplia() ? TD_AMPLIA : TD) + ' pl-6!'">
+                            <app-horas-semana [trab]="p.trab" [jornada]="p.jornada" [pres]="p.pres" [rem]="p.rem" [max]="maxJornada()" />
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  }
+                </table>
+              </div>
+              <app-pie-pagina [total]="filasVista()" [pagina]="paginaActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+            </div>
+          }
+        </div>
+      </section>
+
+      <div [class]="COLUMNA">
+        @if (formulario()) {
+          <app-formulario-solicitud [tipos]="tipos()" [personas]="personas()" [diasAVista]="reporte()?.dias ?? []" [solicitudes]="solicitudes()"
+                                    [enTeletrabajoDe]="teletrabajo" (cerrar)="formulario.set(false)" (listo)="alRegistrar()" />
+        } @else if (abierta() && certificado() === abierta()!.id) {
+          <app-visor-certificado [archivo]="visor.abierto()" [cargando]="visor.cargando()" [nombre]="abierta()!.archivoNombre || 'Certificado'"
+                                 (cerrar)="cerrarCertificado()" />
+        } @else if (abierta(); as s) {
+          <section appTarjeta [class]="COLUMNA_TARJETA" [attr.aria-label]="'Solicitud de ' + s.nombreAgente">
+            <div class="mb-[.75rem] flex items-center">
+              <button type="button" [class]="VOLVER" (click)="cerrarDetalle()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Solicitudes</button>
+            </div>
+            <p role="heading" aria-level="2" [class]="COLUMNA_TITULO">{{ s.nombreAgente }}</p>
+            <div [class]="DESLIZA">
+              <app-detalle-solicitud [solicitud]="s" [segunda]="segundaDe(s)" [aviso]="avisoTele()" (certificado)="verCertificado(s)">
+                @if (s.estado === 'PENDIENTE' && !s.semanaCerrada) {
+                  <app-decidir-solicitud id="eq-motivo" textoSi="Conforme" [guardando]="guardando()" [error]="errorRevision()" (si)="conforme(s, $event)" (no)="rechazar(s, $event)" />
+                }
+              </app-detalle-solicitud>
+            </div>
+          </section>
+        } @else {
+          <section appTarjeta [class]="COLUMNA_TARJETA" aria-label="Solicitudes">
+            <p role="heading" aria-level="2" [class]="COLUMNA_TITULO">Solicitudes</p>
+            <div class="mb-[.5rem] flex flex-wrap gap-[.375rem]">
+              <button type="button" [class]="CHIP" [attr.aria-pressed]="lista() === 'rev'" (click)="lista.set('rev')">Por revisar <i class="text-muted-foreground not-italic">{{ porRevisar().length }}</i></button>
+              <button type="button" [class]="CHIP" [attr.aria-pressed]="lista() === 'hechas'" (click)="lista.set('hechas')">Revisadas <i class="text-muted-foreground not-italic">{{ revisadas().length }}</i></button>
+            </div>
+            <div [class]="DESLIZA">
+              <ul [class]="LISTA_FILAS">
+                @for (s of listaVista(); track s.id) {
+                  @let estado = estadoSolicitud(s);
+                  <li [class]="FILA">
+                    <button type="button" [class]="ITEM_BOTON" (click)="abrir(s)">
+                      <span [class]="ITEM_TITULO">{{ s.nombreAgente }}</span>
+                      <small [class]="ITEM_LINEA">{{ s.tipo }}, {{ rangoCorto(s) }}</small>
+                      <span [class]="PILL[estado[1]] + ITEM_PILL">{{ estado[0] }}</span>
                     </button>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (verPasado()) {
-              <div class="flex flex-col gap-1.5">
-                <span [class]="estilos.etiqueta">Sus días sin completar</span>
-                <ul class="!m-0 max-h-64 list-none overflow-y-auto rounded-xl border border-[#e6e9ee] !px-3.5 !py-0.5 dark:border-slate-800">
-                  @for (f of sinCompletar(); track f.fecha) {
-                    <li class="flex items-center justify-between gap-3 border-b border-[#f1f3f6] py-[11px] last:border-0 dark:border-slate-800">
-                      <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-[13px]">
-                        <input type="checkbox" class="h-[13px] w-[13px] cursor-pointer [accent-color:auto]"
-                               [checked]="marcados().has(f.fecha)" (change)="alternarSinCompletar(f.fecha)">
-                        <span class="flex min-w-0 flex-col leading-[1.35]">
-                          <span>{{ f.etiqueta }}</span>
-                          <small class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.detalle }}</small>
-                        </span>
-                      </label>
-                      <span [class]="estilos.pastilla + ' ' + f.clase">{{ f.pastilla }}</span>
-                    </li>
-                  } @empty {
-                    <li class="py-[11px] text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ cargandoRecientes() ? 'Buscando sus días…' : 'No tiene días sin completar' }}</li>
-                  }
-                </ul>
-                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Solo de semanas sin cerrar. El permiso cubre las horas; la tardanza se mantiene.</p>
-              </div>
-            }
-
-            <!-- Un día que viene: lo usan el permiso y la cita médica. -->
-            @if (verFuturo()) {
-              <div class="flex flex-col gap-1.5">
-                <span [class]="estilos.etiqueta" id="eq-rotulo-que">Qué necesita</span>
-                <div class="grid grid-cols-3 gap-0.5 rounded-[10px] border border-[#e6e9ee] p-[3px] dark:border-slate-700"
-                     role="radiogroup" aria-labelledby="eq-rotulo-que">
-                  @for (o of QUE; track o.valor) {
-                    <button type="button" role="radio" [attr.aria-checked]="que() === o.valor"
-                            [class]="estilos.segmento + ' ' + (que() === o.valor ? estilos.segmentoElegido : estilos.segmentoLibre)"
-                            (click)="elegirQue(o.valor)">{{ o.texto }}</button>
-                  }
-                </div>
-              </div>
-              <div class="flex gap-3">
-                <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <label [class]="estilos.etiqueta" for="eq-dia">{{ que() === 'todo' ? 'Desde' : 'Día' }}</label>
-                  <input id="eq-dia" type="date" [class]="estilos.campo" [attr.min]="primerDiaFuturo()"
-                         [ngModel]="diaFuturo()" (ngModelChange)="cambiarDia($event)">
-                </div>
-                @if (que() === 'todo') {
-                  <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <label [class]="estilos.etiqueta" for="eq-dia-hasta">Hasta</label>
-                    <input id="eq-dia-hasta" type="date" [class]="estilos.campo" [attr.min]="diaFuturo()"
-                           [ngModel]="hastaFuturo()" (ngModelChange)="hastaFuturo.set($event); prever()">
-                  </div>
-                } @else {
-                  <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <label [class]="estilos.etiqueta" for="eq-hora">{{ que() === 'entrar' ? 'Entra a las' : 'Sale a las' }}</label>
-                    <input id="eq-hora" type="time" step="300" [class]="estilos.campo"
-                           [ngModel]="horaElegida()" (ngModelChange)="cambiarHora($event)">
-                  </div>
+                  </li>
                 }
-              </div>
-            }
-
-            <!-- El total, siempre a la vista: es lo que la persona queda debiendo. -->
-            @if (modo() !== 'rango') {
-              <div [class]="estilos.calculo" aria-live="polite">
-                <span class="flex min-w-0 flex-col leading-[1.4]">
-                  <strong class="text-[12.5px] font-bold">{{ total().titulo }}</strong>
-                  <small [class]="'text-[11.5px] ' + (total().mal ? 'text-[#b91c1c] dark:text-red-300' : 'text-[#5f6c80] dark:text-slate-400')">{{ total().detalle }}</small>
-                </span>
-                @if (total().minutos !== undefined) {
-                  <span class="text-[22px] font-extrabold tracking-[-0.02em] tabular-nums">{{ total().minutos === null ? '—' : enHoras(total().minutos!) }}</span>
-                }
-              </div>
-            }
-
-            <!-- Los demás tipos: el rango de fechas. Con descanso médico, los días del certificado. -->
-            @if (modo() === 'rango') {
-              <div class="flex gap-3">
-                <div class="flex flex-1 flex-col gap-1.5">
-                  <label [class]="estilos.etiqueta" for="eq-desde">Desde</label>
-                  <input id="eq-desde" type="date" [class]="estilos.campo" [attr.min]="primerDia()"
-                         [(ngModel)]="nueva.fechaDesde">
-                </div>
-                <div class="flex flex-1 flex-col gap-1.5">
-                  <label [class]="estilos.etiqueta" for="eq-hasta">Hasta</label>
-                  <input id="eq-hasta" type="date" [class]="estilos.campo" [min]="nueva.fechaDesde"
-                         [(ngModel)]="nueva.fechaHasta">
-                </div>
-              </div>
-              @if (esDescanso()) {
-                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Los días del certificado. Son días completos: no cuentan como trabajados, incompletos ni con tardanza.</p>
-              }
-            }
-
-            @if (tipoElegido()?.exigeCertificado) {
-              <div class="flex flex-col gap-1.5">
-                <label [class]="estilos.etiqueta" for="eq-adjunto">{{ modo() === 'cita' ? 'Constancia de la cita' : 'Certificado' }}</label>
-                <input id="eq-adjunto" type="file" accept=".pdf,.jpg,.jpeg,.png" class="!bg-transparent [font:revert] file:[all:revert]"
-                       (change)="elegirArchivo($event)">
-                <p class="!m-0 text-[11.5px] text-[#5f6c80] dark:text-slate-400">Obligatorio para este tipo · hasta 10 MB</p>
-              </div>
-            }
-
-            <div class="flex flex-col gap-1.5">
-              <label [class]="estilos.etiqueta" for="eq-comentario">Comentario</label>
-              <textarea id="eq-comentario" rows="3" maxlength="500" [class]="estilos.area" placeholder="Qué pasó, en una línea"
-                        [(ngModel)]="nueva.comentario"></textarea>
+              </ul>
+              @if (!listaVista().length) { <div [class]="VACIO_CHICO">{{ lista() === 'rev' ? 'Nada por revisar' : 'Sin solicitudes revisadas' }}</div> }
             </div>
-            @if (error()) {
-              <p class="!m-0 text-[12px] text-[#b91c1c] dark:text-red-300">{{ error() }}</p>
-            }
-          </div>
-
-          <footer class="flex justify-end gap-2 border-t border-[#e6e9ee] px-5 py-3.5 dark:border-slate-800">
-            <button type="button" [class]="estilos.botonSecundario" (click)="registrando.set(false)">Cancelar</button>
-            <button type="button" [class]="estilos.botonPrimario" (click)="registrar()" [disabled]="guardando()">
-              {{ guardando() ? 'Enviando…' : 'Enviar a RR.HH.' }}
-            </button>
-          </footer>
-        </div>
+          </section>
+        }
       </div>
-    }
+    </div>
 
-    @if (visor.abierto(); as archivo) {
-      <app-visor-archivo [archivo]="archivo" (cerrar)="visor.cerrar()" />
-    }
+    <div appTarjeta [class]="BARRA">
+      <span [class]="porRevisar().length ? BARRA_ESTADO_HAY : BARRA_ESTADO">{{ porRevisar().length === 1 ? '1 solicitud por revisar' : porRevisar().length + ' solicitudes por revisar' }}</span>
+      <button type="button" appBoton [class]="'px-4! ' + BOTON_APAGADO" [disabled]="formulario() || !personas().length" (click)="abrirRegistro()">Registrar solicitud</button>
+    </div>
   `
 })
-export class AsistenciaEquipoComponent implements OnInit {
+export class AsistenciaEquipoComponent implements OnInit, OnDestroy {
   private readonly servicio = inject(AsistenciaService);
+  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly clientesServicio = inject(TenantService);
   private readonly carterasServicio = inject(PortfolioService);
 
-  protected readonly estilos = ESTILOS;
-  protected readonly PASTILLA_ALERTA = PASTILLA_ALERTA;
-  protected readonly FILTROS: { clave: TipoAlerta; texto: string }[] = [
-    { clave: 'MARCA', texto: 'Marcas sin registrar' },
-    { clave: 'PAUSA', texto: 'Excesos de pausa' },
-    { clave: 'TARDANZA', texto: 'Tardanza' }
-  ];
-
-  readonly idSubcartera = signal<number | null>(null);
-  /** Arranca en la semana en curso: las alertas sirven el mismo día. */
-  readonly lunes = signal(lunesDe(new Date()));
-  readonly reporte = signal<AsistenciaReporte | null>(null);
-  readonly pendientes = signal<Justificacion[]>([]);
-  readonly tipos = signal<TipoDia[]>([]);
-  readonly filtro = signal<TipoAlerta>('MARCA');
-  /** De a pocas filas: una semana con mucha gente llenaba media pantalla. */
-  protected readonly POR_PAGINA_ALERTAS = 8;
-  protected readonly POR_PAGINA_BANDEJA = 5;
-  readonly paginaAlertas = signal(1);
-  readonly paginaBandeja = signal(1);
-  /** Otra subcartera u otra semana: se vuelve a la primera página. */
-  private readonly alCambiarDeVista = effect(() => {
-    this.idSubcartera();
-    this.lunes();
-    untracked(() => {
-      this.paginaAlertas.set(1);
-      this.paginaBandeja.set(1);
-    });
-  });
-  readonly cargando = signal(true);
-  readonly guardando = signal(false);
-
-  readonly enRevision = signal<Justificacion | null>(null);
-  readonly rechazando = signal(false);
-  readonly motivo = signal('');
-  readonly faltaMotivo = signal(false);
-
-  readonly registrando = signal(false);
-  readonly error = signal('');
-  private archivo: File | null = null;
-  nueva = { idUsuario: null as number | null, idTipoDia: null as number | null,
-            fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
-
-  // El formulario es el mismo del asesor: cada tipo pide lo suyo.
+  protected readonly REJILLA = REJILLA; protected readonly PRINCIPAL = PRINCIPAL; protected readonly CABECERA = CABECERA;
+  protected readonly CABECERA_TEXTO = CABECERA_TEXTO; protected readonly TITULO = TITULO; protected readonly SUBTITULO = SUBTITULO;
+  protected readonly FILTROS = FILTROS; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA; protected readonly LISTA = LISTA;
+  protected readonly INDICADORES = INDICADORES; protected readonly ZONA = ZONA; protected readonly VACIO = VACIO; protected readonly VACIO_CHICO = VACIO_CHICO;
+  protected readonly TABLA_CAJA = TABLA_CAJA; protected readonly TABLA = TABLA; protected readonly THEAD = THEAD; protected readonly TR = TR;
+  protected readonly TH = TH; protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE;
+  protected readonly PILL = PILL; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY;
+  protected readonly MINI = MINI; protected readonly VOLVER = VOLVER; protected readonly COLUMNA = COLUMNA; protected readonly COLUMNA_TARJETA = COLUMNA_TARJETA;
+  protected readonly COLUMNA_TITULO = COLUMNA_TITULO; protected readonly DESLIZA = DESLIZA; protected readonly LISTA_FILAS = LISTA_FILAS; protected readonly FILA = FILA;
+  protected readonly ITEM_BOTON = ITEM_BOTON; protected readonly ITEM_TITULO = ITEM_TITULO; protected readonly ITEM_LINEA = ITEM_LINEA; protected readonly ITEM_PILL = ITEM_PILL;
+  protected readonly DETALLE_SUB = DETALLE_SUB; protected readonly AVISO = AVISO;
+  protected readonly tipoAlerta = TIPO_ALERTA;
+  /** Con las filas ampliadas, las celdas pierden parte de su relleno. */
+  protected readonly TD_AMPLIA = TD.replace('py-[.5625rem]!', 'py-[.375rem]!');
+  protected readonly TD_1_AMPLIA = TD_1.replace('py-[.5625rem]!', 'py-[.375rem]!');
+  /** La cabecera del día de hoy, en negro. */
+  protected readonly TH_HOY = TH.replace('text-muted-foreground!', 'text-foreground!');
   protected readonly enHoras = enHoras;
-  protected readonly CUANDO = [
-    { valor: 'pasado' as const, titulo: 'Un día que ya pasó', pie: 'No completó su jornada o no vino' },
-    { valor: 'futuro' as const, titulo: 'Hoy o un día que viene', pie: 'Va a salir antes, entrar tarde o faltar' }
-  ];
-  protected readonly QUE = [
-    { valor: 'salir' as const, texto: 'Salir antes' },
-    { valor: 'entrar' as const, texto: 'Entrar más tarde' },
-    { valor: 'todo' as const, texto: 'Todo el día' }
-  ];
-  /** El tipo y la persona elegidos, como signals: de ellos depende qué pide el formulario. */
-  private readonly idTipoNuevo = signal<number | null>(null);
-  private readonly tipoNuevo = computed(() => this.tipos().find(t => t.id === this.idTipoNuevo()) ?? null);
-  readonly esDescanso = computed(() => this.tipoNuevo()?.codigo === 'DESCANSO_MEDICO');
-  /** El que se recupera, por «para cuándo»; la cita médica, solo un día que viene; los demás, por rango. */
-  readonly modo = computed<'permiso' | 'cita' | 'rango'>(() =>
-    this.tipoNuevo()?.recuperable ? 'permiso' : this.tipoNuevo()?.codigo === 'CITA_MEDICA' ? 'cita' : 'rango');
-  readonly cuando = signal<'pasado' | 'futuro'>('pasado');
-  private cuandoElegido = false;
-  readonly verPasado = computed(() => this.modo() === 'permiso' && this.cuando() === 'pasado');
-  readonly verFuturo = computed(() => this.modo() === 'cita' || (this.modo() === 'permiso' && this.cuando() === 'futuro'));
-  readonly que = signal<'salir' | 'entrar' | 'todo'>('salir');
-  readonly diaFuturo = signal('');
-  readonly hastaFuturo = signal('');
-  readonly horaSalir = signal('15:00');
-  readonly horaEntrar = signal('10:00');
-  readonly horaElegida = computed(() => (this.que() === 'entrar' ? this.horaEntrar() : this.horaSalir()));
-  /** Los días de esa persona en el mes (al menos desde la semana pasada), y los que se marcaron. */
-  readonly diasRecientes = signal<AsistenciaDia[]>([]);
-  readonly cargandoRecientes = signal(false);
-  readonly marcados = signal(new Set<string>());
-  readonly faltaMarcar = signal(false);
-  /** Lo que respondió el backend sobre el día que viene: cuánto deberá, o por qué no se puede. */
-  readonly prevista = signal<SolicitudPrevista | null>(null);
-  readonly errorPrevista = signal('');
-  private turnoPrevista = 0;
-  private turnoRecientes = 0;
-
-  /** Sus días sin completar de las semanas abiertas; el que ya tiene una solicitud no sale. */
-  readonly sinCompletar = computed(() => {
-    const filas: { fecha: string; etiqueta: string; detalle: string; falto: number | null; pastilla: string; clase: string }[] = [];
-    for (const d of this.diasRecientes()) {
-      if (d.fecha >= hoy() || d.semanaCerrada || d.idSolicitud || d.estado === 'NO_LABORABLE' || d.estado === 'JUSTIFICADO') {
-        continue;
-      }
-      const jornada = d.minutosJornada ?? 0;
-      const etiqueta = this.diaLargo(d.fecha);
-      if (!d.entrada) {
-        if (jornada > 0) {
-          filas.push({ fecha: d.fecha, etiqueta, detalle: 'No trabajado', falto: jornada, pastilla: `Faltó ${enHoras(jornada)}`,
-            clase: 'bg-[#fdecec] text-[#b91c1c] dark:bg-red-950/50 dark:text-red-300' });
-        }
-      } else if (d.minutosTrabajados == null) {
-        filas.push({ fecha: d.fecha, etiqueta, detalle: 'Faltan marcas', falto: null, pastilla: 'Sin calcular',
-          clase: 'bg-[#f1f3f6] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400' });
-      } else if ((d.minutosFaltantes ?? jornada - d.minutosTrabajados) > MINIMO_FALTANTE) {
-        const falto = d.minutosFaltantes ?? jornada - d.minutosTrabajados;
-        const horas = `${enHoras(d.minutosTrabajados)} de ${enHoras(jornada)}`;
-        filas.push({ fecha: d.fecha, etiqueta, falto, pastilla: `Faltó ${enHoras(falto)}`,
-          clase: 'bg-[#fdeee0] text-[#c2410c] dark:bg-orange-950/50 dark:text-orange-300',
-          detalle: d.estado === 'TARDE' && d.tardanza ? `Llegó tarde ${d.tardanza} · trabajó ${horas}` : `Trabajó ${horas}` });
-      }
-    }
-    return filas;
-  });
-
-  /** El recuadro del total: lo que quedará por recuperar, o por qué no se puede pedir. */
-  readonly total = computed<{ titulo: string; detalle: string; mal: boolean; minutos?: number | null }>(() => {
-    const cita = this.modo() === 'cita';
-    if (this.verPasado()) {
-      const elegidos = this.sinCompletar().filter(f => this.marcados().has(f.fecha));
-      if (!elegidos.length) {
-        return { titulo: 'Horas por recuperar', mal: this.faltaMarcar(), minutos: null,
-          detalle: this.faltaMarcar() ? 'Marca al menos un día' : 'Marca el día que cubre el permiso' };
-      }
-      const sinCalcular = elegidos.filter(f => f.falto === null).length;
-      return { titulo: 'Horas por recuperar', mal: false, minutos: elegidos.reduce((t, f) => t + (f.falto ?? 0), 0),
-        detalle: (elegidos.length === 1 ? elegidos[0].etiqueta
-            : `${elegidos.length} días · ${elegidos.map(f => this.diaCorto(f.fecha)).join(', ')}`)
-          + (sinCalcular ? ` · ${sinCalcular} sin calcular` : '') };
-    }
-    const titulo = cita ? 'No se recupera' : 'Horas por recuperar';
-    if (this.errorPrevista()) {
-      return { titulo: cita ? 'Cita médica' : titulo, detalle: this.errorPrevista(), mal: true, minutos: cita ? undefined : null };
-    }
-    const p = this.prevista();
-    if (!p) {
-      return { titulo, detalle: 'Calculando…', mal: false, minutos: cita ? undefined : null };
-    }
-    const dia = this.diaLargo(this.diaFuturo());
-    const detalle = p.trabajaDesde && p.trabajaHasta
-      ? `${dia} · trabaja de ${p.trabajaDesde.slice(0, 5)} a ${p.trabajaHasta.slice(0, 5)}`
-      : p.dias > 1 ? `${p.dias} días · del ${this.diaCorto(this.diaFuturo())} al ${this.diaCorto(this.hastaFuturo())}`
-      : `${dia} · todo el día`;
-    return { titulo, detalle, mal: false, minutos: cita ? undefined : p.minutos };
-  });
   protected readonly hoyTexto = hoy();
-  protected readonly detalleRecuperacion = detalleRecuperacion;
-  protected readonly aviso = avisoDeCierre('supervisora');
+  protected readonly BOTON_SEC = 'dark:bg-muted dark:hover:bg-border';
+  /** Deshabilitado como en el molde: gris, sin el degradado ni la transparencia del botón común. */
+  protected readonly BOTON_APAGADO = 'disabled:[background-image:none]! disabled:bg-muted! disabled:text-muted-foreground! disabled:opacity-100! disabled:border-transparent!';
+  /** Datos del detalle de una solicitud: la cifra en negrita y su línea gris. */
+  /** Filtro en forma de píldora: el elegido, en gris con borde. */
+  protected readonly CHIP = 'inline-flex cursor-pointer items-center gap-[.375rem] rounded-full border! border-solid! border-border! bg-card px-3! py-1! [font-family:inherit] text-[.75rem] leading-[1.5] font-semibold text-(--ink2) '
+    + 'transition-colors duration-150 hover:bg-muted dark:bg-muted dark:hover:bg-border aria-pressed:border-(--campo-ln)! aria-pressed:bg-sidebar-accent aria-pressed:text-foreground';
+  protected readonly EXT = EXT;
+  protected readonly diaCorto = diaCorto;
 
+  // ---------- Ámbito ----------
   readonly idCliente = signal<number | null>(null);
   readonly idCartera = signal<number | null>(null);
+  readonly idSubcartera = signal<number | null>(null);
   readonly clientes = signal<Tenant[]>([]);
   readonly carteras = signal<Portfolio[]>([]);
   readonly subcarteras = signal<SubPortfolio[]>([]);
 
-  readonly sabado = computed(() => sumarDias(this.lunes(), 5));
-  readonly esSemanaActual = computed(() => this.lunes() >= lunesDe(new Date()));
+  /** La semana en curso; el reporte trae también la anterior, que sigue abierta hasta el cierre del lunes. */
+  readonly lunes = lunesDe(new Date());
+  readonly reporte = signal<AsistenciaReporte | null>(null);
+  readonly cargando = signal(false);
+  private turnoCarga = 0;
+  readonly solicitudes = signal<Justificacion[]>([]);
+  readonly tipos = signal<TipoDia[]>([]);
 
-  readonly textoSemana = computed(() => {
-    const [a, b] = [new Date(this.lunes() + 'T00:00:00'), new Date(this.sabado() + 'T00:00:00')];
-    const mes = MESES[b.getMonth()].slice(0, 3);
-    return `${a.getDate()} – ${b.getDate()} ${mes}`;
+  readonly vista = signal<'alertas' | 'semana'>('alertas');
+  readonly filtro = signal<TipoAlerta | null>(null);
+  readonly pagina = signal(1);
+  /** Las filas por página y, con alto de sobra, el de las filas ampliadas de la semana. */
+  private readonly medidor = new MedidorTabla(() => ({
+    zona: this.zona?.nativeElement, caja: this.caja?.nativeElement, total: this.filasVista(), amplia: this.vista() === 'semana',
+    clave: `${this.vista()}|${this.filtro()}|${this.filasVista()}|${this.idCliente()}|${this.idCartera()}|${this.idSubcartera()}`
+  }));
+  readonly porPagina = this.medidor.porPagina;
+  readonly altoFila = this.medidor.altoFila;
+
+  // ---------- Columna ----------
+  readonly lista = signal<'rev' | 'hechas'>('rev');
+  readonly abierta = signal<Justificacion | null>(null);
+  readonly errorRevision = signal('');
+  readonly guardando = signal(false);
+  readonly formulario = signal(false);
+  /** La solicitud cuyo certificado se ve en la columna. */
+  readonly certificado = signal<number | null>(null);
+  protected readonly visor = new Visor();
+  /** Lo que el teletrabajo por horas de la abierta no cubre, como lo calcula el backend. */
+  readonly avisoTele = signal('');
+
+  @ViewChild('zona') private zona?: ElementRef<HTMLElement>;
+  @ViewChild('caja') private caja?: ElementRef<HTMLElement>;
+
+  readonly rangoSemana = computed(() => {
+    const a = new Date(this.lunes + 'T00:00:00'), b = new Date(sumarDias(this.lunes, 5) + 'T00:00:00');
+    return a.getMonth() === b.getMonth()
+      ? `${a.getDate()} al ${b.getDate()} de ${MESES[b.getMonth()]}`
+      : `${a.getDate()} de ${MESES[a.getMonth()]} al ${b.getDate()} de ${MESES[b.getMonth()]}`;
   });
 
-  readonly gente = computed(() => this.reporte()?.agentes ?? []);
-
-  readonly resumen = computed(() => {
-    const [a, b] = [new Date(this.lunes() + 'T00:00:00'), new Date(this.sabado() + 'T00:00:00')];
-    const conAlerta = new Set(this.alertas().map(x => x.idUsuario)).size;
-    return `Semana del ${a.getDate()} al ${b.getDate()} de ${MESES[b.getMonth()]}`
-      + ` · ${this.gente().length} asesores · ${conAlerta} con alertas`;
+  /** La gente del ámbito que trabaja esta semana. */
+  readonly gente = computed(() => {
+    const r = this.reporte();
+    if (!r) return [];
+    const estaSemana = new Set(r.dias.filter(d => d.fecha >= this.lunes).map(d => d.idUsuario));
+    return r.agentes.filter(a => estaSemana.has(a.idUsuario));
   });
+
+  /** Para quién puede registrar una solicitud: su gente, por nombre. */
+  readonly personas = computed<PersonaSolicitud[]>(() =>
+    [...this.gente()].sort((a, b) => a.nombreAgente.localeCompare(b.nombreAgente, 'es')).map(a => ({ idUsuario: a.idUsuario, nombre: a.nombreAgente })));
 
   /**
-   * Las alertas salen del reporte. Una marca que falta solo cuenta cuando el día
-   * ya terminó: hoy a mediodía el almuerzo todavía no se ha marcado y no es
-   * falta de nadie.
+   * Lo que la supervisora tiene que mirar, de las semanas abiertas y hasta ayer: marcas de pausa sin
+   * registrar, pausas pasadas de su tiempo y tardanzas sobre el límite diario.
    */
   readonly alertas = computed<Alerta[]>(() => {
     const r = this.reporte();
-    if (!r) {
-      return [];
-    }
-    const ahora = new Date();
-    const hoyTexto = fechaTexto(ahora);
-    const horaAhora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
-    const tolDia = r.toleranciaDiaMin ?? 10;
-    const tolSemana = r.toleranciaSemanaMin ?? 30;
-    const salida: Alerta[] = [];
-
+    if (!r) return [];
+    const hoyTexto = hoy(), tolerancia = r.toleranciaDiaMin ?? 10, salida: Alerta[] = [];
     for (const d of r.dias) {
-      if (d.estado === 'NO_LABORABLE' || d.estado === 'JUSTIFICADO' || d.estado === 'FALTA' || d.fecha > hoyTexto) {
-        continue;
+      const dia = new Date(d.fecha + 'T00:00:00').getDay();
+      if (d.fecha >= hoyTexto || dia === 0 || dia === 6 || d.semanaCerrada || !d.entrada) continue;
+      const base = { idUsuario: d.idUsuario, nombre: d.nombreAgente, subcartera: d.subcartera ?? '', fecha: d.fecha };
+      const faltan: string[] = d.marcasFaltantes ?? [];
+      for (const [prefijo, nombre] of [['ALMUERZO', 'almuerzo'], ['BREAK', 'break']] as const) {
+        const ini = faltan.includes(`${prefijo}_INICIO`), fin = faltan.includes(`${prefijo}_FIN`);
+        if (ini || fin) {
+          salida.push({ ...base, tipo: 'marcas',
+            detalle: ini && fin ? `Sin marcas de ${nombre}` : fin ? `Sin regreso del ${nombre}` : `Sin salida al ${nombre}` });
+        }
       }
-      const base = { idUsuario: d.idUsuario, nombre: d.nombreAgente, orden: d.fecha, dia: this.diaCorto(d.fecha) };
-      const terminado = d.fecha < hoyTexto || (!!d.horaSalidaHorario && horaAhora >= d.horaSalidaHorario.slice(0, 5));
-
-      if (terminado) {
-        this.faltanteDePausa(salida, base, d.marcasFaltantes, 'ALMUERZO', 'almuerzo', d.almuerzoInicio, d.almuerzoFin);
-        this.faltanteDePausa(salida, base, d.marcasFaltantes, 'BREAK', 'break', d.breakInicio, d.breakFin);
+      if ((d.excesoAlmuerzoMin ?? 0) > 0 && d.almuerzoInicio && d.almuerzoFin) {
+        salida.push({ ...base, tipo: 'pausa', detalle: `Almuerzo de ${enHoras(minutosDe(d.almuerzoFin) - minutosDe(d.almuerzoInicio))}`, exceso: d.excesoAlmuerzoMin! });
       }
-      if ((d.excesoAlmuerzoMin ?? 0) > 0) {
-        salida.push({ ...base, tipo: 'PAUSA', alerta: 'Exceso de almuerzo', minutos: d.excesoAlmuerzoMin!,
-          detalle: this.detalleExceso(d.almuerzoInicio, d.almuerzoFin, d.excesoAlmuerzoMin!) });
+      if ((d.excesoBreakMin ?? 0) > 0 && d.breakInicio && d.breakFin) {
+        salida.push({ ...base, tipo: 'pausa', detalle: `Break de ${enHoras(minutosDe(d.breakFin) - minutosDe(d.breakInicio))}`, exceso: d.excesoBreakMin! });
       }
-      if ((d.excesoBreakMin ?? 0) > 0) {
-        salida.push({ ...base, tipo: 'PAUSA', alerta: 'Exceso de break', minutos: d.excesoBreakMin!,
-          detalle: this.detalleExceso(d.breakInicio, d.breakFin, d.excesoBreakMin!) });
-      }
-      if ((d.minutosTardanza ?? 0) > tolDia) {
-        salida.push({ ...base, tipo: 'TARDANZA', alerta: 'Límite diario excedido',
-          detalle: `Ingresó ${d.entrada?.slice(0, 5) ?? '—'} · tardanza ${this.duracion(d.minutosTardanza!)}` });
+      if ((d.minutosTardanza ?? 0) > tolerancia) {
+        salida.push({ ...base, tipo: 'tarde', detalle: `Entró ${hhmm(d.entrada)}`, exceso: d.minutosTardanza! });
       }
     }
-
-    for (const s of r.semanas) {
-      if (s.superoToleranciaSemanal) {
-        salida.push({ idUsuario: s.idUsuario, nombre: s.nombreAgente, orden: this.sabado(), dia: 'Semana',
-          tipo: 'TARDANZA', alerta: 'Límite semanal excedido',
-          detalle: `${this.duracion(s.minutosTardanza)} en la semana · límite ${this.duracion(tolSemana)}` });
-      }
-    }
-
-    return salida.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es') || a.orden.localeCompare(b.orden));
+    return salida.sort((a, b) => b.fecha.localeCompare(a.fecha) || a.nombre.localeCompare(b.nombre, 'es'));
   });
-
-  readonly alertasVisibles = computed(() =>
-    this.alertas().filter(a => a.tipo === this.filtro()));
-  readonly alertasDeLaPagina = computed(() =>
-    pagina(this.alertasVisibles(), this.paginaAlertas(), this.POR_PAGINA_ALERTAS));
-  readonly bandejaDeLaPagina = computed(() =>
-    pagina(this.bandeja(), this.paginaBandeja(), this.POR_PAGINA_BANDEJA));
-
-  /** Solo las de su gente: la bandeja es de toda la empresa. */
-  private readonly deSuGente = computed(() => {
-    const suyos = new Set(this.gente().map(p => p.idUsuario));
-    return this.pendientes().filter(j => suyos.has(j.idUsuario));
-  });
-  /**
-   * Las que puede revisar. Las de una semana cerrada no: RR.HH. cerró sin que
-   * se revisaran, se quedan «Por revisar» y el cierre lo anotó en la Auditoría.
-   */
-  readonly porRevisar = computed(() => this.deSuGente().filter(j => !j.semanaCerrada));
-  /** La bandeja: primero lo que se puede revisar y al final lo que quedó sin revisar. */
-  readonly bandeja = computed(() => [
-    ...this.porRevisar(), ...this.deSuGente().filter(j => j.semanaCerrada)
-  ]);
 
   cuenta(tipo: TipoAlerta): number {
-    return this.alertas().filter(x => x.tipo === tipo).length;
+    return this.alertas().filter(a => a.tipo === tipo).length;
   }
 
   /** Quién tiene alertas, con más alertas primero. */
   readonly conAlerta = computed(() => {
-    const porPersona = new Map<number, { idUsuario: number; nombre: string; cuantas: number }>();
+    const porPersona = new Map<number, { nombre: string; n: number }>();
     for (const a of this.alertas()) {
-      const p = porPersona.get(a.idUsuario) ?? { idUsuario: a.idUsuario, nombre: a.nombre, cuantas: 0 };
-      p.cuantas++;
+      const p = porPersona.get(a.idUsuario) ?? { nombre: a.nombre, n: 0 };
+      p.n++;
       porPersona.set(a.idUsuario, p);
     }
-    return [...porPersona.values()].sort((a, b) => b.cuantas - a.cuantas);
-  });
-  /** Dos por fila y dos filas; con más de cuatro, tres nombres y el resto en la cuarta casilla. */
-  readonly conNombre = computed(() => this.conAlerta().length > 4 ? this.conAlerta().slice(0, 3) : this.conAlerta());
-  readonly sinNombre = computed(() => this.conAlerta().slice(this.conNombre().length));
-
-  /**
-   * La semana, con cuántas marcas sin registrar hubo cada día. De lunes a
-   * viernes; el sábado solo si alguien lo trabajó o lo tenía en su horario, y
-   * el domingo nunca. Un día en que nadie trabajó sale en gris, no en verde.
-   */
-  readonly tira = computed(() => {
-    const suyos = new Set(this.gente().map(p => p.idUsuario));
-    const dias = (this.reporte()?.dias ?? []).filter(d => suyos.has(d.idUsuario));
-    const sabado = sumarDias(this.lunes(), 5);
-    const conSabado = dias.some(d => d.fecha === sabado && (!!d.entrada || d.estado !== 'NO_LABORABLE'));
-    return (conSabado ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4]).map(i => {
-      const fecha = sumarDias(this.lunes(), i);
-      const n = this.alertas().filter(a => a.tipo === 'MARCA' && a.orden === fecha).length;
-      const trabajaron = dias.some(d => d.fecha === fecha && !!d.entrada);
-      const dia = DIAS_CORTOS[new Date(fecha + 'T00:00:00').getDay()];
-      return { fecha, letra: dia[0], numero: Number(fecha.slice(8, 10)), n, vacio: !n && !trabajaron,
-        titulo: `${dia}: ${n ? `${n} sin marcar` : trabajaron ? 'completo' : 'nadie trabajó'}` };
-    });
+    return [...porPersona.values()].sort((a, b) => b.n - a.n);
   });
 
-  /** Quiénes no marcaron: el nombre de pila (dos que se llaman igual, con apellido); hasta tres. */
-  private readonly sinMarcar = computed(() => [...new Set(this.alertas().filter(a => a.tipo === 'MARCA').map(a => a.nombre))]);
-  readonly sinMarcarCorto = computed(() => {
-    const lista = this.sinMarcar();
-    const pila = (n: string) => n.split(' ')[0];
-    const repetido = (n: string) => lista.filter(x => pila(x) === pila(n)).length > 1;
-    return lista.slice(0, lista.length > 3 ? 3 : lista.length)
-      .map(n => (repetido(n) ? n.split(' ').slice(0, 2).join(' ') : pila(n)));
-  });
-  readonly sinMarcarResto = computed(() => Math.max(0, this.sinMarcar().length - 3));
-  /** Cada nombre con lo que va después: «, » entre ellos e « y » antes del último (si no hay resto). */
-  readonly sinMarcarPartes = computed(() => {
-    const nombres = this.sinMarcarCorto();
-    const resto = this.sinMarcarResto();
-    return nombres.map((nombre, i) => ({
-      nombre,
-      sep: i === nombres.length - 1 ? '' : i === nombres.length - 2 && !resto ? ' y ' : ', '
-    }));
-  });
-  readonly nombresSinMarcar = computed(() => this.sinMarcar().join(', '));
-
-  /** Los dos excesos de pausa más grandes, con su barra contra el mayor. */
-  readonly pausas = computed(() => {
-    const lista = this.alertas().filter(a => a.tipo === 'PAUSA' && a.minutos);
-    const mayor = Math.max(1, ...lista.map(a => a.minutos ?? 0));
-    return [...lista].sort((a, b) => (b.minutos ?? 0) - (a.minutos ?? 0)).slice(0, 2)
-      .map(a => ({ nombre: a.nombre, minutos: a.minutos ?? 0, ancho: Math.max(8, ((a.minutos ?? 0) / mayor) * 100) }));
-  });
-
-  nombresDe(lista: { nombre: string }[]): string {
-    return lista.map(x => x.nombre).join(', ');
+  /** «Pepe, Harlington y 2 más»: los nombres de pila de quienes tienen esa alerta. */
+  nombres(tipo: TipoAlerta): string {
+    const n = [...new Set(this.alertas().filter(a => a.tipo === tipo).map(a => a.nombre.split(' ')[0]))];
+    return n.length > 2 ? `${n.slice(0, 2).join(', ')} y ${n.length - 2} más` : n.join(' y ');
   }
 
-  /** «Leydi M.»: el nombre y la inicial del apellido. */
+  /** «Verónica V.»: el nombre y la inicial del apellido. */
   corto(nombre: string): string {
     const [a, b] = nombre.split(' ');
     return b ? `${a} ${b[0]}.` : a;
   }
 
+  filtrar(tipo: TipoAlerta | null): void {
+    this.vista.set('alertas');
+    this.filtro.set(tipo && this.filtro() !== tipo ? tipo : null);
+    this.pagina.set(1);
+  }
+
+  readonly alertasVistas = computed(() => {
+    const f = this.filtro();
+    return f ? this.alertas().filter(a => a.tipo === f) : this.alertas();
+  });
+
+  /** Lunes a viernes, y el sábado solo si alguien marcó. */
+  readonly diasSemana = computed(() => diasDeLaSemana(this.lunes, this.reporte()?.dias ?? [], sumarDias));
+
+  /** Una fila por persona: sus casillas de la semana y sus horas. */
+  readonly semana = computed(() => {
+    const r = this.reporte();
+    if (!r) return [];
+    const porDia = new Map(r.dias.map(d => [`${d.idUsuario}|${d.fecha}`, d]));
+    const semanas = new Map(r.semanas.filter(s => s.lunes === this.lunes).map(s => [s.idUsuario, s]));
+    return this.gente().map(a => {
+      const s = semanas.get(a.idUsuario);
+      return {
+        idUsuario: a.idUsuario, nombre: a.nombreAgente, subcartera: a.subcartera ?? '', teletrabajo: this.teletrabajo(a.idUsuario),
+        casillas: this.diasSemana().map(f => casillaDe(f, porDia.get(`${a.idUsuario}|${f}`))),
+        trab: s?.minutosTrabajados ?? 0, jornada: s?.minutosJornada ?? 0, pres: s?.minutosPresenciales ?? 0, rem: s?.minutosRemotos ?? 0
+      };
+    });
+  });
+  readonly maxJornada = computed(() => Math.max(1, ...this.semana().map(p => p.jornada)));
+
+  readonly filasVista = computed(() => this.vista() === 'alertas' ? this.alertasVistas().length : this.semana().length);
+  readonly paginaActual = computed(() => Math.min(Math.max(1, this.pagina()), Math.max(1, Math.ceil(this.filasVista() / this.porPagina()))));
+  readonly paginaAlertas = computed(() => this.trozo(this.alertasVistas()));
+  readonly paginaSemana = computed(() => this.trozo(this.semana()));
+  /** Todas las filas entran y sobra alto: la semana se muestra amplia. */
+  readonly amplia = computed(() => this.vista() === 'semana' && this.altoFila() > 0);
+
+  private trozo<T>(filas: T[]): T[] {
+    const ini = (this.paginaActual() - 1) * this.porPagina();
+    return filas.slice(ini, ini + this.porPagina());
+  }
+
+  // ---------- Solicitudes ----------
+  private readonly deSuGente = computed(() => {
+    const suyos = new Set(this.gente().map(p => p.idUsuario));
+    return this.solicitudes().filter(j => suyos.has(j.idUsuario));
+  });
+  /** Las que puede revisar. Las de una semana cerrada no: RR.HH. cerró sin que se revisaran. */
+  readonly porRevisar = computed(() => this.deSuGente().filter(j => j.estado === 'PENDIENTE' && !j.semanaCerrada));
+  /** Las que revisó ella. */
+  readonly revisadas = computed(() => {
+    const yo = this.auth.getCurrentUser()?.id;
+    return this.deSuGente().filter(j => j.estado !== 'PENDIENTE' && j.idUsuarioRevisa != null && j.idUsuarioRevisa === yo);
+  });
+  readonly listaVista = computed(() => this.lista() === 'rev' ? this.porRevisar() : this.revisadas());
+
   ngOnInit(): void {
-    // La supervisora elige cliente, cartera y subcartera entre los que tiene asignados:
-    // el catálogo llega ya acotado a su alcance.
-    this.cargando.set(false);
     this.cargarClientes();
     this.servicio.tiposDeDia().subscribe({
       // La recuperación no se pide: la planifica RR.HH.
       next: t => this.tipos.set(t.filter(x => !TIPOS_DE_CALENDARIO.includes(x.codigo) && x.codigo !== RECUPERACION)),
       error: () => this.tipos.set([])
     });
+    this.cargar();
+    this.cargarSolicitudes();
   }
 
-  // ==================== ÁMBITO ====================
+  ngOnDestroy(): void {
+    this.medidor.cerrar();
+    this.visor.cerrar();
+  }
 
-  /** Sin filtrar por `isActive`, como en Control de Asistencia: Financiera Oh está inactiva en QAS. */
+  // ---------- Ámbito ----------
+
+  /** Sin filtrar por `isActive`: Financiera Oh está inactiva en QAS. */
   private cargarClientes(): void {
     this.clientesServicio.getAllTenants().subscribe({
-      next: c => {
-        const lista = [...c]
-          .sort((a, b) => (a.businessName || a.tenantName).localeCompare(b.businessName || b.tenantName));
-        this.clientes.set(lista);
-        if (lista.length === 1) {
-          this.elegirCliente(lista[0].id);
-        }
-      },
+      next: c => this.clientes.set([...c].sort((a, b) => this.nombreCliente(a).localeCompare(this.nombreCliente(b)))),
       error: () => this.toast.error('No se pudieron cargar los clientes')
     });
+  }
+
+  nombreCliente(c: Tenant): string {
+    return c.tenantName || c.businessName;
   }
 
   elegirCliente(id: number | null): void {
@@ -1060,18 +504,13 @@ export class AsistenciaEquipoComponent implements OnInit {
     this.idSubcartera.set(null);
     this.carteras.set([]);
     this.subcarteras.set([]);
-    this.reporte.set(null);
-    if (!id) {
-      return;
-    }
+    this.cargar();
+    if (!id) return;
     this.carterasServicio.getPortfoliosByTenant(id).subscribe({
       next: c => {
-        const lista = [...c]
-          .sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
-        this.carteras.set(lista);
-        if (lista.length === 1) {
-          this.elegirCartera(lista[0].id);
-        }
+        const ordenadas = [...c].sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
+        this.carteras.set(ordenadas);
+        if (ordenadas.length === 1) this.elegirCartera(ordenadas[0].id);
       },
       error: () => this.toast.error('No se pudieron cargar las carteras')
     });
@@ -1081,446 +520,159 @@ export class AsistenciaEquipoComponent implements OnInit {
     this.idCartera.set(id);
     this.idSubcartera.set(null);
     this.subcarteras.set([]);
-    this.reporte.set(null);
-    if (!id) {
-      return;
-    }
+    this.cargar();
+    if (!id) return;
     this.carterasServicio.getSubPortfoliosByPortfolio(id).subscribe({
       next: s => {
-        const lista = [...s]
-          .sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
-        this.subcarteras.set(lista);
-        if (lista.length === 1) {
-          this.cambiarSubcartera(lista[0].id);
-        }
+        const ordenadas = [...s].sort((a, b) => a.subPortfolioName.localeCompare(b.subPortfolioName));
+        this.subcarteras.set(ordenadas);
+        if (ordenadas.length === 1) this.elegirSubcartera(ordenadas[0].id);
       },
       error: () => this.toast.error('No se pudieron cargar las subcarteras')
     });
   }
 
-  cambiarSubcartera(id: number | null): void {
+  elegirSubcartera(id: number | null): void {
     this.idSubcartera.set(id);
-    this.reporte.set(null);
-    if (id) {
-      this.cargar();
-    }
-  }
-
-  moverSemana(n: number): void {
-    this.lunes.set(sumarDias(this.lunes(), 7 * n));
     this.cargar();
   }
 
+  /** La semana pasada y esta: las alertas cubren las semanas que todavía no se cierran. */
   private cargar(): void {
-    const sub = this.idSubcartera();
-    if (!sub) {
-      this.cargando.set(false);
-      return;
-    }
+    const turno = ++this.turnoCarga;
     this.cargando.set(true);
-    this.servicio.reporte(this.lunes(), this.sabado(), sub).subscribe({
+    this.pagina.set(1);
+    this.cerrarDetalle();
+    const ambito = { idCliente: this.idCliente(), idCartera: this.idCartera(), idSubcartera: this.idSubcartera() };
+    this.servicio.reporte(sumarDias(this.lunes, -7), sumarDias(this.lunes, 5), ambito).subscribe({
       next: r => {
+        if (turno !== this.turnoCarga) return;
         this.reporte.set(r);
         this.cargando.set(false);
       },
       error: () => {
+        if (turno !== this.turnoCarga) return;
         this.reporte.set(null);
         this.cargando.set(false);
         this.toast.error('No se pudo cargar la asistencia del equipo');
       }
     });
-    this.cargarPendientes();
   }
 
-  /** Las pendientes de revisión de los últimos tres meses y las que vienen. */
-  private cargarPendientes(): void {
-    this.servicio.justificaciones(sumarDias(hoy(), -90), sumarDias(hoy(), 60), ['PENDIENTE']).subscribe({
-      next: j => this.pendientes.set(j),
-      error: () => this.pendientes.set([])
+  /** Las de los últimos tres meses y las que vienen, en el orden en que se registraron. */
+  private cargarSolicitudes(): void {
+    this.servicio.justificaciones(sumarDias(hoy(), -90), sumarDias(hoy(), 60)).subscribe({
+      next: j => this.solicitudes.set([...j].sort((a, b) => a.id - b.id)),
+      error: () => this.solicitudes.set([])
     });
   }
 
-  // ==================== REVISAR ====================
+  // ---------- Semana ----------
 
-  abrirRevision(j: Justificacion): void {
-    this.enRevision.set(j);
-    this.rechazando.set(false);
-    this.motivo.set('');
-    this.faltaMotivo.set(false);
+  /** Si esa persona trabaja en teletrabajo: su último día de la semana lo dice. */
+  protected readonly teletrabajo = (idUsuario: number | null): boolean => {
+    const dias = (this.reporte()?.dias ?? []).filter(d => d.idUsuario === idUsuario && d.fecha <= hoy());
+    return dias[dias.length - 1]?.origenRemoto === 'MODALIDAD';
+  };
+
+  casillaClase(c: Casilla): string {
+    return claseCasilla(c, this.amplia());
   }
 
-  cerrarRevision(): void {
-    this.enRevision.set(null);
+  diaLargo(fecha: string): string {
+    return `${DIAS_LARGOS[new Date(fecha + 'T00:00:00').getDay()]} ${corta(fecha)}`;
   }
 
-  conforme(j: Justificacion): void {
-    this.decidir(j, true, 'Enviada a RR.HH. para su aprobación');
-  }
+  // ---------- Revisar ----------
 
-  /** El primer clic pide el motivo; el segundo rechaza. */
-  rechazar(j: Justificacion): void {
-    if (!this.rechazando()) {
-      this.rechazando.set(true);
-      return;
+  abrir(s: Justificacion): void {
+    this.abierta.set(s);
+    this.errorRevision.set('');
+    this.cerrarCertificado();
+    this.avisoTele.set('');
+    // El teletrabajo por horas: lo que su horario no cubre, como lo calcula el backend.
+    if (s.remotoDesde && s.remotoHasta && s.oficinaDesde && s.oficinaHasta) {
+      this.servicio.solicitudPrevista({ idTipoDia: s.idTipoDia, fechaDesde: s.fechaDesde, fechaHasta: s.fechaHasta, idUsuario: s.idUsuario, idSolicitud: s.id,
+        oficinaDesde: hhmm(s.oficinaDesde), oficinaHasta: hhmm(s.oficinaHasta), remotoDesde: hhmm(s.remotoDesde), remotoHasta: hhmm(s.remotoHasta) }).subscribe({
+        next: p => { if (this.abierta()?.id === s.id) this.avisoTele.set((p.aviso ?? '').replace('no cubres tu horario', 'no cubre su horario')); },
+        error: () => { /* sin el aviso, el detalle sigue sirviendo */ }
+      });
     }
-    if (!this.motivo().trim()) {
-      this.faltaMotivo.set(true);
-      return;
-    }
-    this.decidir(j, false, 'Rechazada: el asesor verá el motivo');
   }
 
-  private decidir(j: Justificacion, aFavor: boolean, mensaje: string): void {
+  cerrarDetalle(): void {
+    this.abierta.set(null);
+    this.cerrarCertificado();
+  }
+
+  verCertificado(s: Justificacion): void {
+    this.certificado.set(s.id);
+    this.visor.abrir(this.servicio.certificado(s.id, s.archivoNombre), s.archivoNombre, () => { /* el visor dice que no se pudo */ });
+  }
+
+  cerrarCertificado(): void {
+    this.certificado.set(null);
+    this.visor.cerrar();
+  }
+
+  conforme(s: Justificacion, motivo: string): void {
+    this.decidir(s, true, motivo, 'Solicitud revisada. Pasa a RR.HH. para aprobarla');
+  }
+
+  rechazar(s: Justificacion, motivo: string): void {
+    this.decidir(s, false, motivo, 'Solicitud rechazada. El asesor verá el motivo');
+  }
+
+  private decidir(s: Justificacion, aFavor: boolean, motivo: string, mensaje: string): void {
     this.guardando.set(true);
-    this.servicio.revisarJustificacion(j.id, aFavor, this.motivo().trim() || undefined).subscribe({
+    this.errorRevision.set('');
+    this.servicio.revisarJustificacion(s.id, aFavor, motivo || undefined).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.cerrarRevision();
+        this.cerrarDetalle();
         this.toast.success(mensaje);
-        this.cargarPendientes();
+        this.cargarSolicitudes();
       },
       error: respuesta => {
         this.guardando.set(false);
-        this.toast.error(respuesta?.error?.error ?? 'No se pudo guardar la revisión');
+        this.errorRevision.set(respuesta?.error?.error ?? 'No se pudo guardar la revisión');
       }
     });
   }
 
-  /** El visor del adjunto: la foto o el PDF en grande, sin salir de la bandeja. */
-  protected readonly visor = new Visor();
-
-  verCertificado(j: Justificacion): void {
-    this.visor.abrir(this.servicio.certificado(j.id, j.archivoNombre), j.archivoNombre,
-      () => this.toast.error('No se pudo abrir el adjunto'));
+  estadoSolicitud(s: Justificacion): [string, TonoPill] {
+    return ESTADO_SOLICITUD[s.estado];
   }
 
-  // ==================== REGISTRAR ====================
-
-  /** Método y no computed: `nueva` es un objeto del formulario, no una signal. */
-  tipoElegido(): TipoDia | null {
-    return this.tipos().find(t => t.id === this.nueva.idTipoDia) ?? null;
+  /** «09/11» o «03/11 al 05/11». */
+  rangoCorto(s: Justificacion): string {
+    return !s.fechaHasta || s.fechaHasta === s.fechaDesde ? corta(s.fechaDesde) : `${corta(s.fechaDesde)} al ${corta(s.fechaHasta)}`;
   }
 
-  primerDia(): string | null {
-    return primerDiaPermitido(this.tipoElegido());
+
+
+  /** Bajo las horas: su modalidad, si es teletrabajo; si no, su horario de ese día de la semana. */
+  segundaDe(s: Justificacion): string {
+    if (s.tipo?.toUpperCase() === 'TELETRABAJO') {
+      return this.teletrabajo(s.idUsuario) ? 'Teletrabajo' : 'Presencial';
+    }
+    const dia = new Date(s.fechaDesde + 'T00:00:00').getDay();
+    const suyos = (this.reporte()?.dias ?? []).filter(d => d.idUsuario === s.idUsuario && d.horaEntradaHorario && d.horaSalidaHorario);
+    const d = suyos.find(x => x.fecha === s.fechaDesde) ?? suyos.find(x => new Date(x.fecha + 'T00:00:00').getDay() === dia);
+    return d ? `Horario ${hhmm(d.horaEntradaHorario!)} a ${hhmm(d.horaSalidaHorario!)}` : '';
   }
+
+
+  // ---------- Registrar ----------
 
   abrirRegistro(): void {
-    this.nueva = { idUsuario: this.gente()[0]?.idUsuario ?? null, idTipoDia: this.tipos()[0]?.id ?? null,
-                   fechaDesde: hoy(), fechaHasta: hoy(), comentario: '' };
-    this.idTipoNuevo.set(this.nueva.idTipoDia);
-    this.archivo = null;
-    this.error.set('');
-    this.faltaMarcar.set(false);
-    this.cuandoElegido = false;
-    this.cuando.set('pasado');
-    this.que.set('salir');
-    this.horaSalir.set('15:00');
-    this.horaEntrar.set('10:00');
-    const proximo = this.diaHabilDespuesDe(hoy());
-    this.diaFuturo.set(proximo);
-    this.hastaFuturo.set(proximo);
-    this.registrando.set(true);
-    this.cargarRecientes();
-    this.prever();
+    this.cerrarDetalle();
+    this.formulario.set(true);
   }
 
-  elegirPersona(id: number): void {
-    this.nueva.idUsuario = id;
-    this.error.set('');
-    this.cargarRecientes();
-    this.prever();
-  }
-
-  elegirTipo(id: number): void {
-    this.nueva.idTipoDia = id;
-    this.idTipoNuevo.set(id);
-    this.error.set('');
-    this.faltaMarcar.set(false);
-    if (!this.tipoElegido()?.exigeCertificado) {
-      this.archivo = null;
-    }
-    // Lo que lleva anticipación no se pide para hoy.
-    const primero = this.primerDiaFuturo();
-    if (this.diaFuturo() < primero) {
-      this.diaFuturo.set(this.diaHabilDespuesDe(sumarDias(primero, -1)));
-      this.hastaFuturo.set(this.diaFuturo());
-    }
-    this.acomodarCuando();
-    this.prever();
-  }
-
-  /** Los días de esa persona en el mes: de ahí salen los que quedaron sin completar. */
-  private cargarRecientes(): void {
-    const turno = ++this.turnoRecientes;
-    this.marcados.set(new Set());
-    this.diasRecientes.set([]);
-    const idUsuario = this.nueva.idUsuario;
-    if (!idUsuario) {
-      return;
-    }
-    this.cargandoRecientes.set(true);
-    this.servicio.reporte(inicioDiasSinCompletar(), hoy(), this.idSubcartera(), [idUsuario]).subscribe({
-      next: r => {
-        if (turno === this.turnoRecientes) {
-          this.diasRecientes.set((r.dias ?? []).filter(d => d.idUsuario === idUsuario));
-          this.cargandoRecientes.set(false);
-          this.acomodarCuando();
-        }
-      },
-      error: () => {
-        if (turno === this.turnoRecientes) {
-          this.cargandoRecientes.set(false);
-        }
-      }
-    });
-  }
-
-  /** Sin días que cubrir, el permiso se abre en «un día que viene». */
-  private acomodarCuando(): void {
-    if (this.cuandoElegido || this.modo() !== 'permiso' || this.cargandoRecientes()) {
-      return;
-    }
-    const toca = this.sinCompletar().length ? 'pasado' : 'futuro';
-    if (this.cuando() !== toca) {
-      this.cuando.set(toca);
-      this.prever();
-    }
-  }
-
-  elegirCuando(valor: 'pasado' | 'futuro'): void {
-    this.cuandoElegido = true;
-    this.cuando.set(valor);
-    this.error.set('');
-    this.prever();
-  }
-
-  elegirQue(valor: 'salir' | 'entrar' | 'todo'): void {
-    this.que.set(valor);
-    this.prever();
-  }
-
-  cambiarDia(dia: string): void {
-    this.diaFuturo.set(dia);
-    // El rango de «Todo el día» nunca termina antes de empezar.
-    if (!this.hastaFuturo() || this.hastaFuturo() < dia) {
-      this.hastaFuturo.set(dia);
-    }
-    this.prever();
-  }
-
-  cambiarHora(hora: string): void {
-    (this.que() === 'entrar' ? this.horaEntrar : this.horaSalir).set(hora);
-    this.prever();
-  }
-
-  alternarSinCompletar(fecha: string): void {
-    this.marcados.update(m => {
-      const copia = new Set(m);
-      copia.has(fecha) ? copia.delete(fecha) : copia.add(fecha);
-      return copia;
-    });
-    this.faltaMarcar.set(false);
-    this.error.set('');
-  }
-
-  /** El permiso se puede pedir para hoy; lo que lleva anticipación, desde el día que toca. */
-  primerDiaFuturo(): string {
-    return this.primerDia() ?? hoy();
-  }
-
-  /**
-   * Pregunta al backend qué resultaría del día que viene tal como está puesto:
-   * él conoce el horario de esa persona, los feriados y si ya hay otra solicitud.
-   */
-  prever(): void {
-    const turno = ++this.turnoPrevista;
-    this.prevista.set(null);
-    this.errorPrevista.set('');
-    const { idUsuario, idTipoDia } = this.nueva;
-    if (!this.verFuturo() || !idUsuario || !idTipoDia) {
-      return;
-    }
-    const dia = this.diaFuturo();
-    const que = this.que();
-    const hora = this.horaElegida();
-    const hasta = que === 'todo' ? (this.hastaFuturo() || dia) : dia;
-    const falta = !dia ? 'Elige el día' : que !== 'todo' && !hora ? 'Indica la hora'
-      : hasta < dia ? 'La fecha de fin no puede ser anterior a la de inicio' : '';
-    if (falta) {
-      this.errorPrevista.set(falta);
-      return;
-    }
-    this.servicio.solicitudPrevista({
-      idUsuario, idTipoDia, fechaDesde: dia, fechaHasta: hasta,
-      saleALas: que === 'salir' ? hora : null,
-      entraALas: que === 'entrar' ? hora : null
-    }).subscribe({
-      next: p => {
-        if (turno === this.turnoPrevista) {
-          this.prevista.set(p);
-        }
-      },
-      error: respuesta => {
-        if (turno === this.turnoPrevista) {
-          this.errorPrevista.set(respuesta?.error?.error ?? 'No se pudo calcular');
-        }
-      }
-    });
-  }
-
-  elegirArchivo(evento: Event): void {
-    this.archivo = (evento.target as HTMLInputElement).files?.[0] ?? null;
-  }
-
-  registrar(): void {
-    const tipo = this.tipoElegido();
-    const idUsuario = this.nueva.idUsuario;
-    if (!idUsuario || !tipo) {
-      this.error.set('Elige a la persona y el tipo');
-      return;
-    }
-
-    // Cada pedido es una solicitud: un tramo de días seguidos, o un día con sus horas.
-    let pedidos: { desde: string; hasta: string; trabajaDesde?: string | null; trabajaHasta?: string | null }[];
-    if (this.verPasado()) {
-      const fechas = this.sinCompletar().filter(f => this.marcados().has(f.fecha)).map(f => f.fecha);
-      if (!fechas.length) {
-        this.faltaMarcar.set(true);
-        return;
-      }
-      pedidos = this.seguidos(fechas);
-    } else if (this.verFuturo()) {
-      const p = this.prevista();
-      if (!p) {
-        return;  // el recuadro ya dice por qué no se puede, o todavía calcula
-      }
-      const porHoras = this.que() !== 'todo';
-      pedidos = [{
-        desde: this.diaFuturo(),
-        hasta: porHoras ? this.diaFuturo() : (this.hastaFuturo() || this.diaFuturo()),
-        trabajaDesde: porHoras ? p.trabajaDesde : null,
-        trabajaHasta: porHoras ? p.trabajaHasta : null
-      }];
-    } else {
-      if (this.nueva.fechaHasta < this.nueva.fechaDesde) {
-        this.error.set('La fecha final no puede ser anterior a la inicial');
-        return;
-      }
-      const primerDia = this.primerDia();
-      if (primerDia && this.nueva.fechaDesde < primerDia) {
-        this.error.set(avisoAnticipacion(tipo));
-        return;
-      }
-      pedidos = [{ desde: this.nueva.fechaDesde, hasta: this.nueva.fechaHasta }];
-    }
-    if (tipo.exigeCertificado && !this.archivo) {
-      this.error.set(`${tipo.nombre} necesita ${this.modo() === 'cita' ? 'la constancia adjunta' : 'certificado adjunto'}`);
-      return;
-    }
-    if (!this.nueva.comentario.trim()) {
-      this.error.set('Escribe el motivo: es lo que va a leer RR.HH.');
-      return;
-    }
-
-    const nombre = this.gente().find(p => p.idUsuario === idUsuario)?.nombreAgente ?? '';
-    const comentario = this.nueva.comentario.trim();
-    this.error.set('');
-    this.guardando.set(true);
-    from(pedidos).pipe(
-      concatMap(pedido => this.servicio.crearJustificacion({
-        idUsuario, idTipoDia: tipo.id, fechaDesde: pedido.desde, fechaHasta: pedido.hasta, comentario,
-        archivo: tipo.exigeCertificado ? this.archivo : null,
-        trabajaDesde: pedido.trabajaDesde ?? null, trabajaHasta: pedido.trabajaHasta ?? null
-      })),
-      toArray()
-    ).subscribe({
-      next: () => {
-        this.guardando.set(false);
-        this.registrando.set(false);
-        this.toast.success(`Registrada para ${nombre} y enviada a RR.HH.`);
-        this.cargar();
-      },
-      error: respuesta => {
-        this.guardando.set(false);
-        this.error.set(respuesta?.error?.error ?? 'No se pudo registrar la solicitud');
-      }
-    });
-  }
-
-  /** Agrupa fechas en tramos de días seguidos: cada tramo es una solicitud. */
-  private seguidos(fechas: string[]): { desde: string; hasta: string }[] {
-    const tramos: { desde: string; hasta: string }[] = [];
-    for (const f of [...fechas].sort()) {
-      const ultimo = tramos[tramos.length - 1];
-      if (ultimo && sumarDias(ultimo.hasta, 1) === f) {
-        ultimo.hasta = f;
-      } else {
-        tramos.push({ desde: f, hasta: f });
-      }
-    }
-    return tramos;
-  }
-
-  /** El siguiente día de lunes a viernes. */
-  private diaHabilDespuesDe(fecha: string): string {
-    let f = sumarDias(fecha, 1);
-    while ([0, 6].includes(new Date(f + 'T00:00:00').getDay())) {
-      f = sumarDias(f, 1);
-    }
-    return f;
-  }
-
-  /** «Lunes 21/09». */
-  private diaLargo(fecha: string): string {
-    const nombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    return `${nombres[new Date(fecha + 'T00:00:00').getDay()]} ${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
-  }
-
-  // ==================== APOYO ====================
-
-  diasDe(j: Justificacion): string {
-    const corta = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
-    return j.fechaDesde === j.fechaHasta ? corta(j.fechaDesde) : `${corta(j.fechaDesde)} al ${corta(j.fechaHasta)}`;
-  }
-
-  private diaCorto(fecha: string): string {
-    return `${DIAS_CORTOS[new Date(fecha + 'T00:00:00').getDay()]} ${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
-  }
-
-  /** «0:19»: una duración, no una hora de reloj. */
-  private duracion(minutos: number): string {
-    return `${Math.floor(minutos / 60)}:${String(minutos % 60).padStart(2, '0')}`;
-  }
-
-  /** «+14 min · 74 de 60»: cuánto se pasó, cuánto usó y cuánto tenía. */
-  private detalleExceso(inicio: string | null, fin: string | null, exceso: number): string {
-    if (!inicio || !fin) {
-      return `+${exceso} min`;
-    }
-    const aMin = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
-    const usado = aMin(fin) - aMin(inicio);
-    return `+${exceso} min · ${usado} de ${usado - exceso}`;
-  }
-
-  /**
-   * La pausa que falta, dicha según qué parte falta: ninguna de las dos marcas,
-   * o solo la vuelta, o solo la salida.
-   */
-  private faltanteDePausa(salida: Alerta[], base: Omit<Alerta, 'tipo' | 'alerta' | 'detalle'>,
-                          faltantes: string[], prefijo: 'ALMUERZO' | 'BREAK', nombre: string,
-                          inicio: string | null, fin: string | null): void {
-    const faltaInicio = faltantes.includes(`${prefijo}_INICIO`);
-    const faltaFin = faltantes.includes(`${prefijo}_FIN`);
-    if (faltaInicio && faltaFin) {
-      salida.push({ ...base, tipo: 'MARCA', alerta: `No marcó ${nombre}`,
-        detalle: `Sin salida ni regreso del ${nombre}` });
-    } else if (faltaFin) {
-      salida.push({ ...base, tipo: 'MARCA', alerta: `No marcó el regreso del ${nombre}`,
-        detalle: `Salió al ${nombre} a las ${inicio?.slice(0, 5) ?? '—'}` });
-    } else if (faltaInicio) {
-      salida.push({ ...base, tipo: 'MARCA', alerta: `No marcó la salida al ${nombre}`,
-        detalle: `Regresó del ${nombre} a las ${fin?.slice(0, 5) ?? '—'}` });
-    }
+  alRegistrar(): void {
+    this.formulario.set(false);
+    this.cargarSolicitudes();
+    this.cargar();
   }
 }
