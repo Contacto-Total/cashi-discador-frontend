@@ -160,6 +160,44 @@ export enum RestriccionFecha {
   FUERA_MES = 'FUERA_MES'                // Solo fechas del próximo mes en adelante
 }
 
+// Descuento máximo sin aprobación de una tarjeta de monto (tipificacion_campo_opciones.regla_descuento)
+export type TipoLimiteDescuento = 'PORCENTAJE' | 'MONTO';
+/** ANTIGUA_NUEVA: por periodo de compra. ANIO: por año del periodo de castigo. */
+export type SegmentoDescuento = 'ANTIGUA_NUEVA' | 'ANIO';
+
+export interface FilaReglaDescuento {
+  valor: string | null;                // null | 'ANTIGUA' | 'NUEVA' | '2026' (null en ANIO = resto de años)
+  descuentoMaximo: number | null;      // % o soles según el tipo; null = por definir
+  maxCuotas: number | null;            // con descuento; null = las de la tarjeta
+  montoMinimoCuota: number | null;     // con descuento; null = sin mínimo
+}
+
+export interface ReglaDescuento {
+  tipo: TipoLimiteDescuento;
+  campoReferencia: string | null;      // columna sobre la que se calcula; null = el monto de la tarjeta
+  segmento: SegmentoDescuento | null;
+  filas: FilaReglaDescuento[];
+}
+
+/** Resultado de POST /api/v2/descuento-maximo/evaluar */
+export interface EvaluacionDescuento {
+  estado: 'DIRECTO' | 'EVALUACION' | 'BLOQUEADO';
+  mensaje: string | null;
+  montoMinimoDirecto: number | null;
+  maxCuotas: number | null;
+  montoMinimoCuota: number | null;
+}
+
+/** Canal por el que el cliente paga o pagará, de una subcartera (REQ-074). */
+export interface CanalPagoDTO {
+  id: number;
+  nombre: string;
+  activo: boolean;
+  orden: number;
+  /** Alguna gestión lo eligió: al quitarlo queda desactivado. */
+  enUso: boolean;
+}
+
 // Modelos para el sistema de opciones con toggles
 export interface CampoOpcionDTO {
   id?: number;

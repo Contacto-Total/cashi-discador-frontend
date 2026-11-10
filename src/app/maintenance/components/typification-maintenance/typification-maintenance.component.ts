@@ -46,6 +46,14 @@ interface Motivo {
   activo: boolean;
 }
 
+/** Canal de pago de la subcartera (REQ-074). id null: todavía no se guardó. */
+interface Canal {
+  id: number | null;
+  nombre: string;
+  activo: boolean;
+  enUso: boolean;
+}
+
 /** Lo cargado de una subcartera. */
 interface DatosSub {
   configs: TenantTypificationConfigV2[];
@@ -53,6 +61,7 @@ interface DatosSub {
   campos: Record<number, AdditionalFieldV2[]>;
   lista: CampoLista | null;
   motivos: Motivo[];
+  canales: Canal[];
 }
 
 /** Cambios sin guardar de una tipificación en una subcartera. Lo que no está, no cambió. */
@@ -128,6 +137,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   readonly LISTA_BASE = 'font-cashi m-0! h-auto! w-full min-w-0 rounded-lg! border! px-2! py-[.3125rem]! text-[.875rem]! leading-[1.5]! text-ellipsis outline-none '
     + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
   readonly REJILLA_LISTA = 'grid grid-cols-[6rem_minmax(0,1fr)_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2';
+  readonly REJILLA_CANALES = 'grid grid-cols-[minmax(0,1fr)_4.25rem_1.75rem] items-center gap-x-[clamp(.5rem,2.4cqw,1.5rem)] px-2';
   readonly LISTA = 'font-cashi m-0! h-auto! w-full rounded-[.625rem]! border! border-(--campo-ln)! bg-(--campo)! px-2.5! py-2! text-[.875rem]! leading-[1.5]! text-ellipsis text-foreground! outline-none '
     + 'focus:border-ring! focus:shadow-[0_0_0_3px_rgb(16_185_129/.3)]';
   /** El tema antiguo fija con !important el aspecto de los campos: de ahí los `!`. */
@@ -153,9 +163,10 @@ export class TypificationMaintenanceComponent implements OnInit {
   private readonly datos = signal<Record<number, DatosSub>>({});
   private readonly borradores = signal<Record<number, Record<number, Borrador>>>({});
   private readonly motivosTrabajo = signal<Record<number, Motivo[]>>({});
+  private readonly canalesTrabajo = signal<Record<number, Canal[]>>({});
   /** Tipos de contacto desplegados por subcartera; al entrar a una, todos plegados. */
   private readonly desplegados = signal<Record<number, number[]>>({});
-  readonly pestana = signal<'arbol' | 'lista'>('arbol');
+  readonly pestana = signal<'arbol' | 'lista' | 'canales'>('arbol');
   /** Opciones de la tipificación base y lo que se cambió sin guardar (por tipificación del catálogo:
       vale para todas las carteras). null = quitar la base. */
   readonly bases = signal<TipificacionBase[]>([]);
@@ -205,6 +216,15 @@ export class TypificationMaintenanceComponent implements OnInit {
     const id = this.sub();
     return id ? this.motivosTrabajo()[id] ?? [] : [];
   });
+  readonly canales = computed(() => {
+    const id = this.sub();
+    return id ? this.canalesTrabajo()[id] ?? [] : [];
+  });
+  /** Lo que se ve: el árbol, la lista de la rama (si la subcartera tiene una) o los canales de pago. */
+  readonly vista = computed<'arbol' | 'lista' | 'canales'>(() => {
+    const p = this.pestana();
+    return p === 'canales' ? 'canales' : p === 'lista' && this.lista() ? 'lista' : 'arbol';
+  });
 
   /** Filas a la vista: los tipos de contacto y, de los desplegados, todo lo que cuelga de ellos. */
   readonly filas = computed<Fila[]>(() => {
@@ -237,23 +257,31 @@ export class TypificationMaintenanceComponent implements OnInit {
       n += Object.keys(porTip).length;
     }
     const datos = this.datos();
-    for (const [id, trabajo] of Object.entries(this.motivosTrabajo())) {
-      const antes = datos[Number(id)]?.motivos ?? [];
+    const diferencias = (antes: unknown[], trabajo: unknown[]) => {
       const largo = Math.max(antes.length, trabajo.length);
       for (let i = 0; i < largo; i++) {
         if (JSON.stringify(antes[i] ?? null) !== JSON.stringify(trabajo[i] ?? null)) {
           n++;
         }
       }
+    };
+    for (const [id, trabajo] of Object.entries(this.motivosTrabajo())) {
+      diferencias(datos[Number(id)]?.motivos ?? [], trabajo);
+    }
+    for (const [id, trabajo] of Object.entries(this.canalesTrabajo())) {
+      diferencias(datos[Number(id)]?.canales ?? [], trabajo);
     }
     return n;
   });
 
-  readonly hayInvalido = computed(() => Object.values(this.motivosTrabajo()).some(l => l.some((m, i) => this.motivoMal(l, m, i))));
+  private readonly motivosInvalidos = computed(() => Object.values(this.motivosTrabajo()).some(l => l.some((m, i) => this.motivoMal(l, m, i))));
+  private readonly canalesInvalidos = computed(() => Object.values(this.canalesTrabajo()).some(l => l.some((c, i) => this.canalMal(l, c, i))));
+  readonly hayInvalido = computed(() => this.motivosInvalidos() || this.canalesInvalidos());
 
   readonly resumen = computed(() => {
     const n = this.cambios();
-    return this.hayInvalido() ? 'Cada motivo necesita código y nombre, sin repetir'
+    return this.motivosInvalidos() ? 'Cada motivo necesita código y nombre, sin repetir'
+      : this.canalesInvalidos() ? 'Cada canal necesita un nombre, sin repetir'
       : n === 0 ? 'Sin cambios' : n === 1 ? '1 cambio sin guardar' : `${n} cambios sin guardar`;
   });
 
@@ -319,19 +347,25 @@ export class TypificationMaintenanceComponent implements OnInit {
                 .map(o => ({ codigo: o.codigoOpcion, nombre: o.labelOpcion, activo: !!o.estaHabilitada }))),
               catchError(() => of([])))
           : of([]);
-        return motivos$.pipe(map(motivos => ({ configs, campos, lista, motivos })));
+        const canales$: Observable<Canal[]> = this.api.getCanalesPago(id).pipe(
+          map(cs => cs.map(c => ({ id: c.id, nombre: c.nombre, activo: !!c.activo, enUso: !!c.enUso }))),
+          catchError(() => of([])));
+        return forkJoin({ motivos: motivos$, canales: canales$ }).pipe(map(({ motivos, canales }) => ({ configs, campos, lista, motivos, canales })));
       })
     ).subscribe({
-      next: ({ configs, campos, lista, motivos }) => {
+      next: ({ configs, campos, lista, motivos, canales }) => {
         // Al volver a leer tras un cambio del catálogo, la lista que se estaba editando no se pierde.
         const previo = this.datos()[id], trabajo = this.motivosTrabajo()[id];
         const conservar = !!lista && !!previo && !!trabajo && JSON.stringify(trabajo) !== JSON.stringify(previo.motivos);
-        this.datos.update(d => ({ ...d, [id]: { configs, arbol: this.armarArbol(configs), campos, lista, motivos } }));
+        const canalesPrevios = this.canalesTrabajo()[id];
+        const conservarCanales = !!previo && !!canalesPrevios && JSON.stringify(canalesPrevios) !== JSON.stringify(previo.canales);
+        this.datos.update(d => ({ ...d, [id]: { configs, arbol: this.armarArbol(configs), campos, lista, motivos, canales } }));
         this.motivosTrabajo.update(m => {
           const { [id]: _, ...resto } = m;
           return lista ? { ...resto, [id]: conservar ? trabajo : motivos.map(x => ({ ...x })) } : resto;
         });
-        if (!lista) {
+        this.canalesTrabajo.update(c => ({ ...c, [id]: conservarCanales ? canalesPrevios : canales.map(x => ({ ...x })) }));
+        if (!lista && this.pestana() === 'lista') {
           this.pestana.set('arbol');
         }
         this.version.update(n => n + 1);
@@ -396,7 +430,7 @@ export class TypificationMaintenanceComponent implements OnInit {
     this.abierta.set(null);
     if (!this.datos()[n]) {
       this.cargarSub(n);
-    } else if (!this.datos()[n].lista) {
+    } else if (!this.datos()[n].lista && this.pestana() === 'lista') {
       this.pestana.set('arbol');
     }
   }
@@ -652,6 +686,58 @@ export class TypificationMaintenanceComponent implements OnInit {
     });
   }
 
+  // ---------------------------------------------------------------- Canales de pago (REQ-074)
+
+  canalMal(l: Canal[], c: Canal, i: number): boolean {
+    const nombre = c.nombre.trim().toUpperCase();
+    return !nombre || l.findIndex(x => x.nombre.trim().toUpperCase() === nombre) !== i;
+  }
+
+  private cambiarCanales(cambio: (l: Canal[]) => Canal[]): void {
+    const id = this.sub();
+    if (id) {
+      this.canalesTrabajo.update(c => ({ ...c, [id]: cambio((c[id] ?? []).map(x => ({ ...x }))) }));
+    }
+  }
+
+  escribirCanal(i: number, texto: string): void {
+    this.cambiarCanales(l => {
+      l[i].nombre = texto;
+      return l;
+    });
+  }
+
+  alternarCanal(i: number): void {
+    this.cambiarCanales(l => {
+      l[i].activo = !l[i].activo;
+      return l;
+    });
+  }
+
+  /** Un canal que ya está en gestiones no se borra: queda desactivado, igual que en el backend. */
+  quitarCanal(i: number): void {
+    const c = this.canales()[i];
+    if (c?.enUso) {
+      if (c.activo) {
+        this.alternarCanal(i);
+      }
+      this.avisos.info('Este canal ya se usó en gestiones: queda desactivado en vez de borrarse.');
+      return;
+    }
+    this.cambiarCanales(l => l.filter((_, j) => j !== i));
+    this.version.update(n => n + 1);
+  }
+
+  /** La fila nueva queda al final: el cursor salta a ella. */
+  agregarCanal(): void {
+    this.cambiarCanales(l => [...l, { id: null, nombre: '', activo: true, enUso: false }]);
+    this.version.update(n => n + 1);
+    setTimeout(() => {
+      const nombres = this.host.nativeElement.querySelectorAll<HTMLInputElement>('input[placeholder="Nombre del canal"]');
+      nombres.item(nombres.length - 1)?.focus();
+    });
+  }
+
   // ---------------------------------------------------------------- Guardar
 
   descartar(): void {
@@ -660,6 +746,7 @@ export class TypificationMaintenanceComponent implements OnInit {
     this.basesTrabajo.set({});
     this.gruposTrabajo.set({});
     this.motivosTrabajo.set(Object.fromEntries(Object.entries(datos).filter(([, d]) => d.lista).map(([id, d]) => [id, d.motivos.map(x => ({ ...x }))])));
+    this.canalesTrabajo.set(Object.fromEntries(Object.entries(datos).map(([id, d]) => [id, d.canales.map(x => ({ ...x }))])));
     this.version.update(n => n + 1);
   }
 
@@ -718,6 +805,14 @@ export class TypificationMaintenanceComponent implements OnInit {
       listas.push(this.api.guardarOpcionesLista(d.lista.campoId, id,
         trabajo.map(m => ({ codigoOpcion: m.codigo.trim(), labelOpcion: m.nombre.trim(), estaHabilitada: m.activo }))));
     }
+    for (const [idTexto, trabajo] of Object.entries(this.canalesTrabajo())) {
+      const id = Number(idTexto), d = this.datos()[id];
+      if (!d || JSON.stringify(d.canales) === JSON.stringify(trabajo)) {
+        continue;
+      }
+      tocadas.add(id);
+      listas.push(this.api.guardarCanalesPago(id, trabajo.map(c => ({ id: c.id, nombre: c.nombre.trim(), activo: c.activo }))));
+    }
 
     this.guardando.set(true);
     from([...estados, ...personales, ...conBase, ...listas]).pipe(concatMap(p => p), toArray()).subscribe({
@@ -736,6 +831,7 @@ export class TypificationMaintenanceComponent implements OnInit {
     // Un cambio de base es del catálogo: se vuelven a leer todas las subcarteras.
     this.datos.update(d => cambioCatalogo ? {} : Object.fromEntries(Object.entries(d).filter(([id]) => !tocadas.has(Number(id)))));
     this.motivosTrabajo.update(m => Object.fromEntries(Object.entries(m).filter(([id]) => !tocadas.has(Number(id)))));
+    this.canalesTrabajo.update(c => Object.fromEntries(Object.entries(c).filter(([id]) => !tocadas.has(Number(id)))));
     const id = this.sub();
     if (id) {
       this.cargarSub(id);

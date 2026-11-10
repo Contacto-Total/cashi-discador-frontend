@@ -272,6 +272,30 @@ export interface AmountOption {
           </div>
         </div>
       }
+
+      <!-- Canal de pago (REQ-074): por dónde pagará el cliente; la lista es de la subcartera -->
+      @if (canalesPago().length > 0) {
+        <div class="field-group mt-4">
+          <label for="ps-canal-pago" class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200 text-xs mb-2 transition-colors duration-300">
+            <div class="w-5 h-5 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+              <lucide-angular name="wallet" [size]="12" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
+            </div>
+            Canal de pago *
+          </label>
+          <select
+            id="ps-canal-pago"
+            [ngModel]="canalPagoId() ?? ''"
+            (ngModelChange)="canalPagoChange.emit($event ? +$event : null)"
+            [class]="'w-full px-2 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ' +
+              (canalPagoId() ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 text-slate-800 dark:text-white' : 'border-slate-200 dark:border-slate-500 bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white')"
+          >
+            <option value="">Seleccionar...</option>
+            @for (c of canalesPago(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -323,6 +347,10 @@ export class PaymentScheduleComponent implements OnInit {
   @Input() minInstallments: number = 1;  // Default, será sobrescrito por la opción seleccionada
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
   @Output() customAmountSelected = new EventEmitter<boolean>();
+  /** Canales de pago de la subcartera (REQ-074). Vacío: el campo no se muestra. */
+  canalesPago = input<{ id: number; nombre: string }[]>([]);
+  canalPagoId = input<number | null>(null);
+  @Output() canalPagoChange = new EventEmitter<number | null>();
 
   // Signals
   selectedAmount = signal<number>(0);

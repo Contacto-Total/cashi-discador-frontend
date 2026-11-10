@@ -37,6 +37,9 @@ export interface RegistroGestionV2 {
   grupoGestionUuid?: string | null;
   metodoContacto?: string;
   canalContacto?: string;
+  /** Canal por el que paga el cliente (REQ-074); canalPago es su nombre al guardar */
+  idCanalPago?: number | null;
+  canalPago?: string | null;
   estadoGestion?: string;
   nombreAgente?: string;
   userAgent?: string;
@@ -209,6 +212,8 @@ export interface CreateManagementRequest {
   metodoContacto?: 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | 'GESTION_AUTOMATICA';
   // canalContacto: POR QUÉ MEDIO se contactó
   canalContacto?: 'LLAMADA_SALIENTE' | 'LLAMADA_ENTRANTE' | 'SMS' | 'WHATSAPP' | 'EMAIL';
+  /** Canal por el que paga el cliente (canales_pago.id, REQ-074): solo en promesas y cancelaciones */
+  idCanalPago?: number | null;
   idCampana?: number | null;
   idLlamada?: number | null;
   duracionSegundos?: number | null;
@@ -259,6 +264,7 @@ export interface PaymentScheduleRequest {
   grupoGestionUuid?: string | null;
   metodoContacto?: string;  // GESTION_MANUAL, GESTION_PROGRESIVO, etc.
   canalContacto?: string;   // LLAMADA_SALIENTE, LLAMADA_ENTRANTE, SMS, etc.
+  idCanalPago?: number | null;  // Canal por el que pagará el cliente (canales_pago.id, REQ-074)
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   // Campos de continuidad
@@ -720,6 +726,7 @@ export class ManagementService {
       // Campos de contacto
       telefonoContacto: request.phone || undefined,
       canalContacto: request.canalContacto || undefined,
+      idCanalPago: request.idCanalPago ?? null,
       metodoContacto: request.metodoContacto || 'GESTION_MANUAL',
       estadoGestion: 'COMPLETADA',
       // Campos opcionales de llamada
