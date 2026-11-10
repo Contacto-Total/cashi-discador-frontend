@@ -15,7 +15,7 @@ import { NotificationService } from '../../shared/services/notification.service'
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    <div class="bg-slate-900/80 backdrop-blur rounded-2xl shadow-lg border border-slate-800 overflow-hidden">
+    <div class="rounded-2xl border border-slate-800 overflow-hidden">
       <div class="p-6 border-b border-slate-800 flex flex-wrap items-start justify-between gap-4">
         <div class="flex items-start gap-4">
           <div class="w-11 h-11 rounded-xl bg-violet-500/15 flex items-center justify-center shrink-0">
