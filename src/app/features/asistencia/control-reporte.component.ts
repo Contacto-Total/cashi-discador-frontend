@@ -12,7 +12,7 @@ import {
   BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BARRA_ESTADO_MAL, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CAMPO, ENTRADA, ETIQUETA, FUERTE, INDICADORES,
   PILL, PRINCIPAL, REJILLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TR, VACIO, ZONA
 } from './ui/clases';
-import { MINI, MINI_ICONO, TR_ABRE, TR_ELEGIDA, VOLVER } from './ui/ficha-clases';
+import { MINI, TR_ABRE, TR_ELEGIDA } from './ui/ficha-clases';
 import { BOTON_APAGADO, BOTON_SEC, bajarExcel } from './ui/control-comun';
 import { estadoDia, notaDia, tonoCinta } from './ui/dia-estado';
 import { HorasSemanaComponent } from './ui/horas-semana.component';
@@ -73,17 +73,17 @@ interface FilaPersona {
         @if (persona(); as p) {
           <!-- ===================== Una persona ===================== -->
           <div class="mb-4 flex flex-none flex-wrap items-center gap-3">
-            <button type="button" [class]="VOLVER" (click)="cerrar()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Reporte</button>
+            <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="cerrar()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Reporte</button>
             <span class="text-[1rem] font-bold">{{ p.nombre }}</span>
             <span [class]="INSIGNIA">{{ p.subcartera | nombrePropio }}</span>
             @if (p.teletrabajo) { <span [class]="INSIGNIA">Teletrabajo</span> }
             @if (cerrada()) { <span [class]="INSIGNIA">Semana cerrada</span> }
             <div class="ml-auto flex flex-none items-center gap-[.375rem]">
-              <button type="button" [class]="MINI_ICONO" [disabled]="indice() <= 0" (click)="mover(-1)" aria-label="Persona anterior">
+              <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" [disabled]="indice() <= 0" (click)="mover(-1)" aria-label="Persona anterior">
                 <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
               </button>
               <span class="min-w-[9.5rem] text-center text-[.875rem] font-semibold">{{ indice() + 1 }} de {{ lista().length }}</span>
-              <button type="button" [class]="MINI_ICONO" [disabled]="indice() >= lista().length - 1" (click)="mover(1)" aria-label="Persona siguiente">
+              <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" [disabled]="indice() >= lista().length - 1" (click)="mover(1)" aria-label="Persona siguiente">
                 <lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular>
               </button>
             </div>
@@ -173,7 +173,7 @@ interface FilaPersona {
                                 </div>
                                 @if (tieneCambios(d.fecha)) {
                                   <div class="flex flex-wrap items-center gap-2">
-                                    <button type="button" [class]="MINI" (click)="revertir(d.fecha)"><lucide-angular name="undo-2" [size]="16" class="flex"></lucide-angular>Revertir</button>
+                                    <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="revertir(d.fecha)"><lucide-angular name="undo-2" [size]="16" class="flex"></lucide-angular>Revertir</button>
                                   </div>
                                 }
                               </div>
@@ -290,7 +290,7 @@ export class ControlReporteComponent implements OnDestroy {
   protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL;
   protected readonly INDICADORES = INDICADORES; protected readonly BUSCAR = BUSCAR; protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; protected readonly BUSCAR_ICONO = BUSCAR_ICONO;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY; protected readonly BARRA_ESTADO_MAL = BARRA_ESTADO_MAL;
-  protected readonly MINI = MINI; protected readonly MINI_ICONO = MINI_ICONO; protected readonly VOLVER = VOLVER; protected readonly TR_ABRE = TR_ABRE; protected readonly TR_ELEGIDA = TR_ELEGIDA;
+  protected readonly MINI = MINI; protected readonly TR_ABRE = TR_ABRE; protected readonly TR_ELEGIDA = TR_ELEGIDA;
   protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA; protected readonly ENTRADA = ENTRADA; protected readonly INSIGNIA = INSIGNIA; protected readonly AVISO = AVISO;
   protected readonly EXT = EXT; protected readonly BOTON_SEC = BOTON_SEC; protected readonly BOTON_APAGADO = BOTON_APAGADO; protected readonly MARCAS = MARCAS;
   protected readonly TH_NUM = TH + ' text-right!';

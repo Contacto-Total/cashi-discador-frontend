@@ -11,7 +11,7 @@ import { AmbitoAsistencia, BloquePlan, DeudaEquipoPlan, DiaPlan, PlanEquipoPedid
 import { hoy, lunesDe, sumarDias } from './asistencia.estilos';
 import { AVATARES_PERSONAL } from './avatares-personal';
 import { BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, PILL, PRINCIPAL, REJILLA, VACIO, ZONA } from './ui/clases';
-import { AVATAR, MINI, MINI_ICONO, tonoSubcartera } from './ui/ficha-clases';
+import { AVATAR, MINI, tonoSubcartera } from './ui/ficha-clases';
 import { BOTON_APAGADO, BOTON_SEC, rangoSemana } from './ui/control-comun';
 import { DIAS_CORTOS } from './ui/semana-celdas';
 
@@ -51,10 +51,10 @@ interface FilaPlan {
           <div [class]="ZONA"><div [class]="VACIO">Elige una subcartera en el filtro</div></div>
         } @else {
           <div class="mb-[.75rem] flex min-w-0 flex-none flex-wrap items-center gap-x-3 gap-y-2">
-            <button type="button" [class]="MINI_ICONO + ' h-[2.375rem]!'" (click)="moverSemana(-7)" aria-label="Semana anterior"><lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular></button>
-            <button type="button" [class]="MINI_ICONO + ' h-[2.375rem]!'" (click)="moverSemana(7)" aria-label="Semana siguiente"><lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular></button>
+            <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' h-[2.375rem]!'" (click)="moverSemana(-7)" aria-label="Semana anterior"><lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular></button>
+            <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' h-[2.375rem]!'" (click)="moverSemana(7)" aria-label="Semana siguiente"><lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular></button>
             <span class="text-[1rem] font-bold">{{ mesTitulo() }}</span>
-            <button type="button" [class]="MINI + ' h-[2.375rem]!'" (click)="irAHoy()">Hoy</button>
+            <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI + ' h-[2.375rem]!'" (click)="irAHoy()">Hoy</button>
             <span [class]="PILL[estado()[1]]">{{ estado()[0] }}</span>
             <span class="text-[.75rem] text-muted-foreground">Semana del {{ rangoLunes() }}</span>
           </div>
@@ -66,7 +66,7 @@ interface FilaPlan {
               <div class="flex flex-[1_0_auto] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center">
                 <span class="text-[.9375rem] font-semibold text-foreground">Nadie de {{ subcartera() }} debe horas</span>
                 <span class="max-w-[28rem] text-[.8125rem] text-muted-foreground">Cuando se aprueba un permiso que se recupera, la persona aparece aquí para repartir sus horas en la semana.</span>
-                <button type="button" [class]="MINI + ' mt-[.25rem]'" (click)="irA.emit('base')">Ver el horario base</button>
+                <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI + ' mt-[.25rem]'" (click)="irA.emit('base')">Ver el horario base</button>
               </div>
             } @else {
               <div class="@container/lt5 flex flex-col overflow-hidden rounded-[.75rem] border border-(--line2)">
@@ -179,7 +179,7 @@ export class ControlRecuperacionesComponent {
 
   protected readonly REJILLA = REJILLA; protected readonly PRINCIPAL = PRINCIPAL; protected readonly ZONA = ZONA; protected readonly VACIO = VACIO;
   protected readonly PILL = PILL; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY;
-  protected readonly MINI = MINI; protected readonly MINI_ICONO = MINI_ICONO; protected readonly AVATAR = AVATAR; protected readonly BOTON_SEC = BOTON_SEC;
+  protected readonly MINI = MINI; protected readonly AVATAR = AVATAR; protected readonly BOTON_SEC = BOTON_SEC;
   protected readonly BOTON_APAGADO = BOTON_APAGADO; protected readonly DIAS_CORTOS = DIAS_CORTOS; protected readonly enHoras = enHoras; protected readonly corta = corta;
   protected readonly hoyTexto = hoy();
   /** Las columnas: la persona, los seis días y el avance; más angostas si la tarjeta lo es. */

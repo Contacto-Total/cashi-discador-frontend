@@ -9,13 +9,14 @@ import { AsistenciaService } from './asistencia.service';
 import { AmbitoAsistencia, AsistenciaReporte, CierreSemana, Justificacion, SemanaAgente } from './asistencia.models';
 import { hoy, sumarDias } from './asistencia.estilos';
 import {
-  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BARRA_ESTADO_MAL, FUERTE, INDICADORES, PILL, PRINCIPAL, REJILLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TR, TonoPill, VACIO, ZONA
+  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BARRA_ESTADO_MAL, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, FUERTE, LISTA, INDICADORES, PILL, PRINCIPAL, REJILLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TH, THEAD, TR, TonoPill, VACIO, ZONA
 } from './ui/clases';
-import { BOTON_APAGADO, BOTON_SEC, bajarExcel } from './ui/control-comun';
+import { BOTON_APAGADO, BOTON_SEC, MESES, bajarExcel } from './ui/control-comun';
 import { HorasSemanaComponent } from './ui/horas-semana.component';
 import { IndicadorComponent } from './ui/indicador.component';
 import { MedidorTabla } from './ui/medidor-tabla';
 import { PiePaginaComponent } from './ui/pie-pagina.component';
+import { MINI, TR_ABRE } from './ui/ficha-clases';
 import { Casilla, EXT, casillaDe, claseCasilla, diaCorto, diasDeLaSemana, enCurso } from './ui/semana-celdas';
 
 const enHoras = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -36,6 +37,8 @@ interface FilaCierre {
   conSinRevisar: boolean;
 }
 
+type Vista = 'semana' | 'cerradas';
+
 /**
  * Cierre semanal: lo justo para decidir si la semana de una subcartera se cierra y el resumen que se
  * congela. Bloquea lo que le toca a RR.HH. (marcas faltantes y solicitudes por aprobar); lo que la
@@ -51,20 +54,122 @@ interface FilaCierre {
     <div [class]="REJILLA + ' grid-cols-[minmax(0,1fr)]'">
       <section appTarjeta [class]="PRINCIPAL">
         <ng-container *ngTemplateOutlet="cabecera()" />
-        @if (!ambito().idSubcartera) {
+        @if (vista() === 'cerradas') {
+          @if (!abierta()) {
+            <!-- El historial: se vuelve a la semana con «Cierre semanal»; la subcartera la elige el filtro de arriba y aquí se acota por mes. -->
+            <div class="mb-[.75rem] flex flex-none flex-wrap items-center gap-3">
+              <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="elegirVista('semana')"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Cierre semanal</button>
+              <div class="ml-auto">
+                <select [class]="LISTA + ' w-auto! min-w-[11rem]'" aria-label="Mes" (change)="mesCerradas.set($any($event.target).value); pagina.set(1)">
+                  <option value="" [selected]="!mesCerradas()">Todos los meses</option>
+                  @for (m of mesesCerradas(); track m.clave) { <option [value]="m.clave" [selected]="m.clave === mesCerradas()">{{ m.texto }}</option> }
+                </select>
+              </div>
+            </div>
+          }
+          <div #zona [class]="ZONA">
+            @if (abierta(); as c) {
+              <!-- La foto que se guardó al cerrar: cómo quedó cada asesor esa semana. -->
+              <div class="mb-[.75rem] flex flex-none flex-wrap items-center gap-3">
+                <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirCierre(null)"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Semanas cerradas</button>
+                <span class="text-[1rem] font-bold text-foreground">Semana del {{ corta(c.lunes) }} – {{ corta(c.ultimoDia) }}</span>
+                @if (c.subcartera) { <span [class]="PILL.neu">{{ c.subcartera }}</span> }
+                @if (c.agentes?.length) {
+                  <div [class]="BUSCAR" class="ml-auto flex-[0_1_18rem]">
+                    <span [class]="BUSCAR_ICONO"><lucide-angular name="search" [size]="16" class="flex"></lucide-angular></span>
+                    <input type="search" placeholder="Nombre del asesor" aria-label="Buscar asesor" [class]="BUSCAR_CAMPO" [value]="busqueda()"
+                           (input)="busqueda.set($any($event.target).value); pagina.set(1)">
+                  </div>
+                }
+              </div>
+              @if (!c.agentes) {
+                <div [class]="VACIO">Cargando…</div>
+              } @else {
+                <div class="flex flex-[1_0_auto] flex-col">
+                  <div #caja [class]="TABLA_CAJA">
+                    <table [class]="TABLA">
+                      <thead [class]="THEAD"><tr [class]="TR">
+                        <th [class]="TH">Asesor</th><th [class]="TH + ' text-right!'">Días</th><th [class]="TH + ' text-right!'">Puntual</th><th [class]="TH + ' text-right!'">Tarde</th>
+                        <th [class]="TH + ' text-right!'">Faltas</th><th [class]="TH + ' pl-6!'">Horas</th><th [class]="TH + ' text-right!'">Recuperadas</th><th [class]="TH + ' text-right!'">Tardanza</th><th [class]="TH">Límite</th>
+                      </tr></thead>
+                      <tbody>
+                        @if (!fotoFiltrada().length) { <tr [class]="TR"><td colspan="9" [class]="TD_1 + ' text-muted-foreground!'">Sin resultados</td></tr> }
+                        @for (a of paginaFoto(); track a.idUsuario) {
+                          <tr [class]="TR">
+                            <td [class]="TD_1"><span [class]="FUERTE">{{ a.nombreAgente ?? '—' }}</span></td>
+                            <td [class]="TD + ' text-right!'">{{ a.diasTrabajados }}</td><td [class]="TD + ' text-right!'">{{ a.diasPuntual }}</td>
+                            <td [class]="TD + ' text-right!'">{{ a.diasTarde }}</td><td [class]="TD + ' text-right!'">{{ a.diasFalta }}</td>
+                            <td [class]="TD + ' pl-6!'">{{ a.horasTrabajadas }}<span [class]="SEC">de {{ a.jornada }}</span>
+                              @if (a.ajusteTrabajadasMin) { <span [class]="SEC">{{ ajuste(a.ajusteTrabajadasMin) }} después del cierre</span> }</td>
+                            <td [class]="TD + ' text-right!'">{{ enHoras(a.minutosRecuperados ?? 0) }}</td>
+                            <td [class]="TD + ' text-right!'"><span [class]="a.pierdeBono ? 'font-semibold text-(--ro)' : ''">{{ a.tardanza }}</span>
+                              @if (a.ajusteTardanzaMin) { <span [class]="SEC">{{ ajuste(a.ajusteTardanzaMin) }} después del cierre</span> }</td>
+                            <td [class]="TD"><span [class]="a.pierdeBono ? PILL.ro : PILL.ok" [title]="a.pierdeBono ? (a.motivoBono ?? 'Fuera del límite de tardanza') : 'Dentro del límite de tardanza'">{{ a.pierdeBono ? 'Fuera' : 'Dentro' }}</span></td>
+                          </tr>
+                        }
+                      </tbody>
+                      <tfoot>
+                        @let t = totalesDe(c);
+                        <tr [class]="TR">
+                          <td [class]="PIE_1"><span class="font-semibold">Total</span><span [class]="SEC">{{ c.personas === 1 ? '1 persona' : c.personas + ' personas' }}</span></td>
+                          <td [class]="PIE"></td><td [class]="PIE"></td><td [class]="PIE"></td>
+                          <td [class]="PIE + ' text-right!'"><span class="font-semibold">{{ t.faltas }}</span></td>
+                          <td [class]="PIE + ' pl-6!'"><span class="font-semibold">{{ enHoras(t.trabajadas) }}</span></td>
+                          <td [class]="PIE + ' text-right!'"><span class="font-semibold">{{ enHoras(t.recuperado) }}</span></td>
+                          <td [class]="PIE + ' text-right!'"><span class="font-semibold">{{ enHoras(t.tardanza) }}</span></td>
+                          <td [class]="PIE"></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  <app-pie-pagina [total]="fotoFiltrada().length" [pagina]="paginaActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+                </div>
+              }
+            } @else if (!encontradas().length) {
+              <div [class]="VACIO">{{ mesCerradas() ? 'Sin semanas cerradas ese mes' : 'Sin semanas cerradas' }}</div>
+            } @else {
+              <div class="flex flex-[1_0_auto] flex-col">
+                <div #caja [class]="TABLA_CAJA">
+                  <table [class]="TABLA">
+                    <thead [class]="THEAD"><tr [class]="TR">
+                      <th [class]="TH">Semana</th>@if (!ambito().idSubcartera) { <th [class]="TH">Subcartera</th> }
+                      <th [class]="TH + ' text-right!'">Faltas</th><th [class]="TH + ' text-right!'">Tardanza</th><th [class]="TH">Límite de tardanza</th><th [class]="TH">Cerró</th><th [class]="TH"></th>
+                    </tr></thead>
+                    <tbody>
+                      @for (c of paginaCerradas(); track c.id) {
+                        @let t = totalesDe(c);
+                        <tr [class]="TR + ' ' + TR_ABRE" (click)="abrirCierre(c)">
+                          <td [class]="TD_1"><span [class]="FUERTE">{{ corta(c.lunes) }} – {{ corta(c.ultimoDia) }}</span><span [class]="SEC">{{ c.personas === 1 ? '1 persona' : c.personas + ' personas' }}</span></td>
+                          @if (!ambito().idSubcartera) { <td [class]="TD">{{ c.subcartera ?? 'Todas' }}</td> }
+                          <td [class]="TD + ' text-right!'">{{ c.agentes ? t.faltas : '—' }}</td>
+                          <td [class]="TD + ' text-right!'">{{ c.agentes ? enHoras(t.tardanza) : '—' }}</td>
+                          <td [class]="TD"><span [class]="c.sinBono ? PILL.ro : PILL.ok">{{ c.sinBono ? (c.sinBono === 1 ? '1 fuera del límite' : c.sinBono + ' fuera del límite') : 'Todos dentro' }}</span></td>
+                          <td [class]="TD">{{ c.cerradoPor ?? 'RR.HH.' }}<span [class]="SEC">{{ c.cerradoEn ? corta(c.cerradoEn.slice(0, 10)) + ' ' + c.cerradoEn.slice(11, 16) : '' }}</span></td>
+                          <td [class]="TD + ' w-8 text-right! text-muted-foreground'"><lucide-angular name="chevron-right" [size]="16" class="inline-flex"></lucide-angular></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <app-pie-pagina [total]="encontradas().length" [pagina]="paginaActual()" [porPagina]="porPagina()" (ir)="pagina.set($event)" />
+              </div>
+            }
+          </div>
+        } @else if (!ambito().idSubcartera) {
           <div [class]="ZONA"><div [class]="VACIO">Elige una subcartera en el filtro</div></div>
         } @else {
+          <!-- Lo que ya está listo no filtra: no hay nada que ver ahí. -->
           <div [class]="INDICADORES + ' @max-[44.001rem]/p5:grid-cols-2'">
-            <app-indicador [valor]="faltantes()" rotulo="Días con marcas faltantes" [filtra]="true" tono="am" [activo]="filtro() === 'marcas'" (elegir)="filtrar('marcas')">
+            <app-indicador [valor]="faltantes()" rotulo="Días con marcas faltantes" [filtra]="faltantes() > 0 || filtro() === 'marcas'" tono="am" [activo]="filtro() === 'marcas'" (elegir)="filtrar('marcas')">
               <span [class]="pillDe(faltantes(), true)">{{ textoDe(faltantes(), true) }}</span>
             </app-indicador>
-            <app-indicador [valor]="porAprobar().length" rotulo="Solicitudes por aprobar" [filtra]="true" tono="am" [activo]="filtro() === 'sol'" (elegir)="filtrar('sol')">
+            <app-indicador [valor]="porAprobar().length" rotulo="Solicitudes por aprobar" [filtra]="porAprobar().length > 0 || filtro() === 'sol'" tono="am" [activo]="filtro() === 'sol'" (elegir)="filtrar('sol')">
               <span [class]="pillDe(porAprobar().length, true)">{{ textoDe(porAprobar().length, true) }}</span>
             </app-indicador>
-            <app-indicador [valor]="sinRevisar().length" rotulo="Sin revisar por la supervisora" [filtra]="true" tono="info" [activo]="filtro() === 'rev'" (elegir)="filtrar('rev')">
+            <app-indicador [valor]="sinRevisar().length" rotulo="Sin revisar por la supervisora" [filtra]="sinRevisar().length > 0 || filtro() === 'rev'" tono="info" [activo]="filtro() === 'rev'" (elegir)="filtrar('rev')">
               <span [class]="pillDe(sinRevisar().length, false)">{{ textoDe(sinRevisar().length, false) }}</span>
             </app-indicador>
-            <app-indicador [valor]="fuera()" [unidad]="'de ' + filas().length" rotulo="Fuera del límite de tardanza" [filtra]="true" tono="ro" [activo]="filtro() === 'fuera'" (elegir)="filtrar('fuera')">
+            <app-indicador [valor]="fuera()" [unidad]="'de ' + filas().length" rotulo="Fuera del límite de tardanza" [filtra]="fuera() > 0 || filtro() === 'fuera'" tono="ro" [activo]="filtro() === 'fuera'" (elegir)="filtrar('fuera')">
               <span [class]="pillDe(fuera(), false)">{{ textoDe(fuera(), false) }}</span>
             </app-indicador>
           </div>
@@ -132,11 +237,24 @@ interface FilaCierre {
       </section>
     </div>
 
+    <!-- El historial se abre desde la barra, como las demás acciones de la pantalla. -->
+    <ng-template #verCerradas>
+      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="elegirVista('cerradas')">Semanas cerradas</button>
+    </ng-template>
     <div appTarjeta [class]="BARRA">
-      @if (!ambito().idSubcartera) {
+      @if (vista() === 'cerradas') {
+        @if (abierta(); as c) {
+          <span [class]="BARRA_ESTADO">Cerrada el {{ c.cerradoEn ? corta(c.cerradoEn.slice(0, 10)) : '—' }} por {{ c.cerradoPor ?? 'RR.HH.' }}</span>
+          <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="excelCierre(c)"><lucide-angular name="download" [size]="16" class="flex"></lucide-angular>Descargar Excel</button>
+        } @else {
+          <span [class]="BARRA_ESTADO">{{ cerradas().length === 1 ? '1 semana cerrada' : cerradas().length + ' semanas cerradas' }}</span>
+        }
+      } @else if (!ambito().idSubcartera) {
         <span [class]="BARRA_ESTADO">Sin subcartera elegida</span>
+        <ng-container *ngTemplateOutlet="verCerradas" />
       } @else if (cierre(); as c) {
         <span [class]="BARRA_ESTADO">Cerrada el {{ c.cerradoEn ? corta(c.cerradoEn.slice(0, 10)) : '—' }} por {{ c.cerradoPor ?? 'RR.HH.' }}</span>
+        <ng-container *ngTemplateOutlet="verCerradas" />
         <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="excel()"><lucide-angular name="download" [size]="16" class="flex"></lucide-angular>Descargar Excel</button>
       } @else if (confirmando()) {
         <span [class]="BARRA_ESTADO_HAY">Al cerrar, nadie puede corregir marcas ni resolver solicitudes de esta semana</span>
@@ -144,6 +262,7 @@ interface FilaCierre {
         <button type="button" appBoton="peligro" class="px-4!" [disabled]="guardando()" (click)="cerrar()">Confirmar cierre</button>
       } @else {
         <span [class]="error() || (!pronto() && bloqueos().length) ? BARRA_ESTADO_MAL : BARRA_ESTADO">{{ error() || estadoBarra() }}</span>
+        <ng-container *ngTemplateOutlet="verCerradas" />
         @if (porAprobar().length && !pronto()) {
           <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="irA.emit('solicitudes')">Ver solicitudes</button>
         }
@@ -169,6 +288,7 @@ export class ControlCierreComponent implements OnDestroy {
   protected readonly TD = TD; protected readonly TD_1 = TD_1; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly INDICADORES = INDICADORES;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY; protected readonly BARRA_ESTADO_MAL = BARRA_ESTADO_MAL;
   protected readonly BOTON_SEC = BOTON_SEC; protected readonly BOTON_APAGADO = BOTON_APAGADO; protected readonly EXT = EXT;
+  protected readonly LISTA = LISTA; protected readonly BUSCAR = BUSCAR; protected readonly BUSCAR_ICONO = BUSCAR_ICONO; protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; protected readonly MINI = MINI; protected readonly TR_ABRE = TR_ABRE; protected readonly PILL = PILL;
   protected readonly TH_HOY = TH.replace('text-muted-foreground!', 'text-foreground!');
   protected readonly TD_AMPLIA = TD.replace('py-[.5625rem]!', 'py-[.375rem]!');
   protected readonly TD_1_AMPLIA = TD_1.replace('py-[.5625rem]!', 'py-[.375rem]!');
@@ -184,6 +304,14 @@ export class ControlCierreComponent implements OnDestroy {
   readonly solicitudes = signal<Justificacion[]>([]);
   readonly recuperado = signal<Record<number, { recuperado: number; pedido: number }>>({});
   readonly cierres = signal<CierreSemana[]>([]);
+  /** La semana que se revisa o el historial de semanas cerradas. */
+  readonly vista = signal<Vista>('semana');
+  /** La semana cerrada abierta en el historial, con su foto. */
+  readonly abierta = signal<CierreSemana | null>(null);
+  /** En la foto de una semana: el asesor que se busca. */
+  readonly busqueda = signal('');
+  /** En el historial: «2026-10» o vacío para todos los meses. */
+  readonly mesCerradas = signal('');
   readonly cargando = signal(false);
   readonly filtro = signal<Filtro>('');
   readonly pagina = signal(1);
@@ -193,8 +321,9 @@ export class ControlCierreComponent implements OnDestroy {
   private pedido = 0;
 
   private readonly medidor = new MedidorTabla(() => ({
-    zona: this.zona?.nativeElement, caja: this.caja?.nativeElement, total: this.lista().length, amplia: true,
-    clave: `${this.filtro()}|${this.lista().length}|${this.lunes()}|${this.ambito().idSubcartera}`
+    zona: this.zona?.nativeElement, caja: this.caja?.nativeElement, amplia: this.vista() === 'semana',
+    total: this.vista() === 'semana' ? this.lista().length : this.abierta() ? this.fotoFiltrada().length : this.encontradas().length,
+    clave: `${this.vista()}|${this.abierta()?.id}|${this.filtro()}|${this.lista().length}|${this.lunes()}|${this.ambito().idSubcartera}`
   }));
   readonly porPagina = this.medidor.porPagina;
   readonly altoFila = this.medidor.altoFila;
@@ -288,7 +417,10 @@ export class ControlCierreComponent implements OnDestroy {
     return this.filas().filter(p => !f || (f === 'marcas' ? p.conMarcas : f === 'sol' ? p.conPorAprobar : f === 'rev' ? p.conSinRevisar : !!p.semana?.pierdeBono));
   });
   readonly maxJornada = computed(() => Math.max(1, ...this.filas().map(p => p.semana?.minutosJornada ?? 0)));
-  readonly paginaActual = computed(() => Math.min(Math.max(1, this.pagina()), Math.max(1, Math.ceil(this.lista().length / this.porPagina()))));
+  /** Lo que se pagina: la semana, la lista de cerradas o la foto de una. */
+  private readonly totalVisible = computed(() => this.vista() === 'semana' ? this.lista().length
+    : this.abierta() ? this.fotoFiltrada().length : this.encontradas().length);
+  readonly paginaActual = computed(() => Math.min(Math.max(1, this.pagina()), Math.max(1, Math.ceil(this.totalVisible() / this.porPagina()))));
   readonly paginaLista = computed(() => {
     const ini = (this.paginaActual() - 1) * this.porPagina();
     return this.lista().slice(ini, ini + this.porPagina());
@@ -359,6 +491,61 @@ export class ControlCierreComponent implements OnDestroy {
         this.error.set(respuesta?.error?.error ?? 'No se pudo cerrar la semana');
       }
     });
+  }
+
+  /** Las semanas cerradas del filtro, la más reciente primero; sin subcartera, todas. */
+  readonly cerradas = computed(() => {
+    const sub = this.ambito().idSubcartera ?? null;
+    return this.cierres().filter(c => !sub || c.idSubcartera === sub)
+      .sort((a, b) => b.lunes.localeCompare(a.lunes) || (a.subcartera ?? '').localeCompare(b.subcartera ?? ''));
+  });
+  /** Los meses que tienen semanas cerradas, el más reciente primero; la semana cuenta en el mes de su lunes. */
+  readonly mesesCerradas = computed(() => [...new Set(this.cerradas().map(c => c.lunes.slice(0, 7)))]
+    .map(clave => { const n = MESES[+clave.slice(5, 7) - 1]; return { clave, texto: `${n[0].toUpperCase()}${n.slice(1)} ${clave.slice(0, 4)}` }; }));
+  readonly encontradas = computed(() => { const m = this.mesCerradas(); return m ? this.cerradas().filter(c => c.lunes.startsWith(m)) : this.cerradas(); });
+  /** La foto de la semana abierta con el asesor buscado. */
+  readonly fotoFiltrada = computed(() => {
+    const q = this.busqueda().trim().toLowerCase(), a = this.abierta()?.agentes ?? [];
+    return q ? a.filter(x => (x.nombreAgente ?? '').toLowerCase().includes(q)) : a;
+  });
+  readonly paginaCerradas = computed(() => { const ini = (this.paginaActual() - 1) * this.porPagina(); return this.encontradas().slice(ini, ini + this.porPagina()); });
+  readonly paginaFoto = computed(() => { const ini = (this.paginaActual() - 1) * this.porPagina(); return this.fotoFiltrada().slice(ini, ini + this.porPagina()); });
+
+  elegirVista(v: Vista): void {
+    this.vista.set(v);
+    this.abierta.set(null);
+    this.busqueda.set('');
+    this.pagina.set(1);
+  }
+
+  /** Abre la foto de una semana cerrada; si la lista no la trajo, se pide. */
+  abrirCierre(c: CierreSemana | null): void {
+    this.pagina.set(1);
+    this.busqueda.set('');
+    this.abierta.set(c);
+    if (!c || c.agentes) return;
+    this.servicio.cierre(c.id).subscribe({
+      next: completo => { if (this.abierta()?.id === c.id) this.abierta.set(completo); },
+      error: () => { this.abierta.set(null); this.toast.error('No se pudo abrir la semana cerrada'); }
+    });
+  }
+
+  totalesDe(c: CierreSemana): { faltas: number; tardanza: number; recuperado: number; trabajadas: number } {
+    const a = c.agentes ?? [];
+    return {
+      faltas: a.reduce((t, x) => t + x.diasFalta, 0), tardanza: a.reduce((t, x) => t + x.minutosTardanza, 0),
+      recuperado: a.reduce((t, x) => t + (x.minutosRecuperados ?? 0), 0), trabajadas: a.reduce((t, x) => t + x.minutosTrabajados, 0)
+    };
+  }
+
+  /** «+00:30» o «−00:15»: lo que cambió después de cerrar. */
+  ajuste(m: number): string {
+    return (m > 0 ? '+' : '−') + enHoras(Math.abs(m));
+  }
+
+  excelCierre(c: CierreSemana): void {
+    bajarExcel(this.servicio.excel(c.lunes, c.ultimoDia, { idSubcartera: c.idSubcartera }), `Cierre_${c.lunes}.xlsx`,
+      () => this.toast.error('No se pudo generar el Excel'));
   }
 
   excel(): void {

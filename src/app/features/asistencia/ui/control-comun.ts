@@ -16,7 +16,7 @@ export function bajarExcel(excel$: Observable<Blob>, nombre: string, alFallar: (
 }
 
 /** «2 al 7 de noviembre» o «27 de octubre al 1 de noviembre»: de lunes a sábado. */
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+export const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export function rangoSemana(lunes: string, sumar: (f: string, n: number) => string): string {
   const a = new Date(lunes + 'T00:00:00'), b = new Date(sumar(lunes, 5) + 'T00:00:00');
   return a.getMonth() === b.getMonth()

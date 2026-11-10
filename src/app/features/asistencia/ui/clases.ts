@@ -14,8 +14,8 @@ export const REJILLA_LADO = 'grid-cols-[minmax(0,1fr)_17rem]';
 export const REJILLA_FICHA = 'grid-cols-[minmax(0,1fr)_min(23rem,36%)]';
 
 export const PRINCIPAL = '@container/tarjeta flex min-h-0 flex-col self-stretch overflow-hidden px-8 pt-[clamp(1rem,2.6vh,2rem)] pb-5';
-/** Zona que se desplaza dentro de la tarjeta; llega al borde de abajo. */
-export const ZONA = '-mx-8 -mb-5 flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-3';
+/** Zona que se desplaza dentro de la tarjeta; deja 1.5rem abajo para que un panel o un botón con borde no quede pegado al borde de la tarjeta. */
+export const ZONA = '-mx-8 -mb-5 flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-6';
 /** Columna lateral: la misma tarjeta, con su lista desplazable. */
 export const LADO = 'flex min-h-0 min-w-0 flex-col self-stretch overflow-hidden';
 
@@ -87,3 +87,7 @@ export type TonoPill = keyof typeof PILL;
 /** Vacío de una lista: recuadro punteado con el texto al centro. */
 export const VACIO = 'rounded-xl border border-dashed border-(--campo-ln) px-4 py-8 text-center text-muted-foreground';
 export const VACIO_CHICO = 'rounded-xl border border-dashed border-(--campo-ln) px-3 py-5 text-center text-[.875rem] text-muted-foreground';
+
+/** Chip de sección dentro de una pestaña (Configuración, Cierre semanal); el elegido lleva aria-pressed. */
+export const CHIP = 'inline-flex cursor-pointer items-center gap-[.375rem] rounded-full border! border-solid! border-border! bg-card px-3! py-1! [font-family:inherit] text-[.75rem] leading-[1.5] font-semibold text-(--ink2) '
+  + 'transition-colors duration-150 hover:bg-muted dark:bg-muted dark:hover:bg-border aria-pressed:border-(--campo-ln)! aria-pressed:bg-sidebar-accent aria-pressed:text-foreground';

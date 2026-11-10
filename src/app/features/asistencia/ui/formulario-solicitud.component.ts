@@ -11,7 +11,7 @@ import {
   avisoAnticipacion, hoy as hoyLocal, inicioDiasSinCompletar, primerDiaPermitido, sumarDias as sumarDiasLocal
 } from '../asistencia.estilos';
 import { CAMPO, ENTRADA, ETIQUETA, LISTA } from './clases';
-import { ERROR, MINI, VOLVER } from './ficha-clases';
+import { ERROR, MINI } from './ficha-clases';
 import {
   ADJUNTO, AVISO, BOTONES, CALCULO, CASILLA, COLUMNA_TARJETA, COLUMNA_TITULO, DESLIZA, DIAS_LARGOS, DIA_CASILLA, DIA_CASILLA_NOTA,
   FILA_CAMPOS, OPCION, OPCIONES, OPCION_LINEA, OPCION_PUNTO, OPCION_TITULO, PILA, TRIO, TRIO_BOTON, TRIO_DOS, enPalabras
@@ -75,7 +75,7 @@ export interface PersonaSolicitud {
   template: `
   <section appTarjeta [class]="COLUMNA_TARJETA" aria-labelledby="titulo-solicitud">
     <div class="mb-[.75rem] flex items-center">
-      <button type="button" [class]="VOLVER" (click)="cerrar.emit()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Solicitudes</button>
+      <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="cerrar.emit()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Solicitudes</button>
     </div>
     <p role="heading" aria-level="2" id="titulo-solicitud" [class]="COLUMNA_TITULO">{{ titulo() }}</p>
     <div [class]="DESLIZA">
@@ -254,17 +254,17 @@ export interface PersonaSolicitud {
         }
         @if (total().repetida; as otra) {
           <div [class]="BOTONES">
-            <button type="button" [class]="MINI" [disabled]="!otra.modificable" [title]="otra.modificable ? '' : (otra.motivoNoModificable ?? '')" (click)="abrir(otra)">
+            <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" [disabled]="!otra.modificable" [title]="otra.modificable ? '' : (otra.motivoNoModificable ?? '')" (click)="abrir(otra)">
               <lucide-angular name="pencil" [size]="16" class="flex"></lucide-angular>Modificarla
             </button>
           </div>
         }
 
         <div [class]="BOTONES">
-          <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="cerrar.emit()">Cancelar</button>
           <button type="button" appBoton [class]="'px-4! ' + BOTON_APAGADO" (click)="enviar()" [disabled]="enviando() || (modo() === 'tele' && enTeletrabajo())">
-            {{ enviando() ? (editando() ? 'Guardando…' : 'Enviando…') : editando() ? 'Guardar cambios' : paraOtro() ? 'Registrar' : 'Enviar a revisión' }}
+            <lucide-angular name="check" [size]="16" class="flex"></lucide-angular>{{ enviando() ? (editando() ? 'Guardando…' : 'Enviando…') : editando() ? 'Guardar cambios' : paraOtro() ? 'Registrar' : 'Enviar a revisión' }}
           </button>
+          <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="cerrar.emit()">Cancelar</button>
         </div>
       </div>
     </div>
@@ -294,7 +294,7 @@ export class FormularioSolicitudComponent implements OnInit {
   /** Se guardó: la pantalla vuelve a cargar lo suyo. */
   readonly listo = output<void>();
 
-  protected readonly VOLVER = VOLVER; protected readonly COLUMNA_TARJETA = COLUMNA_TARJETA; protected readonly COLUMNA_TITULO = COLUMNA_TITULO;
+  protected readonly COLUMNA_TARJETA = COLUMNA_TARJETA; protected readonly COLUMNA_TITULO = COLUMNA_TITULO;
   protected readonly DESLIZA = DESLIZA; protected readonly PILA = PILA; protected readonly AVISO = AVISO; protected readonly CAMPO = CAMPO;
   protected readonly ETIQUETA = ETIQUETA; protected readonly LISTA = LISTA; protected readonly ENTRADA = ENTRADA; protected readonly ERROR = ERROR;
   protected readonly MINI = MINI; protected readonly OPCIONES = OPCIONES; protected readonly OPCION = OPCION; protected readonly OPCION_PUNTO = OPCION_PUNTO;

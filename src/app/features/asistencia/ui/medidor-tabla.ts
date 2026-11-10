@@ -80,12 +80,15 @@ export class MedidorTabla {
   private medir(zona: HTMLElement, caja: HTMLElement, total: number, amplia: boolean): void {
     const tabla = caja.querySelector('table') as HTMLElement | null;
     const cuerpo = tabla?.querySelector('tbody') as HTMLElement | null;
-    const filas = cuerpo ? Array.from(cuerpo.children) as HTMLElement[] : [];
+    const todas = cuerpo ? Array.from(cuerpo.children) as HTMLElement[] : [];
+    // El panel que se abre bajo una fila (anular, revocar) no es una fila: ni cuenta ni ocupa lugar de una.
+    const paneles = todas.filter(f => f.hasAttribute('data-panel')), filas = todas.filter(f => !f.hasAttribute('data-panel'));
     if (!tabla || !cuerpo || !filas.length) return;
     if (!this.altoFila()) this.natural = Math.max(...filas.map(f => f.offsetHeight));
     if (!this.natural) return;
     // La fila más alta manda y el relleno de la caja cuenta como libre, como en las tablas del molde.
-    const disp = cuerpo.offsetHeight + caja.clientHeight - tabla.offsetHeight - (zona.scrollHeight - zona.clientHeight);
+    const disp = cuerpo.offsetHeight - paneles.reduce((s, p) => s + p.offsetHeight, 0) + caja.clientHeight - tabla.offsetHeight
+      - Math.max(0, zona.scrollHeight - zona.clientHeight - paneles.reduce((s, p) => s + p.offsetHeight, 0));
     const n = Math.max(3, Math.floor(disp / this.natural));
     if (n !== this.porPagina() && this.ajustes < 3) {
       this.ajustes++;

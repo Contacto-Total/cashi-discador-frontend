@@ -1,3 +1,4 @@
+import { BOTON_APAGADO, BOTON_SEC } from './ui/control-comun';
 import { AfterViewChecked, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { forkJoin, of, switchMap } from 'rxjs';
@@ -20,10 +21,7 @@ import {
   FUERTE, HERRAMIENTAS, LISTA, PANTALLA, PILL, PRINCIPAL, REJILLA, REJILLA_FICHA, REJILLA_SOLA, SEC, SUBTITULO, TABLA, TABLA_CAJA,
   TD, TD_1, TH, THEAD, TITULO, TR, VACIO, ZONA
 } from './ui/clases';
-import {
-  AVATAR, AVATAR_BOTON, AVATAR_SIN, AYUDA, CAMPOS, ERROR, MINI, MINI_ICONO, MINI_PELIGRO, NOTA, SECCION_TITULO, TR_ABRE, TR_ELEGIDA, USUARIO, USUARIO_SIN, VOLVER,
-  tonoSubcartera
-} from './ui/ficha-clases';
+import { AVATAR, AVATAR_BOTON, AVATAR_SIN, AYUDA, CAMPOS, ERROR, MINI, MINI_PELIGRO, NOTA, SECCION_TITULO, TR_ABRE, TR_ELEGIDA, USUARIO, USUARIO_SIN, tonoSubcartera } from './ui/ficha-clases';
 import { filasQueEntran } from './ui/filas-por-alto';
 import { PiePaginaComponent } from './ui/pie-pagina.component';
 import { SegmentadoComponent } from './ui/segmentado.component';
@@ -55,6 +53,8 @@ const CAMPOS_ID: Record<Campo, string> = {
 };
 /** Ancho mínimo de una tarjeta de subcartera: si no entran todas en una fila, quedan solo con nombre y cifra. */
 const ANCHO_TARJETA_REM = 9.5;
+/** Ancho mínimo de la ficha de cada persona cuando hay una sola subcartera. */
+const ANCHO_PERSONA_REM = 8;
 
 /**
  * Personal: la ficha de cada persona por subcartera.
@@ -86,7 +86,7 @@ const ANCHO_TARJETA_REM = 9.5;
             </div>
           </div>
           <div [class]="HERRAMIENTAS">
-            <button type="button" [class]="VOLVER" (click)="cancelarNuevo()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Personal</button>
+            <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="cancelarNuevo()"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Personal</button>
           </div>
           <div [class]="ZONA">
             <div class="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] items-start @max-[52.001rem]/tarjeta:grid-cols-[minmax(0,1fr)]">
@@ -213,21 +213,43 @@ const ANCHO_TARJETA_REM = 9.5;
                         <ng-container *ngTemplateOutlet="cabeza" />
                       </button>
                     }
-                    @if (!compacta()) {
+                    @if (uno) {
+                      <!-- Una sola subcartera: la tarjeta tiene todo el ancho y cada persona va con el avatar grande, el nombre y el
+                           usuario debajo, repartidas a lo ancho. Al pasar el cursor el avatar sube, toma el anillo de la subcartera y saluda. -->
                       @let visibles = cuantosVen(g);
-                      <div class="relative z-[1] mt-auto flex flex-wrap overflow-hidden pt-[4px] pr-0 pb-[4px] pl-[3px]" [attr.data-grupo]="g.id"
-                           [class]="uno ? 'h-[calc(2.375rem+1.5rem+8px)] gap-1' : 'h-[calc(2.375rem+8px)] @max-[12.001rem]/sub:h-[calc(2rem+8px)]'">
+                      <div class="relative z-[1] mt-1 flex justify-evenly gap-2" [attr.data-grupo]="g.id">
                         @for (p of g.gente.slice(0, visibles); track p.id) {
-                          <button type="button" [class]="AVATAR_BOTON + (uno ? ' flex w-24 flex-col items-center gap-[.3125rem]' : ' -mr-[.3125rem]')"
-                                  (click)="$event.stopPropagation(); verFicha(p)" [attr.aria-label]="nombreLista(p)" [attr.title]="nombreCorto(p) + (p.usuario ? ', ' + p.usuario : ', sin usuario de Cashi')">
-                            <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'size-[2.375rem]' }" />
-                            @if (uno) { <span class="max-w-full truncate text-[.75rem] font-medium text-(--ink2)">{{ nombreCorto(p) }}</span> }
+                          <button type="button" (click)="verFicha(p)" [attr.title]="nombreLista(p)" [style.width.rem]="ANCHO_PERSONA"
+                                  class="group flex min-w-0 flex-none cursor-pointer flex-col items-center rounded-xl border-0! bg-transparent px-1! pt-2! pb-1! text-center [font-family:inherit] text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--t)">
+                            <span class="relative mb-[.625rem] flex transition-transform duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] group-hover:-translate-y-1 group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:transform-none">
+                              <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'size-[4.5rem] transition-shadow! duration-300! group-hover:shadow-[0_0_0_2px_var(--card),0_0_0_4px_var(--t),0_.875rem_1.5rem_-.75rem_var(--t)]! [&>svg]:origin-[50%_85%] group-hover:[&>svg]:animate-[cashi-saludo_.7s_ease-in-out] motion-reduce:group-hover:[&>svg]:animate-none' }" />
+                              @if (p.modalidad === 'TELETRABAJO') {
+                                <span title="Teletrabajo" class="absolute -right-1 -bottom-[.125rem] grid size-6 place-items-center rounded-full bg-(--info-bg) text-(--info) shadow-[0_0_0_2px_var(--card)]"><lucide-angular name="house" [size]="14" class="flex"></lucide-angular></span>
+                              }
+                            </span>
+                            <span class="block max-w-full truncate text-[.875rem] leading-[1.35] font-semibold transition-colors duration-200 group-hover:text-(--t)">{{ nombreCorto(p) }}</span>
+                            <small class="block max-w-full truncate text-[.75rem] leading-[1.4] text-muted-foreground">{{ p.usuario || 'Sin usuario de Cashi' }}</small>
                           </button>
                         }
                         @if (visibles < g.gente.length) {
-                          <button type="button" (click)="$event.stopPropagation(); uno ? null : alternarGrupo(g.id)" [attr.aria-label]="(g.gente.length - visibles) + ' personas más'"
-                                  class="inline-grid size-[2.375rem] flex-none place-items-center rounded-full border-0! bg-card p-0! text-[.75rem] font-bold text-foreground shadow-[0_0_0_2px_var(--card),0_0_0_3px_color-mix(in_oklab,var(--t)_35%,transparent)] @max-[12.001rem]/sub:size-8"
-                                  [class]="uno ? 'ml-[1.8125rem] cursor-default' : 'cursor-pointer'">+{{ g.gente.length - visibles }}</button>
+                          <span class="flex flex-none flex-col items-center px-1 pt-2 pb-1 text-[.75rem] font-medium text-muted-foreground" [style.width.rem]="ANCHO_PERSONA">
+                            <span class="mb-[.625rem] grid size-[4.5rem] place-items-center rounded-full border border-dashed border-[color-mix(in_oklab,var(--t)_40%,var(--border))] text-[1rem] font-bold text-foreground">+{{ g.gente.length - visibles }}</span>
+                            <span class="leading-[1.35]">más en la lista</span>
+                          </span>
+                        }
+                      </div>
+                    } @else if (!compacta()) {
+                      @let visibles = cuantosVen(g);
+                      <div class="relative z-[1] mt-auto flex flex-wrap overflow-hidden pt-[4px] pr-0 pb-[4px] pl-[3px] h-[calc(2.375rem+8px)] @max-[12.001rem]/sub:h-[calc(2rem+8px)]" [attr.data-grupo]="g.id">
+                        @for (p of g.gente.slice(0, visibles); track p.id) {
+                          <button type="button" [class]="AVATAR_BOTON + ' -mr-[.3125rem]'"
+                                  (click)="$event.stopPropagation(); verFicha(p)" [attr.aria-label]="nombreLista(p)" [attr.title]="nombreCorto(p) + (p.usuario ? ', ' + p.usuario : ', sin usuario de Cashi')">
+                            <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'size-[2.375rem]' }" />
+                          </button>
+                        }
+                        @if (visibles < g.gente.length) {
+                          <button type="button" (click)="$event.stopPropagation(); alternarGrupo(g.id)" [attr.aria-label]="(g.gente.length - visibles) + ' personas más'"
+                                  class="inline-grid size-[2.375rem] flex-none cursor-pointer place-items-center rounded-full border-0! bg-card p-0! text-[.75rem] font-bold text-foreground shadow-[0_0_0_2px_var(--card),0_0_0_3px_color-mix(in_oklab,var(--t)_35%,transparent)] @max-[12.001rem]/sub:size-8">+{{ g.gente.length - visibles }}</button>
                         }
                       </div>
                     }
@@ -303,7 +325,7 @@ const ANCHO_TARJETA_REM = 9.5;
         <section appTarjeta class="flex min-h-0 min-w-0 flex-col self-stretch overflow-hidden p-0!" [attr.aria-label]="'Ficha de ' + p.nombres + ' ' + p.apellidos">
           @let ces = cesado(p);
           <div class="relative flex flex-none flex-col items-center gap-1 border-b border-(--line2) bg-card px-4 pt-5 pb-[.875rem] text-center">
-            <button type="button" id="cerrar-ficha" [class]="MINI_ICONO + ' absolute! top-[.625rem] right-[.625rem]'" (click)="cerrarFicha()" aria-label="Cerrar ficha" title="Cerrar">
+            <button type="button" id="cerrar-ficha" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' absolute! top-[.625rem] right-[.625rem]'" (click)="cerrarFicha()" aria-label="Cerrar ficha" title="Cerrar">
               <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>
             </button>
             <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'mb-[.375rem] size-16' }" />
@@ -318,7 +340,7 @@ const ANCHO_TARJETA_REM = 9.5;
 
           @if (accion(); as a) {
             <div class="flex flex-none items-center gap-3 px-4 pt-[.875rem]">
-              <button type="button" [class]="VOLVER" (click)="accion.set(null)"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Ficha</button>
+              <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="accion.set(null)"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Ficha</button>
               <span class="text-[.9375rem] font-bold text-foreground">{{ TITULO_ACCION[a] }}</span>
             </div>
             <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-3 pb-4">
@@ -392,10 +414,12 @@ const ANCHO_TARJETA_REM = 9.5;
                 @if (notaAccion(p); as nota) { <p [class]="NOTA">{{ nota }}</p> }
                 @if (errorAccion()) { <p [class]="ERROR" role="alert">{{ errorAccion() }}</p> }
                 <div class="flex flex-wrap items-center justify-start gap-2">
+                  @if (a === 'cese') {
+                    <button type="button" appBoton="peligro" [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="guardarAccion(p)">Registrar cese</button>
+                  } @else {
+                    <button type="button" appBoton [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="guardarAccion(p)"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Guardar</button>
+                  }
                   <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="accion.set(null)">Cancelar</button>
-                  <button type="button" appBoton class="h-[2.375rem]! px-4!" [disabled]="guardando()" (click)="guardarAccion(p)">
-                    <lucide-angular name="check" [size]="16" class="flex"></lucide-angular>{{ a === 'cese' ? 'Registrar cese' : 'Guardar' }}
-                  </button>
                 </div>
               </div>
             </div>
@@ -407,12 +431,12 @@ const ANCHO_TARJETA_REM = 9.5;
                   <span class="inline-flex items-center gap-[.4375rem] whitespace-nowrap"><i class="block size-2 flex-none rounded-full" [style.background]="tonoDe(p)"></i>{{ p.subcartera | nombrePropio }}</span>
                   <small class="ml-[.9375rem] text-[.6875rem] font-medium text-muted-foreground">{{ clienteCorto(p) }}</small>
                 </div>
-                @if (!ces) { <button type="button" [class]="MINI" (click)="abrirAccion(p, 'sub')">Cambiar</button> }
+                @if (!ces) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'sub')">Cambiar</button> }
               </div>
               <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 border-t border-(--line2) py-[.375rem]">
                 <span class="text-[.8125rem] text-muted-foreground">Modalidad</span>
                 <div class="flex min-w-0 flex-col items-start"><span [class]="modalidadDe(p) === 'TELETRABAJO' ? PILL.info : PILL.neu">{{ nombreModalidad(modalidadDe(p)) }}</span></div>
-                @if (!ces) { <button type="button" [class]="MINI" (click)="abrirAccion(p, 'mod')">Cambiar</button> }
+                @if (!ces) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'mod')">Cambiar</button> }
               </div>
               <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 border-t border-(--line2) py-[.375rem]">
                 <span class="text-[.8125rem] text-muted-foreground">Estado</span>
@@ -421,7 +445,7 @@ const ANCHO_TARJETA_REM = 9.5;
                   @else if (p.fechaCese) { <span [class]="PILL.am">Cesa el {{ dma(p.fechaCese).slice(0, 5) }}</span> }
                   @else { <span [class]="PILL.ok">Activo</span> }
                 </div>
-                @if (!p.fechaCese) { <button type="button" [class]="MINI_PELIGRO" (click)="abrirAccion(p, 'cese')">Registrar cese</button> }
+                @if (!p.fechaCese) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI_PELIGRO" (click)="abrirAccion(p, 'cese')">Registrar cese</button> }
               </div>
             </div>
             <div class="mx-4 mt-[.875rem] flex flex-none items-center gap-2">
@@ -452,7 +476,7 @@ const ANCHO_TARJETA_REM = 9.5;
                   }
                 </div>
                 <div class="flex justify-end pt-3">
-                  <button type="button" [class]="MINI" (click)="abrirAccion(p, 'datos')"><lucide-angular name="pencil" [size]="16" class="flex"></lucide-angular>Editar datos</button>
+                  <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'datos')"><lucide-angular name="pencil" [size]="16" class="flex"></lucide-angular>Editar datos</button>
                 </div>
               }
             </div>
@@ -468,7 +492,7 @@ const ANCHO_TARJETA_REM = 9.5;
         <button type="button" appBoton class="px-4!" [disabled]="guardando()" (click)="registrar()"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Registrar</button>
       } @else {
         <span [class]="BARRA_ESTADO">{{ activos().length === 1 ? '1 persona activa' : activos().length + ' personas activas' }}{{ sinUsuario() ? ', ' + sinUsuario() + ' sin usuario de Cashi' : '' }}</span>
-        <button type="button" appBoton class="px-4!" (click)="abrirNuevo()">Registrar persona</button>
+        <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="abrirNuevo()">Registrar persona</button>
       }
     </div>
 
@@ -555,13 +579,15 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
   protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly BARRA = BARRA;
   protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_MAL = BARRA_ESTADO_MAL;
   protected readonly AVATAR = AVATAR; protected readonly AVATAR_SIN = AVATAR_SIN; protected readonly AVATAR_BOTON = AVATAR_BOTON;
-  protected readonly MINI = MINI; protected readonly MINI_ICONO = MINI_ICONO; protected readonly MINI_PELIGRO = MINI_PELIGRO; protected readonly VOLVER = VOLVER; protected readonly USUARIO = USUARIO;
+  protected readonly MINI = MINI; protected readonly MINI_PELIGRO = MINI_PELIGRO; protected readonly USUARIO = USUARIO;
   protected readonly USUARIO_SIN = USUARIO_SIN; protected readonly TR_ABRE = TR_ABRE; protected readonly TR_ELEGIDA = TR_ELEGIDA;
   protected readonly SECCION_TITULO = SECCION_TITULO; protected readonly CAMPOS = CAMPOS; protected readonly AYUDA = AYUDA;
   protected readonly NOTA = NOTA; protected readonly ERROR = ERROR;
   /** Secundario en oscuro: el gris de los botones, como en el artifact. */
-  protected readonly BOTON_SEC = 'dark:bg-muted dark:hover:bg-border';
+  protected readonly BOTON_SEC = BOTON_SEC;
+  protected readonly BOTON_APAGADO = BOTON_APAGADO;
   protected readonly ANCHO_TARJETA = ANCHO_TARJETA_REM;
+  protected readonly ANCHO_PERSONA = ANCHO_PERSONA_REM;
   protected readonly ids = CAMPOS_ID;
   protected readonly MOTIVOS_CESE = MOTIVOS_CESE;
   protected readonly ESTADOS_CIVILES = ESTADOS_CIVILES;
@@ -684,10 +710,11 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
         const g = this.grupos().find(x => x.id === +caja.dataset['grupo']!);
         const primero = caja.querySelector<HTMLElement>('button');
         if (!g || !primero) return;
-        const uno = this.grupos().length === 1;
-        // Cada avatar ocupa su ancho menos el solape (con nombres, su casilla más el hueco); el «+N» toma el último lugar.
-        const paso = uno ? primero.offsetWidth + .25 * rem : primero.offsetWidth - .3125 * rem;
-        const caben = Math.max(1, Math.floor((caja.clientWidth - 3 + (uno ? .25 * rem : 0)) / paso));
+        // Una sola subcartera: las fichas que entran en una fila de la rejilla. Varias: cada avatar ocupa su
+        // ancho menos el solape. En los dos casos, si no entran todos, el último lugar es para lo que falta.
+        const caben = this.grupos().length === 1
+          ? Math.max(1, Math.floor((caja.clientWidth + .5 * rem) / ((ANCHO_PERSONA_REM + .5) * rem)))
+          : Math.max(1, Math.floor((caja.clientWidth - 3) / (primero.offsetWidth - .3125 * rem)));
         vis[g.id] = g.gente.length <= caben ? g.gente.length : Math.max(1, caben - 1);
       });
       const antes = this.visibles();
