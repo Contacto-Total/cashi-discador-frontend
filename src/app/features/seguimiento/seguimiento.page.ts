@@ -358,10 +358,9 @@ export class SeguimientoPage implements OnInit, OnDestroy {
 
     const idSubcartera = this.subPortfolioId || undefined;
 
-    // origen=SEGUIMIENTO: le pide al backend que valide la ventana de horario.
-    // El modal de recordatorios usa el mismo endpoint y NO lo manda, porque ese
-    // flujo no tiene ventana configurada y quedaría bloqueado.
-    this.recordatoriosService.iniciarDialer(this.userId, idSubcartera, 'SEGUIMIENTO').subscribe({
+    // El backend valida la ventana de horario y responde 400 si está cerrada; el
+    // motivo se muestra en la rama error:.
+    this.recordatoriosService.iniciarDialer(this.userId, idSubcartera).subscribe({
       next: (response) => {
         this.isLoading = false;
         if (response.success) {
@@ -572,7 +571,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.sipService.blockIncomingCallsMode(false);
 
     // 4. Llamar al backend para originar la llamada directa
-    this.recordatoriosService.iniciarLlamadaDirecta(this.userId, 'SEGUIMIENTO').subscribe({
+    this.recordatoriosService.iniciarLlamadaDirecta(this.userId).subscribe({
       next: (resultado) => {
         if (resultado.success) {
           console.log('[Seguimiento] Llamada directa iniciada, UUID:', resultado.callUuid);
