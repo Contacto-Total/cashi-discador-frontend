@@ -13,6 +13,7 @@ import {
 import { NotificationService } from '../../shared/services/notification.service';
 import { NotificationsComponent } from '../../shared/components/notifications/notifications.component';
 import { ConvenioTrasladosComponent } from './convenio-traslados.component';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-convenio-import',
@@ -214,6 +215,7 @@ import { ConvenioTrasladosComponent } from './convenio-traslados.component';
           </div>
         </div>
 
+        @if (esAdmin) {
         <div class="flex gap-2 mb-6 border-b border-slate-800">
           <button (click)="pestana.set('importar')"
                   class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
@@ -232,8 +234,9 @@ import { ConvenioTrasladosComponent } from './convenio-traslados.component';
             Traslados
           </button>
         </div>
+        }
 
-        @if (pestana() === 'importar') {
+        @if (pestana() === 'importar' || !esAdmin) {
         <!-- Info Card -->
         <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 mb-6">
           <div class="flex items-start gap-3">
@@ -480,6 +483,8 @@ import { ConvenioTrasladosComponent } from './convenio-traslados.component';
 })
 export class ConvenioImportComponent {
   private notificationService = inject(NotificationService);
+  private authService = inject(AuthService);
+  esAdmin = this.authService.getCurrentUser()?.role === 'ADMIN';
 
   // Signals
   pestana = signal<'importar' | 'traslados'>('importar');
