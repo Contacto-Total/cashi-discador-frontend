@@ -452,6 +452,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pagos-bancarios/pages/payments-dashboard/payments-dashboard.component').then(m => m.PaymentsDashboardComponent),
     canActivate: [authGuard, menuAccesoGuard]
   },
+  {
+    path: 'dashboard/fluctuacion-cartera',
+    loadComponent: () => import('./fluctuacion-cartera/fluctuacion-cartera.page').then(m => m.FluctuacionCarteraPage),
+    canActivate: [authGuard, menuAccesoGuard] // REQ-054: acceso por configuración de menú (FLUCTUACION_CARTERA)
+  },
 
   {
     path: 'admin/cartas-cesion',

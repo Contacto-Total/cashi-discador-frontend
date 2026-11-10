@@ -46,6 +46,7 @@ const PORTADA: Record<string, string> = {
   PAGOS_BANCARIOS: 'landmark',
   COMISIONES: 'badge-percent',
   DASHBOARD_PAGOS: 'chart-pie',
+  FLUCTUACION_CARTERA: 'trending-down',
 
   // Campañas
   CAMPANAS: 'megaphone',
