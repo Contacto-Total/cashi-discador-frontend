@@ -42,6 +42,24 @@ import {
 } from './asistencia.models';
 import { conTipo } from './asistencia.estilos';
 
+/** Teletrabajo por horas: la parte en la oficina y la remota de ese día, «HH:mm». */
+interface HorasTeletrabajo {
+  oficinaDesde?: string | null;
+  oficinaHasta?: string | null;
+  remotoDesde?: string | null;
+  remotoHasta?: string | null;
+}
+
+/** Van las cuatro o ninguna: el backend exige las dos partes del día. */
+function ponerHorasTeletrabajo(cuerpo: FormData, datos: HorasTeletrabajo): void {
+  if (datos.remotoDesde && datos.remotoHasta && datos.oficinaDesde && datos.oficinaHasta) {
+    cuerpo.append('remotoDesde', datos.remotoDesde);
+    cuerpo.append('remotoHasta', datos.remotoHasta);
+    cuerpo.append('oficinaDesde', datos.oficinaDesde);
+    cuerpo.append('oficinaHasta', datos.oficinaHasta);
+  }
+}
+
 /**
  * Cliente de /api/asistencia.
  *
@@ -291,7 +309,7 @@ export class AsistenciaService {
     /** Permiso por horas: las horas que sí trabaja ese día, «HH:mm». */
     trabajaDesde?: string | null;
     trabajaHasta?: string | null;
-  }): Observable<{ id: number }> {
+  } & HorasTeletrabajo): Observable<{ id: number }> {
     const cuerpo = new FormData();
     cuerpo.append('idTipoDia', String(datos.idTipoDia));
     cuerpo.append('fechaDesde', datos.fechaDesde);
@@ -312,6 +330,7 @@ export class AsistenciaService {
       cuerpo.append('trabajaDesde', datos.trabajaDesde);
       cuerpo.append('trabajaHasta', datos.trabajaHasta);
     }
+    ponerHorasTeletrabajo(cuerpo, datos);
     if (datos.fechaOrigen) {
       cuerpo.append('fechaOrigen', datos.fechaOrigen);
     }
@@ -330,7 +349,7 @@ export class AsistenciaService {
     archivo?: File | null;
     trabajaDesde?: string | null;
     trabajaHasta?: string | null;
-  }): Observable<{ id: number }> {
+  } & HorasTeletrabajo): Observable<{ id: number }> {
     const cuerpo = new FormData();
     cuerpo.append('idTipoDia', String(datos.idTipoDia));
     cuerpo.append('fechaDesde', datos.fechaDesde);
@@ -345,6 +364,7 @@ export class AsistenciaService {
       cuerpo.append('trabajaDesde', datos.trabajaDesde);
       cuerpo.append('trabajaHasta', datos.trabajaHasta);
     }
+    ponerHorasTeletrabajo(cuerpo, datos);
     return this.http.put<{ id: number }>(`${this.url}/justificaciones/${id}`, cuerpo);
   }
 
@@ -362,7 +382,7 @@ export class AsistenciaService {
     idUsuario?: number | null;
     /** Al modificar, la solicitud que se está cambiando. */
     idSolicitud?: number | null;
-  }): Observable<SolicitudPrevista> {
+  } & HorasTeletrabajo): Observable<SolicitudPrevista> {
     let params = new HttpParams()
       .set('idTipoDia', datos.idTipoDia)
       .set('fechaDesde', datos.fechaDesde)
@@ -372,6 +392,10 @@ export class AsistenciaService {
     }
     if (datos.entraALas) {
       params = params.set('entraALas', datos.entraALas);
+    }
+    if (datos.remotoDesde && datos.remotoHasta && datos.oficinaDesde && datos.oficinaHasta) {
+      params = params.set('remotoDesde', datos.remotoDesde).set('remotoHasta', datos.remotoHasta)
+        .set('oficinaDesde', datos.oficinaDesde).set('oficinaHasta', datos.oficinaHasta);
     }
     if (datos.idUsuario) {
       params = params.set('idUsuario', datos.idUsuario);
@@ -486,6 +510,10 @@ export class AsistenciaService {
 
   cambiarSubcartera(id: number, cuerpo: { idSubcartera: number; fechaDesde: string; motivo: string }): Observable<FichaPersonal> {
     return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/subcartera`, cuerpo);
+  }
+
+  cambiarModalidad(id: number, cuerpo: { modalidad: 'PRESENCIAL' | 'TELETRABAJO'; fechaDesde: string; motivo: string }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/modalidad`, cuerpo);
   }
 
   registrarCese(id: number, cuerpo: { fecha: string; motivo: string; comentario: string | null }): Observable<FichaPersonal> {

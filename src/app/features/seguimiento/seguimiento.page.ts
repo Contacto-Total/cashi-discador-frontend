@@ -11,6 +11,7 @@ import { AgentState } from '../../core/models/agent-status.model';
 import { RecordatorioPromesa } from '../../core/models/recordatorio.model';
 import { trigger, style, animate, transition, keyframes, state } from '@angular/animations';
 import { AppDatePipe, AppNumberPipe, AppTimePipe } from '@/shared/pipes/format.pipes';
+import { ToastService } from '../../shared/services/toast.service';
 
 type PageState = 'initial' | 'countdown' | 'finished';
 
@@ -283,7 +284,8 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     private seguimientoService: SeguimientoService,
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
-    private sipService: SipService
+    private sipService: SipService,
+    private toast: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -356,7 +358,10 @@ export class SeguimientoPage implements OnInit, OnDestroy {
 
     const idSubcartera = this.subPortfolioId || undefined;
 
-    this.recordatoriosService.iniciarDialer(this.userId, idSubcartera).subscribe({
+    // origen=SEGUIMIENTO: le pide al backend que valide la ventana de horario.
+    // El modal de recordatorios usa el mismo endpoint y NO lo manda, porque ese
+    // flujo no tiene ventana configurada y quedaría bloqueado.
+    this.recordatoriosService.iniciarDialer(this.userId, idSubcartera, 'SEGUIMIENTO').subscribe({
       next: (response) => {
         this.isLoading = false;
         if (response.success) {
@@ -380,7 +385,14 @@ export class SeguimientoPage implements OnInit, OnDestroy {
           this.aplicarEstadoDialer(err.error.estado);
           return;
         }
-        console.error('[Seguimiento] Error iniciando dialer:', err.status);
+        // El asesor tiene que saber POR QUE lo devolvieron al tablero: antes se
+        // iba en silencio y parecía que la pantalla estaba rota. Hay dos formas
+        // de mensaje: la rama propia del controller manda "mensaje", y lo que
+        // sale por GlobalExceptionHandler (IllegalStateException -> 400) manda
+        // "message". El toast vive en el shell, así que sobrevive al navigate.
+        const motivo = err.error?.mensaje || err.error?.message;
+        console.error('[Seguimiento] Error iniciando dialer:', err.status, motivo);
+        this.toast.error(motivo || 'No se pudo abrir el seguimiento. Intente de nuevo.', 6000);
         this.router.navigate(['/agent-dashboard']);
       }
     });
@@ -560,23 +572,41 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.sipService.blockIncomingCallsMode(false);
 
     // 4. Llamar al backend para originar la llamada directa
-    this.recordatoriosService.iniciarLlamadaDirecta(this.userId).subscribe({
+    this.recordatoriosService.iniciarLlamadaDirecta(this.userId, 'SEGUIMIENTO').subscribe({
       next: (resultado) => {
         if (resultado.success) {
           console.log('[Seguimiento] Llamada directa iniciada, UUID:', resultado.callUuid);
           // El flujo SIP normal navega a /collection-management
         } else {
-          console.error('[Seguimiento] Error iniciando llamada directa:', resultado.mensaje);
-          this.limpiarLlamadaCancelada();
-          this.obtenerSiguienteYMostrar();
+          this.abortarDiscado(resultado.mensaje);
         }
       },
       error: (err) => {
-        console.error('[Seguimiento] Error en llamada directa:', err);
-        this.limpiarLlamadaCancelada();
-        this.obtenerSiguienteYMostrar();
+        this.abortarDiscado(err.error?.mensaje || err.error?.message, err.status);
       }
     });
+  }
+
+  /**
+   * La llamada directa no salio. Antes se pedia el siguiente cliente, pero
+   * ninguno de los motivos es del cliente: son del agente o de la sesion (fuera
+   * de horario, sin extension SIP, predictiva en vuelo, originate caido, lista
+   * no activa). El siguiente fallaba igual, asi que la pantalla recorria toda la
+   * lista de a 3 segundos, en silencio, y dejaba cada cliente TOMADO hasta que
+   * lo soltara el reaper.
+   *
+   * Ahora para, suelta el cliente que tenia tomado, vuelve al estado inicial y
+   * dice por que. El asesor reintenta con "Iniciar" cuando el motivo ya no este.
+   */
+  private abortarDiscado(motivo?: string, status?: number): void {
+    console.error('[Seguimiento] Llamada directa no iniciada:', status ?? '', motivo);
+    this.limpiarIntervals();
+    this.limpiarLlamadaCancelada();
+    this.soltarItemActual();
+    this.llamadaIniciada = false;
+    this.recordatorioActual = null;
+    this.pageState = 'initial';
+    this.toast.error(motivo || 'No se pudo iniciar la llamada. Intente de nuevo.', 6000);
   }
 
   // ==================== CANCELAR / VOLVER ====================

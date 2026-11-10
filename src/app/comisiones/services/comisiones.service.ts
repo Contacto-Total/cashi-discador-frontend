@@ -28,12 +28,14 @@ interface ClienteContenidoRespuesta {
   nombre: string | null;
   capitalAsignado: number | null;
   fechaContencion: string | null;
+  celular: string | null;
 }
 
 function aClienteContenido(c: ClienteContenidoRespuesta): ClienteContenido {
   return {
     documentoCliente: c.documento,
     nombreCliente: c.nombre,
+    celularCliente: c.celular?.trim() || null,
     capitalAsignado: c.capitalAsignado,
     fechaContencion: c.fechaContencion
   };

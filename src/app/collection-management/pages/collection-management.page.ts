@@ -22,7 +22,7 @@ import { CampoOpcionDTO, CanalPagoDTO } from '../../maintenance/models/typificat
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
-import { AmountOption, ContextoDescuento } from '../../shared/components/payment-schedule/payment-schedule.component';
+import { AmountOption } from '../../shared/components/payment-schedule/payment-schedule.component';
 import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
@@ -1601,10 +1601,6 @@ interface BorradorDeuda {
                 [customerAmounts]="finalPaymentAmounts()"
                 [simboloMoneda]="simboloMoneda()"
                 [deuda]="cuentaSeleccionada()"
-                [contextoDescuento]="contextoDescuento()"
-                [canalesPago]="pideCanalPago() ? canalesPago() : []"
-                [canalPagoId]="canalPagoId()"
-                (canalPagoChange)="canalPagoId.set($event)"
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
@@ -3652,29 +3648,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return fecha ? `${fecha[3]}/${fecha[2]}/${fecha[1]}` : texto;
   }
 
-  /**
-   * Cliente y subcartera para que el cronograma revise el descuento máximo mientras se arma la promesa.
-   * Se reutiliza el mismo objeto mientras no cambien, para no repetir la revisión en cada ciclo.
-   */
-  private ctxDescuento: ContextoDescuento | null = null;
-  contextoDescuento(): ContextoDescuento | null {
-    const documento = this.customerData()?.numero_documento;
-    if (!this.selectedTenantId || !this.selectedSubPortfolioId || !documento) return null;
-    const cuenta = this.esMultiproducto() ? this.cuentaSeleccionada() : null;
-    const c = this.ctxDescuento;
-    if (c && c.idTenant === this.selectedTenantId && c.idCartera === this.selectedPortfolioId
-        && c.idSubcartera === this.selectedSubPortfolioId && c.documentoCliente === documento && c.cuenta === cuenta) {
-      return c;
-    }
-    this.ctxDescuento = {
-      idTenant: this.selectedTenantId,
-      idCartera: this.selectedPortfolioId,
-      idSubcartera: this.selectedSubPortfolioId,
-      documentoCliente: documento,
-      cuenta
-    };
-    return this.ctxDescuento;
-  }
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);

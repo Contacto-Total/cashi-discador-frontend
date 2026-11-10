@@ -310,6 +310,8 @@ export interface AgregarParticipanteRequest {
 export interface ClienteContenido {
   documentoCliente: string;
   nombreCliente: string | null;
+  /** Celular de la tabla del mes, para filtrar el sustento */
+  celularCliente: string | null;
   capitalAsignado: number | null;
   /** null = ya venía contenido */
   fechaContencion: string | null;
@@ -331,6 +333,8 @@ export interface DetalleComision {
   nombreAsesor: string | null;
   documentoCliente: string | null;
   nombreCliente: string | null;
+  /** Celular de la tabla del mes, para filtrar el sustento */
+  celularCliente?: string | null;
   idGestion: number;
   /** Origen de la PDP (registros_gestion.campo_monto_origen) */
   origenPdp: string | null;
@@ -387,6 +391,8 @@ export interface PagoSustento {
   numeroOperacion: string | null;
   documentoCliente: string | null;
   nombreCliente: string | null;
+  /** Celular de la tabla del mes, para filtrar el sustento */
+  celularCliente?: string | null;
   idGestion: number;
   idAgenteGestion: number;
   nombreAgenteGestion: string | null;

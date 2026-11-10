@@ -94,6 +94,16 @@
   --paso-ln: #cbd5e1;
   --seg-activo: #ffffff;
   --line2: #edf2f0;
+  /* Verde de lo elegido: el punto de una opción y la casilla marcada. */
+  --verde-txt: #047857;
+  /* Las dos series de horas: presenciales y remotas. */
+  --serie-a: #047857; --serie-b: #2563eb;
+  /* Almuerzo y break en las franjas del horario. */
+  --almuerzo: #10b981; --break: #8b5cf6;
+  /* Texto secundario fuerte: rótulos de campo y detalle de los indicadores. */
+  --ink2: #3f4c48;
+  /* Color de cada subcartera (Propia, Castigo, Tramo 3, Tramo 5 e Interbank). */
+  --c-1: #2a78d6; --c-2: #eb6834; --c-3: #1baf7a; --c-4: #eda100; --c-5: #d0344f;
   --sombra: rgb(15 23 42 / .12);
 }
 
@@ -109,6 +119,10 @@
   --paso-ln: #3a3a40;
   --seg-activo: #2f2f34;
   --line2: #232327;
+  --verde-txt: #10b981;
+  --serie-a: #0e9f6e; --serie-b: #6b93dc;
+  --ink2: #c9c9cf;
+  --c-1: #3987e5; --c-2: #d95926; --c-3: #199e70; --c-4: #c98500; --c-5: #e0566c;
   --sombra: rgb(0 0 0 / .55);
 }
 
