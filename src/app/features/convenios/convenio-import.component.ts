@@ -12,11 +12,12 @@ import {
 } from './convenio-import.service';
 import { NotificationService } from '../../shared/services/notification.service';
 import { NotificationsComponent } from '../../shared/components/notifications/notifications.component';
+import { ConvenioTrasladosComponent } from './convenio-traslados.component';
 
 @Component({
   selector: 'app-convenio-import',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, NotificationsComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, NotificationsComponent, ConvenioTrasladosComponent],
   template: `
     <app-notifications></app-notifications>
 
@@ -213,6 +214,26 @@ import { NotificationsComponent } from '../../shared/components/notifications/no
           </div>
         </div>
 
+        <div class="flex gap-2 mb-6 border-b border-slate-800">
+          <button (click)="pestana.set('importar')"
+                  class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                  [class.border-violet-500]="pestana() === 'importar'"
+                  [class.text-white]="pestana() === 'importar'"
+                  [class.border-transparent]="pestana() !== 'importar'"
+                  [class.text-gray-400]="pestana() !== 'importar'">
+            Importar
+          </button>
+          <button (click)="pestana.set('traslados')"
+                  class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                  [class.border-violet-500]="pestana() === 'traslados'"
+                  [class.text-white]="pestana() === 'traslados'"
+                  [class.border-transparent]="pestana() !== 'traslados'"
+                  [class.text-gray-400]="pestana() !== 'traslados'">
+            Traslados
+          </button>
+        </div>
+
+        @if (pestana() === 'importar') {
         <!-- Info Card -->
         <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 mb-6">
           <div class="flex items-start gap-3">
@@ -445,6 +466,9 @@ import { NotificationsComponent } from '../../shared/components/notifications/no
             </div>
           </div>
         }
+        } @else {
+          <app-convenio-traslados></app-convenio-traslados>
+        }
       </div>
     </div>
   `,
@@ -458,6 +482,7 @@ export class ConvenioImportComponent {
   private notificationService = inject(NotificationService);
 
   // Signals
+  pestana = signal<'importar' | 'traslados'>('importar');
   selectedFile = signal<File | null>(null);
   isLoading = signal(false);
   loadingMessage = signal('Procesando...');
