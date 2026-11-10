@@ -18,11 +18,11 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio } from '../../maintenance/models/portfolio.model';
 import { TypificationService } from '../../maintenance/services/typification.service';
 import { TypificationV2Service } from '../../maintenance/services/typification-v2.service';
-import { CampoOpcionDTO } from '../../maintenance/models/typification-v2.model';
+import { CampoOpcionDTO, CanalPagoDTO } from '../../maintenance/models/typification-v2.model';
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
-import { AmountOption, ContextoDescuento } from '../../shared/components/payment-schedule/payment-schedule.component';
+import { AmountOption } from '../../shared/components/payment-schedule/payment-schedule.component';
 import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
@@ -1448,6 +1448,25 @@ interface BorradorDeuda {
                         }
                       </div>
                     </div>
+                    <!-- Canal de pago (REQ-074): dónde pagó el cliente; la lista la mantienen los supervisores -->
+                    @if (pideCanalPago()) {
+                      <div class="mt-3">
+                        <label for="cm-canal-pago" class="block text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Canal de Pago *</label>
+                        <select
+                          id="cm-canal-pago"
+                          [ngModel]="canalPagoId() ?? ''"
+                          (ngModelChange)="elegirCanalPago($event)"
+                          [disabled]="!canalesPago().length"
+                          [class]="'w-full px-2 py-1.5 text-sm rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 ' +
+                            (errors()['canalPago'] && !canalPagoId() ? 'border-red-400' : 'border-green-300 dark:border-green-600')"
+                        >
+                          <option value="">{{ canalesPago().length ? 'Seleccionar...' : 'Cargando...' }}</option>
+                          @for (c of canalesPago(); track c.id) {
+                            <option [value]="c.id">{{ c.nombre }}</option>
+                          }
+                        </select>
+                      </div>
+                    }
                     <!-- Info de distribución si el monto es diferente -->
                     @if (montoPagoEditable() !== selectedInstallmentForCancellation()?.monto) {
                       <div class="mt-2 p-2 rounded-lg text-xs"
@@ -1582,7 +1601,9 @@ interface BorradorDeuda {
                 [customerAmounts]="finalPaymentAmounts()"
                 [simboloMoneda]="simboloMoneda()"
                 [deuda]="cuentaSeleccionada()"
-                [contextoDescuento]="contextoDescuento()"
+                [canalesPago]="pideCanalPago() ? canalesPago() : []"
+                [canalPagoId]="canalPagoId()"
+                (canalPagoChange)="canalPagoId.set($event)"
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
@@ -2560,6 +2581,70 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return found as ManagementClassification || null;
   });
 
+  // Canal de pago (REQ-074): en promesas y cancelaciones el asesor elige por dónde paga el cliente.
+  // La lista es de la subcartera y la mantienen los supervisores en Tipificaciones.
+  canalesPago = signal<CanalPagoDTO[]>([]);
+  private canalesPagoSub: number | null = null;
+  private readonly cargandoCanalesPago = signal(false);
+  canalPagoId = signal<number | null>(null);
+  /** La opción elegida es una promesa o una cancelación según su tipificación base. */
+  private readonly esPromesaOCancelacion = computed(() => {
+    const accion = this.apiSystemConfigService.accionBase((this.selectedClassification() as any)?.idTipificacionBase);
+    return accion === 'PROMESA' || accion === 'PAGO';
+  });
+  /**
+   * Se pide el canal si la subcartera tiene canales activos (sin ninguno, la gestión va sin canal), y
+   * solo donde se muestra: en una promesa, dentro de su cronograma; en una cancelación, en los datos del pago.
+   */
+  pideCanalPago = computed(() => {
+    if (!this.cargandoCanalesPago() && this.canalesPago().length === 0) {
+      return false;
+    }
+    const accion = this.apiSystemConfigService.accionBase((this.selectedClassification() as any)?.idTipificacionBase);
+    const conCronograma = !!this.dynamicFieldsSchema()?.fields?.some(f => f.type === 'payment_schedule');
+    return (accion === 'PROMESA' && conCronograma) || (accion === 'PAGO' && this.isCancellationTypification());
+  });
+
+  /** Lee los canales activos de la subcartera del cliente, cada vez que se elige una promesa o cancelación. */
+  private cargarCanalesPago(): void {
+    const sub = this.selectedSubPortfolioId ?? null;
+    if (!sub) {
+      this.canalesPagoSub = null;
+      this.canalesPago.set([]);
+      return;
+    }
+    if (sub !== this.canalesPagoSub) {
+      this.canalesPagoSub = sub;
+      this.canalesPago.set([]);
+      this.cargandoCanalesPago.set(true);
+    }
+    this.typificationV2Service.getCanalesPago(sub, true).subscribe({
+      next: canales => {
+        if (this.canalesPagoSub !== sub) return;
+        this.canalesPago.set(canales);
+        // Si el supervisor desactivó el canal elegido mientras tanto, hay que volver a elegir
+        if (this.canalPagoId() !== null && !canales.some(c => c.id === this.canalPagoId())) {
+          this.canalPagoId.set(null);
+        }
+        this.cargandoCanalesPago.set(false);
+      },
+      error: () => {
+        if (this.canalesPagoSub === sub) {
+          this.cargandoCanalesPago.set(false);
+        }
+      }
+    });
+  }
+
+  elegirCanalPago(valor: string): void {
+    this.canalPagoId.set(valor ? Number(valor) : null);
+  }
+
+  /** Canal que va con la gestión: solo en promesas y cancelaciones. */
+  private canalPagoDeLaGestion(): number | null {
+    return this.pideCanalPago() ? this.canalPagoId() : null;
+  }
+
   // Computed para determinar si el formulario es válido y completo para habilitar el botón guardar
   isFormValid = computed(() => {
     // 0. Verificar bloqueo de promesa activa
@@ -2617,6 +2702,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // 1.6 Campos del nivel 1 que se piden antes del detalle (motivo de no pago)
     const valoresRama = this.valoresDeRama();
     if (this.camposDeRama().some(c => c.required && !valoresRama[c.id])) {
+      return false;
+    }
+
+    // 1.7 Canal de pago en promesas y cancelaciones (REQ-074)
+    if (this.pideCanalPago() && !this.canalPagoId()) {
       return false;
     }
 
@@ -3561,29 +3651,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return fecha ? `${fecha[3]}/${fecha[2]}/${fecha[1]}` : texto;
   }
 
-  /**
-   * Cliente y subcartera para que el cronograma revise el descuento máximo mientras se arma la promesa.
-   * Se reutiliza el mismo objeto mientras no cambien, para no repetir la revisión en cada ciclo.
-   */
-  private ctxDescuento: ContextoDescuento | null = null;
-  contextoDescuento(): ContextoDescuento | null {
-    const documento = this.customerData()?.numero_documento;
-    if (!this.selectedTenantId || !this.selectedSubPortfolioId || !documento) return null;
-    const cuenta = this.esMultiproducto() ? this.cuentaSeleccionada() : null;
-    const c = this.ctxDescuento;
-    if (c && c.idTenant === this.selectedTenantId && c.idCartera === this.selectedPortfolioId
-        && c.idSubcartera === this.selectedSubPortfolioId && c.documentoCliente === documento && c.cuenta === cuenta) {
-      return c;
-    }
-    this.ctxDescuento = {
-      idTenant: this.selectedTenantId,
-      idCartera: this.selectedPortfolioId,
-      idSubcartera: this.selectedSubPortfolioId,
-      documentoCliente: documento,
-      cuenta
-    };
-    return this.ctxDescuento;
-  }
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
@@ -5877,6 +5944,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
 
+    // Canal de pago (REQ-074): se vuelve a elegir con cada opción, y la lista se lee al llegar a una promesa o cancelación
+    this.canalPagoId.set(null);
+    if (this.esPromesaOCancelacion()) {
+      this.cargarCanalesPago();
+    }
+
     // Resetear señales de continuidad y bloqueo de promesa activa al cambiar tipificación
     this.resetContinuidadState();
     this.resetPromesaActivaState();
@@ -7109,6 +7182,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         camposAdicionales: this.getCamposAdicionalesParaGuardar(),
         metodoContacto: this.metodoContactoDeLaGestion(isActiveCallSchedule),
         canalContacto: hasActiveCallOrTimerSched ? 'LLAMADA_SALIENTE' : undefined,
+        idCanalPago: this.canalPagoDeLaGestion(),
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
         // Datos de continuidad (si aplica)
@@ -7241,6 +7315,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Campos de contexto de gestión
         metodoContacto: this.metodoContactoDeLaGestion(isActiveCall),
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
+        idCanalPago: this.canalPagoDeLaGestion(),
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
         idLlamada: isActiveCall ? callContext.llamadaId : null,
         duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
@@ -7601,6 +7676,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (this.isCancellationTypification() && !this.isCancellationPaymentDateValid()) {
       newErrors['fechaPagoCancelacion'] = 'La fecha de pago no es válida para la cuota seleccionada';
+    }
+
+    if (this.pideCanalPago() && !this.canalPagoId()) {
+      newErrors['canalPago'] = 'Elija el canal de pago';
     }
 
     // 3. Validar campos dinámicos requeridos

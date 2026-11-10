@@ -1,11 +1,9 @@
-import { Component, input, Input, Output, EventEmitter, OnInit, OnDestroy, signal, computed, effect, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed, effect, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { PaymentScheduleConfig, PaymentInstallment, EvaluacionDescuento } from '../../../maintenance/models/typification-v2.model';
-import { environment } from '../../../../environments/environment';
+import { PaymentScheduleConfig, PaymentInstallment } from '../../../maintenance/models/typification-v2.model';
 
 export interface AmountOption {
   label: string;
@@ -18,16 +16,6 @@ export interface AmountOption {
   idOpcion?: number;  // Opción de la tarjeta (tipificacion_campo_opciones): su descuento máximo se lee en el backend
   porcentajeMaximoPromesa?: number;
   topeSobrepagoSoles?: number | null;  // Sobrepago máximo en soles; si la promesa lo pasa es monto libre (null = sin tope)
-}
-
-/** Cliente y subcartera de la promesa, para revisar el descuento máximo antes de guardar. */
-export interface ContextoDescuento {
-  idTenant: number;
-  idCartera?: number;
-  idSubcartera?: number;
-  idTipificacion?: number;
-  documentoCliente: string;
-  cuenta?: string | null;
 }
 
 @Component({
@@ -51,7 +39,7 @@ export interface ContextoDescuento {
               <div
                 role="group"
                 [attr.aria-label]="'Monto de ' + option.label"
-                [class]="'flex flex-col items-center gap-1 p-2 border-2 rounded-lg min-w-0 bg-white dark:bg-slate-800 ring-4 transition-all duration-200 ' + claseTarjetaElegida()"
+                class="flex flex-col items-center gap-1 p-2 border-2 rounded-lg min-w-0 bg-white dark:bg-slate-800 ring-4 transition-all duration-200 border-blue-500 dark:border-blue-400 ring-blue-100 dark:ring-blue-900/40"
               >
                 <span class="text-[9px] font-bold uppercase tracking-wide leading-tight text-center truncate w-full text-slate-500 dark:text-slate-400">{{ option.label }}</span>
                 @if (puedeAjustar(option)) {
@@ -90,26 +78,14 @@ export interface ContextoDescuento {
                 } @else {
                   <span class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ formatCurrency(option.value) }}</span>
                 }
-                @switch (ajusteInfo().tipo) {
-                  @case ('EXCEPCION') {
-                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Excepción −{{ ajusteInfo().porcentaje }}%</span>
-                  }
-                  @case ('SOBREPAGO') {
-                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Sobrepago +{{ formatCurrency(ajusteInfo().diferencia) }}</span>
-                  }
-                  @case ('MONTO_LIBRE') {
-                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">Monto libre</span>
-                  }
-                  @default {
-                    @if (option.restriccionFecha && option.restriccionFecha !== 'SIN_RESTRICCION') {
-                      <span class="text-[7px] px-1 py-0.5 rounded-full"
-                        [class]="option.restriccionFecha === 'DENTRO_MES'
-                          ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                          : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
-                        {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Mensual' }}
-                      </span>
-                    }
-                  }
+                <!-- Bajar o subir el monto no muestra etiquetas ni avisos: el backend decide al guardar -->
+                @if (option.restriccionFecha && option.restriccionFecha !== 'SIN_RESTRICCION') {
+                  <span class="text-[7px] px-1 py-0.5 rounded-full"
+                    [class]="option.restriccionFecha === 'DENTRO_MES'
+                      ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                      : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
+                    {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Mensual' }}
+                  </span>
                 }
               </div>
             } @else {
@@ -167,34 +143,6 @@ export interface ContextoDescuento {
           }
         </div>
 
-        <!-- Aviso del ajuste sobre la tarjeta elegida: descuento máximo (lo revisa el backend) o monto libre -->
-        @if (!isCustomAmount() && ajusteInfo().tipo === 'MONTO_LIBRE') {
-          <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300">
-            Sube {{ formatCurrency(ajusteInfo().diferencia) }} y el sobrepago máximo es {{ formatCurrency(selectedTopeSobrepago() ?? 0) }}: se guarda como monto libre y pasa a evaluación del supervisor.
-          </p>
-        } @else if (!isCustomAmount() && ajusteInfo().tipo === 'EXCEPCION') {
-          @if (evaluando() && !evaluacion()) {
-            <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300" role="status">
-              Revisando el descuento máximo de la tarjeta…
-            </p>
-          } @else if (evaluacion()?.estado === 'BLOQUEADO') {
-            <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300" role="alert">
-              {{ evaluacion()?.mensaje }} Ajusta las cuotas para registrar la promesa.
-            </p>
-          } @else if (evaluacion()?.estado === 'EVALUACION') {
-            <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
-              Descuento de {{ ajusteInfo().porcentaje }}%: {{ evaluacion()?.mensaje }}
-            </p>
-          } @else if (evaluacion()?.estado === 'DIRECTO') {
-            <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
-              Descuento de {{ ajusteInfo().porcentaje }}% dentro del máximo sin aprobación: se registra directo.
-            </p>
-          } @else {
-            <p class="mt-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
-              Descuento de {{ ajusteInfo().porcentaje }}%: si supera el descuento máximo de la tarjeta, la promesa pasa a evaluación del supervisor.
-            </p>
-          }
-        }
       </div>
 
       <!-- Selector de Cuotas -->
@@ -294,6 +242,30 @@ export interface ContextoDescuento {
           </div>
         </div>
       }
+
+      <!-- Canal de pago (REQ-074): por dónde pagará el cliente; la lista es de la subcartera -->
+      @if (canalesPago().length > 0) {
+        <div class="field-group mt-4">
+          <label for="ps-canal-pago" class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200 text-xs mb-2 transition-colors duration-300">
+            <div class="w-5 h-5 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+              <lucide-angular name="wallet" [size]="12" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
+            </div>
+            Canal de pago *
+          </label>
+          <select
+            id="ps-canal-pago"
+            [ngModel]="canalPagoId() ?? ''"
+            (ngModelChange)="canalPagoChange.emit($event ? +$event : null)"
+            [class]="'w-full px-2 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ' +
+              (canalPagoId() ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 text-slate-800 dark:text-white' : 'border-slate-200 dark:border-slate-500 bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white')"
+          >
+            <option value="">Seleccionar...</option>
+            @for (c of canalesPago(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -334,19 +306,21 @@ export interface ContextoDescuento {
     }
   `]
 })
-export class PaymentScheduleComponent implements OnInit, OnDestroy {
+export class PaymentScheduleComponent implements OnInit {
   // Signal inputs for reactivity
   availableAmounts = input<AmountOption[]>([]);
   /** Símbolo de la moneda de los montos */
   simboloMoneda = input<string>('S/');
   /** Deuda a la que van los montos: si cambia, la selección se reinicia aunque los campos sean los mismos */
   deuda = input<string | null>(null);
-  /** Cliente y subcartera: con esto se revisa el descuento máximo mientras se arma la promesa */
-  contextoDescuento = input<ContextoDescuento | null>(null);
   @Input() maxInstallments: number = 6;  // Default, será sobrescrito por la opción seleccionada
   @Input() minInstallments: number = 1;  // Default, será sobrescrito por la opción seleccionada
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
   @Output() customAmountSelected = new EventEmitter<boolean>();
+  /** Canales de pago de la subcartera (REQ-074). Vacío: el campo no se muestra. */
+  canalesPago = input<{ id: number; nombre: string }[]>([]);
+  canalPagoId = input<number | null>(null);
+  @Output() canalPagoChange = new EventEmitter<number | null>();
 
   // Signals
   selectedAmount = signal<number>(0);
@@ -371,12 +345,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
   // Sobrepago máximo en soles de la tarjeta elegida (null = sin tope)
   selectedTopeSobrepago = signal<number | null>(null);
 
-  /** Lo que responde el backend sobre el descuento de la promesa armada (null = sin revisar). */
-  evaluacion = signal<EvaluacionDescuento | null>(null);
-  evaluando = signal<boolean>(false);
-  private evaluacionTimer?: ReturnType<typeof setTimeout>;
-  private evaluacionId = 0;
-
   /** El monto de la tarjeta elegida ya no es el suyo tal cual: lo bajó o lo subió. */
   montoAjustado = computed(() => {
     const base = this.montoBase();
@@ -384,40 +352,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
     return Math.round(this.selectedAmount() * 100) !== Math.round(base * 100);
   });
 
-  /**
-   * Cómo queda el monto respecto de su tarjeta, con la misma regla que aplica el backend al guardar:
-   * por debajo es EXCEPCION (si pasa el descuento máximo de la tarjeta, va a evaluación: lo dice el
-   * backend en `evaluacion`), por encima es SOBREPAGO, salvo que pase el sobrepago máximo en soles
-   * de la opción: ahí es MONTO_LIBRE.
-   */
-  ajusteInfo = computed(() => {
-    const base = this.montoBase() || 0;
-    const actual = this.selectedAmount();
-    const diferencia = Math.round((actual - base) * 100) / 100;
-    const pct = base > 0 ? Math.abs(diferencia) / base * 100 : 0;
-    const tope = this.selectedTopeSobrepago();
-    const tipo: 'IGUAL' | 'EXCEPCION' | 'SOBREPAGO' | 'MONTO_LIBRE' =
-      !this.montoAjustado() || actual <= 0 ? 'IGUAL'
-        : diferencia < 0 ? 'EXCEPCION'
-        : tope !== null && diferencia > tope ? 'MONTO_LIBRE'
-        : 'SOBREPAGO';
-    return {
-      tipo,
-      diferencia: Math.abs(diferencia),
-      porcentaje: Math.round(pct * 10) / 10,
-      pasaAEvaluacion: tipo === 'MONTO_LIBRE' || (tipo === 'EXCEPCION' && this.evaluacion()?.estado !== 'DIRECTO')
-    };
-  });
-
-  /** Borde y halo de la tarjeta elegida según cómo quedó el monto (claro y oscuro). */
-  claseTarjetaElegida = computed(() => {
-    switch (this.ajusteInfo().tipo) {
-      case 'EXCEPCION': return 'border-amber-500 dark:border-amber-400 ring-amber-100 dark:ring-amber-900/40';
-      case 'SOBREPAGO': return 'border-emerald-500 dark:border-emerald-400 ring-emerald-100 dark:ring-emerald-900/40';
-      case 'MONTO_LIBRE': return 'border-purple-500 dark:border-purple-400 ring-purple-100 dark:ring-purple-900/40';
-      default: return 'border-blue-500 dark:border-blue-400 ring-blue-100 dark:ring-blue-900/40';
-    }
-  });
 
   // Computed: opciones de cuotas basadas en min/max de la opción seleccionada
   installmentOptionsComputed = computed(() => {
@@ -499,7 +433,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
   private previousAmountsKey = '';
 
   private fmt = inject(FormatService);
-  private http = inject(HttpClient);
 
   constructor() {
     // Effect que resetea la selección cuando los montos disponibles cambian significativamente
@@ -524,7 +457,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
         this.montoTarjeta = null;
         this.selectedTopeSobrepago.set(null);
         this.selectedIdOpcion.set(undefined);
-        this.limpiarEvaluacion();
         // El cronograma anterior deja de valer para quien lo recibió
         this.scheduleChange.emit(null);
 
@@ -537,10 +469,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
 
       this.previousAmountsKey = currentKey;
     });
-  }
-
-  ngOnDestroy(): void {
-    clearTimeout(this.evaluacionTimer);
   }
 
   ngOnInit(): void {
@@ -567,7 +495,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
     this.montoBase.set(amount);  // Guardar monto original del campo
     this.montoTarjeta = amount;  // La tarjeta arranca con su monto tal cual
     this.selectedTopeSobrepago.set(option.topeSobrepagoSoles ?? null);
-    this.limpiarEvaluacion();
 
     // Ajustar número de cuotas si está fuera del nuevo rango
     const currentNum = this.numberOfInstallments();
@@ -594,7 +521,6 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
     this.selectedField.set(undefined);
     this.montoBase.set(undefined);  // Excepción no tiene base
     this.selectedTopeSobrepago.set(null);
-    this.limpiarEvaluacion();
 
     // Buscar la opción "personalizado" para obtener sus configuraciones
     const customOption = this.availableAmounts().find(o => o.field === 'personalizado');
@@ -862,58 +788,8 @@ export class PaymentScheduleComponent implements OnInit, OnDestroy {
     };
 
     this.scheduleChange.emit(config);
-    this.programarEvaluacion();
   }
 
-  private limpiarEvaluacion(): void {
-    clearTimeout(this.evaluacionTimer);
-    this.evaluacionId++;
-    this.evaluacion.set(null);
-    this.evaluando.set(false);
-  }
-
-  /**
-   * Con descuento sobre la tarjeta, pregunta al backend si la promesa se registra directo, pasa a
-   * evaluación o no se puede registrar así. Espera a que el asesor deje de escribir; la respuesta
-   * de una promesa ya cambiada se descarta. Al guardar, el backend vuelve a revisar.
-   */
-  private programarEvaluacion(): void {
-    clearTimeout(this.evaluacionTimer);
-    const id = ++this.evaluacionId;
-    const ctx = this.contextoDescuento();
-    if (!ctx || this._isCustomAmount() || this.ajusteInfo().tipo !== 'EXCEPCION' || this.installments().length === 0) {
-      this.evaluacion.set(null);
-      this.evaluando.set(false);
-      return;
-    }
-    this.evaluando.set(true);
-    this.evaluacionTimer = setTimeout(() => {
-      const body = {
-        ...ctx,
-        campoMontoOrigen: this.selectedField(),
-        montoBase: this.montoBase(),
-        idOpcion: this.selectedIdOpcion(),
-        schedule: {
-          montoTotal: this.selectedAmount(),
-          numeroCuotas: this.numberOfInstallments(),
-          cuotas: this.installments().map(c => ({ numeroCuota: c.numeroCuota, monto: c.monto, fechaPago: c.fechaPago }))
-        }
-      };
-      this.http.post<EvaluacionDescuento>(`${environment.apiUrl}/v2/descuento-maximo/evaluar`, body).subscribe({
-        next: r => {
-          if (id !== this.evaluacionId) return;
-          this.evaluacion.set(r);
-          this.evaluando.set(false);
-        },
-        error: () => {
-          // Sin respuesta queda el aviso general; al guardar, el backend decide
-          if (id !== this.evaluacionId) return;
-          this.evaluacion.set(null);
-          this.evaluando.set(false);
-        }
-      });
-    }, 350);
-  }
 
   formatCurrency(value: number): string {
     const numero = this.fmt.number(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

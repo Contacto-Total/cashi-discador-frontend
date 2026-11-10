@@ -12,6 +12,7 @@ import {
   ClassificationTypeV2,
   AdditionalFieldV2,
   CampoOpcionDTO,
+  CanalPagoDTO,
   ConfigurarOpcionesCampoRequest,
   CampoConOpcionesResponse
 } from '../models/typification-v2.model';
@@ -401,6 +402,23 @@ export class TypificationV2Service {
       `${this.catalogUrl}/campo/${campoId}/lista`,
       { idSubcartera, opciones }
     );
+  }
+
+  /**
+   * Canales de pago de una subcartera (REQ-074). soloActivos: lo que ve el asesor al tipificar;
+   * sin él llegan también los desactivados, para la pantalla de Tipificaciones.
+   */
+  getCanalesPago(subPortfolioId: number, soloActivos = false): Observable<CanalPagoDTO[]> {
+    const params = new HttpParams().set('subPortfolioId', subPortfolioId).set('soloActivos', soloActivos);
+    return this.http.get<CanalPagoDTO[]>(`${this.catalogUrl}/canales-pago`, { params });
+  }
+
+  /** Guarda la lista completa de canales de pago de una subcartera, en ese orden. */
+  guardarCanalesPago(
+    idSubcartera: number,
+    canales: { id: number | null; nombre: string; activo: boolean }[]
+  ): Observable<CanalPagoDTO[]> {
+    return this.http.put<CanalPagoDTO[]>(`${this.catalogUrl}/canales-pago`, { idSubcartera, canales });
   }
 
   /**
