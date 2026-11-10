@@ -24,14 +24,28 @@
 
   <!-- ============ Filtros ============ -->
   <div class="mb-3 flex flex-wrap items-end gap-2.5">
-    <!-- Sin filtro de periodo: siempre el día de hoy, con la fecha del servidor (REQ-22) -->
     <div class="flex flex-col gap-1.5">
-      <span [class]="claseLabel">Fecha</span>
-      <span [class]="claseInput + ' inline-flex items-center gap-2 font-semibold'" aria-live="polite">
-        <lucide-angular name="calendar" [size]="14" class="shrink-0 text-[#8491a3]"></lucide-angular>
-        {{ fechaHoy }}
-      </span>
+      <label for="ap-periodo" [class]="claseLabel">Periodo</label>
+      <select id="ap-periodo" [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" [class]="claseInput">
+        <option value="today">Hoy</option>
+        <option value="week">Últimos 7 días</option>
+        <option value="month">Este mes</option>
+        <option value="lastMonth">Mes anterior</option>
+        <option value="year">Este año</option>
+        <option value="custom">Personalizado</option>
+      </select>
     </div>
+
+    @if (selectedPeriod === 'custom') {
+      <div class="ap-fade flex flex-col gap-1.5">
+        <label for="ap-desde" [class]="claseLabel">Desde</label>
+        <input id="ap-desde" type="date" [(ngModel)]="customDateFrom" [class]="claseInput"/>
+      </div>
+      <div class="ap-fade flex flex-col gap-1.5">
+        <label for="ap-hasta" [class]="claseLabel">Hasta</label>
+        <input id="ap-hasta" type="date" [(ngModel)]="customDateTo" [class]="claseInput"/>
+      </div>
+    }
 
     <div class="flex flex-col gap-1.5">
       <label for="ap-inquilino" [class]="claseLabel">Inquilino</label>
@@ -118,14 +132,14 @@
                 <lucide-angular [name]="getChangeIcon(summary?.cambioPromesas)" [size]="12"></lucide-angular>
                 {{ formatPercent(summary?.cambioPromesas) }}
               </span>
-              <span>vs. ayer</span>
+              <span>vs. periodo anterior</span>
             </span>
           </div>
 
           <div [class]="claseKpi" [style.--i]="2">
             <span [class]="claseLabel">Monto comprometido</span>
             <span [class]="claseKpiV">S/ {{ formatMoney(summary?.montoTotalPromesas || 0) }}</span>
-            <span [class]="claseKpiS">Cuotas que vencen hoy</span>
+            <span [class]="claseKpiS">Cuotas que vencen en el periodo</span>
           </div>
 
           <div [class]="claseKpi" [style.--i]="3">
