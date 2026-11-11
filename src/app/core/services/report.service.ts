@@ -51,6 +51,17 @@ export interface AgentProductivityResponse {
   // que liquidan por capital llega como "Contención".
   etiquetaRecaudo?: string;
   etiquetaRecaudoAcumulado?: string;
+  // Grupos del árbol de tipificaciones del inquilino cuando no es CD / CI / NC
+  // (Interbank). Vacío o ausente = se muestran CD / CI / NC. El conteo de cada
+  // asesor llega en AgentMetrics.tipificaciones, por nombre de grupo.
+  gruposGestion?: GrupoGestion[];
+}
+
+export interface GrupoGestion {
+  nombre: string;
+  sigla: string;
+  // A cuál de CD / CI / NC pertenece: "Todos" sigue siendo CD + CI.
+  clase: 'CD' | 'CI' | 'NC';
 }
 
 export interface ProductivitySummary {

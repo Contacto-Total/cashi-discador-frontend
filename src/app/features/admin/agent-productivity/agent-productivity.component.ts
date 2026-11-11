@@ -13,7 +13,8 @@ import {
   AgentMetrics,
   ChartData,
   CorteHorarioResponse,
-  AgentCorte
+  AgentCorte,
+  GrupoGestion
 } from '../../../core/services/report.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
@@ -31,7 +32,17 @@ type GeneracionVentana = 'hoy' | 'manana' | 'semana' | 'mes';
 type CierreVentana = 'hoy' | 'mes';
 // Que gestiones muestra la columna. Se resuelve en memoria: el SP ya manda
 // los tres conteos, asi que cambiar el selector no reconsulta nada.
-type GestionesTipo = 'todos' | 'cd' | 'ci' | 'nc';
+// Con un inquilino de arbol propio (Interbank) las opciones son sus grupos,
+// con clave 'g:<nombre del grupo>'.
+type GestionesTipo = 'todos' | 'cd' | 'ci' | 'nc' | `g:${string}`;
+
+// Opciones fijas de Financiera Oh y de cualquier inquilino con arbol CD / CI / NC.
+const OPCIONES_GESTIONES_CD_CI_NC: { k: GestionesTipo; l: string; sub: string; t?: string }[] = [
+  { k: 'todos', l: 'Todos (CD+CI)', sub: 'CD + CI' },
+  { k: 'cd',    l: 'CD',            sub: 'solo CD' },
+  { k: 'ci',    l: 'CI',            sub: 'solo CI' },
+  { k: 'nc',    l: 'NC',            sub: 'solo NC' }
+];
 
 // Una de las seis tablas de Corte Horario, ya formateada: el template solo pinta.
 interface TablaCorte {
@@ -139,13 +150,10 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
               : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400 dark:hover:text-slate-100');
   }
 
-  // Opciones de columna. "sub" es lo que se lee bajo el titulo de la columna.
-  readonly opcionesGestiones: { k: GestionesTipo; l: string; sub: string }[] = [
-    { k: 'todos', l: 'Todos (CD+CI)', sub: 'CD + CI' },
-    { k: 'cd',    l: 'CD',            sub: 'solo CD' },
-    { k: 'ci',    l: 'CI',            sub: 'solo CI' },
-    { k: 'nc',    l: 'NC',            sub: 'solo NC' }
-  ];
+  // Opciones de columna. "sub" es lo que se lee bajo el titulo de la columna;
+  // "t" es el nombre completo del grupo (tooltip). Cambian con el inquilino:
+  // ver actualizarOpcionesGestiones().
+  opcionesGestiones: { k: GestionesTipo; l: string; sub: string; t?: string }[] = OPCIONES_GESTIONES_CD_CI_NC;
   readonly opcionesGeneracion: { k: GeneracionVentana; l: string; sub: string }[] = [
     { k: 'hoy',    l: 'Ese día',       sub: 'vence ese día' },
     { k: 'manana', l: 'Día siguiente', sub: 'vence al día siguiente' },
@@ -351,6 +359,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
       const cacheado = this.cache.get(key);
       if (cacheado) {
         this.productivityData = cacheado;
+        this.actualizarOpcionesGestiones();
         this.error = null;
         setTimeout(() => this.initCharts(), 100);
         return;
@@ -371,6 +380,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     ).subscribe({
       next: (data) => {
         this.productivityData = data;
+        this.actualizarOpcionesGestiones();
         this.cache.set(key, data);
         this.loading = false;
         setTimeout(() => this.initCharts(), 100);
@@ -400,8 +410,47 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     }
   }
 
+  /** Grupos propios del inquilino (Interbank); vacío con árbol CD / CI / NC. */
+  get gruposGestion(): GrupoGestion[] {
+    return this.productivityData?.gruposGestion ?? [];
+  }
+
+  /**
+   * Con grupos propios, las opciones son "Todos" + un botón por grupo. "Todos"
+   * sigue siendo CD + CI (los grupos de clase CD y CI), así que el total de la
+   * columna no cambia respecto de Financiera Oh.
+   */
+  private actualizarOpcionesGestiones(): void {
+    const grupos = this.gruposGestion;
+    if (!grupos.length) {
+      this.opcionesGestiones = OPCIONES_GESTIONES_CD_CI_NC;
+    } else {
+      const contactados = grupos.filter(g => g.clase !== 'NC').map(g => g.sigla);
+      this.opcionesGestiones = [
+        { k: 'todos', l: `Todos (${contactados.join('+')})`, sub: contactados.join(' + ') },
+        ...grupos.map(g => ({ k: `g:${g.nombre}` as GestionesTipo, l: g.sigla, sub: `solo ${g.sigla}`, t: g.nombre }))
+      ];
+    }
+    // Si la opcion elegida no existe para este inquilino, vuelve a "Todos".
+    if (!this.opcionesGestiones.some(o => o.k === this.gestionesTipo)) {
+      this.gestionesTipo = 'todos';
+    }
+  }
+
+  /** Desglose bajo el número: "CD 14 · CI 27 · NC 116" o los grupos del inquilino. */
+  desgloseGestiones(agent: AgentMetrics): string {
+    const grupos = this.gruposGestion;
+    const partes = !grupos.length
+      ? [['CD', agent.gestionesCd], ['CI', agent.gestionesCi], ['NC', agent.gestionesNc]] as [string, number][]
+      : grupos.map(g => [g.sigla, agent.tipificaciones?.[g.nombre] ?? 0] as [string, number]);
+    return partes.map(([sigla, n]) => `${sigla} ${this.fmt.number(n ?? 0)}`).join(' · ');
+  }
+
   // "Todos" es CD + CI, el universo historico de la pantalla; NC va aparte.
   gestionesDe(agent: AgentMetrics): number {
+    if (this.gestionesTipo.startsWith('g:')) {
+      return agent.tipificaciones?.[this.gestionesTipo.slice(2)] ?? 0;
+    }
     switch (this.gestionesTipo) {
       case 'cd': return agent.gestionesCd;
       case 'ci': return agent.gestionesCi;
