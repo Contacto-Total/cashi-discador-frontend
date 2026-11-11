@@ -100,7 +100,8 @@ interface FilaPersona {
             <app-indicador [valor]="enHoras(p.semana?.minutosTardanza ?? 0)" rotulo="Tardanza de la semana">
               <div class="relative">
                 <span class="absolute right-0 bottom-full left-0 mb-[.3125rem] block h-4 text-[.75rem] text-muted-foreground">
-                  <span class="absolute top-0 -translate-x-1/2 whitespace-nowrap" [style.left]="'clamp(0%, ' + topeTardanza().t + '%, 100%)'">Tope {{ enPalabras(topeSemana()) }}</span>
+                  <!-- Se corre lo mismo que la raya: centrada al medio y alineada al borde en los extremos, sin salir de la barra. -->
+                  <span class="absolute top-0 whitespace-nowrap" [style.left.%]="topeTardanza().t" [style.transform]="'translateX(-' + topeTardanza().t + '%)'">Tope {{ enPalabras(topeSemana()) }}</span>
                 </span>
                 <div class="relative h-2 rounded-full bg-(--line2)" role="img" [attr.aria-label]="'Tope ' + enPalabras(topeSemana())">
                   <i class="absolute inset-y-0 left-0 rounded-full" [class]="topeTardanza().pasa ? 'bg-(--ro-pt)' : 'bg-(--serie-a)'" [style.width.%]="topeTardanza().pct"></i>
