@@ -105,6 +105,13 @@ export class AdminRecordingsComponent implements OnInit {
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
 
+  // TificacionN1/TificacionN2 cascade
+  tipificacionesN1: string[] = [];
+  tipificacionesN2: string[] = [];
+  selectedTificacionN1: string = '';
+  selectedTificacionN2: string = '';
+
+
   // Pagination
   currentPage: number = 1;
   pageSize: number = 10;
@@ -122,10 +129,11 @@ export class AdminRecordingsComponent implements OnInit {
   documento: string = '';
   telefono: string = '';
   rutaNivel1: string = '';
+  rutaNivel2: string = '';
   errorMessage: string = '';
 
   /** Tipificaciones de nivel 1 para el combo del filtro. */
-  tipificaciones: string[] = [];
+  //tipificaciones: string[] = [];
 
   // Filter fields
   filterDocumento: string = '';
@@ -162,15 +170,17 @@ export class AdminRecordingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTenants();
-    this.loadTipificaciones();
+    //this.loadTipificaciones();
   }
 
+  /*
   private loadTipificaciones(): void {
     this.recordingsService.getTipificaciones().subscribe({
       next: (data) => this.tipificaciones = data,
       error: (err) => console.error('No se pudieron cargar las tipificaciones', err)
     });
   }
+    */
 
   // === Cascade selectors ===
 
@@ -181,11 +191,13 @@ export class AdminRecordingsComponent implements OnInit {
     });
   }
 
+
   onTenantChange(): void {
     this.portfolios = [];
     this.subPortfolios = [];
     this.selectedPortfolioId = 0;
     this.selectedSubPortfolioId = 0;
+    this.resetTipificaciones();
 
     if (this.selectedTenantId > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
@@ -195,17 +207,114 @@ export class AdminRecordingsComponent implements OnInit {
     }
   }
 
+
   onPortfolioChange(): void {
     this.subPortfolios = [];
     this.selectedSubPortfolioId = 0;
+    this.resetTipificaciones();
 
     if (this.selectedPortfolioId > 0) {
-      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
-        next: (data) => { this.subPortfolios = data; },
-        error: (err) => { console.error('Error loading sub-portfolios:', err); }
-      });
+      this.portfolioService
+        .getSubPortfoliosByPortfolio(this.selectedPortfolioId)
+        .subscribe({
+          next: (data) => {
+            this.subPortfolios = data;
+          },
+          error: (err) => {
+            console.error('Error loading sub-portfolios:', err);
+          }
+        });
+
+      // Tipificaciones disponibles para todo el portfolio
+      this.recordingsService
+        .getTipificacionesNivel1ByPortafolio(this.selectedPortfolioId)
+        .subscribe({
+          next: (data) => {
+            this.tipificacionesN1 = data;
+          },
+          error: (err) => {
+            console.error('Error loading tipificaciones nivel 1:', err);
+          }
+        });
     }
   }
+
+  onSubPortfolioChange(): void {
+    this.resetTipificaciones();
+
+    if (this.selectedSubPortfolioId > 0) {
+      // La subcartera reemplaza las tipificaciones del portfolio
+      this.recordingsService
+        .getTipificacionesNivel1BySubPortafolio(this.selectedSubPortfolioId)
+        .subscribe({
+          next: (data) => {
+            this.tipificacionesN1 = data;
+          },
+          error: (err) => {
+            console.error('Error loading tipificaciones nivel 1:', err);
+          }
+        });
+    } else if (this.selectedPortfolioId > 0) {
+      // Si vuelve a "Seleccionar...", retorna a las del portfolio
+      this.recordingsService
+        .getTipificacionesNivel1ByPortafolio(this.selectedPortfolioId)
+        .subscribe({
+          next: (data) => {
+            this.tipificacionesN1 = data;
+          },
+          error: (err) => {
+            console.error('Error loading tipificaciones nivel 1:', err);
+          }
+        });
+    }
+  }
+
+  onTipificacionN1Change(): void {
+    this.tipificacionesN2 = [];
+    this.selectedTificacionN2 = '';
+
+    if (!this.selectedTificacionN1) {
+      return;
+    }
+
+    if (this.selectedSubPortfolioId > 0) {
+      this.recordingsService
+        .getTipificacionesNivel2ByTipificacionNivel1AndSubPortfolio(
+          this.selectedTificacionN1,
+          this.selectedSubPortfolioId
+        )
+        .subscribe({
+          next: (data) => {
+            this.tipificacionesN2 = data;
+          },
+          error: (err) => {
+            console.error('Error loading tipificaciones nivel 2:', err);
+          }
+        });
+    } else if (this.selectedPortfolioId > 0) {
+      this.recordingsService
+        .getTipificacionesNivel2ByTipificacionNivel1AndPortfolio(
+          this.selectedTificacionN1,
+          this.selectedPortfolioId
+        )
+        .subscribe({
+          next: (data) => {
+            this.tipificacionesN2 = data;
+          },
+          error: (err) => {
+            console.error('Error loading tipificaciones nivel 2:', err);
+          }
+        });
+    }
+  }
+
+  private resetTipificaciones(): void {
+    this.tipificacionesN1 = [];
+    this.tipificacionesN2 = [];
+    this.selectedTificacionN1 = '';
+    this.selectedTificacionN2 = '';
+  }
+
 
   // === Search ===
 
@@ -215,6 +324,7 @@ export class AdminRecordingsComponent implements OnInit {
     this.documento = '';
     this.telefono = '';
     this.rutaNivel1 = '';
+    this.rutaNivel2 = '';
     this.errorMessage = '';
   }
 
@@ -271,10 +381,10 @@ export class AdminRecordingsComponent implements OnInit {
 
     const doc = this.documento.trim();
     const tel = this.telefono.trim();
-    const ruta = this.rutaNivel1.trim();
+    const rutaNivel1 = this.selectedTificacionN1.trim();
     const hayFecha = !!(this.startDate || this.endDate);
 
-    if (!hayFecha && !doc && !tel && !ruta) {
+    if (!hayFecha && !doc && !tel && !rutaNivel1) {
       this.toastService.error('Ingresa al menos un criterio: fechas, documento, teléfono o tipificación.');
       return;
     }
@@ -298,7 +408,7 @@ export class AdminRecordingsComponent implements OnInit {
         fechaHasta: this.endDate || undefined,
         documento: doc || undefined,
         telefono: tel || undefined,
-        rutaNivel1: ruta || undefined
+        rutaNivel1: rutaNivel1 || undefined
       }
     ).subscribe({
       next: (data) => {
