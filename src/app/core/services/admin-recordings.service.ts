@@ -39,7 +39,8 @@ export class AdminRecordingsService {
    * Los criterios vacios no se mandan; el backend exige al menos uno.
    */
   search(tenantId: number, portfolioId: number, subPortfolioId: number,
-         criterios: { fechaDesde?: string; fechaHasta?: string; documento?: string; telefono?: string; rutaNivel1?: string }
+         criterios: { fechaDesde?: string; fechaHasta?: string; documento?: string;
+           telefono?: string; rutaNivel1?: string }
         ): Observable<RecordingDTO[]> {
     let params = new HttpParams()
       .set('tenantId', tenantId.toString())
@@ -59,6 +60,49 @@ export class AdminRecordingsService {
   getTipificaciones(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/tipificaciones`);
   }
+
+
+ /** Tipificaciones de nivel 1 activas, para el combo del filtro 
+   * dadas por el subportafolio o portafolio. */
+
+  getTipificacionesNivel1BySubPortafolio(
+    subPortfolioId: number,
+  ): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${this.apiUrl}/tipificaciones/by-subPortfolio/${subPortfolioId}`,
+    );
+  }
+
+  getTipificacionesNivel1ByPortafolio(
+    portfolioId: number,
+  ): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${this.apiUrl}/tipificaciones/by-Portfolio/${portfolioId}`,
+    );
+  }
+
+  /** Tipificaciones de nivel 2 activas, para el combo del filtro 
+   * dadas por la tipificacion nivel 1 junto con el portafolio o subportafolio. */
+
+  getTipificacionesNivel2ByTipificacionNivel1AndSubPortfolio(
+    tipificacionN1: string,
+    subPortfolioId: number,
+  ): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${this.apiUrl}/tipificaciones/by-tipificacionNivel1/${encodeURIComponent(tipificacionN1)}/by-subPortfolio/${subPortfolioId}`,
+    );
+  }
+
+  getTipificacionesNivel2ByTipificacionNivel1AndPortfolio(
+    tipificacionN1: string,
+    portfolioId: number,
+  ): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${this.apiUrl}/tipificaciones/by-tipificacionNivel1/${encodeURIComponent(tipificacionN1)}/by-portfolio/${portfolioId}`,
+    );
+  }
+
+
 
   /** Todas las llamadas de una gestión (discador + rellamadas), en orden de fecha. */
   getLlamadasDeGestion(idGestion: number): Observable<RecordingDTO[]> {
