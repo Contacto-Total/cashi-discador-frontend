@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
 import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, FileAudio, Loader, FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-angular';
+import { catchError } from 'rxjs/operators';
 
 import { CustomSelectComponent, SelectOption } from '../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -13,7 +15,10 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 
 import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
-import { TenantTypificationConfigV2 } from '../../../maintenance/models/typification-v2.model';
+import {
+  TenantTypificationConfigV2,
+  TypificationCatalogV2
+} from '../../../maintenance/models/typification-v2.model';
 
 /**
  * Tope del rango de fechas de la busqueda. Es el unico freno que existe hoy:
@@ -302,39 +307,67 @@ export class AdminRecordingsComponent implements OnInit {
       return;
     }
 
-    const subPortfolioId =
-      this.selectedSubPortfolioId > 0
-        ? this.selectedSubPortfolioId
-        : undefined;
-
-    this.typificationService
-      .getTenantClassifications(
-        this.selectedTenantId,
-        this.selectedPortfolioId,
-        false,
-        subPortfolioId
-      )
-      .subscribe({
-        next: configs => {
-          this.tipificationConfigs = configs.filter(config =>
-            config.estaHabilitada &&
-            config.tipificacion.estaActiva
-          );
-
-          this.tipificacionesN1 = this.tipificationConfigs
-            .filter(config =>
-              config.tipificacion.nivelJerarquia === 1
+    const subPortfolioId = this.selectedSubPortfolioId > 0
+      ? this.selectedSubPortfolioId
+      : undefined;
+    const configs$ = this.typificationService.getTenantClassifications(
+      this.selectedTenantId,
+      this.selectedPortfolioId,
+      false,
+      subPortfolioId
+    );
+    const carga$ = subPortfolioId
+      ? forkJoin({
+          configs: configs$,
+          efectivas: this.typificationService
+            .getEffectiveTypifications(
+              this.selectedTenantId,
+              this.selectedPortfolioId,
+              subPortfolioId
             )
-            .map(config => this.nombreTipificacion(config));
+            .pipe(
+              catchError(() => of([] as TypificationCatalogV2[]))
+            )
+        })
+      : forkJoin({
+          configs: configs$,
+          efectivas: of([] as TypificationCatalogV2[])
+        });
 
-          this.tipificacionesN1 = [
-            ...new Set(this.tipificacionesN1)
-          ];
-        },
-        error: err => {
-          console.error('Error loading typifications:', err);
-        }
-      });
+    carga$.subscribe({
+      next: ({ configs, efectivas }) => {
+        const padres = new Map(
+          efectivas.map(typification => [
+            typification.id,
+            typification.parentTypificationId
+              ?? typification.tipificacionPadre?.id
+          ])
+        );
+
+        configs.forEach(config => {
+          if (padres.has(config.tipificacion.id)) {
+            config.tipificacion.parentTypificationId =
+              padres.get(config.tipificacion.id);
+          }
+        });
+
+        this.tipificationConfigs = configs.filter(config =>
+          config.estaHabilitada &&
+          config.tipificacion.estaActiva
+        );
+
+        this.tipificacionesN1 = [
+          ...new Set(
+            this.tipificationConfigs
+              .filter(config => config.tipificacion.nivelJerarquia === 1)
+              .map(config => this.nombreTipificacion(config))
+          )
+        ];
+      },
+      error: err => {
+        console.error('Error loading typifications:', err);
+      }
+    });
   }
 
   private idDelPadre(
