@@ -814,7 +814,7 @@ export class ExcepcionesComponent implements OnInit {
     if (e.montoBase) datos.push(['MONTO BASE', this.formatCurrency(e.montoBase)]);
     datos.push(['MONTO PROMESA', this.formatCurrency(e.montoPromesa)]);
     const cuotas: [string, string][] = (e.cuotas || []).map(c => [this.fechaCorta(c.fechaPago), this.formatCurrency(c.monto)]);
-    const tabla = (filas: [string, string][]) => `<table style="${estilo}border-collapse:collapse;margin:0 0 14px">${filas.map(f =>
+    const tabla = (filas: [string, string][]) => `<table border="0" cellpadding="1" cellspacing="0" style="${estilo}border-collapse:collapse;margin:0 0 14px">${filas.map(f =>
       `<tr><td style="padding:1px 28px 1px 0;white-space:nowrap">${this.esc(f[0])}</td><td style="padding:1px 0">${this.esc(f[1])}</td></tr>`).join('')}</table>`;
     const html = `<div style="${estilo}">`
       + `<p style="margin:0 0 12px">${this.esc(saludo)},</p>`
@@ -843,11 +843,14 @@ export class ExcepcionesComponent implements OnInit {
     if (e.montoBase) filas.push({ etiqueta: 'MONTO BASE', valor: this.formatCurrency(e.montoBase) });
     filas.push({ etiqueta: 'PROPUESTA', valor: this.formatCurrency(e.montoPromesa), resaltar: true });
     filas.push({ etiqueta: 'CUOTAS', valor: this.plazoDeCuotas(e) });
-    const etiquetaCelda = 'background:#ff4b4b;color:#ffffff;font-weight:600;font-size:12px;text-align:right;padding:3px 10px;border:1px solid #000000;width:150px;';
-    const valorCelda = 'text-align:right;padding:3px 10px;border:1px solid #000000;font-size:13px;';
-    const tabla = `<table style="border-collapse:collapse;width:430px;font-family:Calibri,Arial,sans-serif">`
-      + filas.map(f => `<tr><td style="${etiquetaCelda}">${this.esc(f.etiqueta)}</td><td style="${valorCelda}${f.resaltar ? 'background:#ffff00;' : ''}">${this.esc(f.valor)}</td></tr>`).join('')
-      + `<tr><td style="${etiquetaCelda}vertical-align:middle;text-align:center">MOTIVO</td><td style="border:1px solid #000000;padding:6px 10px;font-size:13px">${motivo ? this.esc(motivo) + '<br>' : ''}${this.esc(aviso)}</td></tr></table>`;
+    const contorno = 'border:1px solid #000000;border-style:solid;border-width:1px;border-color:#000000;';
+    const etiquetaCelda = `background-color:#ff4b4b;color:#ffffff;font-weight:bold;font-size:12px;text-align:right;padding:3px 10px;width:150px;${contorno}`;
+    const valorCelda = `text-align:right;padding:3px 10px;font-size:13px;${contorno}`;
+    const celdaEtiqueta = (texto: string, extra = '') =>
+      `<td bgcolor="#ff4b4b" width="150" align="right" style="${etiquetaCelda}${extra}"><font color="#ffffff"><b>${this.esc(texto)}</b></font></td>`;
+    const tabla = `<table border="1" cellpadding="4" cellspacing="0" width="430" bordercolor="#000000" style="border-collapse:collapse;width:430px;font-family:Calibri,Arial,sans-serif;${contorno}">`
+      + filas.map(f => `<tr>${celdaEtiqueta(f.etiqueta)}<td align="right"${f.resaltar ? ' bgcolor="#ffff00"' : ''} style="${valorCelda}${f.resaltar ? 'background-color:#ffff00;' : ''}">${this.esc(f.valor)}</td></tr>`).join('')
+      + `<tr>${celdaEtiqueta('MOTIVO', 'vertical-align:middle;text-align:center;').replace('align="right"', 'align="center"')}<td style="padding:6px 10px;font-size:13px;${contorno}">${motivo ? this.esc(motivo) + '<br>' : ''}${this.esc(aviso)}</td></tr></table>`;
     const html = `<div style="${estilo}">`
       + `<p style="margin:0 0 12px">${this.esc(saludo)},</p>`
       + `<p style="margin:0 0 12px">Favor tu apoyo con la evaluación de la propuesta adjunta:</p>`
