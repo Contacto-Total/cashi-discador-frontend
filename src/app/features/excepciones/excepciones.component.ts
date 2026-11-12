@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ExcepcionesService, ExcepcionPendiente } from './excepciones.service';
 import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '../reports/excepciones-report/excepciones-report.service';
 import { FormatService } from '@/shared/services/format.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-excepciones',
@@ -537,6 +538,7 @@ export class ExcepcionesComponent implements OnInit {
   historialMetricas = signal<ResumenMetricas | null>(null);
 
   private sanitizer = inject(DomSanitizer);
+  private auth = inject(AuthService);
   correoDesde = signal('');
   correoHasta = signal('');
   correoCartera = signal('');
@@ -832,37 +834,85 @@ export class ExcepcionesComponent implements OnInit {
     return { html, texto };
   }
 
+  private numeroCastigo(valor: string | number | null | undefined): number | null {
+    if (valor === null || valor === undefined || String(valor).trim() === '') return null;
+    const n = Number(String(valor).trim().replace(',', '.'));
+    return isNaN(n) ? null : n;
+  }
+
+  private importeCastigo(valor: string | number | null | undefined): string {
+    const n = this.numeroCastigo(valor);
+    if (n === null) return '';
+    const [entero, decimales] = n.toFixed(2).split('.');
+    return `${entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${decimales}`;
+  }
+
+  private enteroCastigo(valor: string | number | null | undefined): string {
+    const n = this.numeroCastigo(valor);
+    return n === null ? String(valor ?? '').trim() : String(Math.trunc(n));
+  }
+
+  private textoCastigo(valor: string | number | null | undefined): string {
+    const t = String(valor ?? '').trim();
+    return t === t.toUpperCase() && t.length > 1 ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+  }
+
   private correoCastigo(e: ExcepcionPendiente): { html: string; texto: string } {
     const estilo = 'font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f1f1f;';
     const saludo = (e.nombreAutorizador || '').trim().split(/\s+/)[0] || 'Estimado(a)';
     const aviso = 'Se le informa que su solicitud será enviada a evaluación y de contar con el VB tiene que cancelar hoy lo acordado.';
     const motivo = (e.observaciones || '').trim();
+    const d = e.datosCastigo || {};
+    const capital = this.numeroCastigo(d['sld_capital_asig']);
+    const fechaCastigo = this.enteroCastigo(d['periodo_castigo']);
+    const nuevoLtd = this.numeroCastigo(d['nuevo_ltd']) !== null ? d['nuevo_ltd'] : d['nuevo_monto_ltd'];
+    const propuesta = `S/${Number(e.montoPromesa || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const usuario = this.auth.getCurrentUser();
+    const remitente = [usuario?.firstName, usuario?.lastName].filter(n => !!n).join(' ').trim() || usuario?.username || '';
     const filas: { etiqueta: string; valor: string; resaltar?: boolean }[] = [
+      { etiqueta: 'ESTUDIO', valor: 'INNOVAG' },
       { etiqueta: 'TRAMO', valor: 'CASTIGO' },
       { etiqueta: 'DNI', valor: e.documentoCliente },
-      { etiqueta: 'CLIENTE', valor: e.nombreCliente }
+      { etiqueta: 'CLIENTE', valor: e.nombreCliente },
+      { etiqueta: 'DEUDA TOTAL', valor: this.importeCastigo(d['sld_total_asig']) },
+      { etiqueta: 'CAPITAL', valor: this.importeCastigo(d['sld_capital_asig']), resaltar: true },
+      { etiqueta: 'FECHA DE CASTIGO', valor: fechaCastigo },
+      { etiqueta: 'Tipo de Cartera', valor: String(d['tipo_cartera'] ?? '').trim() },
+      { etiqueta: 'LTD', valor: this.importeCastigo(d['ltd']) },
+      { etiqueta: 'LTD ESPECIAL FERIA', valor: this.importeCastigo(d['ltd_especial_feria']) },
+      { etiqueta: 'LTD PLUS', valor: this.importeCastigo(d['ltd_plus']) },
+      { etiqueta: 'NUEVO LTD', valor: this.importeCastigo(nuevoLtd) },
+      { etiqueta: 'PROPUESTA', valor: this.importeCastigo(e.montoPromesa), resaltar: true },
+      { etiqueta: '% capital pagado', valor: capital ? `${Math.round(Number(e.montoPromesa || 0) / capital * 100)}%` : '' },
+      { etiqueta: 'Entidades reportantes', valor: this.enteroCastigo(d['n_entidades_sbs']) },
+      { etiqueta: 'Tipo de actividad', valor: this.textoCastigo(d['tipo_actividad']) },
+      { etiqueta: 'EDAD', valor: this.enteroCastigo(d['edad']) }
     ];
-    if (e.montoBase) filas.push({ etiqueta: 'MONTO BASE', valor: this.formatCurrency(e.montoBase) });
-    filas.push({ etiqueta: 'PROPUESTA', valor: this.formatCurrency(e.montoPromesa), resaltar: true });
-    filas.push({ etiqueta: 'CUOTAS', valor: this.plazoDeCuotas(e) });
     const contorno = 'border:1px solid #000000;border-style:solid;border-width:1px;border-color:#000000;';
-    const etiquetaCelda = `background-color:#ff4b4b;color:#ffffff;font-weight:bold;font-size:12px;text-align:right;padding:3px 10px;width:150px;${contorno}`;
-    const valorCelda = `text-align:right;padding:3px 10px;font-size:13px;${contorno}`;
+    const etiquetaCelda = `background-color:#ff4b4b;color:#ffffff;font-size:11px;text-align:right;padding:3px 6px;width:130px;${contorno}`;
+    const valorCelda = `text-align:right;padding:3px 6px;font-size:12px;${contorno}`;
     const celdaEtiqueta = (texto: string, extra = '') =>
-      `<td bgcolor="#ff4b4b" width="150" align="right" style="${etiquetaCelda}${extra}"><font color="#ffffff"><b>${this.esc(texto)}</b></font></td>`;
-    const tabla = `<table border="1" cellpadding="4" cellspacing="0" width="430" bordercolor="#000000" style="border-collapse:collapse;width:430px;font-family:Calibri,Arial,sans-serif;${contorno}">`
-      + filas.map(f => `<tr>${celdaEtiqueta(f.etiqueta)}<td align="right"${f.resaltar ? ' bgcolor="#ffff00"' : ''} style="${valorCelda}${f.resaltar ? 'background-color:#ffff00;' : ''}">${this.esc(f.valor)}</td></tr>`).join('')
-      + `<tr>${celdaEtiqueta('MOTIVO', 'vertical-align:middle;text-align:center;').replace('align="right"', 'align="center"')}<td style="padding:6px 10px;font-size:13px;${contorno}">${motivo ? this.esc(motivo) + '<br>' : ''}${this.esc(aviso)}</td></tr></table>`;
+      `<td bgcolor="#ff4b4b" width="130" align="right" style="${etiquetaCelda}${extra}"><font color="#ffffff">${this.esc(texto)}</font></td>`;
+    const tabla = `<table border="1" cellpadding="3" cellspacing="0" width="435" bordercolor="#000000" style="border-collapse:collapse;width:435px;font-family:Calibri,Arial,sans-serif;margin:0 0 14px;${contorno}">`
+      + filas.map(f => `<tr>${celdaEtiqueta(f.etiqueta)}<td align="right"${f.resaltar ? ' bgcolor="#ffff00"' : ''} style="${valorCelda}${f.resaltar ? 'background-color:#ffff00;' : ''}">${this.esc(f.valor) || '&nbsp;'}</td></tr>`).join('')
+      + `<tr>${celdaEtiqueta('MOTIVO', 'vertical-align:middle;text-align:center;').replace('align="right"', 'align="center"')}<td style="padding:4px 6px;font-size:12px;line-height:1.6;${contorno}">${motivo ? this.esc(motivo) + '<br>' : ''}${this.esc(aviso)}</td></tr></table>`;
     const html = `<div style="${estilo}">`
-      + `<p style="margin:0 0 12px">${this.esc(saludo)},</p>`
+      + `<p style="margin:0 0 12px">${this.esc(saludo)}</p>`
       + `<p style="margin:0 0 12px">Favor tu apoyo con la evaluación de la propuesta adjunta:</p>`
-      + `<p style="margin:0 0 12px">Cliente: ${this.esc(e.nombreCliente)}<br>DNI: ${this.esc(e.documentoCliente)}<br>Propuesta: ${this.esc(this.formatCurrency(e.montoPromesa))}</p>`
+      + `<p style="margin:0 0 12px">Cliente: ${this.esc(e.nombreCliente)}<br>DNI: ${this.esc(e.documentoCliente)}<br>Propuesta: ${this.esc(propuesta)}`
+      + (fechaCastigo ? `<br>Fecha Castigo ${this.esc(fechaCastigo)}` : '') + `</p>`
       + (motivo ? `<p style="margin:0 0 12px">Motivo excepción: ${this.esc(motivo)}<br>${this.esc(aviso)}</p>` : `<p style="margin:0 0 12px">${this.esc(aviso)}</p>`)
-      + tabla + `</div>`;
-    const texto = [`${saludo},`, '', 'Favor tu apoyo con la evaluación de la propuesta adjunta:', '',
-      `Cliente: ${e.nombreCliente}`, `DNI: ${e.documentoCliente}`, `Propuesta: ${this.formatCurrency(e.montoPromesa)}`, '',
+      + tabla
+      + `<p style="margin:0 0 12px">Gracias</p>`
+      + `<p style="margin:0 0 12px">Saludos cordiales</p>`
+      + (remitente ? `<p style="margin:0">${this.esc(remitente)}</p>` : '')
+      + `</div>`;
+    const texto = [saludo, '', 'Favor tu apoyo con la evaluación de la propuesta adjunta:', '',
+      `Cliente: ${e.nombreCliente}`, `DNI: ${e.documentoCliente}`, `Propuesta: ${propuesta}`,
+      ...(fechaCastigo ? [`Fecha Castigo ${fechaCastigo}`] : []), '',
       ...(motivo ? [`Motivo excepción: ${motivo}`] : []), aviso, '',
-      ...filas.map(f => `${f.etiqueta}: ${f.valor}`)].join('\n');
+      ...filas.map(f => `${f.etiqueta}: ${f.valor}`), `MOTIVO: ${motivo ? motivo + ' ' : ''}${aviso}`, '',
+      'Gracias', '', 'Saludos cordiales', ...(remitente ? ['', remitente] : [])].join('\n');
     return { html, texto };
   }
 
