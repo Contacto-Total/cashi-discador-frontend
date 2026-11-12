@@ -324,18 +324,25 @@ const ANCHO_PERSONA_REM = 8;
         <!-- ===================== Ficha en el panel derecho ===================== -->
         <section appTarjeta class="flex min-h-0 min-w-0 flex-col self-stretch overflow-hidden p-0!" [attr.aria-label]="'Ficha de ' + p.nombres + ' ' + p.apellidos">
           @let ces = cesado(p);
-          <div class="relative flex flex-none flex-col items-center gap-1 border-b border-(--line2) bg-card px-4 pt-5 pb-[.875rem] text-center">
+          <div class="relative flex flex-none flex-col items-center gap-1 border-b border-(--line2) bg-card px-4 pt-4 pb-3 text-center">
             <button type="button" id="cerrar-ficha" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' absolute! top-[.625rem] right-[.625rem]'" (click)="cerrarFicha()" aria-label="Cerrar ficha" title="Cerrar">
               <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>
             </button>
             <ng-container *ngTemplateOutlet="avatar; context: { $implicit: p, clase: 'mb-[.375rem] size-16' }" />
             <span class="text-[1rem] font-bold text-foreground">{{ p.nombres }} {{ p.apellidos }}</span>
             <small class="text-[.75rem] text-muted-foreground">{{ p.tipoDocumento }} {{ p.numeroDocumento ?? '—' }}</small>
+            @if (!accion()) {
+              <!-- Bajo el nombre va lo que toca a la persona entera; en las filas, solo lo que cambia ese dato -->
+              <div class="mt-[.625rem] flex justify-center gap-2">
+                <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'datos')"><lucide-angular name="pencil" [size]="16" class="flex"></lucide-angular>Editar datos</button>
+                @if (!p.fechaCese) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI_PELIGRO" (click)="abrirAccion(p, 'cese')">Registrar cese</button> }
+              </div>
+            }
           </div>
           <div class="grid flex-none grid-cols-3 border-b border-(--line2)">
-            <div class="flex min-w-0 flex-col gap-[.125rem] px-2 py-3 text-center"><span class="text-[.6875rem] text-muted-foreground">Ingreso</span><span class="text-[.8125rem] font-semibold text-foreground [overflow-wrap:anywhere]">{{ dma(p.fechaIngreso) }}</span></div>
-            <div class="flex min-w-0 flex-col gap-[.125rem] border-l border-(--line2) px-2 py-3 text-center"><span class="text-[.6875rem] text-muted-foreground">Antigüedad</span><span class="text-[.8125rem] font-semibold text-foreground [overflow-wrap:anywhere]">{{ antiguedad(p) }}</span></div>
-            <div class="flex min-w-0 flex-col gap-[.125rem] border-l border-(--line2) px-2 py-3 text-center"><span class="text-[.6875rem] text-muted-foreground">Usuario</span><span class="text-[.8125rem] font-semibold [overflow-wrap:anywhere]" [class]="p.usuario ? 'text-foreground' : 'text-(--am)'">{{ p.usuario ?? 'Sin vincular' }}</span></div>
+            <div class="flex min-w-0 flex-col gap-[.125rem] px-2 py-2.5 text-center"><span class="text-[.6875rem] text-muted-foreground">Ingreso</span><span class="text-[.8125rem] font-semibold text-foreground [overflow-wrap:anywhere]">{{ dma(p.fechaIngreso) }}</span></div>
+            <div class="flex min-w-0 flex-col gap-[.125rem] border-l border-(--line2) px-2 py-2.5 text-center"><span class="text-[.6875rem] text-muted-foreground">Antigüedad</span><span class="text-[.8125rem] font-semibold text-foreground [overflow-wrap:anywhere]">{{ antiguedad(p) }}</span></div>
+            <div class="flex min-w-0 flex-col gap-[.125rem] border-l border-(--line2) px-2 py-2.5 text-center"><span class="text-[.6875rem] text-muted-foreground">Usuario</span><span class="text-[.8125rem] font-semibold [overflow-wrap:anywhere]" [class]="p.usuario ? 'text-foreground' : 'text-(--am)'">{{ p.usuario ?? 'Sin vincular' }}</span></div>
           </div>
 
           @if (accion(); as a) {
@@ -343,7 +350,7 @@ const ANCHO_PERSONA_REM = 8;
               <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="accion.set(null)"><lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Ficha</button>
               <span class="text-[.9375rem] font-bold text-foreground">{{ TITULO_ACCION[a] }}</span>
             </div>
-            <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-3 pb-4">
+            <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-2.5 pb-3">
               <div class="flex min-w-0 flex-col gap-3">
                 <div class="grid grid-cols-[minmax(0,1fr)] gap-[.625rem]">
                   @switch (a) {
@@ -413,15 +420,16 @@ const ANCHO_PERSONA_REM = 8;
                 </div>
                 @if (notaAccion(p); as nota) { <p [class]="NOTA">{{ nota }}</p> }
                 @if (errorAccion()) { <p [class]="ERROR" role="alert">{{ errorAccion() }}</p> }
-                <div class="flex flex-wrap items-center justify-start gap-2">
-                  @if (a === 'cese') {
-                    <button type="button" appBoton="peligro" [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="guardarAccion(p)">Registrar cese</button>
-                  } @else {
-                    <button type="button" appBoton [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="guardarAccion(p)"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Guardar</button>
-                  }
-                  <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="accion.set(null)">Cancelar</button>
-                </div>
               </div>
+            </div>
+            <!-- Fijo al pie de la ficha: no se mueve con la cantidad de campos -->
+            <div class="flex flex-none items-center gap-2 px-4 py-3">
+              @if (a === 'cese') {
+                <button type="button" appBoton="peligro" [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="guardarAccion(p)">Registrar cese</button>
+              } @else {
+                <button type="button" appBoton [class]="'h-[2.375rem]! px-4! ' + BOTON_APAGADO" [disabled]="guardando()" (click)="guardarAccion(p)"><lucide-angular name="check" [size]="16" class="flex"></lucide-angular>Guardar</button>
+              }
+              <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="accion.set(null)">Cancelar</button>
             </div>
           } @else {
             <div class="flex flex-none flex-col border-b border-(--line2) px-4 py-1">
@@ -445,10 +453,9 @@ const ANCHO_PERSONA_REM = 8;
                   @else if (p.fechaCese) { <span [class]="PILL.am">Cesa el {{ dma(p.fechaCese).slice(0, 5) }}</span> }
                   @else { <span [class]="PILL.ok">Activo</span> }
                 </div>
-                @if (!p.fechaCese) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI_PELIGRO" (click)="abrirAccion(p, 'cese')">Registrar cese</button> }
               </div>
             </div>
-            <div class="mx-4 mt-[.875rem] flex flex-none items-center gap-2">
+            <div class="mx-4 mt-3 flex flex-none items-center gap-2">
               <div class="grid flex-1 grid-cols-2 gap-[.1875rem] rounded-[.5rem] bg-muted p-[.1875rem]" role="group">
                 @for (s of SECCIONES; track s.clave) {
                   <button type="button" [attr.aria-pressed]="seccion() === s.clave" (click)="seccion.set(s.clave)"
@@ -456,7 +463,7 @@ const ANCHO_PERSONA_REM = 8;
                 }
               </div>
             </div>
-            <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-3 pb-4">
+            <div class="flex min-h-0 flex-1 flex-col gap-[.875rem] overflow-y-auto px-4 pt-2.5 pb-3">
               @if (seccion() === 'historial') {
                 <ol class="relative m-0 flex list-none flex-col gap-3 py-0 pr-0 pl-4 before:absolute before:top-[.375rem] before:bottom-[.375rem] before:left-1 before:w-px before:bg-border before:content-['']">
                   @for (m of p.movimientos; track $index) {
@@ -470,13 +477,10 @@ const ANCHO_PERSONA_REM = 8;
               } @else {
                 <div class="flex flex-col">
                   @for (d of datosDe(p); track d[0]; let primero = $first) {
-                    <div class="flex justify-between gap-3 py-[.4375rem] text-[.8125rem]" [class]="primero ? '' : 'border-t border-(--line2)'">
+                    <div class="flex justify-between gap-3 py-[.375rem] text-[.8125rem]" [class]="primero ? '' : 'border-t border-(--line2)'">
                       <span class="text-muted-foreground">{{ d[0] }}</span><span class="text-right font-semibold text-foreground">{{ d[1] }}</span>
                     </div>
                   }
-                </div>
-                <div class="flex justify-end pt-3">
-                  <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'datos')"><lucide-angular name="pencil" [size]="16" class="flex"></lucide-angular>Editar datos</button>
                 </div>
               }
             </div>
