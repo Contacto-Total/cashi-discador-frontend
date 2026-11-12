@@ -783,7 +783,9 @@ export class ExcepcionesComponent implements OnInit {
     const contenido = castigo ? this.correoCastigo(e) : this.correoTramo(e);
     const tramo = castigo ? 'Castigo' : e.nombreCartera;
     return {
-      para: e.nombreAutorizador || 'Sin autorizador asignado',
+      para: e.nombreAutorizador
+        ? e.nombreAutorizador + (e.correoAutorizador ? ` <${e.correoAutorizador}>` : '')
+        : 'Sin autorizador asignado',
       asunto: `[Excepción] ${tramo} – ${e.nombreCliente} – ${e.documentoCliente}`,
       html: contenido.html,
       texto: contenido.texto,
