@@ -12,6 +12,9 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 
+import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
+import { TenantTypificationConfigV2 } from '../../../maintenance/models/typification-v2.model';
+
 /**
  * Tope del rango de fechas de la busqueda. Es el unico freno que existe hoy:
  * el backend no valida el rango, asi que este numero es la unica proteccion
@@ -106,6 +109,8 @@ export class AdminRecordingsComponent implements OnInit {
   selectedSubPortfolioId: number = 0;
 
   // TificacionN1/TificacionN2 cascade
+  private tipificationConfigs: TenantTypificationConfigV2[] = [];
+
   tipificacionesN1: string[] = [];
   tipificacionesN2: string[] = [];
   selectedTificacionN1: string = '';
@@ -165,7 +170,8 @@ export class AdminRecordingsComponent implements OnInit {
     private recordingsService: AdminRecordingsService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private typificationService: TypificationV2Service,
   ) {}
 
   ngOnInit(): void {
@@ -186,11 +192,14 @@ export class AdminRecordingsComponent implements OnInit {
 
   loadTenants(): void {
     this.tenantService.getAllTenants().subscribe({
-      next: (data) => { this.tenants = data; },
-      error: (err) => { console.error('Error loading tenants:', err); }
+      next: data => {
+        this.tenants = data;
+      },
+      error: err => {
+        console.error('Error loading tenants:', err);
+      }
     });
   }
-
 
   onTenantChange(): void {
     this.portfolios = [];
@@ -200,13 +209,18 @@ export class AdminRecordingsComponent implements OnInit {
     this.resetTipificaciones();
 
     if (this.selectedTenantId > 0) {
-      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
-        next: (data) => { this.portfolios = data; },
-        error: (err) => { console.error('Error loading portfolios:', err); }
-      });
+      this.portfolioService
+        .getPortfoliosByTenant(this.selectedTenantId)
+        .subscribe({
+          next: data => {
+            this.portfolios = data;
+          },
+          error: err => {
+            console.error('Error loading portfolios:', err);
+          }
+        });
     }
   }
-
 
   onPortfolioChange(): void {
     this.subPortfolios = [];
@@ -217,55 +231,26 @@ export class AdminRecordingsComponent implements OnInit {
       this.portfolioService
         .getSubPortfoliosByPortfolio(this.selectedPortfolioId)
         .subscribe({
-          next: (data) => {
+          next: data => {
             this.subPortfolios = data;
           },
-          error: (err) => {
+          error: err => {
             console.error('Error loading sub-portfolios:', err);
           }
         });
 
-      // Tipificaciones disponibles para todo el portfolio
-      this.recordingsService
-        .getTipificacionesNivel1ByPortafolio(this.selectedPortfolioId)
-        .subscribe({
-          next: (data) => {
-            this.tipificacionesN1 = data;
-          },
-          error: (err) => {
-            console.error('Error loading tipificaciones nivel 1:', err);
-          }
-        });
+      // Carga las tipificaciones del portafolio sin subcartera.
+      this.cargarTipificaciones();
     }
   }
 
   onSubPortfolioChange(): void {
     this.resetTipificaciones();
 
-    if (this.selectedSubPortfolioId > 0) {
-      // La subcartera reemplaza las tipificaciones del portfolio
-      this.recordingsService
-        .getTipificacionesNivel1BySubPortafolio(this.selectedSubPortfolioId)
-        .subscribe({
-          next: (data) => {
-            this.tipificacionesN1 = data;
-          },
-          error: (err) => {
-            console.error('Error loading tipificaciones nivel 1:', err);
-          }
-        });
-    } else if (this.selectedPortfolioId > 0) {
-      // Si vuelve a "Seleccionar...", retorna a las del portfolio
-      this.recordingsService
-        .getTipificacionesNivel1ByPortafolio(this.selectedPortfolioId)
-        .subscribe({
-          next: (data) => {
-            this.tipificacionesN1 = data;
-          },
-          error: (err) => {
-            console.error('Error loading tipificaciones nivel 1:', err);
-          }
-        });
+    if (this.selectedPortfolioId > 0) {
+      // Con subcartera carga las tipificaciones de la subcartera.
+      // Sin subcartera carga las del portafolio.
+      this.cargarTipificaciones();
     }
   }
 
@@ -277,44 +262,95 @@ export class AdminRecordingsComponent implements OnInit {
       return;
     }
 
-    if (this.selectedSubPortfolioId > 0) {
-      this.recordingsService
-        .getTipificacionesNivel2ByTipificacionNivel1AndSubPortfolio(
-          this.selectedTificacionN1,
-          this.selectedSubPortfolioId
-        )
-        .subscribe({
-          next: (data) => {
-            this.tipificacionesN2 = data;
-          },
-          error: (err) => {
-            console.error('Error loading tipificaciones nivel 2:', err);
-          }
-        });
-    } else if (this.selectedPortfolioId > 0) {
-      this.recordingsService
-        .getTipificacionesNivel2ByTipificacionNivel1AndPortfolio(
-          this.selectedTificacionN1,
-          this.selectedPortfolioId
-        )
-        .subscribe({
-          next: (data) => {
-            this.tipificacionesN2 = data;
-          },
-          error: (err) => {
-            console.error('Error loading tipificaciones nivel 2:', err);
-          }
-        });
+    const padre = this.tipificationConfigs.find(config =>
+      config.tipificacion.nivelJerarquia === 1 &&
+      this.nombreTipificacion(config) === this.selectedTificacionN1
+    );
+
+    if (!padre) {
+      return;
     }
+
+    const padreId = padre.tipificacion.id;
+
+    this.tipificacionesN2 = this.tipificationConfigs
+      .filter(config =>
+        config.tipificacion.nivelJerarquia === 2 &&
+        this.idDelPadre(config) === padreId
+      )
+      .map(config => this.nombreTipificacion(config));
+
+    this.tipificacionesN2 = [...new Set(this.tipificacionesN2)];
   }
 
   private resetTipificaciones(): void {
+    this.tipificationConfigs = [];
     this.tipificacionesN1 = [];
     this.tipificacionesN2 = [];
     this.selectedTificacionN1 = '';
     this.selectedTificacionN2 = '';
   }
 
+  private cargarTipificaciones(): void {
+    this.tipificationConfigs = [];
+    this.tipificacionesN1 = [];
+    this.tipificacionesN2 = [];
+    this.selectedTificacionN1 = '';
+    this.selectedTificacionN2 = '';
+
+    if (!this.selectedTenantId || !this.selectedPortfolioId) {
+      return;
+    }
+
+    const subPortfolioId =
+      this.selectedSubPortfolioId > 0
+        ? this.selectedSubPortfolioId
+        : undefined;
+
+    this.typificationService
+      .getTenantClassifications(
+        this.selectedTenantId,
+        this.selectedPortfolioId,
+        false,
+        subPortfolioId
+      )
+      .subscribe({
+        next: configs => {
+          this.tipificationConfigs = configs.filter(config =>
+            config.estaHabilitada &&
+            config.tipificacion.estaActiva
+          );
+
+          this.tipificacionesN1 = this.tipificationConfigs
+            .filter(config =>
+              config.tipificacion.nivelJerarquia === 1
+            )
+            .map(config => this.nombreTipificacion(config));
+
+          this.tipificacionesN1 = [
+            ...new Set(this.tipificacionesN1)
+          ];
+        },
+        error: err => {
+          console.error('Error loading typifications:', err);
+        }
+      });
+  }
+
+  private idDelPadre(
+    config: TenantTypificationConfigV2
+  ): number | undefined {
+    return config.tipificacion.parentTypificationId
+      ?? config.tipificacion.tipificacionPadre?.id;
+  }
+
+  private nombreTipificacion(
+    config: TenantTypificationConfigV2
+  ): string {
+    return config.nombreEfectivo
+      || config.nombrePersonalizado
+      || config.tipificacion.nombre;
+  }
 
   // === Search ===
 
