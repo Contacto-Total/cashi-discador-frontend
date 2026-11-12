@@ -887,7 +887,7 @@ export class ExcepcionesComponent implements OnInit {
       { etiqueta: 'Entidades reportantes', valor: this.enteroCastigo(d['n_entidades_sbs']) },
       { etiqueta: 'Tipo de actividad', valor: this.textoCastigo(d['tipo_actividad']) },
       { etiqueta: 'EDAD', valor: this.enteroCastigo(d['edad']) }
-    ];
+    ].filter(f => (f.valor || '').trim() !== '');
     const contorno = 'border:1px solid #000000;border-style:solid;border-width:1px;border-color:#000000;';
     const etiquetaCelda = `background-color:#ff4b4b;color:#ffffff;font-size:11px;text-align:right;padding:3px 6px;width:130px;${contorno}`;
     const valorCelda = `text-align:right;padding:3px 6px;font-size:12px;${contorno}`;
