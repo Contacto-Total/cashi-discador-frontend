@@ -382,6 +382,7 @@ export class AdminRecordingsComponent implements OnInit {
     const doc = this.documento.trim();
     const tel = this.telefono.trim();
     const rutaNivel1 = this.selectedTificacionN1.trim();
+    const rutaNivel2 = this.selectedTificacionN2.trim();
     const hayFecha = !!(this.startDate || this.endDate);
 
     if (!hayFecha && !doc && !tel && !rutaNivel1) {
@@ -408,7 +409,8 @@ export class AdminRecordingsComponent implements OnInit {
         fechaHasta: this.endDate || undefined,
         documento: doc || undefined,
         telefono: tel || undefined,
-        rutaNivel1: rutaNivel1 || undefined
+        rutaNivel1: rutaNivel1 || undefined,
+        rutaNivel2: rutaNivel2 || undefined
       }
     ).subscribe({
       next: (data) => {

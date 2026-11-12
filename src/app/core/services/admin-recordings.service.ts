@@ -40,7 +40,7 @@ export class AdminRecordingsService {
    */
   search(tenantId: number, portfolioId: number, subPortfolioId: number,
          criterios: { fechaDesde?: string; fechaHasta?: string; documento?: string;
-           telefono?: string; rutaNivel1?: string }
+           telefono?: string; rutaNivel1?: string; rutaNivel2?: string }
         ): Observable<RecordingDTO[]> {
     let params = new HttpParams()
       .set('tenantId', tenantId.toString())
@@ -52,6 +52,7 @@ export class AdminRecordingsService {
     if (criterios.documento)  params = params.set('documento', criterios.documento);
     if (criterios.telefono)   params = params.set('telefono', criterios.telefono);
     if (criterios.rutaNivel1) params = params.set('rutaNivel1', criterios.rutaNivel1);
+    if (criterios.rutaNivel2) params = params.set('rutaNivel2', criterios.rutaNivel2);
 
     return this.http.get<RecordingDTO[]>(`${this.apiUrl}/search`, { params });
   }
