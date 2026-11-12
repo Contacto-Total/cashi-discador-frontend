@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -51,6 +52,16 @@ import { FormatService } from '@/shared/services/format.service';
             >
               <lucide-angular name="file-text" [size]="18"></lucide-angular>
               Historial / Reporte
+            </button>
+            <button
+              (click)="tabActivo.set('correos')"
+              [class]="tabActivo() === 'correos'
+                ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-semibold'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+              class="px-4 py-3 text-sm flex items-center gap-2 transition-colors"
+            >
+              <lucide-angular name="mail" [size]="18"></lucide-angular>
+              Preview correos
             </button>
           </nav>
         </div>
@@ -289,6 +300,101 @@ import { FormatService } from '@/shared/services/format.service';
         }
       }
 
+      @if (tabActivo() === 'correos') {
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Desde</label>
+              <input type="date" [ngModel]="correoDesde()" (ngModelChange)="correoDesde.set($event)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hasta</label>
+              <input type="date" [ngModel]="correoHasta()" (ngModelChange)="correoHasta.set($event)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cartera</label>
+              <select [ngModel]="correoCartera()" (ngModelChange)="correoCartera.set($event)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="">Todas</option>
+                @for (cartera of correoCarteras(); track cartera) {
+                  <option [value]="cartera">{{ cartera }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Autorizador</label>
+              <select [ngModel]="correoAutorizador()" (ngModelChange)="correoAutorizador.set($event)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="">Todos</option>
+                @for (autorizador of correoAutorizadores(); track autorizador) {
+                  <option [value]="autorizador">{{ autorizador }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar</label>
+              <input type="text" placeholder="Cliente o DNI" [ngModel]="correoBusqueda()" (ngModelChange)="correoBusqueda.set($event)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+            </div>
+          </div>
+        </div>
+
+        @if (excepcionesService.cargando()) {
+          <div class="flex justify-center items-center py-12">
+            <lucide-angular name="loader" [size]="40" class="animate-spin text-blue-600"></lucide-angular>
+            <span class="ml-3 text-gray-600 dark:text-gray-400">Cargando excepciones...</span>
+          </div>
+        } @else if (correosFiltrados().length === 0) {
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+            <lucide-angular name="file-search" [size]="64" class="mx-auto text-gray-400 mb-4"></lucide-angular>
+            <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay excepciones para mostrar</h3>
+            <p class="text-gray-500 dark:text-gray-400">Ajusta los filtros para ver el correo de una excepcion pendiente</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="space-y-3">
+              @for (excepcion of correosFiltrados(); track excepcion.id) {
+                <button
+                  (click)="correoSelId.set(excepcion.id)"
+                  [class]="correoSeleccionado()?.id === excepcion.id
+                    ? 'border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-900/50'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                  class="w-full text-left bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-colors"
+                >
+                  <div class="font-medium text-gray-900 dark:text-white">{{ excepcion.nombreCliente }}</div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">{{ excepcion.documentoCliente }} · {{ excepcion.nombreCartera }}</div>
+                  <div class="flex items-center justify-between mt-2 gap-2">
+                    <span class="font-bold text-amber-600 dark:text-amber-400">{{ formatCurrency(excepcion.montoPromesa) }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ excepcion.nombreAutorizador ? 'Para ' + excepcion.nombreAutorizador : 'Sin autorizador' }}</span>
+                  </div>
+                </button>
+              }
+            </div>
+
+            @if (correoActual(); as correo) {
+              <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 grid grid-cols-[80px_1fr] gap-y-2 text-sm">
+                  <span class="text-gray-500 dark:text-gray-400">Para</span>
+                  <span class="text-gray-900 dark:text-white">{{ correo.para }}</span>
+                  <span class="text-gray-500 dark:text-gray-400">Asunto</span>
+                  <span class="text-gray-900 dark:text-white break-words">{{ correo.asunto }}</span>
+                </div>
+                <div class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-3">
+                  <button (click)="copiarCorreo()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                    <lucide-angular name="copy" [size]="18"></lucide-angular>
+                    Copiar correo
+                  </button>
+                  <button (click)="copiarAsunto()" class="border border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 px-4 py-2 rounded-lg font-medium">
+                    Copiar asunto
+                  </button>
+                  @if (correoMensaje()) {
+                    <span class="text-sm font-medium text-green-600 dark:text-green-400">{{ correoMensaje() }}</span>
+                  }
+                </div>
+                <div class="p-6 bg-white text-gray-900 overflow-x-auto" [innerHTML]="correo.safeHtml"></div>
+              </div>
+            }
+          </div>
+        }
+      }
+
       <!-- Modal Detalle -->
       @if (showDetalleModal()) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -405,7 +511,7 @@ export class ExcepcionesComponent implements OnInit {
   private fmt = inject(FormatService);
 
   // Tab activo
-  tabActivo = signal<'pendientes' | 'historial'>('pendientes');
+  tabActivo = signal<'pendientes' | 'historial' | 'correos'>('pendientes');
 
   // Paginacion (pendientes)
   currentPage = signal(0);
@@ -429,6 +535,47 @@ export class ExcepcionesComponent implements OnInit {
   cargandoHistorial = signal(false);
   historialData = signal<ReporteExcepcionDTO[]>([]);
   historialMetricas = signal<ResumenMetricas | null>(null);
+
+  private sanitizer = inject(DomSanitizer);
+  correoDesde = signal('');
+  correoHasta = signal('');
+  correoCartera = signal('');
+  correoAutorizador = signal('');
+  correoBusqueda = signal('');
+  correoSelId = signal<number | null>(null);
+  correoMensaje = signal('');
+
+  correoCarteras = computed(() =>
+    [...new Set(this.excepcionesService.excepciones().map(e => e.nombreCartera).filter(n => !!n))]);
+
+  correoAutorizadores = computed(() =>
+    [...new Set(this.excepcionesService.excepciones().map(e => e.nombreAutorizador).filter((n): n is string => !!n))]);
+
+  correosFiltrados = computed(() => {
+    const desde = this.correoDesde();
+    const hasta = this.correoHasta();
+    const cartera = this.correoCartera();
+    const autorizador = this.correoAutorizador();
+    const texto = this.correoBusqueda().trim().toLowerCase();
+    return this.excepcionesService.excepciones().filter(e => {
+      const dia = (e.fechaGestion || '').substring(0, 10);
+      return (!desde || dia >= desde)
+        && (!hasta || dia <= hasta)
+        && (!cartera || e.nombreCartera === cartera)
+        && (!autorizador || e.nombreAutorizador === autorizador)
+        && (!texto || (e.nombreCliente || '').toLowerCase().includes(texto) || (e.documentoCliente || '').includes(texto));
+    });
+  });
+
+  correoSeleccionado = computed<ExcepcionPendiente | null>(() => {
+    const lista = this.correosFiltrados();
+    return lista.find(e => e.id === this.correoSelId()) ?? lista[0] ?? null;
+  });
+
+  correoActual = computed(() => {
+    const excepcion = this.correoSeleccionado();
+    return excepcion ? this.armarCorreo(excepcion) : null;
+  });
 
   ngOnInit(): void {
     this.cargarExcepciones();
@@ -594,6 +741,124 @@ export class ExcepcionesComponent implements OnInit {
     if (estado === 'EN_EVALUACION') return 'Pendiente';
     if (estado === 'CANCELADA' || motivoRechazo) return 'Rechazada';
     return 'Aprobada';
+  }
+
+  async copiarCorreo(): Promise<void> {
+    const correo = this.correoActual();
+    if (!correo) return;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([correo.html], { type: 'text/html' }),
+        'text/plain': new Blob([correo.texto], { type: 'text/plain' })
+      })]);
+      this.avisarCorreo('Correo copiado. Pegalo en tu correo.');
+    } catch {
+      try {
+        await navigator.clipboard.writeText(correo.texto);
+        this.avisarCorreo('Correo copiado como texto.');
+      } catch {
+        this.avisarCorreo('No se pudo copiar. Selecciona el texto y usa Ctrl+C.');
+      }
+    }
+  }
+
+  async copiarAsunto(): Promise<void> {
+    const correo = this.correoActual();
+    if (!correo) return;
+    try {
+      await navigator.clipboard.writeText(correo.asunto);
+      this.avisarCorreo('Asunto copiado.');
+    } catch {
+      this.avisarCorreo('No se pudo copiar el asunto.');
+    }
+  }
+
+  private avisarCorreo(mensaje: string): void {
+    this.correoMensaje.set(mensaje);
+    setTimeout(() => this.correoMensaje.set(''), 3500);
+  }
+
+  private armarCorreo(e: ExcepcionPendiente) {
+    const castigo = `${e.nombreCartera} ${e.nombreSubcartera}`.toUpperCase().includes('CASTIGO');
+    const contenido = castigo ? this.correoCastigo(e) : this.correoTramo(e);
+    const tramo = castigo ? 'Castigo' : e.nombreCartera;
+    return {
+      para: e.nombreAutorizador || 'Sin autorizador asignado',
+      asunto: `[Excepción] ${tramo} – ${e.nombreCliente} – ${e.documentoCliente}`,
+      html: contenido.html,
+      texto: contenido.texto,
+      safeHtml: this.sanitizer.bypassSecurityTrustHtml(contenido.html)
+    };
+  }
+
+  private esc(valor: string | number | null | undefined): string {
+    return String(valor ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  private fechaCorta(fecha: string): string {
+    const [anio, mes, dia] = (fecha || '').substring(0, 10).split('-');
+    return dia ? `${dia}/${mes}/${anio.slice(2)}` : '-';
+  }
+
+  private plazoDeCuotas(e: ExcepcionPendiente): string {
+    const total = e.totalCuotas || e.cuotas?.length || 1;
+    return total === 1 ? '1 cuota' : `${total} cuotas`;
+  }
+
+  private correoTramo(e: ExcepcionPendiente): { html: string; texto: string } {
+    const estilo = 'font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f1f1f;';
+    const saludo = (e.nombreAutorizador || '').trim().split(/\s+/)[0] || 'Estimado(a)';
+    const solicitud = `Cliente: ${e.nombreCliente} DNI: ${e.documentoCliente} indica que desea cancelar su deuda con nuestra entidad, se le brinda Deuda Total pero indica que podría liquidar con ${this.formatCurrency(e.montoPromesa)} en ${this.plazoDeCuotas(e)}, por ello solicita que aceptemos su solicitud.`;
+    const motivo = (e.observaciones || '').trim();
+    const datos: [string, string][] = [];
+    if (e.montoBase) datos.push(['MONTO BASE', this.formatCurrency(e.montoBase)]);
+    datos.push(['MONTO PROMESA', this.formatCurrency(e.montoPromesa)]);
+    const cuotas: [string, string][] = (e.cuotas || []).map(c => [this.fechaCorta(c.fechaPago), this.formatCurrency(c.monto)]);
+    const tabla = (filas: [string, string][]) => `<table style="${estilo}border-collapse:collapse;margin:0 0 14px">${filas.map(f =>
+      `<tr><td style="padding:1px 28px 1px 0;white-space:nowrap">${this.esc(f[0])}</td><td style="padding:1px 0">${this.esc(f[1])}</td></tr>`).join('')}</table>`;
+    const html = `<div style="${estilo}">`
+      + `<p style="margin:0 0 12px">${this.esc(saludo)},</p>`
+      + `<p style="margin:0 0 14px">${this.esc(solicitud)}</p>`
+      + (motivo ? `<p style="margin:0 0 14px">Motivo: ${this.esc(motivo)}</p>` : '')
+      + tabla(datos)
+      + (cuotas.length ? `<p style="margin:0 0 4px">Fecha de pago:</p>${tabla(cuotas)}` : '')
+      + `<p style="margin:0">${this.esc((e.nombreCartera || '').toUpperCase())}</p></div>`;
+    const texto = [`${saludo},`, '', solicitud, ...(motivo ? ['', `Motivo: ${motivo}`] : []), '',
+      ...datos.map(f => `${f[0]}: ${f[1]}`),
+      ...(cuotas.length ? ['', 'Fecha de pago:', ...cuotas.map(f => `${f[0]}  ${f[1]}`)] : []),
+      '', (e.nombreCartera || '').toUpperCase()].join('\n');
+    return { html, texto };
+  }
+
+  private correoCastigo(e: ExcepcionPendiente): { html: string; texto: string } {
+    const estilo = 'font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f1f1f;';
+    const saludo = (e.nombreAutorizador || '').trim().split(/\s+/)[0] || 'Estimado(a)';
+    const aviso = 'Se le informa que su solicitud será enviada a evaluación y de contar con el VB tiene que cancelar hoy lo acordado.';
+    const motivo = (e.observaciones || '').trim();
+    const filas: { etiqueta: string; valor: string; resaltar?: boolean }[] = [
+      { etiqueta: 'TRAMO', valor: 'CASTIGO' },
+      { etiqueta: 'DNI', valor: e.documentoCliente },
+      { etiqueta: 'CLIENTE', valor: e.nombreCliente }
+    ];
+    if (e.montoBase) filas.push({ etiqueta: 'MONTO BASE', valor: this.formatCurrency(e.montoBase) });
+    filas.push({ etiqueta: 'PROPUESTA', valor: this.formatCurrency(e.montoPromesa), resaltar: true });
+    filas.push({ etiqueta: 'CUOTAS', valor: this.plazoDeCuotas(e) });
+    const etiquetaCelda = 'background:#ff4b4b;color:#ffffff;font-weight:600;font-size:12px;text-align:right;padding:3px 10px;border:1px solid #000000;width:150px;';
+    const valorCelda = 'text-align:right;padding:3px 10px;border:1px solid #000000;font-size:13px;';
+    const tabla = `<table style="border-collapse:collapse;width:430px;font-family:Calibri,Arial,sans-serif">`
+      + filas.map(f => `<tr><td style="${etiquetaCelda}">${this.esc(f.etiqueta)}</td><td style="${valorCelda}${f.resaltar ? 'background:#ffff00;' : ''}">${this.esc(f.valor)}</td></tr>`).join('')
+      + `<tr><td style="${etiquetaCelda}vertical-align:middle;text-align:center">MOTIVO</td><td style="border:1px solid #000000;padding:6px 10px;font-size:13px">${motivo ? this.esc(motivo) + '<br>' : ''}${this.esc(aviso)}</td></tr></table>`;
+    const html = `<div style="${estilo}">`
+      + `<p style="margin:0 0 12px">${this.esc(saludo)},</p>`
+      + `<p style="margin:0 0 12px">Favor tu apoyo con la evaluación de la propuesta adjunta:</p>`
+      + `<p style="margin:0 0 12px">Cliente: ${this.esc(e.nombreCliente)}<br>DNI: ${this.esc(e.documentoCliente)}<br>Propuesta: ${this.esc(this.formatCurrency(e.montoPromesa))}</p>`
+      + (motivo ? `<p style="margin:0 0 12px">Motivo excepción: ${this.esc(motivo)}<br>${this.esc(aviso)}</p>` : `<p style="margin:0 0 12px">${this.esc(aviso)}</p>`)
+      + tabla + `</div>`;
+    const texto = [`${saludo},`, '', 'Favor tu apoyo con la evaluación de la propuesta adjunta:', '',
+      `Cliente: ${e.nombreCliente}`, `DNI: ${e.documentoCliente}`, `Propuesta: ${this.formatCurrency(e.montoPromesa)}`, '',
+      ...(motivo ? [`Motivo excepción: ${motivo}`] : []), aviso, '',
+      ...filas.map(f => `${f.etiqueta}: ${f.valor}`)].join('\n');
+    return { html, texto };
   }
 
   formatCurrency(value: number | null): string {
