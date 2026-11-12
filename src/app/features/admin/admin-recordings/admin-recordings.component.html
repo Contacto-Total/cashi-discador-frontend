@@ -7,10 +7,7 @@
       </div>
       <div>
         <h1>Grabaciones del Discador</h1>
-        <p>
-          Busca y descarga las grabaciones de llamadas por proveedor, cartera y
-          subcartera
-        </p>
+        <p>Busca y descarga las grabaciones de llamadas por proveedor, cartera y subcartera</p>
       </div>
     </div>
     <div class="header-stats" *ngIf="hasSearched">
@@ -27,601 +24,368 @@
     las dos pantallas de monitoreo se abran igual.
   -->
   <div class="tabs-bar">
-    <button
-      type="button"
-      [class.active]="pestana === 'grabaciones'"
-      (click)="seleccionar('grabaciones')"
-    >
+    <button type="button"
+            [class.active]="pestana === 'grabaciones'"
+            (click)="seleccionar('grabaciones')">
       <lucide-angular name="search" [size]="15"></lucide-angular>
       Grabaciones
     </button>
-    <button
-      type="button"
-      [class.active]="pestana === 'monitoreo'"
-      (click)="seleccionar('monitoreo')"
-    >
+    <button type="button"
+            [class.active]="pestana === 'monitoreo'"
+            (click)="seleccionar('monitoreo')">
       <lucide-angular name="bar-chart-3" [size]="15"></lucide-angular>
       Monitoreo
     </button>
   </div>
 
-  <app-quality-monitor
-    *ngIf="pestana === 'monitoreo'"
-    modo="discador"
-  ></app-quality-monitor>
+  <app-quality-monitor *ngIf="pestana === 'monitoreo'" modo="discador"></app-quality-monitor>
 
   <ng-container *ngIf="pestana === 'grabaciones'">
-    <!-- Filters Section -->
-    <div class="filters-section">
-      <div class="filters-row">
-        <!-- Proveedor -->
-        <div class="filter-group">
-          <label>Proveedor</label>
-          <select [(ngModel)]="selectedTenantId" (change)="onTenantChange()">
-            <option [value]="0">Seleccionar...</option>
-            <option *ngFor="let tenant of tenants" [value]="tenant.id">
-              {{ tenant.tenantName }}
-            </option>
-          </select>
-        </div>
 
-        <!-- Cartera -->
-        <div class="filter-group">
-          <label>Cartera</label>
-          <select
-            [(ngModel)]="selectedPortfolioId"
-            (change)="onPortfolioChange()"
-            [disabled]="portfolios.length === 0"
-          >
-            <option [value]="0">Seleccionar...</option>
-            <option *ngFor="let portfolio of portfolios" [value]="portfolio.id">
-              {{ portfolio.portfolioName }}
-            </option>
-          </select>
-        </div>
 
-        <!-- Subcartera -->
-        <div class="filter-group">
-          <label>Subcartera</label>
-          <select
-            [(ngModel)]="selectedSubPortfolioId"
-            [disabled]="subPortfolios.length === 0"
-          >
-            <option [value]="0">Seleccionar...</option>
-            <option *ngFor="let sub of subPortfolios" [value]="sub.id">
-              {{ sub.subPortfolioName }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-divider"></div>
-
-        <!-- Criterios de busqueda: se combinan entre si, basta con uno -->
-        <div class="filter-group">
-          <label>Desde</label>
-          <input
-            type="date"
-            [(ngModel)]="startDate"
-            (change)="validateDates()"
-          />
-        </div>
-        <div class="filter-group">
-          <label>Hasta</label>
-          <input type="date" [(ngModel)]="endDate" (change)="validateDates()" />
-        </div>
-
-        <div class="filter-group">
-          <label>Documento</label>
-          <input
-            type="text"
-            [(ngModel)]="documento"
-            placeholder="Opcional"
-            (keyup.enter)="buscar()"
-          />
-        </div>
-
-        <div class="filter-group">
-          <label>Teléfono</label>
-          <input
-            type="text"
-            [(ngModel)]="telefono"
-            placeholder="Opcional"
-            (keyup.enter)="buscar()"
-          />
-        </div>
-
-        <div class="filter-group">
-          <label>Tipificación nivel 1</label>
-          <select
-            [(ngModel)]="selectedTificacionN1"
-            (change)="onTipificacionN1Change()"
-            [disabled]="!selectedPortfolioId || tipificacionesN1.length === 0"
-          >
-            <option value="">Todas</option>
-            <option *ngFor="let t of tipificacionesN1" [value]="t">
-              {{ t }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label>Tipificación nivel 2</label>
-          <select
-            [(ngModel)]="selectedTificacionN2"
-            [disabled]="!selectedTificacionN1 || tipificacionesN2.length === 0"
-          >
-            <option value="">Todas</option>
-            <option *ngFor="let t of tipificacionesN2" [value]="t">
-              {{ t }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Search Button -->
-        <div class="filter-group filter-action">
-          <button class="btn-primary" [disabled]="isLoading" (click)="buscar()">
-            <lucide-angular
-              [img]="isLoading ? Loader : Search"
-              [size]="16"
-              [class.spin]="isLoading"
-            ></lucide-angular>
-            <span>{{ isLoading ? "Buscando..." : "Buscar" }}</span>
-          </button>
-        </div>
-
-        <div class="filter-group filter-action">
-          <button
-            class="btn-secondary"
-            [disabled]="isLoading"
-            (click)="limpiarBusqueda()"
-          >
-            <lucide-angular [img]="X" [size]="16"></lucide-angular>
-            <span>Limpiar</span>
-          </button>
-        </div>
-
-        <div class="filter-divider" *ngIf="recordings.length > 0"></div>
-
-        <!-- Massive Download -->
-        <div class="filter-group filter-action" *ngIf="recordings.length > 0">
-          <button
-            class="btn-download"
-            (click)="massiveDownloadAudios()"
-            [disabled]="isDownloadingMassive"
-          >
-            <lucide-angular
-              [img]="isDownloadingMassive ? Loader : Download"
-              [size]="16"
-              [class.spin]="isDownloadingMassive"
-            ></lucide-angular>
-            <span>{{
-              isDownloadingMassive ? "Descargando..." : "Descargar todo"
-            }}</span>
-          </button>
-        </div>
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-row">
+      <!-- Proveedor -->
+      <div class="filter-group">
+        <label>Proveedor</label>
+        <select [(ngModel)]="selectedTenantId" (change)="onTenantChange()">
+          <option [value]="0">Seleccionar...</option>
+          <option *ngFor="let tenant of tenants" [value]="tenant.id">{{ tenant.tenantName }}</option>
+        </select>
       </div>
 
-      <!-- Error Message -->
-      <div *ngIf="errorMessage" class="error-message">
-        <lucide-angular [img]="X" [size]="16"></lucide-angular>
-        {{ errorMessage }}
+      <!-- Cartera -->
+      <div class="filter-group">
+        <label>Cartera</label>
+        <select [(ngModel)]="selectedPortfolioId" (change)="onPortfolioChange()" [disabled]="portfolios.length === 0">
+          <option [value]="0">Seleccionar...</option>
+          <option *ngFor="let portfolio of portfolios" [value]="portfolio.id">{{ portfolio.portfolioName }}</option>
+        </select>
+      </div>
+
+      <!-- Subcartera -->
+      <div class="filter-group">
+        <label>Subcartera</label>
+        <select [(ngModel)]="selectedSubPortfolioId" [disabled]="subPortfolios.length === 0">
+          <option [value]="0">Seleccionar...</option>
+          <option *ngFor="let sub of subPortfolios" [value]="sub.id">{{ sub.subPortfolioName }}</option>
+        </select>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <!-- Criterios de busqueda: se combinan entre si, basta con uno -->
+      <div class="filter-group">
+        <label>Desde</label>
+        <input type="date" [(ngModel)]="startDate" (change)="validateDates()">
+      </div>
+      <div class="filter-group">
+        <label>Hasta</label>
+        <input type="date" [(ngModel)]="endDate" (change)="validateDates()">
+      </div>
+
+      <div class="filter-group">
+        <label>Documento</label>
+        <input type="text" [(ngModel)]="documento" placeholder="Opcional"
+               (keyup.enter)="buscar()">
+      </div>
+
+      <div class="filter-group">
+        <label>Teléfono</label>
+        <input type="text" [(ngModel)]="telefono" placeholder="Opcional"
+               (keyup.enter)="buscar()">
+      </div>
+
+      <div class="filter-group">
+        <label>Tipificación</label>
+        <select [(ngModel)]="rutaNivel1"
+                title="Filtra por la tipificación que se muestra: la de la llamada o la de su gestión. Si es el único criterio, solo entran las llamadas del discador que tienen gestión propia; combínala con fechas, documento o teléfono para incluir manuales y rellamadas.">
+          <option value="">Todas</option>
+          <option *ngFor="let t of tipificaciones" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+
+      <!-- Search Button -->
+      <div class="filter-group filter-action">
+        <button class="btn-primary" [disabled]="isLoading" (click)="buscar()">
+          <lucide-angular [img]="isLoading ? Loader : Search" [size]="16" [class.spin]="isLoading"></lucide-angular>
+          <span>{{ isLoading ? 'Buscando...' : 'Buscar' }}</span>
+        </button>
+      </div>
+
+      <div class="filter-group filter-action">
+        <button class="btn-secondary" [disabled]="isLoading" (click)="limpiarBusqueda()">
+          <lucide-angular [img]="X" [size]="16"></lucide-angular>
+          <span>Limpiar</span>
+        </button>
+      </div>
+
+      <div class="filter-divider" *ngIf="recordings.length > 0"></div>
+
+      <!-- Massive Download -->
+      <div class="filter-group filter-action" *ngIf="recordings.length > 0">
+        <button class="btn-download" (click)="massiveDownloadAudios()"
+                [disabled]="isDownloadingMassive">
+          <lucide-angular [img]="isDownloadingMassive ? Loader : Download" [size]="16"
+                          [class.spin]="isDownloadingMassive"></lucide-angular>
+          <span>{{ isDownloadingMassive ? 'Descargando...' : 'Descargar todo' }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div class="loading-overlay" *ngIf="isLoading">
-      <div class="loading-spinner">
-        <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
-        <span>Buscando grabaciones...</span>
-      </div>
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="error-message">
+      <lucide-angular [img]="X" [size]="16"></lucide-angular>
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+      <span>Buscando grabaciones...</span>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="table-card animate-in" *ngIf="recordings.length > 0 && !isLoading">
+    <div class="table-header">
+      <h3>Resultados</h3>
+      <span class="record-count">{{ filteredRecordings.length }} de {{ recordings.length }} registros</span>
     </div>
 
-    <!-- Results Table -->
-    <div
-      class="table-card animate-in"
-      *ngIf="recordings.length > 0 && !isLoading"
-    >
-      <div class="table-header">
-        <h3>Resultados</h3>
-        <span class="record-count"
-          >{{ filteredRecordings.length }} de
-          {{ recordings.length }} registros</span
-        >
-      </div>
+    <div class="table-wrapper">
+      <table class="recordings-table">
+        <thead>
+          <!-- Filter Row -->
+          <tr class="filter-row">
+            <th>
+              <input type="text" [(ngModel)]="filterDocumento" (input)="applyFilters()" placeholder="Filtrar DNI...">
+            </th>
+            <th>
+              <input type="text" [(ngModel)]="filterTelefono" (input)="applyFilters()" placeholder="Filtrar tel...">
+            </th>
+            <th></th>
+            <th>
+              <input type="text" [(ngModel)]="filterCampana" (input)="applyFilters()" placeholder="Filtrar campaña...">
+            </th>
+            <th>
+              <input type="text" [(ngModel)]="filterAgente" (input)="applyFilters()" placeholder="Filtrar agente...">
+            </th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th class="col-action">
+              <button class="btn-clear-filters" (click)="clearFilters()" title="Limpiar filtros">
+                <lucide-angular [img]="X" [size]="14"></lucide-angular>
+              </button>
+            </th>
+          </tr>
 
-      <div class="table-wrapper">
-        <table class="recordings-table">
-          <thead>
-            <!-- Filter Row -->
-            <tr class="filter-row">
-              <th>
-                <input
-                  type="text"
-                  [(ngModel)]="filterDocumento"
-                  (input)="applyFilters()"
-                  placeholder="Filtrar DNI..."
-                />
-              </th>
-              <th>
-                <input
-                  type="text"
-                  [(ngModel)]="filterTelefono"
-                  (input)="applyFilters()"
-                  placeholder="Filtrar tel..."
-                />
-              </th>
-              <th></th>
-              <th>
-                <input
-                  type="text"
-                  [(ngModel)]="filterCampana"
-                  (input)="applyFilters()"
-                  placeholder="Filtrar campaña..."
-                />
-              </th>
-              <th>
-                <input
-                  type="text"
-                  [(ngModel)]="filterAgente"
-                  (input)="applyFilters()"
-                  placeholder="Filtrar agente..."
-                />
-              </th>
-              <th></th>
-              <th></th>
-              <th></th>
-              <th></th>
-              <th class="col-action">
-                <button
-                  class="btn-clear-filters"
-                  (click)="clearFilters()"
-                  title="Limpiar filtros"
-                >
-                  <lucide-angular [img]="X" [size]="14"></lucide-angular>
-                </button>
-              </th>
-            </tr>
-
-            <!-- Header Row -->
-            <tr>
-              <th (click)="sort('documento')" class="sortable">
-                Documento
-                <span class="sort-icon" *ngIf="sortField === 'documento'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th (click)="sort('telefono')" class="sortable">
-                Teléfono
-                <span class="sort-icon" *ngIf="sortField === 'telefono'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th (click)="sort('cliente')" class="sortable">
-                Cliente
-                <span class="sort-icon" *ngIf="sortField === 'cliente'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th (click)="sort('campana')" class="sortable">
-                Campaña
-                <span class="sort-icon" *ngIf="sortField === 'campana'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th (click)="sort('agente')" class="sortable">
-                Agente
-                <span class="sort-icon" *ngIf="sortField === 'agente'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th (click)="sort('tipificacion')" class="sortable">
-                Tipificación
-                <span class="sort-icon" *ngIf="sortField === 'tipificacion'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th (click)="sort('fechaInicio')" class="sortable">
-                Fecha
-                <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{
-                  sortOrder === 1 ? "▲" : "▼"
-                }}</span>
-              </th>
-              <th>Hora</th>
-              <th
-                class="col-action"
-                title="Gestión a la que pertenece la llamada y cuántas llamadas tuvo (discador + rellamadas)"
-              >
-                Gestión
-              </th>
-              <th class="col-action">Audio</th>
-              <th class="col-action">Reporte</th>
-            </tr>
-          </thead>
-          <tbody>
-            <ng-container *ngFor="let grupo of paginatedGrupos; let i = index">
-              <tr
-                class="animate-row"
-                [style.animation-delay]="i * 30 + 'ms'"
-                [class.row-expanded]="estaAbierto(grupo)"
-              >
-                <td class="cell-mono">{{ grupo.principal.documento }}</td>
-                <td class="cell-mono">{{ grupo.principal.telefono }}</td>
-                <td class="cell-truncate" [title]="grupo.principal.cliente">
-                  {{ grupo.principal.cliente }}
-                </td>
-                <td class="cell-truncate" [title]="grupo.principal.campana">
-                  {{ grupo.principal.campana }}
-                </td>
-                <td>{{ grupo.principal.agente || "-" }}</td>
-                <td
-                  class="cell-truncate"
-                  [title]="grupo.principal.tipificacion"
-                >
-                  {{ grupo.principal.tipificacion || "-" }}
-                </td>
-                <td class="cell-mono">
-                  {{ formatDate(grupo.principal.fechaInicio) }}
-                </td>
-                <td class="cell-mono">
-                  {{ formatTime(grupo.principal.fechaInicio) }}
-                </td>
-                <td class="col-action">
-                  <button
-                    *ngIf="tieneVariasLlamadas(grupo); else unaLlamada"
-                    class="btn-llamadas"
-                    (click)="alternarGrupo(grupo)"
-                    [class.active]="estaAbierto(grupo)"
-                    [title]="
-                      'Gestión #' + grupo.idGestion + ': ver sus llamadas'
-                    "
-                  >
-                    {{ cantidadLlamadas(grupo) }} llamadas
-                    <lucide-angular
-                      [img]="estaAbierto(grupo) ? ChevronUp : ChevronDown"
-                      [size]="13"
-                    ></lucide-angular>
-                  </button>
-                  <ng-template #unaLlamada>
-                    <span
-                      *ngIf="grupo.idGestion; else sinGestion"
-                      class="llamadas-una"
-                      [title]="'Gestión #' + grupo.idGestion"
-                      >1 llamada</span
-                    >
-                  </ng-template>
-                  <ng-template #sinGestion>
-                    <span
-                      class="sin-gestion"
-                      title="Esta llamada no quedó enlazada a ninguna gestión: el asesor no tipificó, o es una llamada manual anterior al enlace de llamadas por gestión."
-                      >Sin gestión</span
-                    >
-                  </ng-template>
-                </td>
-                <!-- Sin botón de audio cuando la gestión tuvo varias llamadas: hay un audio
+          <!-- Header Row -->
+          <tr>
+            <th (click)="sort('documento')" class="sortable">
+              Documento
+              <span class="sort-icon" *ngIf="sortField === 'documento'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th (click)="sort('telefono')" class="sortable">
+              Teléfono
+              <span class="sort-icon" *ngIf="sortField === 'telefono'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th (click)="sort('cliente')" class="sortable">
+              Cliente
+              <span class="sort-icon" *ngIf="sortField === 'cliente'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th (click)="sort('campana')" class="sortable">
+              Campaña
+              <span class="sort-icon" *ngIf="sortField === 'campana'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th (click)="sort('agente')" class="sortable">
+              Agente
+              <span class="sort-icon" *ngIf="sortField === 'agente'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th (click)="sort('tipificacion')" class="sortable">
+              Tipificación
+              <span class="sort-icon" *ngIf="sortField === 'tipificacion'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th (click)="sort('fechaInicio')" class="sortable">
+              Fecha
+              <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
+            <th>Hora</th>
+            <th class="col-action" title="Gestión a la que pertenece la llamada y cuántas llamadas tuvo (discador + rellamadas)">Gestión</th>
+            <th class="col-action">Audio</th>
+            <th class="col-action">Reporte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let grupo of paginatedGrupos; let i = index">
+          <tr class="animate-row" [style.animation-delay]="(i * 30) + 'ms'"
+              [class.row-expanded]="estaAbierto(grupo)">
+            <td class="cell-mono">{{ grupo.principal.documento }}</td>
+            <td class="cell-mono">{{ grupo.principal.telefono }}</td>
+            <td class="cell-truncate" [title]="grupo.principal.cliente">{{ grupo.principal.cliente }}</td>
+            <td class="cell-truncate" [title]="grupo.principal.campana">{{ grupo.principal.campana }}</td>
+            <td>{{ grupo.principal.agente || '-' }}</td>
+            <td class="cell-truncate" [title]="grupo.principal.tipificacion">{{ grupo.principal.tipificacion || '-' }}</td>
+            <td class="cell-mono">{{ formatDate(grupo.principal.fechaInicio) }}</td>
+            <td class="cell-mono">{{ formatTime(grupo.principal.fechaInicio) }}</td>
+            <td class="col-action">
+              <button *ngIf="tieneVariasLlamadas(grupo); else unaLlamada"
+                      class="btn-llamadas" (click)="alternarGrupo(grupo)"
+                      [class.active]="estaAbierto(grupo)"
+                      [title]="'Gestión #' + grupo.idGestion + ': ver sus llamadas'">
+                {{ cantidadLlamadas(grupo) }} llamadas
+                <lucide-angular [img]="estaAbierto(grupo) ? ChevronUp : ChevronDown" [size]="13"></lucide-angular>
+              </button>
+              <ng-template #unaLlamada>
+                <span *ngIf="grupo.idGestion; else sinGestion" class="llamadas-una"
+                      [title]="'Gestión #' + grupo.idGestion">1 llamada</span>
+              </ng-template>
+              <ng-template #sinGestion>
+                <span class="sin-gestion"
+                      title="Esta llamada no quedó enlazada a ninguna gestión: el asesor no tipificó, o es una llamada manual anterior al enlace de llamadas por gestión.">Sin gestión</span>
+              </ng-template>
+            </td>
+            <!-- Sin botón de audio cuando la gestión tuvo varias llamadas: hay un audio
                  por llamada, y cada uno se baja desde su fila del detalle. -->
-                <td class="col-action">
-                  <button
-                    *ngIf="!tieneVariasLlamadas(grupo); else audioEnDetalle"
-                    class="btn-audio"
-                    (click)="downloadAudio(grupo.principal)"
-                    [disabled]="downloadingUuid === grupo.principal.uuidLlamada"
-                    title="Descargar audio"
-                  >
-                    <lucide-angular
-                      [img]="
-                        downloadingUuid === grupo.principal.uuidLlamada
-                          ? Loader
-                          : Volume2
-                      "
-                      [size]="15"
-                      [class.spin]="
-                        downloadingUuid === grupo.principal.uuidLlamada
-                      "
-                    ></lucide-angular>
-                  </button>
-                  <ng-template #audioEnDetalle>
-                    <span
-                      class="audio-en-detalle"
-                      title="Esta gestión tuvo varias llamadas: el audio de cada una está en el detalle."
-                    >
-                      {{ cantidadLlamadas(grupo) }} audios
-                    </span>
-                  </ng-template>
-                </td>
-                <td class="col-action">
-                  <button
-                    class="btn-audio"
-                    (click)="downloadReporte(grupo.principal)"
-                    [disabled]="downloadingReporteId === grupo.principal.id"
-                    title="Descargar reporte de evaluación"
-                  >
-                    <lucide-angular
-                      [img]="
-                        downloadingReporteId === grupo.principal.id
-                          ? Loader
-                          : FileSpreadsheet
-                      "
-                      [size]="15"
-                      [class.spin]="downloadingReporteId === grupo.principal.id"
-                    ></lucide-angular>
-                  </button>
-                </td>
-              </tr>
+            <td class="col-action">
+              <button *ngIf="!tieneVariasLlamadas(grupo); else audioEnDetalle"
+                      class="btn-audio" (click)="downloadAudio(grupo.principal)"
+                      [disabled]="downloadingUuid === grupo.principal.uuidLlamada"
+                      title="Descargar audio">
+                <lucide-angular [img]="downloadingUuid === grupo.principal.uuidLlamada ? Loader : Volume2"
+                                [size]="15"
+                                [class.spin]="downloadingUuid === grupo.principal.uuidLlamada"></lucide-angular>
+              </button>
+              <ng-template #audioEnDetalle>
+                <span class="audio-en-detalle" title="Esta gestión tuvo varias llamadas: el audio de cada una está en el detalle.">
+                  {{ cantidadLlamadas(grupo) }} audios
+                </span>
+              </ng-template>
+            </td>
+            <td class="col-action">
+              <button class="btn-audio" (click)="downloadReporte(grupo.principal)"
+                      [disabled]="downloadingReporteId === grupo.principal.id"
+                      title="Descargar reporte de evaluación">
+                <lucide-angular [img]="downloadingReporteId === grupo.principal.id ? Loader : FileSpreadsheet"
+                                [size]="15"
+                                [class.spin]="downloadingReporteId === grupo.principal.id"></lucide-angular>
+              </button>
+            </td>
+          </tr>
 
-              <!-- Las llamadas de la gestión (gestion_llamada) -->
-              <tr class="gestion-detalle" *ngIf="estaAbierto(grupo)">
-                <td colspan="11">
-                  <div class="gestion-detalle-box">
-                    <div class="gestion-detalle-title">
-                      <!-- Las que el filtro dejó fuera ya vienen pedidas al abrir el grupo
+          <!-- Las llamadas de la gestión (gestion_llamada) -->
+          <tr class="gestion-detalle" *ngIf="estaAbierto(grupo)">
+            <td colspan="11">
+              <div class="gestion-detalle-box">
+                <div class="gestion-detalle-title">
+                  <!-- Las que el filtro dejó fuera ya vienen pedidas al abrir el grupo
                        (alternarGrupo), así que acá no hay nada que el usuario tenga que
                        accionar: se muestran todas las de la gestión. -->
-                      Gestión #{{ grupo.idGestion }} ·
-                      {{ cantidadLlamadas(grupo) }} llamadas
-                    </div>
-                    <div
-                      class="gestion-detalle-loading"
-                      *ngIf="cargandoGestion === grupo.idGestion"
-                    >
-                      <lucide-angular
-                        [img]="Loader"
-                        [size]="16"
-                        class="spin"
-                      ></lucide-angular>
-                      Cargando llamadas...
-                    </div>
-                    <table class="gestion-detalle-table">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Origen</th>
-                          <th>Teléfono</th>
-                          <th>Agente</th>
-                          <th>Fecha</th>
-                          <th>Hora</th>
-                          <th>Duración</th>
-                          <th>Estado</th>
-                          <th class="col-action">Audio</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr
-                          *ngFor="let llamada of grupo.llamadas; let n = index"
-                          [class.fuera-del-filtro]="
-                            grupo.fueraDelFiltro.has(llamada.uuidLlamada)
-                          "
-                          [title]="
-                            grupo.fueraDelFiltro.has(llamada.uuidLlamada)
-                              ? 'No cumple los filtros de la búsqueda; se muestra para completar la gestión.'
-                              : ''
-                          "
-                        >
-                          <td>{{ n + 1 }}</td>
-                          <td>{{ formatOrigen(llamada.origen) }}</td>
-                          <td class="cell-mono">
-                            {{ llamada.telefono || "-" }}
-                          </td>
-                          <td>{{ llamada.agente || "-" }}</td>
-                          <td class="cell-mono">
-                            {{ formatDate(llamada.fechaInicio) }}
-                          </td>
-                          <td class="cell-mono">
-                            {{ formatTime(llamada.fechaInicio) }}
-                          </td>
-                          <td class="cell-mono">
-                            {{ formatDuration(llamada.duracionSegundos) }}
-                          </td>
-                          <td>{{ llamada.estadoLlamada || "-" }}</td>
-                          <td class="col-action">
-                            <button
-                              class="btn-audio"
-                              (click)="downloadAudio(llamada)"
-                              [disabled]="
-                                !llamada.uuidLlamada ||
-                                downloadingUuid === llamada.uuidLlamada
-                              "
-                              title="Descargar audio"
-                            >
-                              <lucide-angular
-                                [img]="
-                                  downloadingUuid === llamada.uuidLlamada
-                                    ? Loader
-                                    : Volume2
-                                "
-                                [size]="15"
-                                [class.spin]="
-                                  downloadingUuid === llamada.uuidLlamada
-                                "
-                              ></lucide-angular>
-                            </button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-            </ng-container>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination">
-        <div class="pagination-info">
-          Mostrando {{ (currentPage - 1) * pageSize + 1 }} a
-          {{ Math.min(currentPage * pageSize, filteredRecordings.length) }} de
-          {{ filteredRecordings.length }}
-        </div>
-
-        <div class="pagination-controls">
-          <button (click)="goToPage(1)" [disabled]="currentPage === 1">
-            &laquo;
-          </button>
-          <button
-            (click)="goToPage(currentPage - 1)"
-            [disabled]="currentPage === 1"
-          >
-            &lsaquo;
-          </button>
-          <button
-            *ngFor="let page of getPageNumbers()"
-            (click)="goToPage(page)"
-            [class.active]="page === currentPage"
-          >
-            {{ page }}
-          </button>
-          <button
-            (click)="goToPage(currentPage + 1)"
-            [disabled]="currentPage === totalPages"
-          >
-            &rsaquo;
-          </button>
-          <button
-            (click)="goToPage(totalPages)"
-            [disabled]="currentPage === totalPages"
-          >
-            &raquo;
-          </button>
-        </div>
-
-        <div class="pagination-size">
-          <label>Filas:</label>
-          <select [(ngModel)]="pageSize" (change)="onPageSizeChange(pageSize)">
-            <option [ngValue]="5">5</option>
-            <option [ngValue]="10">10</option>
-            <option [ngValue]="20">20</option>
-            <option [ngValue]="50">50</option>
-          </select>
-        </div>
-      </div>
+                  Gestión #{{ grupo.idGestion }} · {{ cantidadLlamadas(grupo) }} llamadas
+                </div>
+                <div class="gestion-detalle-loading" *ngIf="cargandoGestion === grupo.idGestion">
+                  <lucide-angular [img]="Loader" [size]="16" class="spin"></lucide-angular>
+                  Cargando llamadas...
+                </div>
+                <table class="gestion-detalle-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Origen</th>
+                      <th>Teléfono</th>
+                      <th>Agente</th>
+                      <th>Fecha</th>
+                      <th>Hora</th>
+                      <th>Duración</th>
+                      <th>Estado</th>
+                      <th class="col-action">Audio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let llamada of grupo.llamadas; let n = index"
+                        [class.fuera-del-filtro]="grupo.fueraDelFiltro.has(llamada.uuidLlamada)"
+                        [title]="grupo.fueraDelFiltro.has(llamada.uuidLlamada) ? 'No cumple los filtros de la búsqueda; se muestra para completar la gestión.' : ''">
+                      <td>{{ n + 1 }}</td>
+                      <td>{{ formatOrigen(llamada.origen) }}</td>
+                      <td class="cell-mono">{{ llamada.telefono || '-' }}</td>
+                      <td>{{ llamada.agente || '-' }}</td>
+                      <td class="cell-mono">{{ formatDate(llamada.fechaInicio) }}</td>
+                      <td class="cell-mono">{{ formatTime(llamada.fechaInicio) }}</td>
+                      <td class="cell-mono">{{ formatDuration(llamada.duracionSegundos) }}</td>
+                      <td>{{ llamada.estadoLlamada || '-' }}</td>
+                      <td class="col-action">
+                        <button class="btn-audio" (click)="downloadAudio(llamada)"
+                                [disabled]="!llamada.uuidLlamada || downloadingUuid === llamada.uuidLlamada"
+                                title="Descargar audio">
+                          <lucide-angular [img]="downloadingUuid === llamada.uuidLlamada ? Loader : Volume2"
+                                          [size]="15"
+                                          [class.spin]="downloadingUuid === llamada.uuidLlamada"></lucide-angular>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          </ng-container>
+        </tbody>
+      </table>
     </div>
 
-    <!-- Empty State: No search yet -->
-    <div class="empty-state animate-in" *ngIf="!hasSearched && !isLoading">
-      <div class="empty-icon">
-        <lucide-angular name="disc" [size]="48"></lucide-angular>
+    <!-- Pagination -->
+    <div class="pagination">
+      <div class="pagination-info">
+        Mostrando {{ (currentPage - 1) * pageSize + 1 }} a
+        {{ Math.min(currentPage * pageSize, filteredRecordings.length) }} de
+        {{ filteredRecordings.length }}
       </div>
-      <h3>Buscar grabaciones</h3>
-      <p>
-        Selecciona un proveedor, cartera y subcartera, luego realiza una
-        búsqueda para ver las grabaciones disponibles.
-      </p>
-    </div>
 
-    <!-- Empty State: No results -->
-    <div
-      class="empty-state animate-in"
-      *ngIf="hasSearched && recordings.length === 0 && !isLoading"
-    >
-      <div class="empty-icon warning">
-        <lucide-angular name="search" [size]="48"></lucide-angular>
+      <div class="pagination-controls">
+        <button (click)="goToPage(1)" [disabled]="currentPage === 1">&laquo;</button>
+        <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">&lsaquo;</button>
+        <button *ngFor="let page of getPageNumbers()"
+                (click)="goToPage(page)"
+                [class.active]="page === currentPage">
+          {{ page }}
+        </button>
+        <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">&rsaquo;</button>
+        <button (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">&raquo;</button>
       </div>
-      <h3>Sin resultados</h3>
-      <p>
-        No se encontraron grabaciones con los criterios seleccionados. Intenta
-        con otros filtros.
-      </p>
+
+      <div class="pagination-size">
+        <label>Filas:</label>
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange(pageSize)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </div>
     </div>
+  </div>
+
+  <!-- Empty State: No search yet -->
+  <div class="empty-state animate-in" *ngIf="!hasSearched && !isLoading">
+    <div class="empty-icon">
+      <lucide-angular name="disc" [size]="48"></lucide-angular>
+    </div>
+    <h3>Buscar grabaciones</h3>
+    <p>Selecciona un proveedor, cartera y subcartera, luego realiza una búsqueda para ver las grabaciones disponibles.</p>
+  </div>
+
+  <!-- Empty State: No results -->
+  <div class="empty-state animate-in" *ngIf="hasSearched && recordings.length === 0 && !isLoading">
+    <div class="empty-icon warning">
+      <lucide-angular name="search" [size]="48"></lucide-angular>
+    </div>
+    <h3>Sin resultados</h3>
+    <p>No se encontraron grabaciones con los criterios seleccionados. Intenta con otros filtros.</p>
+  </div>
   </ng-container>
 </div>
