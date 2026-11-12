@@ -18,6 +18,7 @@ export interface ExcepcionPendiente {
   nombreAgente: string;
   nombreAutorizador?: string | null;
   correoAutorizador?: string | null;
+  datosCastigo?: Record<string, string | number | null> | null;
   montoPromesa: number;
   montoBase: number | null;
   campoMontoOrigen: string;
