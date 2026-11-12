@@ -86,6 +86,7 @@
           <select
             [(ngModel)]="selectedSubPortfolioId"
             [disabled]="subPortfolios.length === 0"
+            (change)="onSubPortfolioChange()"
           >
             <option [value]="0">Seleccionar...</option>
             <option *ngFor="let sub of subPortfolios" [value]="sub.id">
