@@ -41,7 +41,10 @@ interface Segmentacion {
 type OpcionVista = CampoOpcionDTO & { visualName: string };
 
 const SIN_SEGMENTACION: Segmentacion = { antiguaNueva: false, aniosCastigo: [], conMoneda: false };
-const NUM_INPUT = 'h-[30px] w-full min-w-0 bg-transparent text-[12.5px] font-semibold tabular-nums outline-none placeholder:font-medium placeholder:text-[#8491a3] dark:placeholder:text-slate-500';
+// El campo va dentro de la caja: transparente, sin borde ni sombra y a su altura interior. Los `!` le ganan
+// a las reglas globales de styles.css (body.light-theme input y body.dark-theme input:focus), que lo
+// pintaban crema encima de la caja blanca y tapaban sus bordes.
+const NUM_INPUT = 'h-full w-full min-w-0 border-0! bg-transparent! p-0! shadow-none! text-[12.5px] font-semibold tabular-nums text-[#0f172a]! outline-none placeholder:font-medium placeholder:text-[#8491a3] dark:text-slate-100! dark:placeholder:text-slate-500';
 const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#d5dbe3] bg-white px-2 focus-within:border-[#2563eb] dark:border-slate-700 dark:bg-slate-900';
 
 @Component({
@@ -82,40 +85,17 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
               </p>
             </div>
           } @else {
-            <!-- Cliente, cartera y subcartera: llegan con lo elegido en la pantalla -->
+            <!-- Cliente, cartera y subcartera: vienen del filtro maestro de la pantalla y aquí no se cambian -->
             <div class="flex flex-wrap items-end justify-between gap-2.5">
               <div class="flex flex-wrap items-end gap-2.5">
-                <div class="flex flex-col gap-1.5">
-                  <span [class]="ui.label">Cliente</span>
-                  <span class="flex h-[38px] items-center rounded-lg border border-[#e6e9ee] bg-[#f8fafc] px-3 text-[13px] font-semibold text-[#334155] dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
-                    {{ clienteActual() || '—' }}
-                  </span>
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <label for="mf-car" [class]="ui.label">Cartera</label>
-                  <select id="mf-car" [ngModel]="carteraActual()" (ngModelChange)="onCarteraChange($event)"
-                          [disabled]="carterasDelCliente().length === 0" [class]="ui.input + ' min-w-[180px]'">
-                    @for (c of carterasDelCliente(); track c) {
-                      <option [ngValue]="c">{{ c }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <label for="mf-sub" [class]="ui.label">Subcartera</label>
-                  @if (subsDeLaCartera().length > 0) {
-                    <select id="mf-sub" [ngModel]="selectedSubPortfolioId()" (ngModelChange)="onSubPortfolioChange($event)"
-                            [class]="ui.input + ' min-w-[200px]'">
-                      @if (!selectedSubPortfolioId()) {
-                        <option [ngValue]="undefined">Seleccionar subcartera</option>
-                      }
-                      @for (s of subsDeLaCartera(); track s.subId) {
-                        <option [ngValue]="s.subId">{{ s.subcartera }}</option>
-                      }
-                    </select>
-                  } @else {
-                    <span class="flex h-[38px] items-center text-[12.5px] text-[#5f6c80] dark:text-slate-400">No hay subcarteras disponibles</span>
-                  }
-                </div>
+                @for (f of encabezado(); track f.etiqueta) {
+                  <div class="flex flex-col gap-1.5">
+                    <span [class]="ui.label">{{ f.etiqueta }}</span>
+                    <span class="flex h-[38px] items-center rounded-lg border border-[#e6e9ee] bg-[#f8fafc] px-3 text-[13px] font-semibold text-[#334155] dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+                      {{ f.valor || '—' }}
+                    </span>
+                  </div>
+                }
               </div>
               @if (opciones().length > 0) {
                 <div class="flex flex-wrap items-center gap-3">
@@ -135,7 +115,7 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
             @if (!selectedSubPortfolioId()) {
               <div class="flex flex-col items-center gap-2 px-4 py-10 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
                 <lucide-angular name="inbox" [size]="36" class="text-[#c5ccd6]"></lucide-angular>
-                <span>Elige una subcartera para ver sus montos</span>
+                <span>Elige una subcartera en el filtro de la pantalla para ver sus montos</span>
               </div>
             } @else if (loadingOpciones() || cargandoCampos()) {
               <div class="flex animate-pulse flex-col gap-2.5 motion-reduce:animate-none" role="status">
@@ -373,6 +353,22 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                               </table>
                             </div>
 
+                            <!-- Agregar año va pegado a los años: los que quedan salen de la cartera (SELECT DISTINCT del backend) -->
+                            @if (regla.segmento === 'ANIO') {
+                              @let libres = aniosLibres(regla, null);
+                              <div class="flex flex-wrap items-center gap-2">
+                                @if (libres.length > 0) {
+                                  <button type="button" (click)="agregarAnio(opcion.codigoOpcion)" [class]="ui.textoBtn">
+                                    <lucide-angular name="plus" [size]="14"></lucide-angular>
+                                    Agregar año
+                                  </button>
+                                  <span [class]="ui.ayuda">Quedan {{ libres.length }} {{ libres.length === 1 ? 'año' : 'años' }} de castigo en la cartera: {{ libres.join(', ') }}</span>
+                                } @else {
+                                  <span [class]="ui.ayuda">Ya están todos los años de castigo de la cartera.</span>
+                                }
+                              </div>
+                            }
+
                             <!-- Niveles de autorización: quién aprueba según cuánto pasa el máximo sin aprobación -->
                             <div class="flex flex-col gap-2.5 rounded-[10px] border border-[#e6e9ee] bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
                               <span class="text-[12.5px] font-bold text-[#0f172a] dark:text-slate-100">Niveles de autorización</span>
@@ -458,15 +454,7 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                               }
                             </div>
 
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                              @if (regla.segmento === 'ANIO' && aniosLibres(regla, null).length > 0) {
-                                <button type="button" (click)="agregarAnio(opcion.codigoOpcion)" [class]="ui.textoBtn">
-                                  <lucide-angular name="plus" [size]="14"></lucide-angular>
-                                  Agregar año
-                                </button>
-                              } @else {
-                                <span></span>
-                              }
+                            <div class="flex flex-wrap items-center justify-end gap-2">
                               <button type="button" (click)="aplicarAOtras(opcion)" [class]="ui.textoBtn">
                                 <lucide-angular name="copy" [size]="14"></lucide-angular>
                                 Aplicar estos valores a otras tarjetas
@@ -554,7 +542,7 @@ export class TypificationAdditionalFieldsDialogComponent {
   portfolioId = input<number | undefined>(undefined);
   /** Subcartera abierta en la pantalla: el diálogo arranca con esa misma elegida. */
   subPortfolioId = input<number | undefined>(undefined);
-  /** Subcarteras de la pantalla, para los filtros de cartera y subcartera. */
+  /** Subcarteras de la pantalla, para mostrar el cliente, la cartera y la subcartera abiertas. */
   subcarteras = input<SubcarteraMontos[]>([]);
 
   close = output<void>();
@@ -599,15 +587,17 @@ export class TypificationAdditionalFieldsDialogComponent {
   private descuentoUrl = `${environment.apiUrl}/v2/descuento-maximo`;
   private autorizadoresUrl = `${environment.apiUrl}/v2/autorizadores-excepcion`;
 
-  /** Cliente de la pantalla: fijo mientras el diálogo está abierto. */
+  /** Subcartera del filtro maestro de la pantalla: es la única que se configura en el diálogo. */
   private readonly inicial = computed(() =>
-    this.subcarteras().find(s => s.subId === this.subPortfolioId()) ?? this.subcarteras()[0] ?? null);
-  readonly clienteActual = computed(() => this.inicial()?.cliente ?? '');
-  readonly carterasDelCliente = computed(() =>
-    [...new Set(this.subcarteras().filter(s => s.cliente === this.clienteActual()).map(s => s.cartera))]);
-  carteraActual = signal<string | undefined>(undefined);
-  readonly subsDeLaCartera = computed(() =>
-    this.subcarteras().filter(s => s.cliente === this.clienteActual() && s.cartera === this.carteraActual()));
+    this.subcarteras().find(s => s.subId === this.subPortfolioId()) ?? null);
+  readonly encabezado = computed(() => {
+    const s = this.inicial();
+    return [
+      { etiqueta: 'Cliente', valor: s?.cliente },
+      { etiqueta: 'Cartera', valor: s?.cartera },
+      { etiqueta: 'Subcartera', valor: s?.subcartera }
+    ];
+  });
   private readonly seleccion = computed(() =>
     this.subcarteras().find(s => s.subId === this.selectedSubPortfolioId()) ?? null);
   readonly contextoAutorizadores = computed<ContextoAutorizadores | null>(() => {
@@ -666,7 +656,6 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.cabeceras.set([]);
     this.errorMessage.set('');
     this.selectedSubPortfolioId.set(undefined);
-    this.carteraActual.set(undefined);
     this.paymentScheduleFieldId.set(null);
     this.sinCronograma.set(false);
     this.guardando.set(false);
@@ -685,7 +674,6 @@ export class TypificationAdditionalFieldsDialogComponent {
   private elegirInicial() {
     const inicial = this.inicial();
     if (!inicial) return;
-    this.carteraActual.set(inicial.cartera);
     this.elegirSub(inicial.subId);
   }
 
@@ -714,24 +702,6 @@ export class TypificationAdditionalFieldsDialogComponent {
         this.errorMessage.set('No se pudieron cargar los campos de la tipificación.');
       }
     });
-  }
-
-  onCarteraChange(cartera: string) {
-    this.carteraActual.set(cartera);
-    const subs = this.subsDeLaCartera();
-    this.onSubPortfolioChange(subs.length === 1 ? subs[0].subId : undefined);
-  }
-
-  onSubPortfolioChange(subPortfolioId: number | undefined) {
-    this.opciones.set([]);
-    this.cabeceras.set([]);
-    this.errorMessage.set('');
-    this.segmentacion.set(SIN_SEGMENTACION);
-    this.limpiarAutorizadores();
-    this.selectedSubPortfolioId.set(subPortfolioId);
-    if (subPortfolioId) {
-      this.elegirSub(subPortfolioId);
-    }
   }
 
   private elegirSub(subPortfolioId: number) {
