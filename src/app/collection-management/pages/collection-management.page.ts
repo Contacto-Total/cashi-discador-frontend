@@ -8859,14 +8859,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (activo === false) {
       return { text: 'Equivocado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
     }*/
+    // Resultado de las gestiones del número, según la tipificación base (backend: EstadoContactabilidad)
     switch (estado) {
-      case 'CONTACTO_TITULAR': return { text: 'Titular',             class: 'bg-green-100 text-green-700 dark:bg-green-900/40dark:text-green-300' };
-      case 'CONTACTO_TERCERO': return { text: 'Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
-      case 'CONTACTADO': return { text: 'Contactado',          class: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40dark:text-teal-300' };
-      case 'NO_CONTACTADO': return { text: 'No contactado',       class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'};
-      case 'INVALIDO': return { text: 'Inválido',            class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40dark:text-orange-300' };
-      case 'NUEVO': return { text: 'Nuevo',               class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40dark:text-amber-300' };
-      case 'INVALIDO_CONFIRMADO': return { text: 'Inválido confirmado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'};
+      case 'CONTACTO_TITULAR':       return { text: 'Contacto titular',       class: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' };
+      case 'TERCERO_RELACIONADO':    return { text: 'Tercero relacionado',    class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' };
+      case 'SIN_MARCAR':             return { text: 'Sin marcar',             class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+      case 'NO_CONTACTADO':          return { text: 'No contactado',          class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      case 'TERCERO_NO_RELACIONADO': return { text: 'Tercero no relacionado', class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' };
+      case 'NUMERO_INVALIDO':        return { text: 'Número inválido',        class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' };
+      case 'INVALIDO_CONFIRMADO':    return { text: 'Inválido confirmado',    class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
       default: return { text: '', class: '' };
     }
   }
