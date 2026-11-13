@@ -782,7 +782,8 @@ export class ExcepcionesComponent implements OnInit {
 
   private armarCorreo(e: ExcepcionPendiente) {
     const castigo = `${e.nombreCartera} ${e.nombreSubcartera}`.toUpperCase().includes('CASTIGO');
-    const contenido = castigo ? this.correoCastigo(e) : this.correoTramo(e);
+    const interbank = (e.nombreTenant || '').toUpperCase().includes('INTERBANK');
+    const contenido = castigo && interbank ? this.correoIbk(e) : castigo ? this.correoCastigo(e) : this.correoTramo(e);
     const tramo = castigo ? 'Castigo' : e.nombreCartera;
     return {
       para: e.nombreAutorizador
@@ -913,6 +914,120 @@ export class ExcepcionesComponent implements OnInit {
       ...(motivo ? [`Motivo excepción: ${motivo}`] : []), aviso, '',
       ...filas.map(f => `${f.etiqueta}: ${f.valor}`), `MOTIVO: ${motivo ? motivo + ' ' : ''}${aviso}`, '',
       'Gracias', '', 'Saludos cordiales', ...(remitente ? ['', remitente] : [])].join('\n');
+    return { html, texto };
+  }
+
+  private miles(n: number): string {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  private fechaLarga(fecha: string | null | undefined): string {
+    const [anio, mes, dia] = (fecha || '').substring(0, 10).split('-');
+    return dia ? `${dia}/${mes}/${anio}` : '';
+  }
+
+  private textoPlano(valor: string | number | null | undefined): string {
+    return String(valor ?? '').trim();
+  }
+
+  private fechaCastigoIbk(valor: string | number | null | undefined): string {
+    const t = this.textoPlano(valor);
+    return /^\d{4}-\d{2}-\d{2}/.test(t) ? t.substring(0, 10).replace(/-/g, '') : this.enteroCastigo(valor);
+  }
+
+  private saludoPorHora(): string {
+    const hora = new Date().getHours();
+    return hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
+  }
+
+  private correoIbk(e: ExcepcionPendiente): { html: string; texto: string } {
+    const estilo = 'font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f1f1f;';
+    const d = e.datosCastigo || {};
+    const nombre = (e.nombreAutorizador || '').trim().split(/\s+/)[0] || '';
+    const saludo = `${this.saludoPorHora()}${nombre ? ', ' + nombre : ''}:`;
+    const cuotas = [...(e.cuotas || [])].sort((a, b) => a.numeroCuota - b.numeroCuota);
+    const promesa = Number(e.montoPromesa || 0);
+    const capital = this.numeroCastigo(d['capital_mn']) ?? this.numeroCastigo(d['capital']);
+    const importe = this.numeroCastigo(e.montoBase) ?? this.numeroCastigo(d['importe_cancelacion']);
+    const conPropuesta = importe === null || Math.abs(promesa - importe) >= 0.01;
+    const pct = (n: number | null) => n !== null && capital ? `${(n / capital * 100).toFixed(2)}%` : '';
+    const total = cuotas.reduce((s, c) => s + Number(c.monto || 0), 0);
+    const mesInicial = (cuotas[0]?.fechaPago || '').substring(0, 7);
+    const pagoMes = cuotas.length
+      ? cuotas.filter(c => (c.fechaPago || '').startsWith(mesInicial)).reduce((s, c) => s + Number(c.monto || 0), 0)
+      : null;
+    const numeroCuotas = cuotas.length > 1 ? cuotas.length - 1 : cuotas.length;
+    const tipoModelo = this.textoPlano(d['tipo_modelo']);
+    const edad = (tipoModelo.match(/EDAD:\s*(\d+)/i) || [])[1] || '';
+
+    const monto = `S/ ${promesa.toLocaleString('en-US', {
+      minimumFractionDigits: Number.isInteger(promesa) ? 0 : 2, maximumFractionDigits: 2
+    })}`;
+    const dscto = !conPropuesta && (e.campoMontoOrigen || '').toLowerCase().includes('minimo') ? 'su dscto min. ' : '';
+    const mensuales = cuotas.slice(1).map(c => (c.fechaPago || '').substring(0, 10).split('-').map(Number));
+    const diaVence = Math.max(0, ...mensuales.map(f => f[2] || 0));
+    const mismoDia = mensuales.length > 0 && mensuales.every(([anio, mes, dia]) =>
+      dia === Math.min(diaVence, new Date(anio, mes, 0).getDate()));
+    const vence = mismoDia ? `, con vencimiento el día ${diaVence} de cada mes` : '';
+    const plazo = cuotas.length > 1
+      ? ` con una inicial de S/ ${this.miles(Number(cuotas[0].monto || 0))} y ${numeroCuotas} ${numeroCuotas === 1 ? 'cuota mensual' : 'cuotas mensuales'}${vence}, según el siguiente cronograma:`
+      : cuotas.length === 1 ? ` el ${this.fechaLarga(cuotas[0].fechaPago)}.` : '.';
+    const solicitud = cuotas.length > 1 ? 'la solicitud de fraccionamiento del cliente' : 'la solicitud del cliente';
+    const intro = `Por favor, su apoyo con la revisión de ${solicitud}, quien propone pagar ${dscto}`;
+
+    const verde = '#c6efce';
+    const celda = 'padding:1px 10px;font-size:14px;';
+    const encabezado = `${celda}background-color:${verde};font-weight:bold;`;
+    const cronograma = cuotas.length > 1
+      ? `<table border="0" cellpadding="1" cellspacing="0" style="${estilo}border-collapse:collapse;margin:0 0 16px">`
+        + `<tr><th bgcolor="${verde}" style="${encabezado}text-align:center">Cuota</th><th bgcolor="${verde}" style="${encabezado}text-align:center">Fecha de pago</th><th bgcolor="${verde}" style="${encabezado}text-align:right">Importe</th></tr>`
+        + cuotas.map((c, i) => `<tr><td style="${celda}text-align:right">${i + 1}</td><td style="${celda}text-align:center">${this.esc(this.fechaLarga(c.fechaPago))}</td><td style="${celda}text-align:right">S/ ${this.esc(this.miles(Number(c.monto || 0)))}</td></tr>`).join('')
+        + `<tr><td style="${celda}font-weight:bold">Total</td><td></td><td style="${celda}text-align:right;font-weight:bold">S/ ${this.esc(this.miles(total))}</td></tr></table>`
+      : '';
+
+    const columnas: { titulo: string; valor: string; resalte?: string }[] = [
+      { titulo: 'Fecha', valor: this.fechaLarga(e.fechaGestion) },
+      { titulo: 'CU', valor: this.textoPlano(d['cu']), resalte: '#e2efda' },
+      { titulo: 'CJ', valor: this.textoPlano(d['cj']) },
+      { titulo: 'Estudio', valor: this.textoCastigo(d['estudio']) || 'Holistico' },
+      { titulo: 'Nombre_Cliente', valor: e.nombreCliente },
+      { titulo: 'Grupo_Producto', valor: this.textoPlano(d['grupo_producto']) },
+      { titulo: 'Saldo_Capital', valor: capital === null ? '' : this.miles(capital) },
+      { titulo: 'Importe_Cancelacion', valor: importe === null ? '' : this.miles(importe), resalte: '#fff2cc' },
+      { titulo: 'Campaña %', valor: pct(importe), resalte: '#f8cbad' },
+      { titulo: 'Propuesta', valor: conPropuesta ? this.miles(promesa) : '' },
+      { titulo: '%_Capital_Pagado', valor: conPropuesta ? pct(promesa) : '' },
+      { titulo: 'Fecha_de_Pago', valor: this.fechaLarga(cuotas[0]?.fechaPago) },
+      { titulo: 'Fecha_castigo', valor: this.fechaCastigoIbk(d['fecha_castigo']) },
+      { titulo: 'Entidades', valor: this.enteroCastigo(d['entidades_reportantes']) },
+      { titulo: 'Prioridad', valor: this.enteroCastigo(d['prioridad_gestion']) },
+      { titulo: 'Tipo_Modelo', valor: tipoModelo },
+      { titulo: 'Edad', valor: edad },
+      { titulo: 'Zona', valor: this.textoPlano(d['zona_cliente']) },
+      { titulo: 'N° CUOTAS', valor: String(numeroCuotas), resalte: '#fff2cc' },
+      { titulo: 'Pago del mes', valor: pagoMes === null ? '' : `S/ ${this.miles(pagoMes)}`, resalte: '#fff2cc' }
+    ];
+    const contorno = 'border:1px solid #000000;';
+    const tabla = `<table border="1" cellpadding="3" cellspacing="0" bordercolor="#000000" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;margin:0 0 16px;${contorno}">`
+      + `<tr>${columnas.map(c => `<td bgcolor="${verde}" align="center" style="background-color:${verde};color:#1f1f1f;font-size:10px;font-weight:bold;text-align:center;padding:4px;min-width:60px;${contorno}">${this.esc(c.titulo)}</td>`).join('')}</tr>`
+      + `<tr>${columnas.map(c => `<td align="center"${c.resalte ? ` bgcolor="${c.resalte}"` : ''} style="font-size:11px;text-align:center;padding:4px;${c.resalte ? `background-color:${c.resalte};` : ''}${contorno}">${this.esc(c.valor) || '&nbsp;'}</td>`).join('')}</tr></table>`;
+
+    const usuario = this.auth.getCurrentUser();
+    const remitente = [usuario?.firstName, usuario?.lastName].filter(n => !!n).join(' ').trim() || usuario?.username || '';
+    const html = `<div style="${estilo}">`
+      + `<p style="margin:0 0 14px">${this.esc(saludo)}</p>`
+      + `<p style="margin:0 0 14px">${this.esc(intro)}<b>${this.esc(monto)}</b>${this.esc(plazo)}</p>`
+      + cronograma
+      + tabla
+      + `<p style="margin:0">Saludos,</p>`
+      + (remitente ? `<p style="margin:0"><b>${this.esc(remitente)}</b></p>` : '')
+      + `</div>`;
+    const texto = [saludo, '', `${intro}${monto}${plazo}`,
+      ...(cuotas.length > 1 ? ['', 'Cuota  Fecha de pago  Importe',
+        ...cuotas.map((c, i) => `${i + 1}  ${this.fechaLarga(c.fechaPago)}  S/ ${this.miles(Number(c.monto || 0))}`),
+        `Total  S/ ${this.miles(total)}`] : []),
+      '', ...columnas.map(c => `${c.titulo}: ${c.valor}`),
+      '', 'Saludos,', ...(remitente ? [remitente] : [])].join('\n');
     return { html, texto };
   }
 
