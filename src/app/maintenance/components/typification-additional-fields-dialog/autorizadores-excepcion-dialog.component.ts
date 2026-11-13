@@ -56,7 +56,8 @@ const CORREO_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           @if (modo() === 'lista') {
             <span [class]="ui.ayuda">
               Pueden ser usuarios de Cashi o personas sin usuario; de estas se registra el correo. Se eligen en los
-              niveles de autorización de cada tarjeta. Un autorizador asignado a un nivel no se puede editar ni desactivar.
+              niveles de autorización y en los convenios en cuotas de cada tarjeta. Un autorizador asignado a uno de ellos
+              no se puede editar ni desactivar.
             </span>
             @if (bloqueo()) {
               <div role="alert" class="flex items-start gap-2.5 rounded-[10px] border border-[#f5c2c2] bg-[#fdecec] px-3 py-2.5 text-[12px] font-semibold leading-[1.45] text-[#b91c1c] dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
@@ -197,7 +198,7 @@ const CORREO_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               <label for="au-cargo" [class]="ui.label">Cargo <span class="normal-case tracking-normal">(opcional)</span></label>
               <input id="au-cargo" type="text" maxlength="100" [(ngModel)]="cargo"
                      placeholder="Ej.: Jefatura de Cobranza" [class]="ui.input + ' w-full'"/>
-              <span [class]="ui.ayuda">Va junto al nombre en los niveles de autorización y en la promesa que pasa a evaluación.</span>
+              <span [class]="ui.ayuda">Va junto al nombre en los niveles de autorización, en los convenios y en la promesa que pasa a evaluación.</span>
             </div>
           }
         </div>
@@ -318,12 +319,12 @@ export class AutorizadoresExcepcionDialogComponent {
     this.cargarUsuarios();
   }
 
-  /** Mismo criterio que el backend: si un nivel lo usa, no se edita ni se desactiva. */
+  /** Mismo criterio que el backend: si un nivel o un convenio lo usa, no se edita ni se desactiva. */
   private enUso(a: AutorizadorExcepcion, accion: string): boolean {
     const tarjetas = [...new Set([...(a.tarjetas ?? []), ...this.usosSinGuardar()(a.id)])];
     if (tarjetas.length === 0) return false;
-    this.bloqueo.set(`No se puede ${accion} a ${a.nombre}: está asignado en los niveles de autorización de `
-      + `${tarjetas.length === 1 ? 'la tarjeta' : 'las tarjetas'} ${tarjetas.join(', ')}. Quítalo de esos niveles y guarda primero.`);
+    this.bloqueo.set(`No se puede ${accion} a ${a.nombre}: está asignado en los niveles o convenios de `
+      + `${tarjetas.length === 1 ? 'la tarjeta' : 'las tarjetas'} ${tarjetas.join(', ')}. Quítalo de ahí y guarda primero.`);
     return true;
   }
 

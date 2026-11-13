@@ -5,8 +5,8 @@ import { LucideAngularModule } from 'lucide-angular';
 import { HttpClient } from '@angular/common/http';
 import { A11yModule } from '@angular/cdk/a11y';
 import {
-  AutorizadorExcepcion, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, FilaReglaDescuento, ReglaDescuento,
-  RestriccionFecha, TipoLimiteDescuento
+  AutorizadorExcepcion, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, ConvenioDescuento, FieldTypeV2, FilaReglaDescuento,
+  ReglaDescuento, RestriccionFecha, SegmentoDescuento, TipoLimiteDescuento
 } from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -35,12 +35,19 @@ export interface SubcarteraMontos {
 interface Segmentacion {
   antiguaNueva: boolean;
   aniosCastigo: string[];
+  ltd: boolean;
   conMoneda: boolean;
 }
 
 type OpcionVista = CampoOpcionDTO & { visualName: string };
 
-const SIN_SEGMENTACION: Segmentacion = { antiguaNueva: false, aniosCastigo: [], conMoneda: false };
+const SIN_SEGMENTACION: Segmentacion = { antiguaNueva: false, aniosCastigo: [], ltd: false, conMoneda: false };
+/** Cómo puede separarse el límite de una tarjeta; cada subcartera ofrece solo lo que sus datos permiten. */
+const SEPARACIONES: Record<SegmentoDescuento, string> = {
+  ANTIGUA_NUEVA: 'Cartera antigua y nueva',
+  ANIO: 'Año de castigo',
+  LTD: 'Con o sin LTD'
+};
 // El campo va dentro de la caja: transparente, sin borde ni sombra y a su altura interior. Los `!` le ganan
 // a las reglas globales de styles.css (body.light-theme input y body.dark-theme input:focus), que lo
 // pintaban crema encima de la caja blanca y tapaban sus bordes.
@@ -261,13 +268,19 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                   }
                                 </select>
                               </div>
-                              @if (segmentacion().aniosCastigo.length > 0) {
-                                <label class="flex h-[34px] cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[#334155] dark:text-slate-300">
-                                  <input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#2563eb]"
-                                         [checked]="regla.segmento === 'ANIO'"
-                                         (change)="onPorAnioChange(opcion.codigoOpcion, $event)"/>
-                                  Límite distinto por año de castigo
-                                </label>
+                              @let separaciones = separacionesDe(regla);
+                              @if (separaciones.length > 0) {
+                                <div class="flex min-w-[220px] max-w-[300px] flex-1 flex-col gap-1.5">
+                                  <label [for]="'mf-sep-' + opcion.codigoOpcion" [class]="ui.label">Límite distinto según</label>
+                                  <select [id]="'mf-sep-' + opcion.codigoOpcion" [ngModel]="regla.segmento"
+                                          (ngModelChange)="onSegmentoChange(opcion.codigoOpcion, $event)"
+                                          [class]="ui.inputSm + ' w-full'">
+                                    <option [ngValue]="null">Igual para todos los clientes</option>
+                                    @for (sep of separaciones; track sep.valor) {
+                                      <option [ngValue]="sep.valor">{{ sep.texto }}</option>
+                                    }
+                                  </select>
+                                </div>
                               }
                             </div>
 
@@ -277,6 +290,8 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                   <tr>
                                     @if (regla.segmento === 'ANTIGUA_NUEVA') {
                                       <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Cartera</th>
+                                    } @else if (regla.segmento === 'LTD') {
+                                      <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Clientes</th>
                                     } @else if (regla.segmento === 'ANIO') {
                                       <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Año de castigo</th>
                                     }
@@ -291,7 +306,7 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                 <tbody>
                                   @for (fila of regla.filas; track $index; let i = $index) {
                                     <tr>
-                                      @if (regla.segmento === 'ANTIGUA_NUEVA') {
+                                      @if (regla.segmento === 'ANTIGUA_NUEVA' || regla.segmento === 'LTD') {
                                         <td class="py-1 pr-2.5 text-[12.5px] font-bold text-[#334155] dark:text-slate-200">{{ rotuloFila(regla, fila) }}</td>
                                       } @else if (regla.segmento === 'ANIO') {
                                         <td class="py-1 pr-2.5">
@@ -418,13 +433,13 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                                 </span>
                                               </td>
                                               <td class="py-1 pr-2.5">
-                                                <select (change)="onNivelAutorizadorChange(opcion.codigoOpcion, fi, ni, $event)"
+                                                <select (change)="onAutorizadorChange(opcion.codigoOpcion, fi, ni, 'nivel', $event)"
                                                         [attr.aria-label]="'Quién autoriza el nivel ' + (ni + 1) + ' ' + rotuloFila(regla, fila)"
                                                         [class]="ui.inputSm + ' h-[30px] w-full min-w-[240px]'">
                                                   @if (n.idAutorizador === null) {
                                                     <option value="" selected>Elegir autorizador</option>
                                                   }
-                                                  @for (a of autorizadoresParaNivel(n.idAutorizador); track a.id) {
+                                                  @for (a of autorizadoresPara(n.idAutorizador); track a.id) {
                                                     <option [value]="a.id" [selected]="a.id === n.idAutorizador">{{ etiquetaAutorizador(a) }}</option>
                                                   }
                                                   <option value="nuevo">+ Nuevo autorizador…</option>
@@ -448,6 +463,112 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                     <button type="button" (click)="agregarNivel(opcion.codigoOpcion, fi)" [class]="ui.textoBtn">
                                       <lucide-angular name="plus" [size]="14"></lucide-angular>
                                       Agregar nivel
+                                    </button>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+
+                            <!-- Convenios en cuotas: tramos de cuotas que pasan a evaluación con su propio autorizador -->
+                            <div class="flex flex-col gap-2.5 rounded-[10px] border border-[#e6e9ee] bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                              <span class="text-[12.5px] font-bold text-[#0f172a] dark:text-slate-100">Convenios en cuotas</span>
+                              <span [class]="ui.ayuda">
+                                Si las cuotas de la promesa caen en un convenio, pasa a evaluación y la autoriza quien indique el convenio,
+                                aunque cubra el monto de la tarjeta. «Con descuento» aplica cuando la promesa es menor que
+                                {{ sobre(opcion) }}. Si alguna cuota es menor que el mínimo del convenio, se guarda como monto libre.
+                              </span>
+                              @for (fila of regla.filas; track $index; let fi = $index) {
+                                @if (fi > 0) {
+                                  <div class="border-t border-dashed border-[#e6e9ee] dark:border-slate-700"></div>
+                                }
+                                <div class="flex flex-col gap-1.5">
+                                  @if (regla.segmento) {
+                                    <span class="text-[12px] font-bold text-[#334155] dark:text-slate-200">{{ rotuloFila(regla, fila) }}</span>
+                                  }
+                                  @if (fila.convenios.length > 0) {
+                                    <div class="overflow-x-auto">
+                                      <table class="w-full min-w-[640px] border-separate border-spacing-0 text-left">
+                                        <thead>
+                                          <tr>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Promesa</th>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Cuotas</th>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Mínimo por cuota</th>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Autoriza</th>
+                                            <th class="w-8 pb-1.5"><span class="sr-only">Quitar</span></th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          @for (c of fila.convenios; track $index; let ci = $index) {
+                                            <tr>
+                                              <td class="w-[150px] py-1 pr-2.5">
+                                                <select (change)="onConvenioTipoChange(opcion.codigoOpcion, fi, ci, $event)"
+                                                        [attr.aria-label]="'Promesa del convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                        [class]="ui.inputSm + ' h-[30px] w-full'">
+                                                  @if (c.conDescuento === null) {
+                                                    <option value="" selected>Elegir</option>
+                                                  }
+                                                  <option value="con" [selected]="c.conDescuento === true">Con descuento</option>
+                                                  <option value="sin" [selected]="c.conDescuento === false">Sin descuento</option>
+                                                </select>
+                                              </td>
+                                              <td class="py-1 pr-2.5">
+                                                <div class="flex items-center gap-1.5">
+                                                  <span [class]="numCaja + ' w-[84px]'">
+                                                    <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">De</span>
+                                                    <input type="number" min="1" max="48" step="1" [value]="c.cuotasDesde ?? ''"
+                                                           (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'cuotasDesde', $event)"
+                                                           [attr.aria-label]="'Desde cuántas cuotas, convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                           [class]="numInput"/>
+                                                  </span>
+                                                  <span [class]="numCaja + ' w-[110px]'">
+                                                    <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">a</span>
+                                                    <input type="number" min="1" max="48" step="1" placeholder="Sin tope" [value]="c.cuotasHasta ?? ''"
+                                                           (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'cuotasHasta', $event)"
+                                                           [attr.aria-label]="'Hasta cuántas cuotas, convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                           [class]="numInput"/>
+                                                  </span>
+                                                </div>
+                                              </td>
+                                              <td class="w-[130px] py-1 pr-2.5">
+                                                <span [class]="numCaja">
+                                                  <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">S/</span>
+                                                  <input type="number" min="0" step="1" placeholder="Opcional" [value]="c.montoMinimoCuota ?? ''"
+                                                         (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'montoMinimoCuota', $event)"
+                                                         [attr.aria-label]="'Monto mínimo por cuota, convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                         [class]="numInput"/>
+                                                </span>
+                                              </td>
+                                              <td class="py-1 pr-2.5">
+                                                <select (change)="onAutorizadorChange(opcion.codigoOpcion, fi, ci, 'convenio', $event)"
+                                                        [attr.aria-label]="'Quién autoriza el convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                        [class]="ui.inputSm + ' h-[30px] w-full min-w-[220px]'">
+                                                  @if (c.idAutorizador === null) {
+                                                    <option value="" selected>Elegir autorizador</option>
+                                                  }
+                                                  @for (a of autorizadoresPara(c.idAutorizador); track a.id) {
+                                                    <option [value]="a.id" [selected]="a.id === c.idAutorizador">{{ etiquetaAutorizador(a) }}</option>
+                                                  }
+                                                  <option value="nuevo">+ Nuevo autorizador…</option>
+                                                </select>
+                                              </td>
+                                              <td class="w-8 py-1">
+                                                <button type="button" (click)="quitarConvenio(opcion.codigoOpcion, fi, ci)"
+                                                        [attr.aria-label]="'Quitar convenio ' + (ci + 1)" [class]="ui.iconBtnPeligro">
+                                                  <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          }
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  } @else {
+                                    <span [class]="ui.ayuda">Sin convenios: las cuotas solo las limitan la tarjeta y el descuento sin aprobación.</span>
+                                  }
+                                  <div>
+                                    <button type="button" (click)="agregarConvenio(opcion.codigoOpcion, fi)" [class]="ui.textoBtn">
+                                      <lucide-angular name="plus" [size]="14"></lucide-angular>
+                                      Agregar convenio
                                     </button>
                                   </div>
                                 </div>
@@ -576,10 +697,12 @@ export class TypificationAdditionalFieldsDialogComponent {
   readonly autorizadoresActivos = computed(() => this.autorizadores().filter(a => a.activo));
   autorizadoresAbierto = signal(false);
   autorizadoresModo = signal<'lista' | 'form'>('lista');
-  /** Nivel desde el que se pidió «Nuevo autorizador…»: el creado se le asigna. */
-  private nivelPendiente: { codigoOpcion: string; fi: number; ni: number } | null = null;
+  /** Nivel o convenio desde el que se pidió «Nuevo autorizador…»: el creado se le asigna. */
+  private autorizadorPendiente: { codigoOpcion: string; fi: number; i: number; en: 'nivel' | 'convenio' } | null = null;
   /** Lo escrito en cada tipo de límite mientras no se guarde: volver al tipo anterior lo recupera. */
   private memoriaTipo = new Map<string, FilaReglaDescuento[]>();
+  /** Lo mismo al cambiar «Límite distinto según»: volver a la separación anterior recupera sus filas. */
+  private memoriaSegmento = new Map<string, { tipo: TipoLimiteDescuento; filas: FilaReglaDescuento[] }>();
 
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
@@ -666,8 +789,9 @@ export class TypificationAdditionalFieldsDialogComponent {
   private limpiarAutorizadores() {
     this.autorizadores.set([]);
     this.autorizadoresAbierto.set(false);
-    this.nivelPendiente = null;
+    this.autorizadorPendiente = null;
     this.memoriaTipo.clear();
+    this.memoriaSegmento.clear();
   }
 
   /** Se parte de la subcartera abierta en la pantalla. */
@@ -734,7 +858,7 @@ export class TypificationAdditionalFieldsDialogComponent {
       });
   }
 
-  /** Cartera antigua y nueva o años de castigo, según lo que la subcartera enlaza en Config. Cabeceras. */
+  /** Qué separaciones ofrece la subcartera: antigua y nueva, años de castigo o tarjetas LTD. */
   private loadSegmentacion() {
     const sel = this.seleccion();
     if (!sel) return;
@@ -743,8 +867,9 @@ export class TypificationAdditionalFieldsDialogComponent {
     }).subscribe({
       next: (s) => {
         if (this.selectedSubPortfolioId() !== sel.subId) return;
-        this.segmentacion.set({ antiguaNueva: !!s?.antiguaNueva, aniosCastigo: s?.aniosCastigo ?? [], conMoneda: !!s?.conMoneda });
-        this.opciones.set(this.opciones().map(o => this.normalizarRegla(o)));
+        this.segmentacion.set({
+          antiguaNueva: !!s?.antiguaNueva, aniosCastigo: s?.aniosCastigo ?? [], ltd: !!s?.ltd, conMoneda: !!s?.conMoneda
+        });
       },
       error: (error) => console.warn('[DIALOG] Error loading segmentación:', error)
     });
@@ -904,37 +1029,42 @@ export class TypificationAdditionalFieldsDialogComponent {
   // ---------------------------------------------------------------- Descuento máximo
 
   private filaVacia(valor: string | null): FilaReglaDescuento {
-    return { valor, descuentoMaximo: null, maxCuotas: null, montoMinimoCuota: null, niveles: [] };
+    return { valor, descuentoMaximo: null, maxCuotas: null, montoMinimoCuota: null, niveles: [], convenios: [] };
   }
 
   private copiarFila(f: FilaReglaDescuento): FilaReglaDescuento {
-    return { ...f, niveles: (f.niveles ?? []).map(n => ({ ...n })) };
+    return { ...f, niveles: (f.niveles ?? []).map(n => ({ ...n })), convenios: (f.convenios ?? []).map(c => ({ ...c })) };
   }
 
-  /** Regla que se muestra cuando la tarjeta todavía no tiene una: todo por definir. */
+  /** Filas vacías de una separación; en años de castigo, el más reciente y «Resto de años». */
+  private filasDe(segmento: SegmentoDescuento | null): FilaReglaDescuento[] {
+    switch (segmento) {
+      case 'ANTIGUA_NUEVA': return [this.filaVacia('ANTIGUA'), this.filaVacia('NUEVA')];
+      case 'LTD': return [this.filaVacia('CON'), this.filaVacia('SIN')];
+      case 'ANIO': return [...this.segmentacion().aniosCastigo.slice(0, 1).map(a => this.filaVacia(a)), this.filaVacia(null)];
+      default: return [this.filaVacia(null)];
+    }
+  }
+
+  /** Regla que se muestra cuando la tarjeta todavía no tiene una: un solo límite, todo por definir. */
   private reglaInicial(): ReglaDescuento {
-    return this.segmentacion().antiguaNueva
-      ? { tipo: 'PORCENTAJE', campoReferencia: null, segmento: 'ANTIGUA_NUEVA', filas: [this.filaVacia('ANTIGUA'), this.filaVacia('NUEVA')] }
-      : { tipo: 'PORCENTAJE', campoReferencia: null, segmento: null, filas: [this.filaVacia(null)] };
+    return { tipo: 'PORCENTAJE', campoReferencia: null, segmento: null, filas: this.filasDe(null) };
   }
 
   /**
-   * Deja la regla con las filas que corresponden a la subcartera: con periodo de compra, siempre cartera
-   * antigua y nueva; por año, los años y al final "Resto de años"; si no, una sola fila.
+   * Deja la regla con las filas de su separación: antigua y nueva, con y sin LTD, los años con «Resto de
+   * años» al final, o una sola fila. La separación guardada se respeta aunque la subcartera ya no la ofrezca.
    */
   private normalizarRegla(o: CampoOpcionDTO): CampoOpcionDTO {
     if (o.codigoOpcion === 'personalizado' || !o.reglaDescuento) return o;
     const r: ReglaDescuento = { ...o.reglaDescuento, filas: (o.reglaDescuento.filas ?? []).map(f => this.copiarFila(f)) };
     const busca = (v: string | null) => r.filas.find(f => f.valor === v);
-    if (this.segmentacion().antiguaNueva) {
-      r.segmento = 'ANTIGUA_NUEVA';
+    if (r.segmento === 'ANTIGUA_NUEVA') {
       r.filas = [busca('ANTIGUA') ?? this.filaVacia('ANTIGUA'), busca('NUEVA') ?? this.filaVacia('NUEVA')];
+    } else if (r.segmento === 'LTD') {
+      r.filas = [busca('CON') ?? this.filaVacia('CON'), busca('SIN') ?? this.filaVacia('SIN')];
     } else if (r.segmento === 'ANIO') {
       r.filas = [...r.filas.filter(f => f.valor !== null), busca(null) ?? this.filaVacia(null)];
-    } else if (r.segmento === 'ANTIGUA_NUEVA') {
-      // La subcartera ya no enlaza el periodo de compra: queda un solo límite por definir
-      r.segmento = null;
-      r.filas = [this.filaVacia(null)];
     } else {
       r.filas = [busca(null) ?? r.filas[0] ?? this.filaVacia(null)];
     }
@@ -979,17 +1109,31 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.editarRegla(codigoOpcion, r => r.campoReferencia = campo || null);
   }
 
-  onPorAnioChange(codigoOpcion: string, event: Event) {
-    const porAnio = (event.target as HTMLInputElement).checked;
+  /** Separaciones que ofrece la subcartera, más la guardada en la tarjeta aunque ya no la ofrezca. */
+  separacionesDe(regla: ReglaDescuento): { valor: SegmentoDescuento; texto: string }[] {
+    const s = this.segmentacion();
+    const ofrece: Record<SegmentoDescuento, boolean> = {
+      ANTIGUA_NUEVA: s.antiguaNueva, ANIO: s.aniosCastigo.length > 0, LTD: s.ltd
+    };
+    return (Object.keys(SEPARACIONES) as SegmentoDescuento[])
+      .filter(v => ofrece[v] || regla.segmento === v)
+      .map(v => ({ valor: v, texto: SEPARACIONES[v] }));
+  }
+
+  /**
+   * Cambia cómo se separa el límite. Las filas de la nueva separación empiezan vacías; mientras no se
+   * guarde, volver a la anterior recupera lo escrito.
+   */
+  onSegmentoChange(codigoOpcion: string, segmento: SegmentoDescuento | null) {
     this.editarRegla(codigoOpcion, r => {
-      const resto = r.filas.find(f => f.valor === null) ?? r.filas[0] ?? this.filaVacia(null);
-      if (porAnio) {
-        const anios = this.segmentacion().aniosCastigo.slice(0, 1);
-        r.segmento = 'ANIO';
-        r.filas = [...anios.map(a => this.filaVacia(a)), { ...resto, valor: null }];
-      } else {
-        r.segmento = null;
-        r.filas = [{ ...resto, valor: null }];
+      if (r.segmento === segmento) return;
+      this.memoriaSegmento.set(codigoOpcion + '|' + (r.segmento ?? 'TODOS'), { tipo: r.tipo, filas: r.filas.map(f => this.copiarFila(f)) });
+      const previa = this.memoriaSegmento.get(codigoOpcion + '|' + (segmento ?? 'TODOS'));
+      r.segmento = segmento;
+      r.filas = previa ? previa.filas.map(f => this.copiarFila(f)) : this.filasDe(segmento);
+      // Lo recordado en otro tipo de límite no vale en este (un 85 en % no es S/ 85)
+      if (previa && previa.tipo !== r.tipo) {
+        r.filas.forEach(f => { f.descuentoMaximo = null; f.niveles = []; });
       }
     });
   }
@@ -1078,7 +1222,14 @@ export class TypificationAdditionalFieldsDialogComponent {
   rotuloFila(regla: ReglaDescuento, fila: FilaReglaDescuento): string {
     if (regla.segmento === 'ANTIGUA_NUEVA') return fila.valor === 'NUEVA' ? 'Cartera nueva' : 'Cartera antigua';
     if (regla.segmento === 'ANIO') return fila.valor === null ? 'Resto de años' : 'Castigo ' + fila.valor;
+    if (regla.segmento === 'LTD') return fila.valor === 'CON' ? 'Con LTD' : 'Sin LTD';
     return '';
+  }
+
+  /** Sobre qué se mide el descuento: el saldo de referencia o la propia tarjeta. */
+  sobre(o: OpcionVista): string {
+    const r = this.reglaDe(o);
+    return r.campoReferencia ? this.nombreCampo(r.campoReferencia) : o.visualName;
   }
 
   limiteTexto(regla: ReglaDescuento, v: number): string {
@@ -1089,14 +1240,17 @@ export class TypificationAdditionalFieldsDialogComponent {
     return this.reglaDe(o).filas.every(f => f.descuentoMaximo == null);
   }
 
-  /** Resumen del límite junto al nombre de la tarjeta, con cuántos niveles de autorización tiene. */
+  /** Resumen del límite junto al nombre de la tarjeta, con cuántos niveles y convenios tiene. */
   resumen(o: OpcionVista): string {
     const r = this.reglaDe(o);
-    if (r.filas.every(f => f.descuentoMaximo == null)) return 'Descuento por definir';
+    const c = Math.max(0, ...r.filas.map(f => f.convenios?.length ?? 0));
+    const convenios = c ? ` · ${c} ${c === 1 ? 'convenio' : 'convenios'}` : '';
+    if (r.filas.every(f => f.descuentoMaximo == null)) return 'Descuento por definir' + convenios;
     const n = Math.max(0, ...r.filas.map(f => f.niveles?.length ?? 0));
-    const niveles = n ? ` · ${n} ${n === 1 ? 'nivel' : 'niveles'}` : '';
+    const niveles = (n ? ` · ${n} ${n === 1 ? 'nivel' : 'niveles'}` : '') + convenios;
     const sobre = r.campoReferencia ? ' sobre ' + this.nombreCampo(r.campoReferencia) : '';
     if (r.segmento === 'ANTIGUA_NUEVA') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ': antigua y nueva' + niveles;
+    if (r.segmento === 'LTD') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ': con y sin LTD' + niveles;
     if (r.segmento === 'ANIO') return (r.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Monto') + sobre + ' por año de castigo' + niveles;
     const lim = r.filas[0].descuentoMaximo as number;
     if (lim === 0) return 'Sin descuento directo' + niveles;
@@ -1115,6 +1269,9 @@ export class TypificationAdditionalFieldsDialogComponent {
     if (r.segmento === 'ANIO') {
       return `El descuento se calcula sobre ${sobre}.${cuando} Cada cliente toma la fila del año en que se castigó su deuda; los años sin fila van a «Resto de años». Una fila sin límite está por definir.`;
     }
+    if (r.segmento === 'LTD') {
+      return `El descuento se calcula sobre ${sobre}.${cuando} Toma la fila «Con LTD» la deuda con monto en alguna tarjeta LTD de la subcartera; las demás, «Sin LTD». Una fila sin límite está por definir.`;
+    }
     const lim = r.filas[0]?.descuentoMaximo;
     if (lim == null) return `Por definir: mientras no tenga límite, todo descuento sobre ${o.visualName} pasa a evaluación.`;
     if (lim === 0) return `Cualquier promesa menor que ${o.visualName} pasa a evaluación.${cuando}`;
@@ -1131,7 +1288,7 @@ export class TypificationAdditionalFieldsDialogComponent {
   }
 
   /** Activos, más el ya elegido aunque esté desactivado. */
-  autorizadoresParaNivel(actual: number | null): AutorizadorExcepcion[] {
+  autorizadoresPara(actual: number | null): AutorizadorExcepcion[] {
     return this.autorizadores().filter(a => a.activo || a.id === actual);
   }
 
@@ -1159,49 +1316,87 @@ export class TypificationAdditionalFieldsDialogComponent {
     input.value = valor === null ? '' : String(valor);
   }
 
-  onNivelAutorizadorChange(codigoOpcion: string, fi: number, ni: number, event: Event) {
+  /** Nivel o convenio al que apunta un select de autorizador. */
+  private destino(r: ReglaDescuento, fi: number, i: number, en: 'nivel' | 'convenio'): { idAutorizador: number | null } | undefined {
+    const fila = r.filas[fi];
+    return en === 'nivel' ? fila?.niveles[i] : fila?.convenios[i];
+  }
+
+  onAutorizadorChange(codigoOpcion: string, fi: number, i: number, en: 'nivel' | 'convenio', event: Event) {
     const select = event.target as HTMLSelectElement;
     if (select.value === 'nuevo') {
       // El select vuelve a lo que tenía; si se registra uno nuevo, se asigna aquí
-      const actual = this.opciones().find(o => o.codigoOpcion === codigoOpcion)?.reglaDescuento?.filas[fi]?.niveles[ni]?.idAutorizador;
+      const regla = this.opciones().find(o => o.codigoOpcion === codigoOpcion)?.reglaDescuento;
+      const actual = regla ? this.destino(regla, fi, i, en)?.idAutorizador : null;
       select.value = actual != null ? String(actual) : '';
-      this.nivelPendiente = { codigoOpcion, fi, ni };
+      this.autorizadorPendiente = { codigoOpcion, fi, i, en };
       this.abrirAutorizadores('form');
       return;
     }
     const id = select.value ? Number(select.value) : null;
-    this.editarRegla(codigoOpcion, r => r.filas[fi].niveles[ni].idAutorizador = id);
+    this.editarRegla(codigoOpcion, r => {
+      const d = this.destino(r, fi, i, en);
+      if (d) d.idAutorizador = id;
+    });
   }
 
   abrirAutorizadores(modo: 'lista' | 'form') {
-    if (modo === 'lista') this.nivelPendiente = null;
+    if (modo === 'lista') this.autorizadorPendiente = null;
     this.autorizadoresModo.set(modo);
     this.autorizadoresAbierto.set(true);
   }
 
   cerrarAutorizadores() {
     this.autorizadoresAbierto.set(false);
-    this.nivelPendiente = null;
+    this.autorizadorPendiente = null;
   }
 
   onAutorizadorCreado(a: AutorizadorExcepcion) {
-    const p = this.nivelPendiente;
-    this.nivelPendiente = null;
+    const p = this.autorizadorPendiente;
+    this.autorizadorPendiente = null;
     if (!p) return;
     this.editarRegla(p.codigoOpcion, r => {
-      const nivel = r.filas[p.fi]?.niveles[p.ni];
-      if (nivel) nivel.idAutorizador = a.id;
+      const d = this.destino(r, p.fi, p.i, p.en);
+      if (d) d.idAutorizador = a.id;
     });
   }
 
-  /** Tarjetas de esta pantalla, aún sin guardar, en las que el autorizador es un nivel. */
+  // ---------------------------------------------------------------- Convenios en cuotas
+
+  /** Convenio nuevo, todo por llenar: no se puede guardar hasta elegir el tipo, las cuotas y quién autoriza. */
+  agregarConvenio(codigoOpcion: string, fi: number) {
+    const vacio: ConvenioDescuento = { conDescuento: null, cuotasDesde: null, cuotasHasta: null, montoMinimoCuota: null, idAutorizador: null };
+    this.editarRegla(codigoOpcion, r => r.filas[fi].convenios.push(vacio));
+  }
+
+  quitarConvenio(codigoOpcion: string, fi: number, ci: number) {
+    this.editarRegla(codigoOpcion, r => r.filas[fi].convenios.splice(ci, 1));
+  }
+
+  onConvenioTipoChange(codigoOpcion: string, fi: number, ci: number, event: Event) {
+    const v = (event.target as HTMLSelectElement).value;
+    this.editarRegla(codigoOpcion, r => r.filas[fi].convenios[ci].conDescuento = v === 'con' ? true : v === 'sin' ? false : null);
+  }
+
+  onConvenioChange(codigoOpcion: string, fi: number, ci: number, campo: 'cuotasDesde' | 'cuotasHasta' | 'montoMinimoCuota', event: Event) {
+    const input = event.target as HTMLInputElement;
+    const texto = input.value.trim();
+    let valor: number | null = texto === '' ? null : Number(texto);
+    if (valor !== null && (isNaN(valor) || valor <= 0)) valor = null;
+    if (valor !== null && campo !== 'montoMinimoCuota') valor = Math.max(1, Math.min(48, Math.round(valor)));
+    this.editarRegla(codigoOpcion, r => r.filas[fi].convenios[ci][campo] = valor);
+    input.value = valor === null ? '' : String(valor);
+  }
+
+  /** Tarjetas de esta pantalla, aún sin guardar, en las que el autorizador es un nivel o autoriza un convenio. */
   readonly usosSinGuardar = (id: number): string[] => this.opcionesConNombres()
     .filter(o => o.codigoOpcion !== 'personalizado'
-      && (o.reglaDescuento?.filas ?? []).some(f => (f.niveles ?? []).some(n => n.idAutorizador === id)))
+      && (o.reglaDescuento?.filas ?? []).some(f => (f.niveles ?? []).some(n => n.idAutorizador === id)
+        || (f.convenios ?? []).some(c => c.idAutorizador === id)))
     .map(o => o.visualName);
 
   /** Lo que el backend rechazaría, avisado antes de enviar. */
-  private validarNiveles(): string | null {
+  private validarReglas(): string | null {
     for (const o of this.opcionesConNombres()) {
       const r = o.reglaDescuento;
       if (o.codigoOpcion === 'personalizado' || !r) continue;
@@ -1216,6 +1411,22 @@ export class TypificationAdditionalFieldsDialogComponent {
             return `En ${donde}, cada nivel debe autorizar más descuento que el anterior.`;
           }
           if (n.hasta !== null) anterior = n.hasta;
+        }
+        const convenios = f.convenios ?? [];
+        for (let i = 0; i < convenios.length; i++) {
+          const c = convenios[i];
+          if (c.conDescuento === null) return `Elige si cada convenio de ${donde} es con o sin descuento.`;
+          if (c.cuotasDesde === null) return `Indica desde cuántas cuotas aplica cada convenio de ${donde}.`;
+          if (c.cuotasHasta !== null && c.cuotasHasta < c.cuotasDesde) {
+            return `En ${donde}, un convenio termina en menos cuotas de las que empieza.`;
+          }
+          if (c.idAutorizador === null) return `Elige quién autoriza cada convenio de ${donde}.`;
+          const cruza = convenios.slice(0, i).some(x => x.conDescuento === c.conDescuento && x.cuotasDesde !== null
+            && (x.cuotasHasta === null || c.cuotasDesde! <= x.cuotasHasta)
+            && (c.cuotasHasta === null || x.cuotasDesde <= c.cuotasHasta));
+          if (cruza) {
+            return `En ${donde}, dos convenios ${c.conDescuento ? 'con' : 'sin'} descuento cubren las mismas cuotas.`;
+          }
         }
       }
     }
@@ -1246,7 +1457,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     if (!campoId || opcionesActuales.length === 0 || this.guardando()) {
       return;
     }
-    const invalido = this.validarNiveles();
+    const invalido = this.validarReglas();
     if (invalido) {
       this.toast.error(invalido);
       return;
@@ -1276,6 +1487,7 @@ export class TypificationAdditionalFieldsDialogComponent {
       next: (opcionesActualizadas) => {
         this.guardando.set(false);
         this.memoriaTipo.clear();
+        this.memoriaSegmento.clear();
         this.opciones.set(opcionesActualizadas.map(o => this.normalizarRegla(o)));
         const sub = this.selectedSubPortfolioId();
         if (sub) this.loadAutorizadores(sub);
