@@ -162,8 +162,8 @@ export enum RestriccionFecha {
 
 // Descuento máximo de una tarjeta de monto (tipificacion_campo_opciones y tipificacion_opcion_descuento)
 export type TipoLimiteDescuento = 'PORCENTAJE' | 'MONTO';
-/** ANTIGUA_NUEVA: por periodo de compra. ANIO: por año del periodo de castigo. */
-export type SegmentoDescuento = 'ANTIGUA_NUEVA' | 'ANIO';
+/** ANTIGUA_NUEVA: por periodo de compra. ANIO: por año del periodo de castigo. LTD: con o sin monto en tarjetas LTD. */
+export type SegmentoDescuento = 'ANTIGUA_NUEVA' | 'ANIO' | 'LTD';
 
 /** Nivel de aprobación por encima del máximo sin aprobación. */
 export interface NivelDescuento {
@@ -171,12 +171,22 @@ export interface NivelDescuento {
   idAutorizador: number | null;        // autorizador de la subcartera
 }
 
+/** Convenio en cuotas: las promesas cuyas cuotas caen en el tramo pasan a evaluación con su autorizador. */
+export interface ConvenioDescuento {
+  conDescuento: boolean | null;        // null = sin elegir (no se puede guardar)
+  cuotasDesde: number | null;
+  cuotasHasta: number | null;          // null = sin tope
+  montoMinimoCuota: number | null;     // null = sin mínimo
+  idAutorizador: number | null;
+}
+
 export interface FilaReglaDescuento {
-  valor: string | null;                // null | 'ANTIGUA' | 'NUEVA' | '2026' (null en ANIO = resto de años)
+  valor: string | null;                // null | 'ANTIGUA' | 'NUEVA' | '2026' | 'CON' | 'SIN' (null en ANIO = resto de años)
   descuentoMaximo: number | null;      // % o soles según el tipo; null = por definir
   maxCuotas: number | null;            // con descuento; null = las de la tarjeta
   montoMinimoCuota: number | null;     // con descuento; null = sin mínimo
   niveles: NivelDescuento[];           // de menor a mayor descuento
+  convenios: ConvenioDescuento[];
 }
 
 export interface ReglaDescuento {
@@ -196,7 +206,7 @@ export interface AutorizadorExcepcion {
   correo: string | null;
   cargo: string | null;
   activo: boolean;
-  tarjetas: string[];                  // tarjetas guardadas donde es un nivel
+  tarjetas: string[];                  // tarjetas guardadas donde es un nivel o autoriza un convenio
 }
 
 export interface GuardarAutorizadorExcepcion {
