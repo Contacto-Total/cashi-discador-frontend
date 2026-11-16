@@ -171,11 +171,15 @@ export interface NivelDescuento {
   idAutorizador: number | null;        // autorizador de la subcartera
 }
 
-/** Convenio en cuotas: las promesas cuyas cuotas caen en el tramo pasan a evaluación con su autorizador. */
+/** CUOTAS = número de cuotas; MESES = desde la primera cuota hasta la última (20/11 → 20/12 = 1 mes). */
+export type UnidadPlazo = 'CUOTAS' | 'MESES';
+
+/** Convenio: las promesas cuyo plazo (en cuotas o en meses) cae en el tramo pasan a evaluación con su autorizador. */
 export interface ConvenioDescuento {
   conDescuento: boolean | null;        // null = sin elegir (no se puede guardar)
-  cuotasDesde: number | null;
-  cuotasHasta: number | null;          // null = sin tope
+  unidadPlazo: UnidadPlazo | null;     // null = CUOTAS
+  plazoDesde: number | null;
+  plazoHasta: number | null;           // null = sin tope
   montoMinimoCuota: number | null;     // null = sin mínimo
   idAutorizador: number | null;
 }

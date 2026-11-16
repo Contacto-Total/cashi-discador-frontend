@@ -46,7 +46,7 @@ const SIN_SEGMENTACION: Segmentacion = { antiguaNueva: false, aniosCastigo: [], 
 const SEPARACIONES: Record<SegmentoDescuento, string> = {
   ANTIGUA_NUEVA: 'Cartera antigua y nueva',
   ANIO: 'Año de castigo',
-  LTD: 'Con o sin LTD'
+  LTD: 'Si tiene LTD este mes'
 };
 // El campo va dentro de la caja: transparente, sin borde ni sombra y a su altura interior. Los `!` le ganan
 // a las reglas globales de styles.css (body.light-theme input y body.dark-theme input:focus), que lo
@@ -271,11 +271,11 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                               @let separaciones = separacionesDe(regla);
                               @if (separaciones.length > 0) {
                                 <div class="flex min-w-[220px] max-w-[300px] flex-1 flex-col gap-1.5">
-                                  <label [for]="'mf-sep-' + opcion.codigoOpcion" [class]="ui.label">Límite distinto según</label>
+                                  <label [for]="'mf-sep-' + opcion.codigoOpcion" [class]="ui.label">Separar clientes por</label>
                                   <select [id]="'mf-sep-' + opcion.codigoOpcion" [ngModel]="regla.segmento"
                                           (ngModelChange)="onSegmentoChange(opcion.codigoOpcion, $event)"
                                           [class]="ui.inputSm + ' w-full'">
-                                    <option [ngValue]="null">Igual para todos los clientes</option>
+                                    <option [ngValue]="null">No separar: un límite para todos</option>
                                     @for (sep of separaciones; track sep.valor) {
                                       <option [ngValue]="sep.valor">{{ sep.texto }}</option>
                                     }
@@ -291,7 +291,7 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                     @if (regla.segmento === 'ANTIGUA_NUEVA') {
                                       <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Cartera</th>
                                     } @else if (regla.segmento === 'LTD') {
-                                      <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Clientes</th>
+                                      <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">LTD este mes</th>
                                     } @else if (regla.segmento === 'ANIO') {
                                       <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Año de castigo</th>
                                     }
@@ -469,12 +469,14 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                               }
                             </div>
 
-                            <!-- Convenios en cuotas: tramos de cuotas que pasan a evaluación con su propio autorizador -->
+                            <!-- Convenios: tramos de cuotas o de meses que pasan a evaluación con su propio autorizador -->
                             <div class="flex flex-col gap-2.5 rounded-[10px] border border-[#e6e9ee] bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-                              <span class="text-[12.5px] font-bold text-[#0f172a] dark:text-slate-100">Convenios en cuotas</span>
+                              <span class="text-[12.5px] font-bold text-[#0f172a] dark:text-slate-100">Convenios en cuotas o meses</span>
                               <span [class]="ui.ayuda">
-                                Si las cuotas de la promesa caen en un convenio, pasa a evaluación y la autoriza quien indique el convenio,
-                                aunque cubra el monto de la tarjeta. «Con descuento» aplica cuando la promesa es menor que
+                                Si el plazo de la promesa cae en un convenio, pasa a evaluación y la autoriza quien indique el convenio,
+                                aunque cubra el monto de la tarjeta. En cuotas cuenta cuántas cuotas tiene; en meses, el tiempo desde la
+                                primera cuota hasta la última: hasta el mismo día del mes siguiente es 1 mes, hasta el subsiguiente son 2.
+                                «Con descuento» aplica cuando la promesa es menor que
                                 {{ sobre(opcion) }}. Si alguna cuota es menor que el mínimo del convenio, se guarda como monto libre.
                               </span>
                               @for (fila of regla.filas; track $index; let fi = $index) {
@@ -487,11 +489,11 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                   }
                                   @if (fila.convenios.length > 0) {
                                     <div class="overflow-x-auto">
-                                      <table class="w-full min-w-[640px] border-separate border-spacing-0 text-left">
+                                      <table class="w-full min-w-[740px] border-separate border-spacing-0 text-left">
                                         <thead>
                                           <tr>
                                             <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Promesa</th>
-                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Cuotas</th>
+                                            <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Plazo</th>
                                             <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Mínimo por cuota</th>
                                             <th [class]="ui.label + ' pb-1.5 pr-2.5 font-bold'">Autoriza</th>
                                             <th class="w-8 pb-1.5"><span class="sr-only">Quitar</span></th>
@@ -512,19 +514,26 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                                 </select>
                                               </td>
                                               <td class="py-1 pr-2.5">
+                                                @let unidades = c.unidadPlazo === 'MESES' ? 'meses' : 'cuotas';
                                                 <div class="flex items-center gap-1.5">
+                                                  <select (change)="onConvenioUnidadChange(opcion.codigoOpcion, fi, ci, $event)"
+                                                          [attr.aria-label]="'Plazo en cuotas o meses, convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                          [class]="ui.inputSm + ' h-[30px] w-[96px]'">
+                                                    <option value="CUOTAS" [selected]="c.unidadPlazo !== 'MESES'">Cuotas</option>
+                                                    <option value="MESES" [selected]="c.unidadPlazo === 'MESES'">Meses</option>
+                                                  </select>
                                                   <span [class]="numCaja + ' w-[84px]'">
                                                     <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">De</span>
-                                                    <input type="number" min="1" max="48" step="1" [value]="c.cuotasDesde ?? ''"
-                                                           (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'cuotasDesde', $event)"
-                                                           [attr.aria-label]="'Desde cuántas cuotas, convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                    <input type="number" min="1" max="48" step="1" [value]="c.plazoDesde ?? ''"
+                                                           (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'plazoDesde', $event)"
+                                                           [attr.aria-label]="'Desde cuántas ' + unidades + ', convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
                                                            [class]="numInput"/>
                                                   </span>
                                                   <span [class]="numCaja + ' w-[110px]'">
                                                     <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">a</span>
-                                                    <input type="number" min="1" max="48" step="1" placeholder="Sin tope" [value]="c.cuotasHasta ?? ''"
-                                                           (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'cuotasHasta', $event)"
-                                                           [attr.aria-label]="'Hasta cuántas cuotas, convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
+                                                    <input type="number" min="1" max="48" step="1" placeholder="Sin tope" [value]="c.plazoHasta ?? ''"
+                                                           (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'plazoHasta', $event)"
+                                                           [attr.aria-label]="'Hasta cuántas ' + unidades + ', convenio ' + (ci + 1) + ' ' + rotuloFila(regla, fila)"
                                                            [class]="numInput"/>
                                                   </span>
                                                 </div>
@@ -563,7 +572,7 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                       </table>
                                     </div>
                                   } @else {
-                                    <span [class]="ui.ayuda">Sin convenios: las cuotas solo las limitan la tarjeta y el descuento sin aprobación.</span>
+                                    <span [class]="ui.ayuda">Sin convenios: el plazo solo lo limitan la tarjeta y el descuento sin aprobación.</span>
                                   }
                                   <div>
                                     <button type="button" (click)="agregarConvenio(opcion.codigoOpcion, fi)" [class]="ui.textoBtn">
@@ -701,7 +710,7 @@ export class TypificationAdditionalFieldsDialogComponent {
   private autorizadorPendiente: { codigoOpcion: string; fi: number; i: number; en: 'nivel' | 'convenio' } | null = null;
   /** Lo escrito en cada tipo de límite mientras no se guarde: volver al tipo anterior lo recupera. */
   private memoriaTipo = new Map<string, FilaReglaDescuento[]>();
-  /** Lo mismo al cambiar «Límite distinto según»: volver a la separación anterior recupera sus filas. */
+  /** Lo mismo al cambiar «Separar clientes por»: volver a la separación anterior recupera sus filas. */
   private memoriaSegmento = new Map<string, { tipo: TipoLimiteDescuento; filas: FilaReglaDescuento[] }>();
 
   // Cabeceras para nombres visuales
@@ -1361,11 +1370,13 @@ export class TypificationAdditionalFieldsDialogComponent {
     });
   }
 
-  // ---------------------------------------------------------------- Convenios en cuotas
+  // ---------------------------------------------------------------- Convenios en cuotas o meses
 
-  /** Convenio nuevo, todo por llenar: no se puede guardar hasta elegir el tipo, las cuotas y quién autoriza. */
+  /** Convenio nuevo, en cuotas y por llenar: no se puede guardar hasta elegir el tipo, el plazo y quién autoriza. */
   agregarConvenio(codigoOpcion: string, fi: number) {
-    const vacio: ConvenioDescuento = { conDescuento: null, cuotasDesde: null, cuotasHasta: null, montoMinimoCuota: null, idAutorizador: null };
+    const vacio: ConvenioDescuento = {
+      conDescuento: null, unidadPlazo: 'CUOTAS', plazoDesde: null, plazoHasta: null, montoMinimoCuota: null, idAutorizador: null
+    };
     this.editarRegla(codigoOpcion, r => r.filas[fi].convenios.push(vacio));
   }
 
@@ -1378,7 +1389,12 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.editarRegla(codigoOpcion, r => r.filas[fi].convenios[ci].conDescuento = v === 'con' ? true : v === 'sin' ? false : null);
   }
 
-  onConvenioChange(codigoOpcion: string, fi: number, ci: number, campo: 'cuotasDesde' | 'cuotasHasta' | 'montoMinimoCuota', event: Event) {
+  onConvenioUnidadChange(codigoOpcion: string, fi: number, ci: number, event: Event) {
+    const v = (event.target as HTMLSelectElement).value;
+    this.editarRegla(codigoOpcion, r => r.filas[fi].convenios[ci].unidadPlazo = v === 'MESES' ? 'MESES' : 'CUOTAS');
+  }
+
+  onConvenioChange(codigoOpcion: string, fi: number, ci: number, campo: 'plazoDesde' | 'plazoHasta' | 'montoMinimoCuota', event: Event) {
     const input = event.target as HTMLInputElement;
     const texto = input.value.trim();
     let valor: number | null = texto === '' ? null : Number(texto);
@@ -1416,16 +1432,19 @@ export class TypificationAdditionalFieldsDialogComponent {
         for (let i = 0; i < convenios.length; i++) {
           const c = convenios[i];
           if (c.conDescuento === null) return `Elige si cada convenio de ${donde} es con o sin descuento.`;
-          if (c.cuotasDesde === null) return `Indica desde cuántas cuotas aplica cada convenio de ${donde}.`;
-          if (c.cuotasHasta !== null && c.cuotasHasta < c.cuotasDesde) {
-            return `En ${donde}, un convenio termina en menos cuotas de las que empieza.`;
+          const unidad = c.unidadPlazo ?? 'CUOTAS';
+          const unidades = unidad === 'MESES' ? 'meses' : 'cuotas';
+          if (c.plazoDesde === null) return `Indica desde cuántas ${unidades} aplica cada convenio de ${donde}.`;
+          if (c.plazoHasta !== null && c.plazoHasta < c.plazoDesde) {
+            return `En ${donde}, un convenio termina en menos ${unidades} de las que empieza.`;
           }
           if (c.idAutorizador === null) return `Elige quién autoriza cada convenio de ${donde}.`;
-          const cruza = convenios.slice(0, i).some(x => x.conDescuento === c.conDescuento && x.cuotasDesde !== null
-            && (x.cuotasHasta === null || c.cuotasDesde! <= x.cuotasHasta)
-            && (c.cuotasHasta === null || x.cuotasDesde <= c.cuotasHasta));
+          const cruza = convenios.slice(0, i).some(x => x.conDescuento === c.conDescuento
+            && (x.unidadPlazo ?? 'CUOTAS') === unidad && x.plazoDesde !== null
+            && (x.plazoHasta === null || c.plazoDesde! <= x.plazoHasta)
+            && (c.plazoHasta === null || x.plazoDesde <= c.plazoHasta));
           if (cruza) {
-            return `En ${donde}, dos convenios ${c.conDescuento ? 'con' : 'sin'} descuento cubren las mismas cuotas.`;
+            return `En ${donde}, dos convenios ${c.conDescuento ? 'con' : 'sin'} descuento cubren las mismas ${unidades}.`;
           }
         }
       }
