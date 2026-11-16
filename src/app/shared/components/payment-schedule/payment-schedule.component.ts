@@ -107,13 +107,14 @@ export interface AmountOption {
               </button>
             }
           }
-          <!-- Opción personalizada -->
+          <!-- Opción personalizada. Los «!» les ganan a los !important de styles.css sobre app-payment-schedule
+               (.text-white e input), que dejaban el texto gris oscuro sobre el violeta. -->
           @if (hasCustomOption()) {
             <button
               type="button"
               [class]="'flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md min-w-0 ' +
                 (isCustomAmount()
-                  ? 'sm:col-span-2 border-purple-500 bg-purple-500 dark:bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                  ? 'sm:col-span-2 border-purple-500 bg-purple-500 dark:bg-purple-600 text-white! shadow-lg shadow-purple-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-600')"
               (click)="enableCustomAmount()"
             >
@@ -121,7 +122,7 @@ export interface AmountOption {
               @if (isCustomAmount()) {
                 <input
                   type="number"
-                  class="w-full mt-0.5 px-2 py-1 border border-white/30 rounded text-center text-sm font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white min-w-[90px]"
+                  class="w-full mt-0.5 px-2 py-1 border rounded text-center text-sm font-bold min-w-[90px] border-white/30! bg-white/90! text-slate-800! dark:bg-slate-800! dark:text-white! focus:outline-none focus:ring-2 focus:ring-white/60"
                   [(ngModel)]="customAmountValue"
                   (ngModelChange)="onCustomAmountChange($event)"
                   (click)="$event.stopPropagation()"
@@ -199,6 +200,13 @@ export interface AmountOption {
                 </div>
                 <div class="flex items-center gap-1.5 flex-1 min-w-[120px]">
                   <label class="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">Monto:</label>
+                  @if (unaCuota()) {
+                    <lucide-angular name="lock" [size]="12" class="text-slate-400 dark:text-slate-500"></lucide-angular>
+                    <span
+                      aria-readonly="true"
+                      class="flex-1 min-w-0 px-2 py-1.5 border border-dashed border-slate-300 dark:border-slate-500 rounded-lg text-xs bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-300 cursor-not-allowed tabular-nums"
+                    >{{ installment.monto | number:'1.2-2' }}</span>
+                  } @else {
                   <input
                     type="number"
                     [(ngModel)]="installment.monto"
@@ -208,6 +216,7 @@ export interface AmountOption {
                     step="0.01"
                     class="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 dark:border-slate-500 rounded-lg text-xs bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
+                  }
                 </div>
                 <div class="flex items-center gap-1.5 flex-1 min-w-[130px]">
                   <label class="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">Fecha:</label>
@@ -223,6 +232,12 @@ export interface AmountOption {
               </div>
             }
           </div>
+          @if (unaCuota()) {
+            <p class="mt-2 px-2 py-1.5 rounded-lg text-[10px] flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              <lucide-angular name="info" [size]="12"></lucide-angular>
+              <span>Con 1 cuota, el monto se cambia en la tarjeta de arriba.</span>
+            </p>
+          }
 
           <!-- Resumen -->
           <div class="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl border border-emerald-200 dark:border-emerald-800 transition-colors duration-300">
@@ -419,6 +434,9 @@ export class PaymentScheduleComponent implements OnInit {
   totalAmount = computed(() =>
     this.installments().reduce((sum, i) => sum + (i.monto || 0), 0)
   );
+
+  /** Con 1 cuota el monto se cambia solo en la tarjeta: el detalle lo muestra sin editar. */
+  unaCuota = computed(() => this.installments().length === 1);
 
   amountPerInstallment = computed(() => {
     const num = this.numberOfInstallments();
