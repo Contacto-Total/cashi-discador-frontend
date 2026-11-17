@@ -964,7 +964,8 @@ export class ExcepcionesComponent implements OnInit {
     if (!fraccionado && coincide?.clave === 'maximo') {
       return { tipo: 'CAMPANA_MAXIMA' as const, motivo: 'Campaña máxima', campana: coincide.nombre, referencia: coincide.monto };
     }
-    return { tipo: 'MONTO_PROPUESTO' as const, motivo: 'Monto propuesto por el cliente', campana: deBase?.nombre ?? '', referencia: deBase?.monto ?? base };
+    const comparado = deBase ? `su campaña ${deBase.nombre}` : origen.includes('capital') ? 'su capital' : 'su campaña aprobada';
+    return { tipo: 'MONTO_PROPUESTO' as const, motivo: 'Monto propuesto por el cliente', campana: comparado, referencia: deBase?.monto ?? base };
   }
 
   private correoIbk(e: ExcepcionPendiente): { html: string; texto: string; motivo: string } {
@@ -1006,7 +1007,7 @@ export class ExcepcionesComponent implements OnInit {
       CAMPANA_MAXIMA: 'Por favor, su apoyo con la autorización para aplicar la campaña máxima al cliente, quien propone pagar '
     }[caso.tipo];
     const referencia = conPropuesta && importe !== null
-      ? `, por debajo de su campaña ${caso.campana || 'aprobada'} de S/ ${this.miles(importe)},`
+      ? `, por debajo de ${caso.campana} de S/ ${this.miles(importe)},`
       : '';
     const detalle = `${referencia}${plazo}`;
 
