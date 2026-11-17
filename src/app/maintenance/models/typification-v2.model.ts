@@ -230,7 +230,6 @@ export interface UsuarioAutorizable {
   roles: string | null;
 }
 
-<<<<<<< HEAD
 /** Canal por el que el cliente paga o pagará, de una subcartera (REQ-074). */
 export interface CanalPagoDTO {
   id: number;
@@ -241,8 +240,6 @@ export interface CanalPagoDTO {
   enUso: boolean;
 }
 
-=======
->>>>>>> 6860f9cd (feat(montos): configurar descuento máximo por tarjeta y revisarlo en el cronograma)
 // Modelos para el sistema de opciones con toggles
 export interface CampoOpcionDTO {
   id?: number;

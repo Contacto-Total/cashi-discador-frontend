@@ -1601,16 +1601,9 @@ interface BorradorDeuda {
                 [customerAmounts]="finalPaymentAmounts()"
                 [simboloMoneda]="simboloMoneda()"
                 [deuda]="cuentaSeleccionada()"
-<<<<<<< HEAD
-<<<<<<< HEAD
                 [canalesPago]="pideCanalPago() ? canalesPago() : []"
                 [canalPagoId]="canalPagoId()"
                 (canalPagoChange)="canalPagoId.set($event)"
-=======
-                [contextoDescuento]="contextoDescuento()"
->>>>>>> 6860f9cd (feat(montos): configurar descuento máximo por tarjeta y revisarlo en el cronograma)
-=======
->>>>>>> b29d3d50 (feat(montos): autorizadores y niveles en Configurar montos; el cronograma ya no muestra avisos de descuento)
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
