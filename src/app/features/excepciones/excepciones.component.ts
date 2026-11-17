@@ -980,7 +980,11 @@ export class ExcepcionesComponent implements OnInit {
     const iguales = campanas.filter(c => c.monto !== null && Math.abs(promesa - c.monto) < 1);
     const coincide = iguales.find(c => origen.includes(c.clave)) ?? iguales[0];
     const base = this.numeroCastigo(e.montoBase) ?? this.numeroCastigo(d['importe_cancelacion']);
-    const deBase = campanas.find(c => origen.includes(c.clave))
+    const encima = campanas
+      .filter(c => c.monto !== null && c.monto > promesa)
+      .sort((x, y) => (x.monto as number) - (y.monto as number))[0];
+    const deBase = encima
+      ?? campanas.find(c => origen.includes(c.clave))
       ?? campanas.find(c => c.monto !== null && base !== null && Math.abs(base - c.monto) < 1);
 
     if (fraccionado && capital !== null && promesa >= capital - 1) {
