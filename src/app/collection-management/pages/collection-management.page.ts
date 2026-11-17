@@ -3282,6 +3282,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   cuentasTipificadas = computed(() => this.borradores().flatMap(b => b.cuentas));
   private grupoGestionUuid: string | null = null;
   private datosBaseCliente: Record<string, any> = {};
+  /** Cliente con una sola deuda: la gestión la guarda igual, para no depender de la cartera del mes */
+  private deudaUnica = signal<{ cuenta: string; producto: string; moneda: string } | null>(null);
+  /** Las deudas del cliente todavía no llegan: guardar ahora dejaría la gestión sin su deuda */
+  private cargandoCuentas = signal(false);
+  private consultaCuentas = 0;
 
   esMultiproducto = computed(() => !!this.campoCuenta() && this.cuentasCliente().length > 1);
 
@@ -3371,18 +3376,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.cuentasMarcadas.set([]);
     this.borradores.set([]);
     this.grupoGestionUuid = null;
+    this.deudaUnica.set(null);
+    this.cargandoCuentas.set(false);
     this.datosBaseCliente = { ...this.rawClientData() };
     const tenantId = this.selectedTenantId;
     const portfolioId = this.selectedPortfolioId;
     const subPortfolioId = this.selectedSubPortfolioId;
     if (!documento || !tenantId || !portfolioId || !subPortfolioId) return;
 
+    const consulta = ++this.consultaCuentas;
+    this.cargandoCuentas.set(true);
     this.managementService.getCuentasCliente(tenantId, portfolioId, subPortfolioId, String(documento)).pipe(
       catchError(() => of(null))
     ).subscribe(respuesta => {
       // Si mientras tanto se abrió otro cliente, la respuesta es de ese otro
+      if (consulta !== this.consultaCuentas) return;
+      this.cargandoCuentas.set(false);
       if (!respuesta || subPortfolioId !== this.selectedSubPortfolioId) return;
       const filas = respuesta.cuentas || [];
+      if (respuesta.campoCuenta && filas.length === 1) {
+        const fila = filas[0];
+        const cuenta = String(fila[respuesta.campoCuenta] ?? '');
+        if (cuenta.trim()) {
+          this.deudaUnica.set({
+            cuenta,
+            producto: respuesta.campoProducto ? String(fila[respuesta.campoProducto] ?? '') : '',
+            moneda: respuesta.campoMoneda ? String(fila[respuesta.campoMoneda] ?? '').trim().toUpperCase() : ''
+          });
+        }
+        return;
+      }
       if (!respuesta.campoCuenta || filas.length < 2) return;
       this.campoCuenta.set(respuesta.campoCuenta);
       this.campoProducto.set(respuesta.campoProducto ?? null);
@@ -3463,12 +3486,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   });
 
   /**
-   * A qué deudas va el guardado. Sin varias deudas: un registro, como siempre. Sin contacto directo
-   * o con todas las deudas marcadas (y sin acuerdo): un registro sin cuenta, que vale para todas.
-   * Si no, un registro por deuda marcada. null si así no se puede guardar.
+   * A qué deudas va el guardado. Sin varias deudas: un registro, con su deuda si la subcartera la
+   * identifica. Sin contacto directo o con todas las deudas marcadas (y sin acuerdo): un registro sin
+   * cuenta, que vale para todas. Si no, un registro por deuda marcada. null si así no se puede guardar.
    */
   private deudasDelGuardado(): { registros: ({ cuenta: string; producto: string; moneda: string } | null)[]; cuentas: string[] } | null {
-    if (!this.esMultiproducto()) return { registros: [null], cuentas: [] };
+    if (this.cargandoCuentas()) {
+      alert('⚠️ Todavía se están cargando los productos del cliente. Vuelva a guardar en unos segundos.');
+      return null;
+    }
+    if (!this.esMultiproducto()) return { registros: [this.deudaUnica()], cuentas: [] };
     const productos = this.productosCliente();
     if (!this.esContactoDirecto()) {
       if (this.borradores().length) {
@@ -3634,7 +3661,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   private camposDeuda(registro: { cuenta: string; producto: string; moneda: string } | null) {
-    if (!this.esMultiproducto()) return {};
+    if (!this.esMultiproducto()) {
+      return registro ? { cuenta: registro.cuenta, producto: registro.producto, moneda: registro.moneda } : {};
+    }
     return {
       cuenta: registro?.cuenta ?? null,
       producto: registro?.producto ?? null,
