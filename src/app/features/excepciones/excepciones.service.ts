@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface CuotaExcepcion {
@@ -89,6 +89,14 @@ export class ExcepcionesService {
         this.cargando.set(false);
       })
     );
+  }
+
+  getTodasPendientes(): Observable<ExcepcionPendiente[]> {
+    const params = new HttpParams().set('page', '0').set('size', '1000');
+    return this.http.get<PageResponse<ExcepcionPendiente>>(
+      `${this.baseUrl}/pendientes`,
+      { headers: this.getHeaders(), params }
+    ).pipe(map(response => response.content));
   }
 
   /**

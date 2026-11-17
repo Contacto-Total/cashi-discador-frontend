@@ -55,7 +55,7 @@ import { AuthService } from '../../core/services/auth.service';
               Historial / Reporte
             </button>
             <button
-              (click)="tabActivo.set('correos')"
+              (click)="tabActivo.set('correos'); cargarCorreos()"
               [class]="tabActivo() === 'correos'
                 ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-semibold'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
@@ -547,11 +547,14 @@ export class ExcepcionesComponent implements OnInit {
   correoSelId = signal<number | null>(null);
   correoMensaje = signal('');
 
+  correoExcepciones = signal<ExcepcionPendiente[]>([]);
+  cargandoCorreos = signal(false);
+
   correoCarteras = computed(() =>
-    [...new Set(this.excepcionesService.excepciones().map(e => e.nombreCartera).filter(n => !!n))]);
+    [...new Set(this.correoExcepciones().map(e => e.nombreCartera).filter(n => !!n))]);
 
   correoAutorizadores = computed(() =>
-    [...new Set(this.excepcionesService.excepciones().map(e => e.nombreAutorizador).filter((n): n is string => !!n))]);
+    [...new Set(this.correoExcepciones().map(e => e.nombreAutorizador).filter((n): n is string => !!n))]);
 
   correosFiltrados = computed(() => {
     const desde = this.correoDesde();
@@ -559,7 +562,7 @@ export class ExcepcionesComponent implements OnInit {
     const cartera = this.correoCartera();
     const autorizador = this.correoAutorizador();
     const texto = this.correoBusqueda().trim().toLowerCase();
-    return this.excepcionesService.excepciones().filter(e => {
+    return this.correoExcepciones().filter(e => {
       const dia = (e.fechaGestion || '').substring(0, 10);
       return (!desde || dia >= desde)
         && (!hasta || dia <= hasta)
@@ -601,6 +604,20 @@ export class ExcepcionesComponent implements OnInit {
           alert('Error al cargar las excepciones pendientes');
         }
       });
+  }
+
+  cargarCorreos(): void {
+    this.cargandoCorreos.set(true);
+    this.excepcionesService.getTodasPendientes().subscribe({
+      next: (lista) => {
+        this.correoExcepciones.set(lista);
+        this.cargandoCorreos.set(false);
+      },
+      error: () => {
+        this.cargandoCorreos.set(false);
+        this.avisarCorreo('No se pudieron cargar las excepciones pendientes.');
+      }
+    });
   }
 
   cargarHistorial(): void {
