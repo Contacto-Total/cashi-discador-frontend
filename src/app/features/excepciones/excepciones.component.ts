@@ -783,13 +783,14 @@ export class ExcepcionesComponent implements OnInit {
   private armarCorreo(e: ExcepcionPendiente) {
     const castigo = `${e.nombreCartera} ${e.nombreSubcartera}`.toUpperCase().includes('CASTIGO');
     const interbank = (e.nombreTenant || '').toUpperCase().includes('INTERBANK');
-    const contenido = castigo && interbank ? this.correoIbk(e) : castigo ? this.correoCastigo(e) : this.correoTramo(e);
+    const contenido: { html: string; texto: string; motivo?: string } =
+      castigo && interbank ? this.correoIbk(e) : castigo ? this.correoCastigo(e) : this.correoTramo(e);
     const tramo = castigo ? 'Castigo' : e.nombreCartera;
     return {
       para: e.nombreAutorizador
         ? e.nombreAutorizador + (e.correoAutorizador ? ` <${e.correoAutorizador}>` : '')
         : 'Sin autorizador asignado',
-      asunto: `[Excepción] ${tramo} – ${e.nombreCliente} – ${e.documentoCliente}`,
+      asunto: `[Excepción] ${tramo}${contenido.motivo ? ' – ' + contenido.motivo : ''} – ${e.nombreCliente} – ${e.documentoCliente}`,
       html: contenido.html,
       texto: contenido.texto,
       safeHtml: this.sanitizer.bypassSecurityTrustHtml(contenido.html)
@@ -940,7 +941,33 @@ export class ExcepcionesComponent implements OnInit {
     return hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
   }
 
-  private correoIbk(e: ExcepcionPendiente): { html: string; texto: string } {
+  private casoIbk(e: ExcepcionPendiente, promesa: number, capital: number | null, fraccionado: boolean) {
+    const d = e.datosCastigo || {};
+    const origen = (e.campoMontoOrigen || '').toLowerCase();
+    const campanas = [
+      { clave: 'minimo', nombre: 'mínima' },
+      { clave: 'optimo', nombre: 'óptima' },
+      { clave: 'maximo', nombre: 'máxima' }
+    ].map(c => ({ ...c, monto: this.numeroCastigo(d['importe_cancelacion_' + c.clave]) }));
+    const iguales = campanas.filter(c => c.monto !== null && Math.abs(promesa - c.monto) < 1);
+    const coincide = iguales.find(c => origen.includes(c.clave)) ?? iguales[0];
+    const base = this.numeroCastigo(e.montoBase) ?? this.numeroCastigo(d['importe_cancelacion']);
+    const deBase = campanas.find(c => origen.includes(c.clave))
+      ?? campanas.find(c => c.monto !== null && base !== null && Math.abs(base - c.monto) < 1);
+
+    if (fraccionado && capital !== null && promesa >= capital - 1) {
+      return { tipo: 'FRACCIONAMIENTO_SIN_DESCUENTO' as const, motivo: 'Fraccionamiento sin descuento', campana: '', referencia: capital };
+    }
+    if (fraccionado && coincide) {
+      return { tipo: 'FRACCIONAMIENTO_CON_DESCUENTO' as const, motivo: 'Fraccionamiento con descuento', campana: coincide.nombre, referencia: coincide.monto };
+    }
+    if (!fraccionado && coincide?.clave === 'maximo') {
+      return { tipo: 'CAMPANA_MAXIMA' as const, motivo: 'Campaña máxima', campana: coincide.nombre, referencia: coincide.monto };
+    }
+    return { tipo: 'MONTO_PROPUESTO' as const, motivo: 'Monto propuesto por el cliente', campana: deBase?.nombre ?? '', referencia: deBase?.monto ?? base };
+  }
+
+  private correoIbk(e: ExcepcionPendiente): { html: string; texto: string; motivo: string } {
     const estilo = 'font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f1f1f;';
     const d = e.datosCastigo || {};
     const nombre = (e.nombreAutorizador || '').trim().split(/\s+/)[0] || '';
@@ -948,8 +975,9 @@ export class ExcepcionesComponent implements OnInit {
     const cuotas = [...(e.cuotas || [])].sort((a, b) => a.numeroCuota - b.numeroCuota);
     const promesa = Number(e.montoPromesa || 0);
     const capital = this.numeroCastigo(d['capital_mn']) ?? this.numeroCastigo(d['capital']);
-    const importe = this.numeroCastigo(e.montoBase) ?? this.numeroCastigo(d['importe_cancelacion']);
-    const conPropuesta = importe === null || Math.abs(promesa - importe) >= 0.01;
+    const caso = this.casoIbk(e, promesa, capital, cuotas.length > 1);
+    const importe = caso.referencia;
+    const conPropuesta = caso.tipo === 'MONTO_PROPUESTO';
     const pct = (n: number | null) => n !== null && capital ? `${(n / capital * 100).toFixed(2)}%` : '';
     const total = cuotas.reduce((s, c) => s + Number(c.monto || 0), 0);
     const mesInicial = (cuotas[0]?.fechaPago || '').substring(0, 7);
@@ -963,7 +991,6 @@ export class ExcepcionesComponent implements OnInit {
     const monto = `S/ ${promesa.toLocaleString('en-US', {
       minimumFractionDigits: Number.isInteger(promesa) ? 0 : 2, maximumFractionDigits: 2
     })}`;
-    const dscto = !conPropuesta && (e.campoMontoOrigen || '').toLowerCase().includes('minimo') ? 'su dscto min. ' : '';
     const mensuales = cuotas.slice(1).map(c => (c.fechaPago || '').substring(0, 10).split('-').map(Number));
     const diaVence = Math.max(0, ...mensuales.map(f => f[2] || 0));
     const mismoDia = mensuales.length > 0 && mensuales.every(([anio, mes, dia]) =>
@@ -972,8 +999,16 @@ export class ExcepcionesComponent implements OnInit {
     const plazo = cuotas.length > 1
       ? ` con una inicial de S/ ${this.miles(Number(cuotas[0].monto || 0))} y ${numeroCuotas} ${numeroCuotas === 1 ? 'cuota mensual' : 'cuotas mensuales'}${vence}, según el siguiente cronograma:`
       : cuotas.length === 1 ? ` el ${this.fechaLarga(cuotas[0].fechaPago)}.` : '.';
-    const solicitud = cuotas.length > 1 ? 'la solicitud de fraccionamiento del cliente' : 'la solicitud del cliente';
-    const intro = `Por favor, su apoyo con la revisión de ${solicitud}, quien propone pagar ${dscto}`;
+    const intro = {
+      MONTO_PROPUESTO: 'Por favor, su apoyo con la autorización del monto propuesto por el cliente, quien ofrece pagar ',
+      FRACCIONAMIENTO_SIN_DESCUENTO: 'Por favor, su apoyo con la autorización del fraccionamiento sin descuento que solicita el cliente, quien propone pagar su capital de ',
+      FRACCIONAMIENTO_CON_DESCUENTO: `Por favor, su apoyo con la autorización del fraccionamiento con descuento que solicita el cliente, quien propone pagar en cuotas su campaña ${caso.campana} de `,
+      CAMPANA_MAXIMA: 'Por favor, su apoyo con la autorización para aplicar la campaña máxima al cliente, quien propone pagar '
+    }[caso.tipo];
+    const referencia = conPropuesta && importe !== null
+      ? `, por debajo de su campaña ${caso.campana || 'aprobada'} de S/ ${this.miles(importe)},`
+      : '';
+    const detalle = `${referencia}${plazo}`;
 
     const verde = '#c6efce';
     const celda = 'padding:1px 10px;font-size:14px;';
@@ -1016,19 +1051,19 @@ export class ExcepcionesComponent implements OnInit {
     const remitente = [usuario?.firstName, usuario?.lastName].filter(n => !!n).join(' ').trim() || usuario?.username || '';
     const html = `<div style="${estilo}">`
       + `<p style="margin:0 0 14px">${this.esc(saludo)}</p>`
-      + `<p style="margin:0 0 14px">${this.esc(intro)}<b>${this.esc(monto)}</b>${this.esc(plazo)}</p>`
+      + `<p style="margin:0 0 14px">${this.esc(intro)}<b>${this.esc(monto)}</b>${this.esc(detalle)}</p>`
       + cronograma
       + tabla
       + `<p style="margin:0">Saludos,</p>`
       + (remitente ? `<p style="margin:0"><b>${this.esc(remitente)}</b></p>` : '')
       + `</div>`;
-    const texto = [saludo, '', `${intro}${monto}${plazo}`,
+    const texto = [saludo, '', `${intro}${monto}${detalle}`,
       ...(cuotas.length > 1 ? ['', 'Cuota  Fecha de pago  Importe',
         ...cuotas.map((c, i) => `${i + 1}  ${this.fechaLarga(c.fechaPago)}  S/ ${this.miles(Number(c.monto || 0))}`),
         `Total  S/ ${this.miles(total)}`] : []),
       '', ...columnas.map(c => `${c.titulo}: ${c.valor}`),
       '', 'Saludos,', ...(remitente ? [remitente] : [])].join('\n');
-    return { html, texto };
+    return { html, texto, motivo: caso.motivo };
   }
 
   formatCurrency(value: number | null): string {
