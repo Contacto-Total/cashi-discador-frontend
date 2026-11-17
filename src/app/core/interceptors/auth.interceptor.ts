@@ -4,6 +4,12 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import {
+  CABECERA_DISPOSITIVO,
+  esDispositivoPermitido,
+  esRechazoDeDispositivo,
+  marcarDispositivoRechazado
+} from '../dispositivo';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -24,6 +30,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     headers['X-Agent-Id'] = String(agentId);
   }
 
+  // Un celular en «modo PC» o un iPad que dice ser Mac: el servidor no lo ve en
+  // el User-Agent. Solo a nuestra API (mismo origen), para no forzar preflights.
+  if (!esDispositivoPermitido() && req.url.startsWith(environment.apiUrl)) {
+    headers[CABECERA_DISPOSITIVO] = 'movil';
+  }
+
   if (Object.keys(headers).length > 0) {
     req = req.clone({ setHeaders: headers });
   }
@@ -36,6 +48,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         console.error('[INTERCEPTOR] Haciendo logout automático');
         authService.logout();
         router.navigate(['/login']);
+      }
+
+      // El servidor no deja entrar a este usuario desde este equipo (celular o tablet).
+      if (esRechazoDeDispositivo(error.status, error.error)) {
+        const usuario = (req.body as { nombreUsuario?: string } | null)?.nombreUsuario
+          ?? authService.getCurrentUser()?.username
+          ?? null;
+        marcarDispositivoRechazado(usuario);
       }
 
       // El backend esta en mantenimiento: se avisa para que la pantalla se actualice.
