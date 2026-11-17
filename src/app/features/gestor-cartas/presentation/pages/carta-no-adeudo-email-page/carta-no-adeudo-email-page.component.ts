@@ -24,8 +24,6 @@ import { CartaNoAdeudoListaWidgetComponent } from '../../widgets/carta-no-adeudo
 import { BcpPagosService } from '../../../../../pagos-bancarios/services/bcp-pagos.service';
 import { ResumenConciliacionCliente } from '../../../../../pagos-bancarios/models/bcp-archivo.model';
 import { ClienteResumenConciliacionLecturaWidget } from '../../../../../pagos-bancarios/widgets/cliente-resumen-conciliacion-lectura.widget';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { ROL_ADMIN, ROLES_ADMINISTRACION_CARTAS, ROLES_SUPERVISION_CARTAS } from '../../../roles-cartas';
 import { firstValueFrom } from 'rxjs';
 
 type PestanaCarta = 'correo' | 'pagos' | 'historial';
@@ -707,25 +705,10 @@ export class CartaNoAdeudoEmailPageComponent implements OnInit, OnDestroy {
   private readonly cartaNoAdeudoService = inject(CartaNoAdeudoService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly bcpPagosService = inject(BcpPagosService);
-  private readonly authService = inject(AuthService);
-
-  // El acceso va por rol: supervisión valida el correo y administración valida los pagos. ADMIN ve todo.
-  // Son getters porque los roles de la sesión pueden completarse después de cargar la página.
-  get puedeCorreo(): boolean {
-    return this.authService.hasAnyRole(ROL_ADMIN, ...ROLES_SUPERVISION_CARTAS);
-  }
-
-  get puedePagos(): boolean {
-    return this.authService.hasAnyRole(ROL_ADMIN, ...ROLES_ADMINISTRACION_CARTAS);
-  }
-
-  get puedeHistorial(): boolean {
-    return this.puedeCorreo || this.puedePagos;
-  }
-
-  get tieneAcceso(): boolean {
-    return this.puedeHistorial;
-  }
+  readonly puedeCorreo = true;
+  readonly puedePagos = true;
+  readonly puedeHistorial = true;
+  readonly tieneAcceso = true;
 
   readonly activeTab = signal<PestanaCarta>('correo');
   readonly subTabPagos = signal<SubTabPagos>('validacion');
