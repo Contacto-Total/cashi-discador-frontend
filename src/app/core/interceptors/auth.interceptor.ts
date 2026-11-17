@@ -2,7 +2,7 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { NEVER, catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import {
   CABECERA_DISPOSITIVO,
@@ -56,6 +56,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           ?? authService.getCurrentUser()?.username
           ?? null;
         marcarDispositivoRechazado(usuario);
+        // La página se recarga para mostrar el aviso: el error no sigue, para que el
+        // login no alcance a mostrarlo como «usuario o contraseña incorrectos».
+        return NEVER;
       }
 
       // El backend esta en mantenimiento: se avisa para que la pantalla se actualice.
