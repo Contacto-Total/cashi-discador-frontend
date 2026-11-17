@@ -201,12 +201,8 @@ export interface AmountOption {
                 <div class="flex items-center gap-1.5 flex-1 min-w-[120px]">
                   <label class="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">Monto:</label>
                   @if (unaCuota()) {
-                    <lucide-angular name="lock" [size]="12" class="text-slate-400 dark:text-slate-500"></lucide-angular>
-                    <span
-                      aria-readonly="true"
-                      class="flex-1 min-w-0 px-2 py-1.5 border border-dashed border-slate-300 dark:border-slate-500 rounded-lg text-xs bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-300 cursor-not-allowed tabular-nums"
-                    >{{ installment.monto | number:'1.2-2' }}</span>
-                  } @else {
+                    <lucide-angular name="link" [size]="12" class="text-blue-500 dark:text-blue-400" aria-hidden="true"></lucide-angular>
+                  }
                   <input
                     type="number"
                     [(ngModel)]="installment.monto"
@@ -214,9 +210,10 @@ export interface AmountOption {
                     (wheel)="$event.preventDefault()"
                     [min]="1"
                     step="0.01"
-                    class="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 dark:border-slate-500 rounded-lg text-xs bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    [attr.aria-label]="unaCuota() ? 'Monto de la cuota, va junto con el de la tarjeta' : null"
+                    [class]="'flex-1 min-w-0 px-2 py-1.5 border rounded-lg text-xs bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 '
+                      + (unaCuota() ? 'border-blue-300 dark:border-blue-500' : 'border-slate-200 dark:border-slate-500')"
                   >
-                  }
                 </div>
                 <div class="flex items-center gap-1.5 flex-1 min-w-[130px]">
                   <label class="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">Fecha:</label>
@@ -234,8 +231,8 @@ export interface AmountOption {
           </div>
           @if (unaCuota()) {
             <p class="mt-2 px-2 py-1.5 rounded-lg text-[10px] flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              <lucide-angular name="info" [size]="12"></lucide-angular>
-              <span>Con 1 cuota, el monto se cambia en la tarjeta de arriba.</span>
+              <lucide-angular name="link" [size]="12"></lucide-angular>
+              <span>Con 1 cuota, la tarjeta y la cuota van juntas: si cambias una, se actualiza la otra.</span>
             </p>
           }
 
@@ -435,7 +432,7 @@ export class PaymentScheduleComponent implements OnInit {
     this.installments().reduce((sum, i) => sum + (i.monto || 0), 0)
   );
 
-  /** Con 1 cuota el monto se cambia solo en la tarjeta: el detalle lo muestra sin editar. */
+  /** Con 1 cuota, la tarjeta y la cuota van juntas: cambiar una cambia la otra. */
   unaCuota = computed(() => this.installments().length === 1);
 
   amountPerInstallment = computed(() => {
@@ -586,7 +583,9 @@ export class PaymentScheduleComponent implements OnInit {
       return;
     }
 
-    this.generateInstallments();
+    if (!this.llevarMontoACuota(value)) {
+      this.generateInstallments();
+    }
   }
 
   /** La tarjeta elegida se puede ajustar: no en continuidad ni sin monto. */
@@ -619,7 +618,46 @@ export class PaymentScheduleComponent implements OnInit {
   /** Lleva el monto ajustado al cronograma. Subir o bajar no se bloquea: solo cambia cómo se guarda. */
   private aplicarMontoTarjeta(monto: number): void {
     this.selectedAmount.set(monto);
-    this.generateInstallments();
+    if (!this.llevarMontoACuota(monto)) {
+      this.generateInstallments();
+    }
+  }
+
+  /** Con 1 cuota, el monto de la tarjeta pasa a la cuota y se queda la fecha que eligió el asesor. */
+  private llevarMontoACuota(monto: number): boolean {
+    const cuotas = this.installments();
+    if (cuotas.length !== 1 || this.numberOfInstallments() !== 1 || !(monto > 0)) {
+      return false;
+    }
+    this.installments.set([{ ...cuotas[0], monto: Math.round(monto * 100) / 100 }]);
+    this.emitChange();
+    return true;
+  }
+
+  /** Con 1 cuota, el monto escrito en la cuota pasa a la tarjeta (o a la Excepción). */
+  private onUnicaCuotaChange(): void {
+    const cuota = this.installments()[0];
+    const monto = Math.round((Number(cuota.monto) || 0) * 100) / 100;
+    if (monto <= 0) {
+      // Borró el monto para escribir otro: no hay cronograma válido hasta que lo escriba
+      this.scheduleChange.emit(null);
+      return;
+    }
+    if (this.isCustomAmount()) {
+      this.onCustomAmountChange(monto);
+      return;
+    }
+    // Tarjeta que no se ajusta (continuidad): la cuota se queda con su monto
+    const tarjeta = this.availableAmounts().find(o => o.field === this.selectedField());
+    if (tarjeta && !this.puedeAjustar(tarjeta)) {
+      this.installments.set([{ ...cuota, monto: this.selectedAmount() }]);
+      this.emitChange();
+      return;
+    }
+    this.montoTarjeta = monto;
+    this.selectedAmount.set(monto);
+    this.installments.set([{ ...cuota, monto }]);
+    this.emitChange();
   }
 
   setInstallments(num: number): void {
@@ -715,6 +753,10 @@ export class PaymentScheduleComponent implements OnInit {
    * - La suma de cuotas debe ser exactamente igual al monto total
    */
   onInstallmentAmountChange(editedCuotaNumber: number): void {
+    if (this.unaCuota()) {
+      this.onUnicaCuotaChange();
+      return;
+    }
     const currentInstallments = this.installments();
     const totalAmount = this.selectedAmount();
     const numInstallments = currentInstallments.length;

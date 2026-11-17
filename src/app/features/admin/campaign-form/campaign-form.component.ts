@@ -1603,15 +1603,22 @@ export class CampaignFormComponent implements OnInit {
   /**
    * Exporta la campaña a Excel con dos hojas y estilos profesionales:
    * 1. Resumen: datos del preview con colores y formato
-   * 2. Clientes: documento y celular con tabla formateada
+   * 2. Clientes: documento y celular con tabla formateada, más las columnas de deuda
+   *    que el backend agrega cuando la subcartera trae una fila por deuda (en Interbank: CJ, CU y capital)
    */
   private exportCampaignToExcel(campaignId: number): void {
     // Obtener los contactos de la campaña
-    this.http.get<Array<{documento: string, celular: string}>>(
+    this.http.get<Array<{ documento: string; celular: string; [columna: string]: string }>>(
       `${environment.apiUrl}/contacts/campaign/${campaignId}/export`
     ).subscribe({
       next: async (contacts) => {
         console.log('Exportando', contacts.length, 'contactos a Excel');
+        const columnasDeuda = contacts.length
+          ? Object.keys(contacts[0]).filter(k => k !== 'documento' && k !== 'celular')
+          : [];
+        const totalColumnas = 3 + columnasDeuda.length;
+        const ultimaColumna = String.fromCharCode(64 + totalColumnas);
+        const columnasTabla = Array.from({ length: totalColumnas }, (_, i) => i + 1);
 
         // Crear workbook con ExcelJS
         const workbook = new Workbook();
@@ -1785,11 +1792,12 @@ export class CampaignFormComponent implements OnInit {
         wsClientes.columns = [
           { width: 5 },
           { width: 20 },
-          { width: 20 }
+          { width: 20 },
+          ...columnasDeuda.map(() => ({ width: 30 }))
         ];
 
         // Título
-        wsClientes.mergeCells('A1:C1');
+        wsClientes.mergeCells(`A1:${ultimaColumna}1`);
         const clientesTitle = wsClientes.getCell('A1');
         clientesTitle.value = `LISTA DE CONTACTOS - ${this.campaign.name}`;
         clientesTitle.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
@@ -1798,7 +1806,7 @@ export class CampaignFormComponent implements OnInit {
         wsClientes.getRow(1).height = 28;
 
         // Info de cantidad
-        wsClientes.mergeCells('A2:C2');
+        wsClientes.mergeCells(`A2:${ultimaColumna}2`);
         const countCell = wsClientes.getCell('A2');
         countCell.value = `Total: ${contacts.length} contactos`;
         countCell.font = { italic: true, color: { argb: '6B7280' } };
@@ -1806,7 +1814,7 @@ export class CampaignFormComponent implements OnInit {
 
         // Encabezados
         const clienteHeader = wsClientes.getRow(4);
-        ['#', 'DOCUMENTO', 'CELULAR'].forEach((h, idx) => {
+        ['#', 'DOCUMENTO', 'CELULAR', ...columnasDeuda].forEach((h, idx) => {
           const cell = clienteHeader.getCell(idx + 1);
           cell.value = h;
           cell.font = { bold: true, color: { argb: 'FFFFFF' } };
@@ -1822,10 +1830,13 @@ export class CampaignFormComponent implements OnInit {
           row.getCell(1).alignment = { horizontal: 'center' };
           row.getCell(2).value = c.documento || '';
           row.getCell(3).value = c.celular || '';
+          columnasDeuda.forEach((columna, i) => {
+            row.getCell(4 + i).value = c[columna] || '';
+          });
 
           // Alternar colores de fila
           const bgColor = idx % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
-          [1, 2, 3].forEach(col => {
+          columnasTabla.forEach(col => {
             row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
             row.getCell(col).border = this.getTableBorder();
           });
