@@ -473,6 +473,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  el bot disca y sin esto la pantalla se queda en la foto de cuando entraste. */
   private readonly REFRESCO_MS = 5000;
   private refresco?: ReturnType<typeof setInterval>;
+  private subSesiones?: Subscription;
+  private subResumen?: Subscription;
 
   constructor(private svc: BotVozService, private router: Router, private route: ActivatedRoute) {}
 
@@ -501,6 +503,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     clearInterval(this.refresco);
     this.subCola?.unsubscribe();
+    this.subSesiones?.unsubscribe();
+    this.subResumen?.unsubscribe();
     this.pararDemo();       // si no, la muestra sigue sonando al cambiar de pantalla
   }
 
@@ -518,7 +522,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private refrescar(): void {
     this.cargarColas();
     this.cargarContadores();
-    if (this.vista === 'llamadas') this.cargarSesiones();
+    if (this.vista === 'llamadas') this.cargarSesiones(true);
   }
 
   /**
@@ -748,6 +752,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
         if ((this.fechaLlamadas || this.hayFiltroCartera) && this.colaLlamadas != null
             && !this.colasFiltro.some((c) => c.id === this.colaLlamadas)) {
           this.colaLlamadas = null;
+          this.paginaSesiones = 1;
+          this.cargarSesiones();
         }
       },
       // Sin el histórico se pinta al menos lo que hay vivo: un selector vacío deja al
@@ -2810,10 +2816,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   // ----- Llamadas (monitoreo) -----
-  cargarSesiones(): void {
+  cargarSesiones(silencioso = false): void {
+    if (silencioso && this.subSesiones && !this.subSesiones.closed) return;
+    this.subSesiones?.unsubscribe();
+    this.subResumen?.unsubscribe();
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
     // Fecha vacia = todas las llamadas de la cola elegida, del dia que sean.
-    this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
+    this.subSesiones = this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
                          this.fechaLlamadas || null, g?.hablo ?? null,
                          this.busquedaLlamadas.trim() || null,
                          this.paginaSesiones - 1, this.TAM_PAGINA, this.filtroCarteraActual).subscribe({
@@ -2832,12 +2841,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
         // colas que existen hoy.
         this.componerColasFiltro();
       },
-      error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
+      error: () => {
+        this.errorSesiones = true;
+        if (!silencioso) this.flash('No se pudieron cargar las llamadas', true);
+      },
     });
     // Los contadores van aparte porque cuentan el día ENTERO en la base y la tabla
     // solo trae las 100 últimas de ese mismo día. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
     // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
+    this.subResumen = this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });
