@@ -26,10 +26,6 @@ import { FiltroSubcarteraComponent, SeleccionSubcartera } from '../reports/entre
         </p>
       </div>
 
-      <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-        <app-filtro-subcartera clave="excepciones.filtro" (seleccion)="onJerarquia($event)"></app-filtro-subcartera>
-      </div>
-
       <!-- Tabs -->
       <div class="mb-6">
         <div class="border-b border-gray-200 dark:border-gray-700">
@@ -308,6 +304,9 @@ import { FiltroSubcarteraComponent, SeleccionSubcartera } from '../reports/entre
 
       @if (tabActivo() === 'correos') {
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
+          <div class="mb-4">
+            <app-filtro-subcartera clave="excepciones.filtro" (seleccion)="onJerarquia($event)"></app-filtro-subcartera>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Desde</label>
@@ -601,7 +600,7 @@ export class ExcepcionesComponent implements OnInit {
   }
 
   cargarExcepciones(): void {
-    this.excepcionesService.getExcepcionesPendientes(this.currentPage(), this.pageSize, this.jerarquia())
+    this.excepcionesService.getExcepcionesPendientes(this.currentPage(), this.pageSize)
       .subscribe({
         next: (response) => {
           this.totalPages.set(response.totalPages);
@@ -615,11 +614,7 @@ export class ExcepcionesComponent implements OnInit {
 
   onJerarquia(s: SeleccionSubcartera): void {
     this.jerarquia.set({ idTenant: s.idProveedor, idCartera: s.idCartera, idSubcartera: s.idSubcartera });
-    this.currentPage.set(0);
-    this.cargarExcepciones();
-    if (this.tabActivo() === 'correos') {
-      this.cargarCorreos();
-    }
+    this.cargarCorreos();
   }
 
   cargarCorreos(): void {
