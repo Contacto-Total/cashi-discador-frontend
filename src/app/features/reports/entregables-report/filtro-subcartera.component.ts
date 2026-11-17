@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
@@ -71,6 +71,7 @@ const CLAVE = 'entregables.filtro';
 })
 export class FiltroSubcarteraComponent implements OnInit {
   @Output() seleccion = new EventEmitter<SeleccionSubcartera>();
+  @Input() clave = CLAVE;
 
   readonly ui = EUI;
 
@@ -85,11 +86,12 @@ export class FiltroSubcarteraComponent implements OnInit {
   };
 
   /** Lo que se intenta reponer al cargar: la última subcartera que se eligió. */
-  private recordado = this.leerRecordado();
+  private recordado: { idProveedor: number | null; idCartera: number | null; idSubcartera: number | null } | null = null;
 
   constructor(private comisionesService: ComisionesService) {}
 
   ngOnInit(): void {
+    this.recordado = this.leerRecordado();
     this.comisionesService.obtenerInquilinos().subscribe({
       next: (data) => {
         const activos = data.filter(p => p.estaActivo !== false);
@@ -181,7 +183,7 @@ export class FiltroSubcarteraComponent implements OnInit {
 
   private recordar(): void {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify(this.filtro));
+      localStorage.setItem(this.clave, JSON.stringify(this.filtro));
     } catch {
       // Sin almacenamiento disponible: solo deja de recordarse.
     }
@@ -189,7 +191,7 @@ export class FiltroSubcarteraComponent implements OnInit {
 
   private leerRecordado(): { idProveedor: number | null; idCartera: number | null; idSubcartera: number | null } | null {
     try {
-      const guardado = localStorage.getItem(CLAVE);
+      const guardado = localStorage.getItem(this.clave);
       return guardado ? JSON.parse(guardado) : null;
     } catch {
       return null;

@@ -7,11 +7,12 @@ import { ExcepcionesService, ExcepcionPendiente } from './excepciones.service';
 import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '../reports/excepciones-report/excepciones-report.service';
 import { FormatService } from '@/shared/services/format.service';
 import { AuthService } from '../../core/services/auth.service';
+import { FiltroSubcarteraComponent, SeleccionSubcartera } from '../reports/entregables-report/filtro-subcartera.component';
 
 @Component({
   selector: 'app-excepciones',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, FiltroSubcarteraComponent],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-6">
       <!-- Header -->
@@ -23,6 +24,10 @@ import { AuthService } from '../../core/services/auth.service';
         <p class="text-gray-600 dark:text-gray-400 mt-1">
           Gestion de promesas con montos personalizados
         </p>
+      </div>
+
+      <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <app-filtro-subcartera clave="excepciones.filtro" (seleccion)="onJerarquia($event)"></app-filtro-subcartera>
       </div>
 
       <!-- Tabs -->
@@ -547,6 +552,8 @@ export class ExcepcionesComponent implements OnInit {
   correoSelId = signal<number | null>(null);
   correoMensaje = signal('');
 
+  jerarquia = signal<{ idTenant: number | null; idCartera: number | null; idSubcartera: number | null }>(
+    { idTenant: null, idCartera: null, idSubcartera: null });
   correoExcepciones = signal<ExcepcionPendiente[]>([]);
   cargandoCorreos = signal(false);
 
@@ -594,7 +601,7 @@ export class ExcepcionesComponent implements OnInit {
   }
 
   cargarExcepciones(): void {
-    this.excepcionesService.getExcepcionesPendientes(this.currentPage(), this.pageSize)
+    this.excepcionesService.getExcepcionesPendientes(this.currentPage(), this.pageSize, this.jerarquia())
       .subscribe({
         next: (response) => {
           this.totalPages.set(response.totalPages);
@@ -606,9 +613,18 @@ export class ExcepcionesComponent implements OnInit {
       });
   }
 
+  onJerarquia(s: SeleccionSubcartera): void {
+    this.jerarquia.set({ idTenant: s.idProveedor, idCartera: s.idCartera, idSubcartera: s.idSubcartera });
+    this.currentPage.set(0);
+    this.cargarExcepciones();
+    if (this.tabActivo() === 'correos') {
+      this.cargarCorreos();
+    }
+  }
+
   cargarCorreos(): void {
     this.cargandoCorreos.set(true);
-    this.excepcionesService.getTodasPendientes().subscribe({
+    this.excepcionesService.getTodasPendientes(this.jerarquia()).subscribe({
       next: (lista) => {
         this.correoExcepciones.set(lista);
         this.cargandoCorreos.set(false);
@@ -801,8 +817,8 @@ export class ExcepcionesComponent implements OnInit {
     const castigo = `${e.nombreCartera} ${e.nombreSubcartera}`.toUpperCase().includes('CASTIGO');
     const interbank = (e.nombreTenant || '').toUpperCase().includes('INTERBANK');
     const contenido: { html: string; texto: string; motivo?: string } =
-      castigo && interbank ? this.correoIbk(e) : castigo ? this.correoCastigo(e) : this.correoTramo(e);
-    const tramo = castigo ? 'Castigo' : e.nombreCartera;
+      interbank ? this.correoIbk(e) : castigo ? this.correoCastigo(e) : this.correoTramo(e);
+    const tramo = interbank ? (e.nombreSubcartera || e.nombreCartera) : castigo ? 'Castigo' : e.nombreCartera;
     return {
       para: e.nombreAutorizador
         ? e.nombreAutorizador + (e.correoAutorizador ? ` <${e.correoAutorizador}>` : '')

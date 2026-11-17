@@ -3,6 +3,12 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface FiltroJerarquia {
+  idTenant?: number | null;
+  idCartera?: number | null;
+  idSubcartera?: number | null;
+}
+
 export interface CuotaExcepcion {
   numeroCuota: number;
   monto: number;
@@ -68,16 +74,12 @@ export class ExcepcionesService {
   /**
    * Obtiene excepciones pendientes paginadas
    */
-  getExcepcionesPendientes(page: number = 0, size: number = 20, idTenant?: number): Observable<PageResponse<ExcepcionPendiente>> {
+  getExcepcionesPendientes(page: number = 0, size: number = 20, filtro: FiltroJerarquia = {}): Observable<PageResponse<ExcepcionPendiente>> {
     this.cargando.set(true);
 
-    let params = new HttpParams()
+    const params = this.conFiltro(new HttpParams()
       .set('page', page.toString())
-      .set('size', size.toString());
-
-    if (idTenant) {
-      params = params.set('idTenant', idTenant.toString());
-    }
+      .set('size', size.toString()), filtro);
 
     return this.http.get<PageResponse<ExcepcionPendiente>>(
       `${this.baseUrl}/pendientes`,
@@ -91,12 +93,19 @@ export class ExcepcionesService {
     );
   }
 
-  getTodasPendientes(): Observable<ExcepcionPendiente[]> {
-    const params = new HttpParams().set('page', '0').set('size', '1000');
+  getTodasPendientes(filtro: FiltroJerarquia = {}): Observable<ExcepcionPendiente[]> {
+    const params = this.conFiltro(new HttpParams().set('page', '0').set('size', '1000'), filtro);
     return this.http.get<PageResponse<ExcepcionPendiente>>(
       `${this.baseUrl}/pendientes`,
       { headers: this.getHeaders(), params }
     ).pipe(map(response => response.content));
+  }
+
+  private conFiltro(params: HttpParams, filtro: FiltroJerarquia): HttpParams {
+    if (filtro.idTenant) params = params.set('idTenant', filtro.idTenant.toString());
+    if (filtro.idCartera) params = params.set('idCartera', filtro.idCartera.toString());
+    if (filtro.idSubcartera) params = params.set('idSubcartera', filtro.idSubcartera.toString());
+    return params;
   }
 
   /**
