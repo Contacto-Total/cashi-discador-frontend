@@ -596,9 +596,11 @@ export class SustentoTabComponent {
   readonly fuenteDetalle = input<(idPeriodo: number) => Observable<DetalleComision[]>>();
   /** De dónde salen los pagos que no suman; por defecto, todos los del período (módulo de comisiones) */
   readonly fuentePagos = input<(idPeriodo: number) => Observable<PagoSustento[]>>();
-  /** Cómo se arma lo que cobra: en Mis comisiones no se muestra */
+  /** De dónde salen los clientes contenidos; por defecto, los del módulo de comisiones */
+  readonly fuenteContenidos = input<(idPeriodo: number) => Observable<ClienteContenido[]>>();
+  /** Cómo se arma lo que cobra */
   readonly mostrarDesglose = input(true);
-  /** Pagos que no suman: solo los ve el responsable de comisiones; en Mis comisiones no se muestran */
+  /** Pagos que no suman: los ve el responsable de comisiones y, en Mis comisiones, el supervisor */
   readonly mostrarNoSuman = input(true);
   /** Persona elegida: id de usuario del asesor o 'sup' */
   readonly seleccion = model<number | 'sup' | null>(null);
@@ -1041,6 +1043,7 @@ export class SustentoTabComponent {
     }
     const fuente = this.fuenteDetalle() ?? ((id: number) => this.service.obtenerDetalle(id));
     const fuentePagos = this.fuentePagos() ?? ((id: number) => this.service.obtenerPagos(id));
+    const fuenteContenidos = this.fuenteContenidos() ?? ((id: number) => this.service.obtenerContenidos(id));
     const id = this.reporte().periodo.id;
     this.periodoCargado = id;
     // Los pagos excluidos y los contenidos son complementos: si fallan, el sustento se ve igual.
@@ -1048,7 +1051,7 @@ export class SustentoTabComponent {
       filas: fuente(id),
       pagos: fuentePagos(id).pipe(catchError(() => of<PagoSustento[]>([]))),
       contenidos: this.porCapital() && this.reporte().participantes.some(p => p.rol === 'SUPERVISOR')
-        ? this.service.obtenerContenidos(id).pipe(catchError(() => of(null))) : of<ClienteContenido[]>([])
+        ? fuenteContenidos(id).pipe(catchError(() => of(null))) : of<ClienteContenido[]>([])
     }).subscribe({
       next: ({ filas, pagos, contenidos }) => {
         this.filas.set(filas);

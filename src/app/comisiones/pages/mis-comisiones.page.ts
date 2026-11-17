@@ -14,8 +14,9 @@ function claveMes(p: { anio: number; mes: number }): number {
 }
 
 /**
- * Mis comisiones: cada usuario ve solo su sustento (el mismo de la pestaña Sustento del módulo de
+ * Mis comisiones: cada usuario ve su sustento (el mismo de la pestaña Sustento del módulo de
  * comisiones), de los períodos en los que participa y que ya se recalcularon. Solo lectura.
+ * El supervisor del período ve además a cada asesor de su equipo y los pagos que no suman (REQ-084).
  * El periodo se elige como en Comisiones (flechas y grilla del año); si un mes participa en más de una
  * subcartera, se elige cuál. El periodo vive en la URL (?periodo=id).
  */
@@ -101,7 +102,7 @@ function claveMes(p: { anio: number; mes: number }): number {
                 <p style="max-width:52ch">Aquí verás cuánto llevas y cómo se arma lo que cobras cuando se configure y recalcule un periodo en el que participas.</p>
               </div>
             } @else if (reporte(); as r) {
-              <cmx-sustento-tab [reporte]="r" [vista]="vistaSustento()!" [fuenteDetalle]="fuenteDetalle" [fuentePagos]="fuentePagos" [mostrarDesglose]="r.participantes[0]?.rol === 'ASESOR'" [mostrarNoSuman]="false" />
+              <cmx-sustento-tab [reporte]="r" [vista]="vistaSustento()!" [fuenteDetalle]="fuenteDetalle" [fuentePagos]="fuentePagos" [fuenteContenidos]="fuenteContenidos" [mostrarNoSuman]="actual()?.rol === 'SUPERVISOR'" />
             }
           </div>
         </div>
@@ -124,6 +125,7 @@ export class MisComisionesPage implements OnInit {
 
   readonly fuenteDetalle = (id: number) => this.service.miDetalle(id);
   readonly fuentePagos = (id: number) => this.service.misPagos(id);
+  readonly fuenteContenidos = (id: number) => this.service.misContenidos(id);
 
   readonly actual = computed(() => this.periodos()?.find(p => p.idPeriodo === this.idPeriodo()) ?? null);
 

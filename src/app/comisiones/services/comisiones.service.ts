@@ -163,7 +163,7 @@ export class ComisionesService {
       .pipe(map(contenidos => contenidos.map(aClienteContenido)));
   }
 
-  // ==================== MIS COMISIONES (solo lo del usuario de la sesión) ====================
+  // ==================== MIS COMISIONES (lo del usuario de la sesión; el supervisor, su equipo) ====================
 
   /** Períodos recalculados en los que participa, del más reciente al más antiguo */
   misPeriodos(): Observable<MiPeriodoComision[]> {
@@ -183,5 +183,11 @@ export class ComisionesService {
   /** Sus pagos, sumen o no (el supervisor, todos los del período) */
   misPagos(id: number): Observable<PagoSustento[]> {
     return this.http.get<PagoSustento[]>(`${this.baseUrl}/mis/${id}/pagos`);
+  }
+
+  /** Clientes contenidos que sustentan su logrado (solo el supervisor del período) */
+  misContenidos(id: number): Observable<ClienteContenido[]> {
+    return this.http.get<ClienteContenidoRespuesta[]>(`${this.baseUrl}/mis/${id}/contenidos`)
+      .pipe(map(contenidos => contenidos.map(aClienteContenido)));
   }
 }
