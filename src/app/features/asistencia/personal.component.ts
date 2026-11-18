@@ -12,8 +12,9 @@ import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
+import { AuthService } from '../../core/services/auth.service';
 import { AsistenciaService } from './asistencia.service';
-import { DatosPersonal, FichaPersonal, UsuarioLibre } from './asistencia.models';
+import { DatosPersonal, FichaPersonal, OtraCarteraPersonal, UsuarioLibre } from './asistencia.models';
 import { hoy, lunesDe, sumarDias } from './asistencia.estilos';
 import { AVATARES_PERSONAL } from './avatares-personal';
 import {
@@ -28,7 +29,7 @@ import { SegmentadoComponent } from './ui/segmentado.component';
 
 type Estado = 'ACTIVO' | 'CESADO';
 type Seccion = 'datos' | 'historial';
-type Accion = 'datos' | 'sub' | 'mod' | 'cese' | null;
+type Accion = 'datos' | 'sub' | 'mod' | 'cese' | 'otra' | 'quitar' | null;
 type Modalidad = 'PRESENCIAL' | 'TELETRABAJO';
 
 /** Los campos del formulario de datos, en el orden en que se revisan. */
@@ -400,6 +401,40 @@ const ANCHO_PERSONA_REM = 8;
                         <input id="f-mot" [class]="ENTRADA" placeholder="Queda en el historial" [value]="cambioMotivo()" (input)="cambioMotivo.set($any($event.target).value)">
                       </div>
                     }
+                    @case ('otra') {
+                      <div [class]="CAMPO">
+                        <label for="f-otra" [class]="ETIQUETA">Otra cartera</label>
+                        <select id="f-otra" [class]="LISTA" (change)="cambioSub.set(+$any($event.target).value)">
+                          @for (s of cambioSubcarteras(); track s.id) { <option [value]="s.id" [selected]="s.id === cambioSub()" [disabled]="s.id === p.idSubcartera">{{ rotuloSubcartera(s) }}{{ s.id === p.idSubcartera ? ' (la suya)' : '' }}</option> }
+                        </select>
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-desde" [class]="ETIQUETA">Desde</label>
+                        <input id="f-desde" type="date" [class]="ENTRADA" [value]="cambioDesde()" (change)="cambioDesde.set($any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-hasta" [class]="ETIQUETA">Hasta (opcional)</label>
+                        <input id="f-hasta" type="date" [class]="ENTRADA" [value]="cambioHasta()" (change)="cambioHasta.set($any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-mot" [class]="ETIQUETA">Motivo</label>
+                        <input id="f-mot" [class]="ENTRADA" placeholder="Queda en el historial" [value]="cambioMotivo()" (input)="cambioMotivo.set($any($event.target).value)">
+                      </div>
+                    }
+                    @case ('quitar') {
+                      <div [class]="CAMPO">
+                        <span [class]="ETIQUETA">Otra cartera</span>
+                        <span class="text-[.8125rem] font-semibold text-foreground">{{ otraElegida()?.subcartera | nombrePropio }}</span>
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-desde" [class]="ETIQUETA">Último día en esa cartera</label>
+                        <input id="f-desde" type="date" [class]="ENTRADA" [value]="cambioDesde()" (change)="cambioDesde.set($any($event.target).value)">
+                      </div>
+                      <div [class]="CAMPO">
+                        <label for="f-mot" [class]="ETIQUETA">Motivo</label>
+                        <input id="f-mot" [class]="ENTRADA" placeholder="Queda en el historial" [value]="cambioMotivo()" (input)="cambioMotivo.set($any($event.target).value)">
+                      </div>
+                    }
                     @case ('cese') {
                       <div [class]="CAMPO">
                         <label for="f-desde" [class]="ETIQUETA">Último día</label>
@@ -441,6 +476,25 @@ const ANCHO_PERSONA_REM = 8;
                 </div>
                 @if (!ces) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'sub')">Cambiar</button> }
               </div>
+              @if (otrasVigentes(p).length || (esAdmin && !ces)) {
+                <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 border-t border-(--line2) py-[.375rem]">
+                  <span class="text-[.8125rem] text-muted-foreground">Otra cartera</span>
+                  <div class="flex min-w-0 flex-col items-start gap-[.375rem] text-[.8125rem] font-semibold text-foreground">
+                    @for (o of otrasVigentes(p); track o.id) {
+                      <div class="flex w-full items-center justify-between gap-2">
+                        <span class="flex min-w-0 flex-col items-start gap-[.0625rem]">
+                          <span>{{ o.subcartera | nombrePropio }}</span>
+                          <small class="text-[.6875rem] font-medium text-muted-foreground">Desde el {{ dma(o.fechaDesde).slice(0, 5) }}{{ o.fechaHasta ? ' hasta el ' + dma(o.fechaHasta).slice(0, 5) : '' }}</small>
+                        </span>
+                        @if (esAdmin && !o.fechaHasta) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirQuitar(p, o)">Quitar</button> }
+                      </div>
+                    } @empty {
+                      <span class="font-medium text-muted-foreground">Ninguna</span>
+                    }
+                  </div>
+                  @if (esAdmin && !ces) { <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="abrirAccion(p, 'otra')">Asignar</button> }
+                </div>
+              }
               <div class="grid min-h-[2.75rem] grid-cols-[5.25rem_minmax(0,1fr)_auto] items-center gap-3 border-t border-(--line2) py-[.375rem]">
                 <span class="text-[.8125rem] text-muted-foreground">Modalidad</span>
                 <div class="flex min-w-0 flex-col items-start"><span [class]="modalidadDe(p) === 'TELETRABAJO' ? PILL.info : PILL.neu">{{ nombreModalidad(modalidadDe(p)) }}</span></div>
@@ -572,6 +626,8 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
   private readonly carterasServicio = inject(PortfolioService);
   private readonly toast = inject(ToastService);
   private readonly sanitizer = inject(DomSanitizer);
+  /** REQ-082: «Asignar otra cartera» lo usa la supervisora (ADMIN) directo, sin solicitud. */
+  protected readonly esAdmin = inject(AuthService).getCurrentUser()?.role === 'ADMIN';
 
   protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly REJILLA_FICHA = REJILLA_FICHA;
   protected readonly PRINCIPAL = PRINCIPAL; protected readonly CABECERA = CABECERA; protected readonly CABECERA_TEXTO = CABECERA_TEXTO;
@@ -597,7 +653,7 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
   protected readonly ESTADOS_CIVILES = ESTADOS_CIVILES;
   protected readonly MODALIDADES: Modalidad[] = ['PRESENCIAL', 'TELETRABAJO'];
   protected readonly SECCIONES: { clave: Seccion; texto: string }[] = [{ clave: 'datos', texto: 'Datos personales' }, { clave: 'historial', texto: 'Historial' }];
-  protected readonly TITULO_ACCION: Record<Exclude<Accion, null>, string> = { datos: 'Editar datos', sub: 'Cambiar subcartera', mod: 'Cambiar modalidad', cese: 'Registrar cese' };
+  protected readonly TITULO_ACCION: Record<Exclude<Accion, null>, string> = { datos: 'Editar datos', sub: 'Cambiar subcartera', mod: 'Cambiar modalidad', cese: 'Registrar cese', otra: 'Asignar otra cartera', quitar: 'Quitar otra cartera' };
 
   /** Los avatares, ya confiados: son SVG propios, no vienen del usuario. */
   private readonly avatares: SafeHtml[] = AVATARES_PERSONAL.map(a =>
@@ -634,6 +690,10 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
   readonly cambioSub = signal<number | null>(null);
   readonly cambioModalidad = signal<Modalidad>('TELETRABAJO');
   readonly cambioDesde = signal('');
+  /** Otra cartera: hasta cuándo (opcional) */
+  readonly cambioHasta = signal('');
+  /** Otra cartera que se va a quitar */
+  readonly otraElegida = signal<OtraCarteraPersonal | null>(null);
   readonly cambioMotivo = signal('');
   readonly ceseMotivo = signal(MOTIVOS_CESE[0]);
 
@@ -968,9 +1028,10 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
         direccion: p.direccion ?? '', distrito: p.distrito ?? '', fechaIngreso: p.fechaIngreso, idUsuario: p.idUsuario
       });
       this.cargarUsuariosLibres();
-    } else if (a === 'sub') {
-      // Los cambios rigen desde un lunes: el próximo.
-      this.cambioDesde.set(sumarDias(lunesDe(new Date()), 7));
+    } else if (a === 'sub' || a === 'otra') {
+      // Los cambios de subcartera rigen desde un lunes: el próximo. La otra cartera, desde cualquier día.
+      this.cambioDesde.set(a === 'sub' ? sumarDias(lunesDe(new Date()), 7) : hoy());
+      this.cambioHasta.set('');
       this.cambioSubcarteras.set([]);
       this.cambioSub.set(null);
       // Todas las subcarteras del cliente, de todas sus carteras, en un solo selector.
@@ -996,6 +1057,19 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.accion.set(a);
   }
 
+  /** Las otras carteras que todavía no terminaron (sin fin o con fin desde hoy). */
+  otrasVigentes(p: FichaPersonal): OtraCarteraPersonal[] {
+    return (p.otrasCarteras ?? []).filter(o => !o.fechaHasta || o.fechaHasta >= hoy());
+  }
+
+  abrirQuitar(p: FichaPersonal, o: OtraCarteraPersonal): void {
+    this.errorAccion.set('');
+    this.cambioMotivo.set('');
+    this.cambioDesde.set(hoy() < o.fechaDesde ? o.fechaDesde : hoy());
+    this.otraElegida.set(o);
+    this.accion.set('quitar');
+  }
+
   /** Nombre de la subcartera; si otra del cliente se llama igual, con su cartera al lado. */
   rotuloSubcartera(s: SubPortfolio): string {
     const pipe = new NombrePropioPipe(), nombre = pipe.transform(s.subPortfolioName);
@@ -1010,6 +1084,8 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
         ? 'Desde esa fecha sus horas cuentan como remotas sin pedir solicitud.'
         : 'Desde esa fecha sus horas cuentan como presenciales; para un día remoto pide Teletrabajo.';
       case 'cese': return 'Sale del reporte de asistencia después de su último día. Sus semanas anteriores no cambian.';
+      case 'otra': return `No es un cambio de cartera: sigue en ${new NombrePropioPipe().transform(p.subcartera ?? 'la suya')}. La otra cartera solo hace que aparezca para elegirla en Comisiones de esa subcartera. La asistencia y los reportes no cambian.`;
+      case 'quitar': return 'No se borra: los meses pasados se siguen calculando con los días en que sí la tuvo.';
       default: return '';
     }
   }
@@ -1025,6 +1101,16 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
       error = !nueva ? 'Elige la nueva subcartera' : nueva === p.idSubcartera ? 'Ya está en esa subcartera'
         : !desde ? 'Pon desde cuándo' : new Date(`${desde}T12:00:00`).getDay() !== 1 ? 'El cambio rige desde un lunes'
         : !motivo ? 'Escribe el motivo: queda en el historial' : '';
+    } else if (a === 'otra') {
+      const otra = this.cambioSub(), hasta = this.cambioHasta();
+      error = !otra ? 'Elige la otra cartera' : otra === p.idSubcartera ? 'Esa ya es su subcartera'
+        : !desde ? 'Pon desde cuándo' : desde < p.fechaIngreso ? `No puede ser antes de su ingreso, el ${this.dma(p.fechaIngreso)}`
+        : hasta && hasta < desde ? 'La fecha hasta no puede ser antes de la fecha desde'
+        : !motivo ? 'Escribe el motivo: queda en el historial' : '';
+    } else if (a === 'quitar') {
+      const o = this.otraElegida();
+      error = !o ? 'Elige la otra cartera' : !desde ? 'Pon el último día en esa cartera'
+        : desde < o.fechaDesde ? `No puede ser antes del ${this.dma(o.fechaDesde)}, cuando empezó` : '';
     } else if (a === 'mod') {
       error = this.cambioModalidad() === this.modalidadDe(p) ? `Ya está en ${this.nombreModalidad(this.cambioModalidad()).toLowerCase()}`
         : !desde ? 'Pon desde cuándo' : desde < p.fechaIngreso ? `No puede ser antes de su ingreso, el ${this.dma(p.fechaIngreso)}`
@@ -1036,6 +1122,8 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (error) return;
     this.guardando.set(true);
     const peticion = a === 'sub' ? this.servicio.cambiarSubcartera(p.id, { idSubcartera: this.cambioSub()!, fechaDesde: desde, motivo })
+      : a === 'otra' ? this.servicio.asignarOtraCartera(p.id, { idSubcartera: this.cambioSub()!, fechaDesde: desde, fechaHasta: this.cambioHasta() || null, motivo })
+      : a === 'quitar' ? this.servicio.quitarOtraCartera(p.id, this.otraElegida()!.id, { fechaHasta: desde, motivo: motivo || null })
       : a === 'mod' ? this.servicio.cambiarModalidad(p.id, { modalidad: this.cambioModalidad(), fechaDesde: desde, motivo })
       : this.servicio.registrarCese(p.id, { fecha: desde, motivo: this.ceseMotivo(), comentario: motivo || null });
     peticion.subscribe({
@@ -1044,6 +1132,8 @@ export class PersonalComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.reemplazar(ficha);
         this.accion.set(null);
         this.toast.success(a === 'sub' ? `${this.nombreCorto(ficha)} pasa a ${ficha.subcartera ?? 'la nueva subcartera'} desde el ${this.dma(desde).slice(0, 5)}`
+          : a === 'otra' ? `${this.nombreCorto(ficha)} también trabaja ${this.cambioSubcarteras().find(s => s.id === this.cambioSub())?.subPortfolioName ?? 'la otra cartera'} desde el ${this.dma(desde).slice(0, 5)}`
+          : a === 'quitar' ? `${this.nombreCorto(ficha)} deja ${this.otraElegida()?.subcartera ?? 'la otra cartera'} el ${this.dma(desde).slice(0, 5)}`
           : a === 'mod' ? `${this.nombreCorto(ficha)}: ${this.nombreModalidad(this.cambioModalidad()).toLowerCase()} desde el ${this.dma(desde).slice(0, 5)}`
           : `Cese de ${this.nombreCorto(ficha)} registrado`);
       },

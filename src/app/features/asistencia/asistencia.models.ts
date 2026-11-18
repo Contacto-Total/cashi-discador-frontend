@@ -628,7 +628,7 @@ export interface PersonalAsistencia {
 
 /** Un hito de la ficha: el ingreso, cada cambio de subcartera y el cese. */
 export interface MovimientoPersonal {
-  tipo: 'ingreso' | 'cambio' | 'modalidad' | 'cese';
+  tipo: 'ingreso' | 'cambio' | 'modalidad' | 'cese' | 'otra';
   fecha: string;
   titulo: string;
   detalle: string;
@@ -664,6 +664,19 @@ export interface FichaPersonal {
   /** PRESENCIAL o TELETRABAJO, hoy (o en su último día). */
   modalidad: 'PRESENCIAL' | 'TELETRABAJO' | null;
   movimientos: MovimientoPersonal[];
+  /** Otras carteras que trabaja sin dejar la suya (REQ-082); solo las lee Comisiones. */
+  otrasCarteras: OtraCarteraPersonal[];
+}
+
+/** Otra cartera de la persona (REQ-082). fechaHasta null = vigente. */
+export interface OtraCarteraPersonal {
+  id: number;
+  idSubcartera: number;
+  subcartera: string | null;
+  cartera: string | null;
+  fechaDesde: string;
+  fechaHasta: string | null;
+  motivo: string | null;
 }
 
 /** Lo que se manda al registrar o editar una ficha. */

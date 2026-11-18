@@ -3,7 +3,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ParticipanteComision, ReportePeriodo } from '../models/comision.model';
 import {
-  GRUPO_INFO, METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, partesComision, siguienteTramo, tramosDe, truncar2
+  GRUPO_INFO, METRICA_INFO, bonoCorto, bonosGanados, chipsMetas, construirBarra, diaMes, partesComision, siguienteTramo, tramosDe, truncar2,
+  fechasEnCartera
 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
@@ -79,7 +80,7 @@ import { CmxIconComponent } from './cmx-icon.component';
                   {{ a.nombre }}
                   <span class="cmx-role">Asesor</span>
                   @if (a.metaManual != null) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">Meta propia · excepción</span> }
-                  @else if (a.fechaIngreso) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">Ingresó {{ diaMes(a.fechaIngreso) }} · {{ a.diasHabiles }} de {{ p.diasHabiles }} días hábiles</span> }
+                  @if (fechas(a); as f) { <span class="cmx-tag cmx-tag-v" style="margin-top:3px">{{ f }} · {{ a.diasHabiles }} de {{ p.diasHabiles }} días hábiles</span> }
                   @if (!a.calculado) { <span class="cmx-tag cmx-tag-off" style="margin-top:3px">Entra al recalcular</span> }
                 </td>
                 <td class="n">{{ a.metaIndividual | appNumber:'1.2-2' }}</td>
@@ -209,7 +210,8 @@ export class ResultadosTabComponent {
 
   readonly asesores = computed(() => this.reporte().participantes
     .filter(p => p.rol === 'ASESOR')
-    .sort((a, b) => Number(a.metaManual != null || !!a.fechaIngreso) - Number(b.metaManual != null || !!b.fechaIngreso)
+    .sort((a, b) => Number(a.metaManual != null || !!a.fechaIngreso || !!a.fechaHasta)
+      - Number(b.metaManual != null || !!b.fechaIngreso || !!b.fechaHasta)
       || b.logrado - a.logrado));
 
   readonly conMetas = computed(() => (this.reporte().periodo.metasCantidad ?? []).length > 0);
@@ -226,7 +228,13 @@ export class ResultadosTabComponent {
 
   readonly totalAsesores = computed(() => this.asesores().reduce((s, a) => s + a.logrado, 0));
   readonly comisionAsesores = computed(() => this.asesores().reduce((s, a) => s + a.montoComision, 0));
-  readonly conMetaPropia = computed(() => this.asesores().filter(a => a.metaManual != null || !!a.fechaIngreso).length);
+  readonly conMetaPropia = computed(() => this.asesores().filter(a => a.metaManual != null || !!a.fechaIngreso || !!a.fechaHasta).length);
+
+  /** «Del 02/11 al 13/11» de quien no está todo el mes en la cartera (REQ-082) */
+  fechas(a: ParticipanteComision): string | null {
+    const p = this.reporte().periodo;
+    return fechasEnCartera(a.fechaIngreso, a.fechaHasta, p.anio, p.mes);
+  }
   readonly grupoInfo = GRUPO_INFO;
   readonly diaMes = diaMes;
   readonly truncar2 = truncar2;

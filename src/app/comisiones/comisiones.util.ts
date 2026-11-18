@@ -43,6 +43,18 @@ export function truncar2(valor: number | null | undefined): number {
 }
 
 /** dd/mm de una fecha ISO (yyyy-mm-dd) */
+/**
+ * REQ-082: «Del 02/11 al 13/11» para un asesor que no está todo el mes en la cartera; null si está todo el mes.
+ * desde null = día 1, hasta null = fin de mes.
+ */
+export function fechasEnCartera(desde: string | null | undefined, hasta: string | null | undefined, anio: number, mes: number): string | null {
+  if (!desde && !hasta) {
+    return null;
+  }
+  const mm = String(mes).padStart(2, '0');
+  return `Del ${diaMes(desde ?? `${anio}-${mm}-01`)} al ${diaMes(hasta ?? `${anio}-${mm}-${new Date(anio, mes, 0).getDate()}`)}`;
+}
+
 export function diaMes(fechaIso: string | null | undefined): string {
   if (!fechaIso) {
     return '';
@@ -103,7 +115,10 @@ export const MOTIVO_INFO: Record<MotivoExclusion, string> = {
   YA_CONTENIDO: 'Cliente ya venía contenido',
   PDP_DESPUES_CONTENCION: 'PDP después de la contención',
   SIN_BAJA30: 'Cliente sin baja 30',
-  PDP_MENOR_BAJA30: 'PDP menor a la baja 30'
+  PDP_MENOR_BAJA30: 'PDP menor a la baja 30',
+  CLIENTE_OTRA_CARTERA: 'Cliente de la otra cartera',
+  CLIENTE_DOS_CARTERAS: 'Cliente con cuentas en las dos carteras',
+  CLIENTE_SIN_CARTERA: 'Cliente sin periodo de compra'
 };
 
 /** Por qué un cliente no cuadra contra el consolidado mensual del banco (ver BcpConsolidadoService) */
@@ -144,7 +159,12 @@ export const ACCION_INFO: Record<AccionAuditoria, string> = {
  * Es la misma regla del backend.
  */
 export function diasHabilesDesde(anio: number, mes: number, desdeDia: number, feriados: string[]): number {
-  const fin = new Date(anio, mes, 0).getDate();
+  return diasHabilesEntre(anio, mes, desdeDia, null, feriados);
+}
+
+/** Días hábiles del mes entre dos días (inclusive), lunes a viernes sin feriados; hastaDia null = fin de mes */
+export function diasHabilesEntre(anio: number, mes: number, desdeDia: number, hastaDia: number | null, feriados: string[]): number {
+  const fin = Math.min(hastaDia ?? 31, new Date(anio, mes, 0).getDate());
   const fuera = new Set(feriados.map(f => f.slice(0, 10)));
   let dias = 0;
   for (let d = Math.max(desdeDia, 1); d <= fin; d++) {

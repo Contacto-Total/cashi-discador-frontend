@@ -4,7 +4,7 @@ import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { ComisionesService } from '../services/comisiones.service';
 import { Observable, Subscription, catchError, forkJoin, of } from 'rxjs';
 import { ClienteContenido, DetalleComision, EscalaComision, LineaDesglose, PagoSustento, ReportePeriodo, VistaSustento } from '../models/comision.model';
-import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, MESES, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe, truncar2 } from '../comisiones.util';
+import { CUADRE_INFO, DiaDetalle, GRUPO_INFO, MESES, METRICA_INFO, MOTIVO_INFO, PARCIAL_EN_ESPERA, agruparContenidosPorDia, agruparPagosPorDia, agruparPorDia, diaMes, mensajeError, siguienteTramo, tramosDe, truncar2, fechasEnCartera } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
 
 interface Persona {
@@ -13,7 +13,7 @@ interface Persona {
   esSupervisor: boolean;
   meta: number | null;
   metaPropia: boolean;
-  /** Ingresó a mitad de mes: "Ingresó el 15/09: 12 de 22 días hábiles" */
+  /** No está todo el mes en la cartera: "del 02/11 al 13/11: 10 de 21 días hábiles" */
   ingreso: string | null;
   logrado: number;
   porcentaje: number | null;
@@ -644,8 +644,8 @@ export class SustentoTabComponent {
         esSupervisor: false,
         meta: a.metaIndividual,
         metaPropia: a.metaManual != null,
-        ingreso: a.fechaIngreso && a.metaManual == null
-          ? `ingresó el ${diaMes(a.fechaIngreso)}: ${a.diasHabiles} de ${r.periodo.diasHabiles} días hábiles` : null,
+        ingreso: a.fechaIngreso || a.fechaHasta
+          ? `${fechasEnCartera(a.fechaIngreso, a.fechaHasta, r.periodo.anio, r.periodo.mes)!.toLowerCase()}: ${a.diasHabiles} de ${r.periodo.diasHabiles} días hábiles` : null,
         logrado: a.logrado,
         porcentaje: a.porcentajeCumplimiento,
         nivel: a.porcentajeTramo,
