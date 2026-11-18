@@ -16,9 +16,15 @@ import {
   VistaPeriodo
 } from '../models/comision.model';
 import {
-  GRUPO_INFO, METRICA_INFO, TIPOS_META, codigoPeriodo, diaMes, diasHabilesDesde, mensajeError, metasParaEditar
+  GRUPO_INFO, METRICA_INFO, TIPOS_META, codigoPeriodo, diaMes, diasHabilesEntre, mensajeError, metasParaEditar
 } from '../comisiones.util';
 import { CmxIconComponent } from './cmx-icon.component';
+
+/** Fechas de un asesor en la cartera dentro del mes (yyyy-mm-dd); null = desde el día 1 / hasta fin de mes */
+interface FechasCartera {
+  desde: string | null;
+  hasta: string | null;
+}
 
 interface Nivel {
   clave: number;
@@ -142,8 +148,9 @@ let secuencia = 0;
           </div>
           <div class="cmx-card-b">
             <p class="cmx-hint" style="margin:0 0 10px">
-              Salen de <b>Personal</b>: quienes tienen asignada {{ vista().nombreSubcartera }} en algún día de {{ codigo() }} y no cesaron antes del mes.
-              @if (grupo()) { Cada persona va en <b>una sola</b> cartera: quien ya está en la otra aparece bloqueado. }
+              Salen de <b>Personal</b>: quienes tienen asignada {{ vista().nombreSubcartera }} en algún día de {{ codigo() }}, como su subcartera
+              o como otra cartera, y no cesaron antes del mes. Sus fechas en la cartera también salen de Personal; si no son correctas, usa «Cambiar fechas».
+              @if (grupo()) { Quien está en CP Antigua y en CP Nueva suma en cada una solo los clientes de esa cartera. }
             </p>
 
             <div class="cmx-divisor">
@@ -163,19 +170,24 @@ let secuencia = 0;
               @for (u of candidatos(); track u.idUsuario) {
                 @let dentro = asesores().has(u.idUsuario);
                 @let propia = asesores().get(u.idUsuario);
-                @let ingreso = ingresos().get(u.idUsuario);
+                @let f = fechas().get(u.idUsuario);
                 <div class="cmx-prow" [class.is-out]="!dentro">
                   <label class="cmx-prow-nm" [for]="'cmx-ase-' + u.idUsuario">
-                    <input type="checkbox" [id]="'cmx-ase-' + u.idUsuario" [checked]="dentro" [disabled]="soloLectura() || (!!u.participaEn && !dentro)"
+                    <input type="checkbox" [id]="'cmx-ase-' + u.idUsuario" [checked]="dentro" [disabled]="soloLectura()"
                            (change)="alternarAsesor(u.idUsuario)" />
                     <span>{{ u.nombre || 'Usuario ' + u.idUsuario }}</span>
+                    @if (u.otraCartera) { <span class="cmx-tag cmx-tag-b" title="Asignada en Personal como otra cartera">Otra cartera</span> }
                   </label>
-                  @if (u.participaEn && !dentro) {
-                    <span class="cmx-prow-st">Participa en {{ u.participaEn }}</span>
-                  } @else if (dentro) {
-                    @if (ingreso && propia == null) {
-                      <span class="cmx-tag cmx-tag-v">Ingresó {{ diaMes(ingreso) }}</span>
-                      <span class="cmx-prow-st">S/ {{ metaIngreso(ingreso) | appNumber:'1.2-2' }} · {{ diasDe(ingreso) }} de {{ vista().diasHabiles }} días hábiles</span>
+                  @if (dentro) {
+                    @if (f) {
+                      <span class="cmx-tag cmx-tag-v">{{ textoFechas(f) }}</span>
+                      <span class="cmx-prow-st">{{ diasDe(f) }} de {{ vista().diasHabiles }} días hábiles</span>
+                    }
+                    @if (f && propia == null) {
+                      <span class="cmx-prow-st">S/ {{ metaParcial(f) | appNumber:'1.2-2' }}</span>
+                      @if (!soloLectura()) {
+                        <button type="button" class="cmx-btn cmx-btn-link" (click)="ponerMetaPropia(u.idUsuario)">Meta propia</button>
+                      }
                     } @else if (propia != null) {
                       <span class="cmx-tag cmx-tag-v">Meta propia</span>
                       <span class="cmx-money">
@@ -194,6 +206,31 @@ let secuencia = 0;
                         <button type="button" class="cmx-btn cmx-btn-link" (click)="ponerMetaPropia(u.idUsuario)">Meta propia</button>
                       }
                     }
+                    @if (!soloLectura()) {
+                      <button type="button" class="cmx-btn cmx-btn-link" (click)="alternarEdicionFechas(u.idUsuario)">Cambiar fechas</button>
+                    }
+                    @if (u.participaEn) {
+                      <span class="cmx-prow-st" style="flex-basis:100%;padding-left:26px">
+                        También en {{ u.participaEn }}: aquí suma solo los clientes de {{ grupoInfo[grupo()!] }}.
+                      </span>
+                    }
+                    @if (!soloLectura() && difiereDePersonal(u)) {
+                      <span class="cmx-prow-st" style="flex-basis:100%;padding-left:26px">
+                        En Personal: {{ textoFechas({ desde: u.fechaDesde, hasta: u.fechaHasta }) }}.
+                        <button type="button" class="cmx-btn cmx-btn-link" (click)="usarFechasDePersonal(u)">Usar esas fechas</button>
+                      </span>
+                    }
+                    @if (editandoFechas() === u.idUsuario && !soloLectura()) {
+                      <div class="cmx-prow-st" style="flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-left:26px">
+                        <label [for]="'cmx-fd-' + u.idUsuario">Desde</label>
+                        <input [id]="'cmx-fd-' + u.idUsuario" type="date" class="cmx-fdate" [min]="primerDia()" [max]="ultimoDia()"
+                               [value]="f?.desde ?? primerDia()" (change)="cambiarFecha(u.idUsuario, 'desde', $any($event.target).value)" />
+                        <label [for]="'cmx-fh-' + u.idUsuario">hasta</label>
+                        <input [id]="'cmx-fh-' + u.idUsuario" type="date" class="cmx-fdate" [min]="primerDia()" [max]="ultimoDia()"
+                               [value]="f?.hasta ?? ultimoDia()" (change)="cambiarFecha(u.idUsuario, 'hasta', $any($event.target).value)" />
+                        <button type="button" class="cmx-btn cmx-btn-link" (click)="editandoFechas.set(null)">Listo</button>
+                      </div>
+                    }
                   } @else {
                     <span class="cmx-prow-st">No participa</span>
                   }
@@ -202,8 +239,9 @@ let secuencia = 0;
             }
             <p class="cmx-hint">
               Cada asesor tiene la meta del mes entre <b>{{ divisor() }}</b>: <b>S/ {{ metaPorAsesor() | appNumber:'1.2-2' }}</b>.
-              Una meta propia cambia solo a ese asesor. Quien ingresa a mitad de mes («Agregar participante» en Resultados)
-              recibe esa meta por sus días hábiles entre los días hábiles del mes.
+              Una meta propia cambia solo a ese asesor. Quien no está todo el mes en la cartera recibe esa meta por sus días
+              hábiles en la cartera entre los días hábiles del mes; sus metas de gestiones, PDP y pagos también van por sus días,
+              aunque tenga meta propia.
             </p>
           </div>
         </section>
@@ -324,7 +362,7 @@ let secuencia = 0;
           <div class="cmx-prev-t">{{ soloLectura() ? 'Configuración congelada' : 'Lo que vas a guardar' }}</div>
           <div class="cmx-prev-r"><span>Métrica</span><b class="is-txt">{{ tipoMetrica() ? metricaInfo[tipoMetrica()!].etiqueta : '—' }}</b></div>
           @if (grupo(); as g) { <div class="cmx-prev-r"><span>Cartera</span><b class="is-txt">{{ grupoInfo[g] }}</b></div> }
-          <div class="cmx-prev-r"><span>Asesores</span><b>{{ asesores().size }}@if (conMetaPropiaOIngreso()) { <small class="is-txt"> ({{ conMetaPropiaOIngreso() }} con meta propia o ingreso)</small> }</b></div>
+          <div class="cmx-prev-r"><span>Asesores</span><b>{{ asesores().size }}@if (conMetaPropiaOIngreso()) { <small class="is-txt"> ({{ conMetaPropiaOIngreso() }} con meta propia o parte del mes)</small> }</b></div>
           <div class="cmx-prev-r"><span>Supervisor</span><b class="is-txt">{{ nombreSupervisor() }}</b></div>
           <div class="cmx-prev-r"><span>Meta del mes</span><b>S/ {{ metaDelMes() ?? 0 | appNumber:'1.2-2' }}</b></div>
           <div class="cmx-prev-r"><span>Niveles asesor / supervisor</span><b>{{ nivelesAsesor().length }} / {{ nivelesSupervisor().length }}</b></div>
@@ -374,8 +412,10 @@ export class ConfiguracionTabComponent {
   readonly tipoMetrica = signal<TipoMetrica | null>(null);
   /** idUsuario → meta propia (null = divide la meta del mes) */
   readonly asesores = signal<Map<number, number | null>>(new Map());
-  /** idUsuario → fecha de ingreso (yyyy-mm-dd) de quien entró a mitad de mes; se agrega desde Resultados */
-  readonly ingresos = signal<Map<number, string>>(new Map());
+  /** idUsuario → sus fechas en la cartera, solo de quien no está todo el mes (salen de Personal o de «Cambiar fechas») */
+  readonly fechas = signal<Map<number, FechasCartera>>(new Map());
+  /** Asesor con las fechas abiertas para corregir */
+  readonly editandoFechas = signal<number | null>(null);
   readonly idSupervisor = signal<number | null>(null);
   /** En Tramo Propio, la meta de la cartera escrita a mano */
   readonly metaAjustada = signal<number | null>(null);
@@ -408,14 +448,19 @@ export class ConfiguracionTabComponent {
   /** Cartera de Tramo Propio; null en las demás subcarteras */
   readonly grupo = computed(() => this.vista().grupo !== 'GENERAL' ? this.vista().grupo : null);
   readonly metaDelMes = computed(() => this.grupo() ? this.metaAjustada() : this.metaAjustada() ?? this.vista().metaInterna);
-  /** Candidatos que se pueden elegir (sin los que ya están en la otra cartera) */
-  readonly disponibles = computed(() => this.candidatos().filter(u => !u.participaEn || this.asesores().has(u.idUsuario)).length);
-  /** Entre cuánto se divide la meta del mes; sin escribirlo, los asesores marcados (sin los que ingresan a mitad de mes) */
+  /** Candidatos que se pueden elegir */
+  readonly disponibles = computed(() => this.candidatos().length);
+  /** Entre cuánto se divide la meta del mes; sin escribirlo, los asesores marcados (sin los que no están todo el mes) */
   readonly divisor = computed(() => this.divisorEscrito()
-    ?? Math.max([...this.asesores().keys()].filter(id => !this.ingresos().has(id)).length, 1));
+    ?? Math.max([...this.asesores().keys()].filter(id => !this.fechas().has(id)).length, 1));
   readonly metaPorAsesor = computed(() => this.divisor() > 0 ? (this.metaDelMes() ?? 0) / this.divisor() : 0);
   readonly conMetaPropiaOIngreso = computed(() =>
-    [...this.asesores().entries()].filter(([id, m]) => m != null || this.ingresos().has(id)).length);
+    [...this.asesores().entries()].filter(([id, m]) => m != null || this.fechas().has(id)).length);
+  readonly primerDia = computed(() => `${this.vista().anio}-${String(this.vista().mes).padStart(2, '0')}-01`);
+  readonly ultimoDia = computed(() => {
+    const { anio, mes } = this.vista();
+    return `${anio}-${String(mes).padStart(2, '0')}-${new Date(anio, mes, 0).getDate()}`;
+  });
   readonly nombreSupervisor = computed(() => {
     const id = this.idSupervisor();
     return id == null ? 'Sin supervisor' : this.supervisores().find(s => s.idUsuario === id)?.nombre || 'Usuario ' + id;
@@ -445,7 +490,8 @@ export class ConfiguracionTabComponent {
       asesores: [...this.asesores().entries()].map(([idUsuario, metaManual]) => ({
         idUsuario,
         metaManual,
-        fechaIngreso: this.ingresos().get(idUsuario) ?? null
+        fechaIngreso: this.fechas().get(idUsuario)?.desde ?? null,
+        fechaHasta: this.fechas().get(idUsuario)?.hasta ?? null
       })),
       idSupervisor: this.idSupervisor(),
       metaAjustada: this.metaAjustada(),
@@ -543,16 +589,74 @@ export class ConfiguracionTabComponent {
     return rol === 'ASESOR' ? this.nivelesAsesor() : this.nivelesSupervisor();
   }
 
-  /** Días hábiles que trabaja quien ingresó en esa fecha (inclusive) */
-  diasDe(fecha: string): number {
+  /** Días hábiles en la cartera entre sus fechas (inclusive) */
+  diasDe(f: FechasCartera): number {
     const v = this.vista();
-    return diasHabilesDesde(v.anio, v.mes, Number(fecha.slice(8, 10)), v.feriados);
+    return diasHabilesEntre(v.anio, v.mes, f.desde ? Number(f.desde.slice(8, 10)) : 1,
+      f.hasta ? Number(f.hasta.slice(8, 10)) : null, v.feriados);
   }
 
-  /** Meta de quien ingresó: meta del mes ÷ divisor × sus días ÷ días hábiles del mes */
-  metaIngreso(fecha: string): number {
+  /** Meta de quien no está todo el mes: meta del mes ÷ divisor × sus días ÷ días hábiles del mes */
+  metaParcial(f: FechasCartera): number {
     const diasMes = this.vista().diasHabiles;
-    return diasMes ? this.metaPorAsesor() * this.diasDe(fecha) / diasMes : 0;
+    return diasMes ? this.metaPorAsesor() * this.diasDe(f) / diasMes : 0;
+  }
+
+  /** «Del 02/11 al 13/11» */
+  textoFechas(f: FechasCartera): string {
+    if (!f.desde && !f.hasta) {
+      return 'Todo el mes';
+    }
+    return `Del ${diaMes(f.desde ?? this.primerDia())} al ${diaMes(f.hasta ?? this.ultimoDia())}`;
+  }
+
+  /** Las fechas de Personal, sin los extremos del mes (null = todo el mes) */
+  private fechasDePersonal(u: CandidatoAsesor): FechasCartera | null {
+    return u.fechaDesde || u.fechaHasta ? { desde: u.fechaDesde, hasta: u.fechaHasta } : null;
+  }
+
+  /** Las fechas del asesor marcado no son las que dice Personal */
+  difiereDePersonal(u: CandidatoAsesor): boolean {
+    const actual = this.fechas().get(u.idUsuario) ?? null;
+    const personal = this.fechasDePersonal(u);
+    return (actual?.desde ?? null) !== (personal?.desde ?? null) || (actual?.hasta ?? null) !== (personal?.hasta ?? null);
+  }
+
+  usarFechasDePersonal(u: CandidatoAsesor): void {
+    this.ponerFechas(u.idUsuario, this.fechasDePersonal(u));
+  }
+
+  alternarEdicionFechas(idUsuario: number): void {
+    this.editandoFechas.set(this.editandoFechas() === idUsuario ? null : idUsuario);
+  }
+
+  /** Corrige una fecha; el día 1 y el fin de mes se guardan como «sin fecha» (todo el mes) */
+  cambiarFecha(idUsuario: number, campo: 'desde' | 'hasta', valor: string): void {
+    const actual = this.fechas().get(idUsuario) ?? { desde: null, hasta: null };
+    const limpio = !valor || (campo === 'desde' && valor <= this.primerDia()) || (campo === 'hasta' && valor >= this.ultimoDia())
+      ? null : valor;
+    const nuevas = { ...actual, [campo]: limpio };
+    if (nuevas.desde && nuevas.hasta && nuevas.hasta < nuevas.desde) {
+      this.toast.warning('La fecha hasta no puede ser antes de la fecha desde.');
+      return;
+    }
+    if (this.diasDe(nuevas) <= 0) {
+      this.toast.warning('Entre esas fechas no hay días hábiles.');
+      return;
+    }
+    this.ponerFechas(idUsuario, nuevas.desde || nuevas.hasta ? nuevas : null);
+  }
+
+  private ponerFechas(idUsuario: number, f: FechasCartera | null): void {
+    this.fechas.update(m => {
+      const n = new Map(m);
+      if (f) {
+        n.set(idUsuario, f);
+      } else {
+        n.delete(idUsuario);
+      }
+      return n;
+    });
   }
 
   // ==================== EDICIÓN ====================
@@ -572,20 +676,25 @@ export class ConfiguracionTabComponent {
       const n = new Map(m);
       if (n.has(idUsuario)) {
         n.delete(idUsuario);
-        this.ingresos.update(i => { const c = new Map(i); c.delete(idUsuario); return c; });
+        this.ponerFechas(idUsuario, null);
       } else {
         n.set(idUsuario, null);
+        // Sus fechas en la cartera salen de Personal
+        const u = this.candidatos().find(c => c.idUsuario === idUsuario);
+        this.ponerFechas(idUsuario, u ? this.fechasDePersonal(u) : null);
       }
       return n;
     });
   }
 
   marcarTodos(): void {
+    const nuevos = this.candidatos().filter(u => !this.asesores().has(u.idUsuario));
     this.asesores.update(m => {
       const n = new Map(m);
-      this.candidatos().forEach(u => { if (!n.has(u.idUsuario) && !u.participaEn) { n.set(u.idUsuario, null); } });
+      nuevos.forEach(u => n.set(u.idUsuario, null));
       return n;
     });
+    nuevos.forEach(u => this.ponerFechas(u.idUsuario, this.fechasDePersonal(u)));
   }
 
   ponerMetaPropia(idUsuario: number): void {
@@ -689,9 +798,10 @@ export class ConfiguracionTabComponent {
     // Mes nuevo: sin métrica elegida; la trae "Copiar configuración" o la elige quien configura
     this.tipoMetrica.set(p?.tipoMetrica ?? null);
     this.asesores.set(new Map(participantes.filter(x => x.rol === 'ASESOR').map(x => [x.idUsuario, x.metaManual])));
-    this.ingresos.set(new Map(participantes
-      .filter(x => x.rol === 'ASESOR' && x.fechaIngreso)
-      .map(x => [x.idUsuario, x.fechaIngreso!.slice(0, 10)])));
+    this.fechas.set(new Map(participantes
+      .filter(x => x.rol === 'ASESOR' && (x.fechaIngreso || x.fechaHasta))
+      .map(x => [x.idUsuario, { desde: x.fechaIngreso?.slice(0, 10) ?? null, hasta: x.fechaHasta?.slice(0, 10) ?? null }])));
+    this.editandoFechas.set(null);
     this.idSupervisor.set(participantes.find(x => x.rol === 'SUPERVISOR')?.idUsuario ?? null);
     this.metaAjustada.set(p?.metaAjustada ?? null);
     this.divisorEscrito.set(p?.divisorMeta ?? null);

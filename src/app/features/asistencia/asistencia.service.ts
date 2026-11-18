@@ -520,6 +520,16 @@ export class AsistenciaService {
     return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/cese`, cuerpo);
   }
 
+  /** REQ-082: otra cartera sin quitarle la suya. Solo ADMIN. */
+  asignarOtraCartera(id: number, cuerpo: { idSubcartera: number; fechaDesde: string; fechaHasta: string | null; motivo: string }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/otra-cartera`, cuerpo);
+  }
+
+  /** Le pone el último día a la otra cartera; no la borra. */
+  quitarOtraCartera(id: number, idOtra: number, cuerpo: { fechaHasta: string; motivo: string | null }): Observable<FichaPersonal> {
+    return this.http.post<FichaPersonal>(`${environment.apiUrl}/personal/${id}/otra-cartera/${idOtra}/quitar`, cuerpo);
+  }
+
   // ==================== VACACIONES ====================
 
   /** Los asesores del ámbito (sin subcartera, todos), también los que cesaron. */

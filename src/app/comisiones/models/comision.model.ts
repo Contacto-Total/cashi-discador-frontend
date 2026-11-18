@@ -118,12 +118,17 @@ export interface LineaDesglose {
   monto: number;
 }
 
-/** Candidato a asesor: el personal con la subcartera asignada en el mes */
+/** Candidato a asesor: el personal con la subcartera asignada en el mes (como suya o como otra cartera) */
 export interface CandidatoAsesor {
   idUsuario: number;
   nombre: string | null;
-  /** Tramo Propio: la otra cartera en la que ya es asesor este mes (no se puede elegir); null si está libre */
+  /** Tramo Propio: la otra cartera en la que también es asesor este mes (se puede elegir igual); null si no */
   participaEn: string | null;
+  /** Sus fechas en la subcartera dentro del mes según Personal (yyyy-mm-dd); null = desde el día 1 / hasta fin de mes */
+  fechaDesde: string | null;
+  fechaHasta: string | null;
+  /** Está por la otra cartera asignada en Personal, no porque sea su subcartera */
+  otraCartera: boolean;
 }
 
 /** Candidato a supervisor */
@@ -185,9 +190,11 @@ export interface ParticipanteComision {
   metaIndividual: number | null;
   /** Meta propia (excepción); null = meta del mes ÷ divisor del período */
   metaManual: number | null;
-  /** Ingresó a mitad de mes (yyyy-mm-dd); null = mes completo */
+  /** Desde cuándo está en la cartera (yyyy-mm-dd); null = desde el día 1 */
   fechaIngreso: string | null;
-  /** Días hábiles que trabaja en el mes */
+  /** Hasta cuándo está en la cartera (yyyy-mm-dd); null = hasta fin de mes */
+  fechaHasta?: string | null;
+  /** Días hábiles en la cartera en el mes */
   diasHabiles: number | null;
   /** false = entró después del último recálculo */
   calculado: boolean;
@@ -275,8 +282,10 @@ export interface MesPeriodo {
 export interface AsesorConfig {
   idUsuario: number;
   metaManual: number | null;
-  /** Ingresó a mitad de mes (se conserva al guardar) */
+  /** Desde cuándo está en la cartera; null = desde el día 1 */
   fechaIngreso: string | null;
+  /** Hasta cuándo está en la cartera; null = hasta fin de mes */
+  fechaHasta: string | null;
 }
 
 /** Configuración de un mes (guardar o simular) */
@@ -304,6 +313,8 @@ export interface AgregarParticipanteRequest {
   idUsuario: number;
   /** yyyy-mm-dd, dentro del mes del período */
   fechaIngreso: string;
+  /** Último día en la cartera; null = hasta fin de mes */
+  fechaHasta?: string | null;
 }
 
 /** Cliente CONTENIDO de la tabla del mes: sustento del logrado del supervisor en contención */
@@ -381,7 +392,10 @@ export type MotivoExclusion =
   | 'YA_CONTENIDO'
   | 'PDP_DESPUES_CONTENCION'
   | 'SIN_BAJA30'
-  | 'PDP_MENOR_BAJA30';
+  | 'PDP_MENOR_BAJA30'
+  | 'CLIENTE_OTRA_CARTERA'
+  | 'CLIENTE_DOS_CARTERAS'
+  | 'CLIENTE_SIN_CARTERA';
 
 /** Un pago conciliado del período (comision_resultado_pago), sume o no */
 export interface PagoSustento {

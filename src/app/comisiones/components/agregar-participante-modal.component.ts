@@ -106,8 +106,8 @@ export class AgregarParticipanteModalComponent implements OnInit {
   });
   readonly libres = computed(() => {
     const dentro = new Set(this.reporte().participantes.map(p => p.idUsuario));
-    // Quien ya es asesor de la otra cartera de Tramo Propio no se puede agregar
-    return this.candidatos().filter(u => !dentro.has(u.idUsuario) && !u.participaEn);
+    // En Tramo Propio también se puede agregar a quien ya es asesor de la otra cartera (REQ-082)
+    return this.candidatos().filter(u => !dentro.has(u.idUsuario));
   });
 
   readonly error = computed(() => {
@@ -132,7 +132,7 @@ export class AgregarParticipanteModalComponent implements OnInit {
     const p = this.reporte().periodo;
     const diasMes = p.diasHabiles;
     const mesCompleto = this.reporte().participantes
-      .filter(x => x.rol === 'ASESOR' && x.metaManual == null && x.fechaIngreso == null).length;
+      .filter(x => x.rol === 'ASESOR' && x.metaManual == null && x.fechaIngreso == null && !x.fechaHasta).length;
     const metaBase = p.metaDelMes / (p.divisorMeta ?? Math.max(mesCompleto, 1));
     const dias = this.dias();
     const metas = p.tipoMetrica === 'CONTENCION'
