@@ -539,7 +539,8 @@ const NUM_CAJA = 'flex h-[30px] items-center gap-1.5 rounded-lg border border-[#
                                                 </div>
                                               </td>
                                               <td class="w-[130px] py-1 pr-2.5">
-                                                <span [class]="numCaja">
+                                                <!-- Ancho mínimo: si la tabla no alcanza, no se come el monto -->
+                                                <span [class]="numCaja + ' min-w-[120px]'">
                                                   <span class="text-[11.5px] font-bold text-[#5f6c80] dark:text-slate-400">S/</span>
                                                   <input type="number" min="0" step="1" placeholder="Opcional" [value]="c.montoMinimoCuota ?? ''"
                                                          (change)="onConvenioChange(opcion.codigoOpcion, fi, ci, 'montoMinimoCuota', $event)"
