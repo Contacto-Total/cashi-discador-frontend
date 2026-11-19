@@ -60,6 +60,8 @@ export interface Campaign {
   // Filtro tipo de teléfono: CELULAR, FIJO, o ambos separados por coma
   filtroTipoTelefono?: string;
   maxTelefonosPorCliente?: number;
+  // Con qué se generó: CONTINGENCIA = Campaña de contingencia; null = Nueva campaña
+  origen?: string | null;
 
   // Clientes según sus deudas en la cartera: UNO = una sola, VARIOS = más de una, vacío = todos
   filtroProductos?: 'UNO' | 'VARIOS' | null;

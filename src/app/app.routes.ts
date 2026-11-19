@@ -4,6 +4,7 @@ import { rrhhGuard } from './features/asistencia/asistencia.guards';
 import { adminGuard } from './core/guards/admin.guard';
 import { menuAccesoGuard } from './core/guards/menu-acceso.guard';
 import { gestionPendienteGuard } from './core/guards/gestion-pendiente.guard';
+import { contingenciaGuard } from './features/admin/campaign-contingencia/contingencia.guard';
 
 export const routes: Routes = [
   {
@@ -35,6 +36,13 @@ export const routes: Routes = [
     path: 'admin/campaigns/generation',
     loadComponent: () => import('./features/legacy/campaign/pages/campaign-page/campaign-page.component').then(m => m.CampaignPageComponent),
     canActivate: [authGuard, menuAccesoGuard]
+  },
+  {
+    // REQ-038: va dentro de Gestión de campañas y además un ADMIN se la tiene que habilitar al usuario
+    path: 'admin/campaigns/contingencia',
+    loadComponent: () => import('./features/admin/campaign-contingencia/campaign-contingencia.component').then(m => m.CampaignContingenciaComponent),
+    canActivate: [authGuard, menuAccesoGuard, contingenciaGuard],
+    data: { acceso: '/admin/campaigns' }
   },
   {
     path: 'admin/campaigns/grupos',
