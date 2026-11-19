@@ -1,0 +1,467 @@
+<div class="p-4 md:p-6 bg-slate-50 dark:bg-slate-900 min-h-screen">
+
+  <!-- Cabecera -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-violet-600 text-white flex items-center justify-center">
+        <lucide-angular name="shield-alert" [size]="22"></lucide-angular>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-800 dark:text-white">Campaña de contingencia</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Base de la subcartera como en Excel: excluir filas y ordenar la prioridad de discado</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      @if (esAdmin) {
+        <button type="button" (click)="abrirAccesos()"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-white text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-600">
+          <lucide-angular name="user-check" [size]="16"></lucide-angular> Accesos
+        </button>
+      }
+      <button type="button" routerLink="/admin/campaigns"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg !bg-slate-700 hover:!bg-slate-800 !text-white text-sm font-semibold">
+        <lucide-angular name="arrow-left" [size]="16"></lucide-angular> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- Subcartera -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl">
+      <div>
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Proveedor *</label>
+        <select [(ngModel)]="idTenant" (ngModelChange)="onTenant()"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+          <option [ngValue]="0">Seleccione un proveedor...</option>
+          @for (t of tenants; track t.id) { <option [ngValue]="t.id">{{ t.tenantCode }} - {{ t.tenantName }}</option> }
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Cartera *</label>
+        <select [(ngModel)]="idPortfolio" (ngModelChange)="onPortfolio()" [disabled]="idTenant === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm disabled:opacity-60">
+          <option [ngValue]="0">Seleccione...</option>
+          @for (p of portfolios; track p.id) { <option [ngValue]="p.id">{{ p.portfolioCode }} - {{ p.portfolioName }}</option> }
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Subcartera *</label>
+        <select [(ngModel)]="idSubcartera" (ngModelChange)="onSubcartera()" [disabled]="idPortfolio === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm disabled:opacity-60">
+          <option [ngValue]="0">Seleccione...</option>
+          @for (s of subPortfolios; track s.id) { <option [ngValue]="s.id">{{ s.subPortfolioCode }} - {{ s.subPortfolioName }}</option> }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="mb-4 px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm dark:bg-red-950/40 dark:border-red-800 dark:text-red-300">{{ error }}</div>
+  }
+
+  @if (idSubcartera === 0) {
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+      Elige la subcartera para ver su base.
+    </div>
+  } @else if (cargandoColumnas) {
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-10 text-center text-sm text-slate-500">Cargando la base...</div>
+  } @else if (columnas.length) {
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
+
+      <!-- Tabla -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 min-w-0">
+        <div class="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-slate-200 dark:border-slate-700">
+          @for (f of filtros; track f.columna) {
+            <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-md border border-blue-200 bg-blue-50 text-xs text-blue-900 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-200">
+              <span class="text-blue-700 dark:text-blue-300">Excluye</span>
+              <strong>{{ nombreColumna(f.columna) }}</strong>
+              <span>{{ descripcionFiltro(f) }}</span>
+              @if (excluyePorFiltro[f.columna] !== undefined) {
+                <span class="text-blue-700 dark:text-blue-300">· {{ formatoNumero(excluyePorFiltro[f.columna]) }} filas</span>
+              }
+              <button type="button" (click)="quitarFiltro(f)" class="p-0.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900" title="Quitar filtro">
+                <lucide-angular name="x" [size]="13"></lucide-angular>
+              </button>
+            </span>
+          }
+          @if (!filtros.length) {
+            <span class="text-xs text-slate-500 dark:text-slate-400">Sin filtros. Usa el embudo de cada columna para excluir filas.</span>
+          }
+          <span class="ml-auto text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">
+            @if (resultado) { Quedan <strong class="text-slate-900 dark:text-white">{{ formatoNumero(resultado.quedan) }}</strong> de {{ formatoNumero(resultado.base) }} filas }
+          </span>
+        </div>
+
+        <div class="overflow-auto max-h-[62vh]" [class.opacity-60]="cargando">
+          <table class="min-w-full text-xs border-collapse">
+            <thead class="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">
+              <tr>
+                @for (c of columnas; track c.columna) {
+                  <th class="px-2.5 py-2 text-left font-semibold uppercase tracking-wide text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-slate-200 dark:border-slate-700">
+                    <span class="inline-flex items-center gap-1.5">
+                      {{ c.nombre }}
+                      <button type="button" (click)="abrirFiltro(c, $event)"
+                              [title]="'Filtrar ' + c.nombre"
+                              class="p-1 rounded border"
+                              [ngClass]="tieneFiltro(c) || abierta?.columna === c.columna
+                                ? 'bg-blue-600 border-blue-600 text-white'
+                                : 'border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'">
+                        <lucide-angular name="filter" [size]="11"></lucide-angular>
+                      </button>
+                    </span>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of resultado?.filas ?? []; track $index) {
+                <tr class="border-t border-slate-100 dark:border-slate-700/60 hover:bg-blue-50/60 dark:hover:bg-slate-700/40">
+                  @for (c of columnas; track c.columna) {
+                    <td class="px-2.5 py-1.5 whitespace-nowrap text-slate-800 dark:text-slate-200" [class.text-right]="c.tipo === 'NUMERO'">{{ celda(fila, c) }}</td>
+                  }
+                </tr>
+              }
+              @if (resultado && resultado.quedan === 0) {
+                <tr><td [attr.colspan]="columnas.length" class="px-3 py-8 text-center text-slate-500">Los filtros excluyen todas las filas.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+          <span>
+            @if (cargando) { Cargando... } @else if (resultado) {
+              Mostrando {{ formatoNumero(desdeFila) }}–{{ formatoNumero(hastaFila) }} de {{ formatoNumero(resultado.quedan) }}{{ prioridad.length ? ' · ordenado por la prioridad de discado' : '' }}
+            }
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <button type="button" (click)="irPagina(pagina - 1)" [disabled]="pagina === 0 || cargando"
+                    class="p-1 rounded border border-slate-300 dark:border-slate-600 disabled:opacity-40">
+              <lucide-angular name="chevron-left" [size]="14"></lucide-angular>
+            </button>
+            <span class="px-1">Página {{ pagina + 1 }} de {{ totalPaginas }}</span>
+            <button type="button" (click)="irPagina(pagina + 1)" [disabled]="pagina + 1 >= totalPaginas || cargando"
+                    class="p-1 rounded border border-slate-300 dark:border-slate-600 disabled:opacity-40">
+              <lucide-angular name="chevron-right" [size]="14"></lucide-angular>
+            </button>
+          </span>
+        </div>
+      </div>
+
+      <!-- Prioridad y resumen -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
+          <lucide-angular name="list-ordered" [size]="16"></lucide-angular> Prioridad de discado
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-3">Orden en que se llamará a los clientes. Arrastra para cambiar el orden.</p>
+
+        <div cdkDropList (cdkDropListDropped)="moverPrioridad($event)" class="space-y-2">
+          @for (p of prioridad; track p.columna; let i = $index) {
+            <div cdkDrag class="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800">
+              <span cdkDragHandle class="cursor-grab text-slate-400"><lucide-angular name="grip-vertical" [size]="14"></lucide-angular></span>
+              <span class="w-5 h-5 shrink-0 rounded-full bg-violet-600 text-white text-[11px] flex items-center justify-center">{{ i + 1 }}</span>
+              <span class="flex-1 min-w-0 truncate text-xs font-semibold text-slate-800 dark:text-slate-100" [title]="nombreColumna(p.columna)">{{ nombreColumna(p.columna) }}</span>
+              <select [(ngModel)]="p.direccion" (ngModelChange)="recargarSoloOrden()"
+                      class="shrink-0 text-[11px] px-1 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                <option value="DESC">Mayor a menor</option>
+                <option value="ASC">Menor a mayor</option>
+              </select>
+              <button type="button" (click)="quitarPrioridad(i)" class="p-1 rounded text-slate-400 hover:text-red-600" title="Quitar">
+                <lucide-angular name="x" [size]="14"></lucide-angular>
+              </button>
+            </div>
+          }
+        </div>
+
+        @if (prioridad.length < MAX_PRIORIDAD) {
+          <div class="flex gap-2 mt-2">
+            <select [(ngModel)]="columnaNuevaPrioridad"
+                    class="flex-1 min-w-0 text-xs px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+              <option value="">Agregar columna...</option>
+              @for (c of columnasParaPrioridad; track c.columna) { <option [value]="c.columna">{{ c.nombre }}</option> }
+            </select>
+            <button type="button" (click)="agregarPrioridad()" [disabled]="!columnaNuevaPrioridad"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-700 border border-blue-200 hover:bg-blue-50 disabled:opacity-40 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-950/40">
+              <lucide-angular name="plus" [size]="13"></lucide-angular> Agregar
+            </button>
+          </div>
+        }
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+          Después de estas columnas sigue el orden que ya usa el discador, igual que en Nueva campaña.
+        </p>
+
+        @if (resultado) {
+          <dl class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 text-sm space-y-1.5">
+            <div class="flex justify-between text-slate-600 dark:text-slate-300">
+              <dt>Base de la subcartera</dt><dd>{{ formatoNumero(resultado.totalTabla) }}</dd>
+            </div>
+            <div class="flex justify-between text-slate-600 dark:text-slate-300">
+              <dt>Blacklist y pago cumplido</dt><dd>−{{ formatoNumero(resultado.excluidasBlacklistPago) }}</dd>
+            </div>
+            <div class="flex justify-between text-slate-600 dark:text-slate-300">
+              <dt>Excluidas por filtros</dt><dd>−{{ formatoNumero(resultado.base - resultado.quedan) }}</dd>
+            </div>
+            <div class="flex justify-between pt-1.5 border-t border-slate-200 dark:border-slate-700 font-semibold text-slate-900 dark:text-white">
+              <dt>Clientes para la campaña</dt><dd>{{ formatoNumero(resultado.clientes) }}</dd>
+            </div>
+          </dl>
+        }
+
+        <button type="button" (click)="abrirGenerar()" [disabled]="!resultado || resultado.quedan === 0 || cargando"
+                class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">
+          <lucide-angular name="send" [size]="16"></lucide-angular> Generar campaña
+        </button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Filtro de una columna -->
+@if (abierta; as c) {
+  <div class="fixed inset-0 z-40" (click)="cerrarFiltro()"></div>
+  <div class="fixed z-50 w-[300px] rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl p-3"
+       [style.top.px]="popTop" [style.left.px]="popLeft" (click)="$event.stopPropagation()">
+    <p class="text-sm font-semibold text-slate-800 dark:text-white mb-2">Filtrar {{ c.nombre }}</p>
+
+    @if (c.tipo === 'NUMERO') {
+      <label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Excluir las filas donde el valor es</label>
+      <select [(ngModel)]="numOp" (ngModelChange)="onCambioNumero()"
+              class="w-full mb-2 text-sm px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+        <option value="MENOR">Menor a</option>
+        <option value="MAYOR">Mayor a</option>
+        <option value="ENTRE">Entre</option>
+        <option value="IGUAL">Igual a</option>
+        <option value="VACIO">Vacío</option>
+      </select>
+      @if (numOp !== 'VACIO') {
+        <div class="flex items-center gap-2">
+          <input type="number" [(ngModel)]="numDesde" (ngModelChange)="onCambioNumero()" placeholder="Valor"
+                 class="w-full text-sm px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+          @if (numOp === 'ENTRE') {
+            <span class="text-xs text-slate-500">y</span>
+            <input type="number" [(ngModel)]="numHasta" (ngModelChange)="onCambioNumero()" placeholder="Valor"
+                   class="w-full text-sm px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+          }
+        </div>
+      }
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 min-h-4">
+        @if (previewExcluye !== null) { Excluye {{ formatoNumero(previewExcluye) }} filas }
+      </p>
+    } @else {
+      @if (c.tipo === 'FECHA') {
+        <div class="flex gap-1 mb-2 text-xs">
+          <button type="button" (click)="modoFecha = 'LISTA'"
+                  class="flex-1 px-2 py-1 rounded border"
+                  [ngClass]="modoFecha === 'LISTA' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300'">Lista de fechas</button>
+          <button type="button" (click)="modoFecha = 'RANGO'; onCambioNumero()"
+                  class="flex-1 px-2 py-1 rounded border"
+                  [ngClass]="modoFecha === 'RANGO' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300'">Excluir un rango</button>
+        </div>
+      }
+
+      @if (c.tipo === 'FECHA' && modoFecha === 'RANGO') {
+        <label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Excluir las fechas entre</label>
+        <div class="flex items-center gap-2">
+          <input type="date" [(ngModel)]="fechaDesde" (ngModelChange)="onCambioNumero()"
+                 class="w-full text-sm px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+          <span class="text-xs text-slate-500">y</span>
+          <input type="date" [(ngModel)]="fechaHasta" (ngModelChange)="onCambioNumero()"
+                 class="w-full text-sm px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 min-h-4">
+          @if (previewExcluye !== null) { Excluye {{ formatoNumero(previewExcluye) }} filas }
+        </p>
+      } @else {
+        <div class="relative mb-2">
+          <span class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"><lucide-angular name="search" [size]="13"></lucide-angular></span>
+          <input type="text" [(ngModel)]="buscar" (ngModelChange)="onBuscar()" placeholder="Buscar..."
+                 class="w-full text-sm pl-7 pr-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+        </div>
+        <div class="max-h-60 overflow-auto -mx-1 px-1">
+          @if (cargandoValores) {
+            <p class="text-xs text-slate-500 py-3 text-center">Cargando valores...</p>
+          } @else if (!valores.length) {
+            <p class="text-xs text-slate-500 py-3 text-center">Sin valores</p>
+          } @else {
+            <label class="flex items-center gap-2 py-1 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+              <input type="checkbox" [checked]="todosMarcados" (change)="alternarTodos()" class="accent-emerald-600">
+              <span class="flex-1">(Seleccionar todo)</span>
+              <span class="text-xs text-slate-400">{{ formatoNumero(totalValores) }}</span>
+            </label>
+            @for (v of valores; track v.valor) {
+              <label class="flex items-center gap-2 py-1 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                <input type="checkbox" [checked]="marcado(v.valor)" (change)="alternar(v.valor)" class="accent-emerald-600">
+                <span class="flex-1 truncate" [title]="textoValor(v.valor, c.tipo)">{{ textoValor(v.valor, c.tipo) }}</span>
+                <span class="text-xs text-slate-400">{{ formatoNumero(v.filas) }}</span>
+              </label>
+            }
+          }
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Desmarca los valores que no deben entrar a la campaña.</p>
+      }
+    }
+
+    <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+      <button type="button" (click)="cerrarFiltro()" class="px-3 py-1.5 rounded-lg bg-slate-500 hover:bg-slate-600 text-white text-sm">Cancelar</button>
+      <button type="button" (click)="aplicarFiltro()" [disabled]="!puedeAplicar"
+              class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">Aplicar</button>
+    </div>
+  </div>
+}
+
+<!-- Generar campaña -->
+@if (modalGenerar) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="w-full max-w-xl rounded-xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700">
+        <h2 class="text-base font-semibold text-slate-800 dark:text-white">Generar campaña de contingencia</h2>
+        <button type="button" (click)="cerrarGenerar()" [disabled]="generando" class="p-1 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <lucide-angular name="x" [size]="18"></lucide-angular>
+        </button>
+      </div>
+
+      @if (generada) {
+        <div class="px-5 py-6 text-sm text-slate-700 dark:text-slate-200">
+          <p class="font-semibold text-slate-900 dark:text-white mb-1">Campaña creada</p>
+          <p>Se cargaron {{ formatoNumero(generada.contactosImportados) }} clientes. La campaña queda en borrador con la etiqueta CONTINGENCIA; se activa desde Gestión de campañas.</p>
+        </div>
+        <div class="flex justify-end px-5 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
+          <button type="button" (click)="irAGestion()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold">Ir a Gestión de campañas</button>
+        </div>
+      } @else {
+        <div class="px-5 py-4 space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nombre de la campaña *</label>
+            <input type="text" [(ngModel)]="nombre" maxlength="100"
+                   class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Fecha y hora inicio</label>
+              <input type="datetime-local" [(ngModel)]="fechaInicio"
+                     class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Fecha y hora fin</label>
+              <input type="datetime-local" [(ngModel)]="fechaFin"
+                     class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Modo de discado</label>
+              <select [(ngModel)]="modoDiscado"
+                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                <option value="MANUAL">Manual</option>
+                <option value="PROGRESSIVE">Progresivo</option>
+                <option value="PREDICTIVE">Predictivo</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Intensidad de llamadas (1-100)</label>
+              @if (intensidadAutomatica) {
+                <p class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg">Automática para esta subcartera</p>
+              } @else {
+                <input type="number" min="1" max="100" [(ngModel)]="intensidad"
+                       class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+              }
+            </div>
+          </div>
+          @if (fechaInicio && fechaFin && fechaFin <= fechaInicio) {
+            <p class="text-xs text-red-600">La fecha fin debe ser posterior al inicio.</p>
+          }
+
+          <div class="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+            <p>{{ descripcionSubcartera }}</p>
+            <p><strong class="text-slate-900 dark:text-white">{{ formatoNumero(resultado?.clientes) }} clientes</strong>
+              de {{ formatoNumero(resultado?.base) }} filas
+              ({{ filtros.length }} {{ filtros.length === 1 ? 'filtro que excluye' : 'filtros que excluyen' }} {{ formatoNumero((resultado?.base ?? 0) - (resultado?.quedan ?? 0)) }})</p>
+            @if (prioridad.length) {
+              <p>Prioridad:
+                @for (p of prioridad; track p.columna; let i = $index; let last = $last) {
+                  {{ i + 1 }}. {{ nombreColumna(p.columna) }} {{ p.direccion === 'DESC' ? 'mayor a menor' : 'menor a mayor' }}{{ last ? '' : ' · ' }}
+                }
+              </p>
+            }
+            <p>Igual que en Nueva campaña, no entran quienes no tienen un teléfono válido o tienen una promesa vigente.</p>
+            <p>La campaña queda marcada como
+              <span class="inline-block rounded border border-amber-300 bg-amber-50 px-1.5 text-[10px] font-semibold tracking-wide text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">CONTINGENCIA</span>
+            </p>
+          </div>
+
+          @if (errorGenerar) {
+            <div class="px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm dark:bg-red-950/40 dark:border-red-800 dark:text-red-300">{{ errorGenerar }}</div>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 px-5 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
+          <button type="button" (click)="cerrarGenerar()" [disabled]="generando"
+                  class="px-4 py-2 rounded-lg bg-slate-500 hover:bg-slate-600 text-white text-sm disabled:opacity-50">Cancelar</button>
+          <button type="button" (click)="generar()" [disabled]="!puedeGenerar || generando"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">
+            @if (generando) { <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular> Generando... } @else { Generar campaña }
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Accesos (solo ADMIN): a quién se le da la contingencia -->
+@if (modalAccesos) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="w-full max-w-xl rounded-xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700">
+        <div>
+          <h2 class="text-base font-semibold text-slate-800 dark:text-white">Accesos a contingencia</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Marca a quién se le da. Los ADMIN la tienen siempre. Se guarda al marcar.</p>
+        </div>
+        <button type="button" (click)="modalAccesos = false" class="p-1 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <lucide-angular name="x" [size]="18"></lucide-angular>
+        </button>
+      </div>
+
+      <div class="px-5 pt-3 pb-2 flex items-center gap-3">
+        <input type="text" [(ngModel)]="buscarUsuario" placeholder="Buscar por nombre, usuario o rol"
+               class="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+        <span class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ totalConAcceso }} con acceso</span>
+      </div>
+      @if (errorAccesos) {
+        <p class="px-5 pb-2 text-xs text-red-600">{{ errorAccesos }}</p>
+      }
+
+      <div class="overflow-y-auto px-5 pb-4 flex-1">
+        @if (cargandoAccesos) {
+          <p class="py-6 text-center text-sm text-slate-500">Cargando...</p>
+        } @else if (usuariosAccesoFiltrados.length === 0) {
+          <p class="py-6 text-center text-sm text-slate-500">Sin usuarios</p>
+        } @else {
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                <th class="py-2 w-10"></th>
+                <th class="py-2">Usuario</th>
+                <th class="py-2">Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of usuariosAccesoFiltrados; track u.idUsuario) {
+                <tr class="border-b border-slate-100 dark:border-slate-700/60">
+                  <td class="py-2">
+                    <input type="checkbox" [checked]="u.habilitado" [disabled]="guardandoAcceso.has(u.idUsuario)"
+                           (change)="cambiarAcceso(u, $any($event.target).checked)"
+                           [attr.aria-label]="'Dar contingencia a ' + u.nombre"
+                           class="w-4 h-4 accent-blue-600 cursor-pointer">
+                  </td>
+                  <td class="py-2">
+                    <div class="text-slate-800 dark:text-white">{{ u.nombre }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ u.usuario }}</div>
+                  </td>
+                  <td class="py-2 text-xs text-slate-600 dark:text-slate-300">{{ u.roles }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -19,6 +19,12 @@
         <lucide-angular name="users" [size]="18"></lucide-angular>
         <span>Administrar grupos</span>
       </button>
+      @if (contingenciaHabilitada) {
+        <button class="btn-create" routerLink="/admin/campaigns/contingencia">
+          <lucide-angular name="shield-alert" [size]="18"></lucide-angular>
+          <span>Campaña de contingencia</span>
+        </button>
+      }
       <button class="btn-create" routerLink="/admin/campaigns/new">
         <lucide-angular name="plus-circle" [size]="18"></lucide-angular>
         <span>Nueva Campaña</span>
@@ -60,6 +66,9 @@
             <tr *ngFor="let campaign of paginatedCampaigns; trackBy: trackByCampaignId" class="!border-t !border-slate-100 !transition-colors hover:!bg-blue-50 dark:!border-slate-800 dark:hover:!bg-slate-800/70" [ngClass]="campaign.estaDiscando ? '!border-l-4 !border-l-emerald-500' : ''">
               <td class="!h-12 !cursor-pointer !px-2 !py-1.5 !text-xs !leading-snug !text-slate-900 dark:!text-slate-100" (click)="viewCampaignDetail(campaign)">
                 {{ campaign.name }}
+                @if (campaign.origen === 'CONTINGENCIA') {
+                  <span class="!ml-1.5 !inline-block !rounded !border !border-amber-300 !bg-amber-50 !px-1.5 !py-px !align-middle !text-[10px] !font-semibold !tracking-wide !text-amber-800 dark:!border-amber-700 dark:!bg-amber-950/40 dark:!text-amber-300">CONTINGENCIA</span>
+                }
               </td>
               <td class="!px-2 !py-1.5 !text-xs !leading-snug !text-slate-700 dark:!text-slate-300">{{ tenantNombre(campaign) }}</td>
               <td class="!px-2 !py-1.5 !text-xs !leading-snug !text-slate-700 dark:!text-slate-300">{{ campaign.subPortfolioName || ('#' + (campaign.subPortfolioId || '-')) }}</td>

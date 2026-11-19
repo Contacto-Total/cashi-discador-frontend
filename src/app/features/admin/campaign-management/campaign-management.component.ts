@@ -7,6 +7,7 @@ import { CampaignAdminService, Campaign, ImportStats } from '../../../core/servi
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { ControlIntensidadService } from '../../control-intensidad/control-intensidad.service';
+import { CampaignContingenciaService } from '../campaign-contingencia/campaign-contingencia.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { AppDatePipe, AppDateTimePipe, AppTimePipe } from '@/shared/pipes/format.pipes';
@@ -74,6 +75,10 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     return !!subPortfolioId && this.subcarterasAutomaticas.includes(subPortfolioId);
   }
 
+  // REQ-038: el botón de contingencia solo sale si un ADMIN se la habilitó a este usuario.
+  private readonly contingencia = inject(CampaignContingenciaService);
+  contingenciaHabilitada = false;
+
   constructor(
     private campaignService: CampaignAdminService,
     private tenantService: TenantService,
@@ -87,6 +92,10 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.controlIntensidad.subcarterasAutomaticas().subscribe({
       next: ids => this.subcarterasAutomaticas = ids,
       error: () => this.subcarterasAutomaticas = []
+    });
+    this.contingencia.mio().subscribe({
+      next: r => this.contingenciaHabilitada = r.habilitado,
+      error: () => this.contingenciaHabilitada = false
     });
     this.loadCampaigns();
     this.loadTenants();
