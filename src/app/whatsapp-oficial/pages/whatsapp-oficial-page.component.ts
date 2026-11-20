@@ -2,6 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, signal }
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { catchError, finalize, forkJoin, of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { WhatsappOficialService } from '../services/whatsapp-oficial.service';
 import { WhatsappOficialAvisosService } from '../services/whatsapp-oficial-avisos.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -627,13 +628,15 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   readonly cercaDelTope = computed(() => this.porcentajeTope() >= 90);
 
-  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService) {}
+  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService, private readonly route: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
     this.refrescar();
     this.cargarBajas();
     this.cambiarHerramienta('plantillas');
+    const chatUrl = this.route.snapshot.queryParamMap.get('chat');
+    if (chatUrl) this.seleccionar(chatUrl);
     this.temporizador = setInterval(() => {
       this.ahora.set(Date.now());
       this.refrescar(true);

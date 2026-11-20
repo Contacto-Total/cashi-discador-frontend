@@ -1,6 +1,5 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { NotificationService } from '../../shared/services/notification.service';
 import { WaoMensaje } from '../models/whatsapp-oficial.models';
 import { WhatsappOficialService } from './whatsapp-oficial.service';
 
@@ -8,6 +7,8 @@ import { WhatsappOficialService } from './whatsapp-oficial.service';
 export class WhatsappOficialAvisosService {
   readonly pendientes = signal<Record<string, number>>({});
   readonly chatActivo = signal<string | null>(null);
+  readonly aviso = signal<{ clave: string; titulo: string; texto: string; iniciales: string } | null>(null);
+  private cierre?: ReturnType<typeof setTimeout>;
 
   private readonly ultimoVisto = new Map<string, number>();
   private temporizador?: ReturnType<typeof setInterval>;
@@ -16,7 +17,6 @@ export class WhatsappOficialAvisosService {
 
   constructor(
     private readonly api: WhatsappOficialService,
-    private readonly avisos: NotificationService,
     private readonly router: Router
   ) {}
 
@@ -33,6 +33,7 @@ export class WhatsappOficialAvisosService {
     this.base = false;
     this.ultimoVisto.clear();
     this.pendientes.set({});
+    this.cerrarAviso();
   }
 
   limpiar(clave: string): void {
@@ -66,22 +67,48 @@ export class WhatsappOficialAvisosService {
     const enPantalla = this.router.url.startsWith('/whatsapp-oficial') && document.visibilityState === 'visible';
     const viendoChat = enPantalla && this.chatActivo() === clave;
     const titulo = m.nombre || (m.waId ? '+' + m.waId : clave);
-    const texto = m.contenido || '[' + m.tipo.toLowerCase() + ']';
+    const texto = this.vistaPrevia(m);
 
     if (!viendoChat) {
       this.pendientes.update(p => ({ ...p, [clave]: (p[clave] ?? 0) + 1 }));
     }
     this.sonar();
-    if (!enPantalla) {
-      this.avisos.show({
-        type: 'info',
-        title: 'WhatsApp oficial · ' + titulo,
-        message: texto.length > 90 ? texto.slice(0, 90) + '…' : texto,
-        duration: 8000,
-        actions: [{ label: 'Abrir', primary: true, callback: () => { this.router.navigateByUrl('/whatsapp-oficial'); } }]
-      });
-    }
+    if (!enPantalla) this.mostrar(clave, titulo, this.vistaPrevia(m));
     if (document.visibilityState === 'hidden') this.notificarEscritorio(titulo, texto);
+  }
+
+  abrir(): void {
+    const a = this.aviso();
+    if (!a) return;
+    this.router.navigate(['/whatsapp-oficial'], { queryParams: { chat: a.clave } });
+    this.cerrarAviso();
+  }
+
+  cerrarAviso(): void {
+    if (this.cierre) clearTimeout(this.cierre);
+    this.cierre = undefined;
+    this.aviso.set(null);
+  }
+
+  private mostrar(clave: string, titulo: string, texto: string): void {
+    const base = titulo.replace(/[^A-Za-z0-9ÁÉÍÓÚÑáéíóúñ ]/g, '').trim();
+    const partes = base.split(/\s+/).filter(Boolean);
+    const iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : base.slice(0, 2);
+    this.aviso.set({ clave, titulo, texto: texto.length > 90 ? texto.slice(0, 90) + '...' : texto, iniciales: (iniciales || '#').toUpperCase() });
+    if (this.cierre) clearTimeout(this.cierre);
+    this.cierre = setTimeout(() => this.cerrarAviso(), 15000);
+  }
+
+  private vistaPrevia(m: WaoMensaje): string {
+    if (m.contenido?.trim()) return m.contenido.trim();
+    switch (m.tipo) {
+      case 'IMAGE': return 'Foto';
+      case 'STICKER': return 'Sticker';
+      case 'AUDIO': return 'Mensaje de voz';
+      case 'VIDEO': return 'Video';
+      case 'DOCUMENT': return 'Documento';
+      default: return 'Nuevo mensaje';
+    }
   }
 
   private pedirPermiso(): void {

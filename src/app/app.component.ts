@@ -14,6 +14,7 @@ import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
 import { AgentPresenceService } from './core/services/agent-presence.service';
 import { SesionDesconexionService } from './core/services/sesion-desconexion.service';
+import { WhatsappOficialPopupComponent } from './whatsapp-oficial/components/whatsapp-oficial-popup.component';
 import { WhatsappOficialAvisosService } from './whatsapp-oficial/services/whatsapp-oficial-avisos.service';
 import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
 import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
@@ -47,6 +48,7 @@ import { MenuLateralService } from './shared/services/menu-lateral.service';
   imports: [
     CommonModule,
     RouterOutlet,
+    WhatsappOficialPopupComponent,
     RouterModule,
     LucideAngularModule,
     AuthorizationNotificationComponent,
