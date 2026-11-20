@@ -8,7 +8,9 @@ export class WhatsappOficialAvisosService {
   readonly pendientes = signal<Record<string, number>>({});
   readonly chatActivo = signal<string | null>(null);
   readonly aviso = signal<{ clave: string; titulo: string; texto: string; iniciales: string } | null>(null);
+  readonly alerta = signal<string | null>(null);
   private cierre?: ReturnType<typeof setTimeout>;
+  private cierreAlerta?: ReturnType<typeof setTimeout>;
 
   private readonly ultimoVisto = new Map<string, number>();
   private temporizador?: ReturnType<typeof setInterval>;
@@ -82,6 +84,18 @@ export class WhatsappOficialAvisosService {
     if (!a) return;
     this.router.navigate(['/whatsapp-oficial'], { queryParams: { chat: a.clave } });
     this.cerrarAviso();
+  }
+
+  alertar(texto: string): void {
+    this.alerta.set(texto);
+    if (this.cierreAlerta) clearTimeout(this.cierreAlerta);
+    this.cierreAlerta = setTimeout(() => this.cerrarAlerta(), 7000);
+  }
+
+  cerrarAlerta(): void {
+    if (this.cierreAlerta) clearTimeout(this.cierreAlerta);
+    this.cierreAlerta = undefined;
+    this.alerta.set(null);
   }
 
   cerrarAviso(): void {

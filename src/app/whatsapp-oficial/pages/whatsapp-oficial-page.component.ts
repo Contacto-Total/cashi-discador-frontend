@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, effect, signal, untracked } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { catchError, finalize, forkJoin, of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -62,9 +62,6 @@ type ModoBusqueda = 'telefono' | 'documento';
                 name="nuevo" placeholder="Nuevo chat: número con 51 o ID de Meta" [ngModel]="nuevoContacto()" (ngModelChange)="nuevoContacto.set($event)" />
               <button type="submit" class="shrink-0 rounded-full bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-slate-300" [disabled]="!nuevoContacto().trim()">Abrir</button>
             </form>
-            @if (error() && !seleccion()) {
-              <p class="mt-2 rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-200">{{ error() }}</p>
-            }
           </header>
 
           <section class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -189,9 +186,6 @@ type ModoBusqueda = 'telefono' | 'documento';
             </div>
 
             <footer class="space-y-2 border-t border-slate-200 bg-[#f0f2f5] p-3">
-              @if (error()) {
-                <p class="rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-200">{{ error() }}</p>
-              }
               <div class="flex items-center justify-between gap-2 text-xs">
                 @if (ventanaAbierta()) {
                   <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700 ring-1 ring-emerald-200">
@@ -628,7 +622,16 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   readonly cercaDelTope = computed(() => this.porcentajeTope() >= 90);
 
-  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService, private readonly route: ActivatedRoute) {}
+  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService, private readonly route: ActivatedRoute) {
+    effect(() => {
+      const texto = this.error();
+      if (!texto) return;
+      untracked(() => {
+        this.avisos.alertar(texto);
+        this.error.set('');
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
@@ -747,7 +750,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
       .filter((k, i, a) => k.length === 9 && a.indexOf(k) === i)
       .map(k => '51' + k);
     if (!claves.length) {
-      this.errorBusqueda.set('Este cliente no tiene teléfonos registrados.');
+      this.error.set('Este cliente no tiene teléfonos registrados.');
       return;
     }
     this.errorBusqueda.set('');
@@ -755,7 +758,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
       .subscribe(listas => {
         const i = listas.findIndex(l => l.some(m => m.direccion === 'ENTRANTE'));
         if (i >= 0) this.seleccionar(claves[i]);
-        else this.errorBusqueda.set('Este cliente aún no ha escrito al número oficial, así que no se puede abrir su chat.');
+        else this.error.set('Este cliente aún no ha escrito al número oficial, así que no se puede abrir su chat.');
       });
   }
 
