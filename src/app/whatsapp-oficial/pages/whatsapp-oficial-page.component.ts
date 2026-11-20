@@ -1,10 +1,13 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WhatsappOficialService } from '../services/whatsapp-oficial.service';
+import { WhatsappOficialAvisosService } from '../services/whatsapp-oficial-avisos.service';
+import { AuthService } from '../../core/services/auth.service';
+import { SipService } from '../../core/services/sip.service';
 import { UserInfoService } from '../../whatsapp/services/user-info.service';
 import {
-  WaoBaja, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
+  WaoBaja, WaoEspectador, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
 } from '../models/whatsapp-oficial.models';
 
 type Pestana = 'plantillas' | 'resumen' | 'bajas';
@@ -12,7 +15,7 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
 @Component({
   selector: 'app-whatsapp-oficial-page',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, DecimalPipe, FormsModule],
   template: `
     <main class="h-screen min-h-0 overflow-hidden bg-slate-100 text-slate-950">
       <section class="grid h-full min-h-0 grid-cols-1 sm:grid-cols-[minmax(300px,30%)_minmax(0,1fr)] lg:grid-cols-[minmax(280px,22%)_minmax(0,1fr)_minmax(300px,26%)]">
@@ -66,10 +69,15 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                       <p class="truncate text-sm font-semibold text-slate-950">{{ titulo(chat) }}</p>
                       <time class="shrink-0 text-xs font-medium text-slate-500">{{ chat.fechaCreacion | date: 'dd/MM HH:mm' }}</time>
                     </div>
-                    <p class="mt-1 truncate text-sm text-slate-600">
-                      @if (chat.direccion === 'SALIENTE') { <span class="font-medium text-emerald-700">Tú: </span> }
-                      {{ vistaPrevia(chat) }}
-                    </p>
+                    <div class="mt-1 flex items-center justify-between gap-2">
+                      <p class="min-w-0 flex-1 truncate text-sm text-slate-600" [class.font-semibold]="avisos.pendientes()[clave(chat)]" [class.text-slate-900]="avisos.pendientes()[clave(chat)]">
+                        @if (chat.direccion === 'SALIENTE') { <span class="font-medium text-emerald-700">Tú: </span> }
+                        {{ vistaPrevia(chat) }}
+                      </p>
+                      @if (avisos.pendientes()[clave(chat)]; as n) {
+                        <span class="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold text-white">{{ n }}</span>
+                      }
+                    </div>
                   </div>
                 </button>
               }
@@ -79,18 +87,39 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
 
         <section class="hidden h-full min-h-0 flex-col overflow-hidden bg-white sm:flex">
           @if (seleccion(); as sel) {
-            <header class="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
-              <div class="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-slate-950">{{ inicialesClave() }}</div>
+            <header class="relative flex items-center gap-3 border-b border-slate-200 bg-[#f0f2f5] px-4 py-2.5">
+              <div class="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-slate-950">{{ inicialesClave() }}</div>
               <div class="min-w-0 flex-1">
-                <h2 class="truncate text-base font-semibold text-slate-950">{{ tituloSeleccion() }}</h2>
+                <h2 class="truncate text-[15px] font-semibold text-slate-950">{{ tituloSeleccion() }}</h2>
                 <p class="truncate text-xs text-slate-500">{{ subtituloSeleccion() }}</p>
               </div>
               @if (enBaja()) {
                 <span class="rounded-md bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">No quiere mensajes</span>
               }
+              <button type="button" class="relative grid size-10 place-items-center rounded-full text-slate-600 transition hover:bg-slate-200" title="Quién está viendo este chat" aria-label="Quién está viendo este chat" (click)="verEspectadores.set(!verEspectadores())">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                @if (espectadores().length) {
+                  <span class="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">{{ espectadores().length }}</span>
+                }
+              </button>
+              <button type="button" class="grid size-10 place-items-center rounded-full text-slate-600 transition hover:bg-slate-200" title="Llamar" aria-label="Llamar" (click)="llamar()">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>
+              </button>
+              @if (verEspectadores()) {
+                <div class="absolute right-16 top-14 z-20 w-64 rounded-xl bg-white p-3 text-sm shadow-xl ring-1 ring-slate-200">
+                  <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Viendo este chat</p>
+                  @for (e of espectadores(); track e.usuario) {
+                    <p class="mt-2 flex items-center gap-2 text-slate-800">
+                      <span class="size-2 rounded-full bg-emerald-500"></span>{{ e.nombre }}@if (e.usuario === usuarioActual()) { <span class="text-xs text-slate-400">(tú)</span> }
+                    </p>
+                  } @empty {
+                    <p class="mt-2 text-xs text-slate-500">Nadie más lo está viendo.</p>
+                  }
+                </div>
+              }
             </header>
 
-            <div #panel class="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-5 py-4">
+            <div #panel class="min-h-0 flex-1 overflow-y-auto bg-[#efeae2] px-[6%] py-4">
               @if (!mensajes().length) {
                 <div class="flex h-full flex-col items-center justify-center text-center text-slate-500">
                   <p class="font-semibold text-slate-900">Sin mensajes</p>
@@ -101,20 +130,27 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                   @for (m of mensajes(); track m.id) {
                     <article class="flex" [class.justify-end]="m.direccion === 'SALIENTE'" [class.justify-start]="m.direccion === 'ENTRANTE'">
                       <div class="max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm"
-                        [class.bg-emerald-100]="m.direccion === 'SALIENTE'" [class.bg-white]="m.direccion === 'ENTRANTE'">
+                        [class]="m.direccion === 'SALIENTE' ? 'bg-[#d9fdd3]' : 'bg-white'">
                         @if (m.plantilla) { <p class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Plantilla · {{ m.plantilla }}</p> }
                         @if (m.mediaId) {
                           @if (esImagen(m) && archivos()[m.id]) {
                             <img [src]="archivos()[m.id]" alt="Imagen recibida" class="mb-1 max-h-72 max-w-full cursor-zoom-in rounded-md" (click)="imagenAmpliada.set(archivos()[m.id])" />
                           } @else if (esImagen(m)) {
                             <p class="text-xs text-slate-500">Cargando imagen...</p>
+                          } @else if (m.tipo === 'AUDIO' && archivos()[m.id]) {
+                            <audio controls [src]="archivos()[m.id]" class="mb-1 h-10 w-64 max-w-full"></audio>
+                          } @else if (m.tipo === 'VIDEO' && archivos()[m.id]) {
+                            <video controls [src]="archivos()[m.id]" class="mb-1 max-h-72 max-w-full rounded-md"></video>
                           } @else if (archivos()[m.id]) {
-                            <a [href]="archivos()[m.id]" target="_blank" class="mb-1 block text-xs font-semibold text-emerald-700 underline">Abrir {{ m.tipo.toLowerCase() }}</a>
+                            <a [href]="archivos()[m.id]" target="_blank" [attr.download]="m.contenido || 'archivo'" class="mb-1 flex items-center gap-2 rounded-md bg-black/5 px-3 py-2 text-xs font-semibold text-emerald-800">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg>
+                              Descargar {{ m.tipo === 'DOCUMENT' ? 'documento' : m.tipo.toLowerCase() }}
+                            </a>
                           } @else {
                             <p class="text-xs text-slate-500">Cargando {{ m.tipo.toLowerCase() }}...</p>
                           }
                         }
-                        @if (m.contenido || !m.mediaId) {
+                        @if ((m.contenido && m.tipo !== 'DOCUMENT') || !m.mediaId) {
                           <p class="whitespace-pre-wrap break-words text-slate-900">{{ m.contenido || ('[' + m.tipo.toLowerCase() + ']') }}</p>
                         }
                         <p class="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-500">
@@ -135,7 +171,7 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
               }
             </div>
 
-            <footer class="space-y-2 border-t border-slate-200 p-3">
+            <footer class="space-y-2 border-t border-slate-200 bg-[#f0f2f5] p-3">
               @if (error()) {
                 <p class="rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-200">{{ error() }}</p>
               }
@@ -152,18 +188,72 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                   </span>
                 }
               </div>
-              <form class="flex items-end gap-2" (ngSubmit)="enviarTexto()">
-                <textarea class="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm leading-tight text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
-                  rows="1" name="texto"
-                  [placeholder]="ventanaAbierta() ? 'Escribe un mensaje' : 'Ventana cerrada: usa una plantilla'"
-                  [disabled]="!ventanaAbierta() || enBaja() || enviando()"
-                  [ngModel]="texto()" (ngModelChange)="texto.set($event)"
-                  (keydown.enter)="alEnter($event)"></textarea>
-                <button type="submit"
-                  class="h-11 shrink-0 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-                  [disabled]="!texto().trim() || !ventanaAbierta() || enBaja() || enviando()">
-                  {{ enviando() ? 'Enviando' : 'Enviar' }}
-                </button>
+              @if (adjunto(); as f) {
+                <div class="flex items-center gap-3 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
+                  @if (adjuntoVista()) { <img [src]="adjuntoVista()" alt="" class="size-12 rounded-md object-cover" /> }
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-semibold text-slate-900">{{ f.name }}</p>
+                    <p class="text-xs text-slate-500">{{ (f.size / 1024) | number: '1.0-0' }} KB · escribe un mensaje opcional y envía</p>
+                  </div>
+                  <button type="button" class="grid size-8 place-items-center rounded-full text-slate-500 hover:bg-slate-100" aria-label="Quitar archivo" (click)="quitarAdjunto()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              }
+              @if (emojis()) {
+                <div class="grid grid-cols-8 gap-1 rounded-xl bg-white p-2 text-xl ring-1 ring-slate-200">
+                  @for (e of listaEmojis; track e) {
+                    <button type="button" class="rounded-md p-1 hover:bg-slate-100" (click)="agregarEmoji(e)">{{ e }}</button>
+                  }
+                </div>
+              }
+              @if (menuAdjuntar()) {
+                <div class="flex flex-wrap gap-2 rounded-xl bg-white p-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                  <button type="button" class="rounded-lg px-3 py-2 hover:bg-slate-100" (click)="imagenInput.click()">Foto</button>
+                  <button type="button" class="rounded-lg px-3 py-2 hover:bg-slate-100" (click)="documentoInput.click()">Documento</button>
+                  <button type="button" class="rounded-lg px-3 py-2 hover:bg-slate-100" (click)="audioInput.click()">Audio</button>
+                </div>
+              }
+              <input #imagenInput type="file" class="hidden" accept="image/jpeg,image/png" (change)="elegirArchivo($event)" />
+              <input #documentoInput type="file" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" (change)="elegirArchivo($event)" />
+              <input #audioInput type="file" class="hidden" accept="audio/*" (change)="elegirArchivo($event)" />
+              <form class="flex items-end gap-2" (ngSubmit)="enviarPrincipal()">
+                @if (grabando()) {
+                  <button type="button" class="grid size-11 shrink-0 place-items-center rounded-full text-rose-600 hover:bg-rose-50" title="Cancelar" aria-label="Cancelar grabación" (click)="cancelarGrabacion()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                  </button>
+                  <div class="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-full bg-white px-4 text-sm text-slate-700 ring-1 ring-slate-200">
+                    <span class="size-2.5 animate-pulse rounded-full bg-rose-500"></span>
+                    Grabando {{ tiempoGrabacion() }}
+                  </div>
+                  <button type="button" class="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white hover:bg-emerald-700" title="Enviar audio" aria-label="Enviar audio" (click)="detenerGrabacion(true)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg>
+                  </button>
+                } @else {
+                  <button type="button" class="grid size-11 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-200 disabled:opacity-40" title="Emojis" aria-label="Emojis" [disabled]="!puedeEscribir()" (click)="emojis.set(!emojis()); menuAdjuntar.set(false)">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/></svg>
+                  </button>
+                  <button type="button" class="grid size-11 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-200 disabled:opacity-40" title="Adjuntar" aria-label="Adjuntar" [disabled]="!puedeEscribir()" (click)="menuAdjuntar.set(!menuAdjuntar()); emojis.set(false)">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>
+                  </button>
+                  <textarea class="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-3xl border border-transparent bg-white px-4 py-3 text-sm leading-tight text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 disabled:bg-slate-100 disabled:text-slate-500"
+                    rows="1" name="texto"
+                    [placeholder]="ventanaAbierta() ? 'Escribe un mensaje' : 'Ventana cerrada: usa una plantilla'"
+                    [disabled]="!puedeEscribir()"
+                    [ngModel]="texto()" (ngModelChange)="texto.set($event)"
+                    (keydown.enter)="alEnter($event)"></textarea>
+                  @if (texto().trim() || adjunto()) {
+                    <button type="submit" class="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      title="Enviar" aria-label="Enviar" [disabled]="!puedeEscribir()">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg>
+                    </button>
+                  } @else {
+                    <button type="button" class="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      title="Grabar audio" aria-label="Grabar audio" [disabled]="!puedeEscribir()" (click)="iniciarGrabacion()">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+                    </button>
+                  }
+                }
               </form>
             </footer>
           } @else {
@@ -341,6 +431,27 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly cargando = signal(false);
   readonly pestana = signal<Pestana>('plantillas');
   readonly archivos = signal<Record<number, string>>({});
+  readonly espectadores = signal<WaoEspectador[]>([]);
+  readonly verEspectadores = signal(false);
+  readonly emojis = signal(false);
+  readonly menuAdjuntar = signal(false);
+  readonly adjunto = signal<File | null>(null);
+  readonly adjuntoVista = signal<string | null>(null);
+  readonly grabando = signal(false);
+  readonly segundosGrabacion = signal(0);
+  readonly tiempoGrabacion = computed(() => {
+    const s = this.segundosGrabacion();
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  });
+  readonly listaEmojis = ['😀','😂','😊','😍','🙂','😉','🙏','👍','👏','🙌','💪','🤝','👋','😅','😢','😮','😡','❤️','✅','❌','📞','📄','💳','⏰','📅','💬','🎉','🌟','😴','🤔','😬','🥲'];
+  private mediaRecorder?: MediaRecorder;
+  private trozos: Blob[] = [];
+  private flujoAudio?: MediaStream;
+  private relojGrabacion?: ReturnType<typeof setInterval>;
+  private latidoPresencia?: ReturnType<typeof setInterval>;
+  private chatPresencia: string | null = null;
+  readonly usuarioActual = computed(() => this.auth.getCurrentUser()?.username ?? '');
+  readonly puedeEscribir = computed(() => this.ventanaAbierta() && !this.enBaja() && !this.enviando());
   readonly imagenAmpliada = signal<string | null>(null);
   readonly detalle = signal<WaoMensaje | null>(null);
   readonly remitente = signal<WaoRemitente | null>(null);
@@ -409,7 +520,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   readonly cercaDelTope = computed(() => this.porcentajeTope() >= 90);
 
-  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService) {}
+  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService) {}
 
   ngOnInit(): void {
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
@@ -423,7 +534,131 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.temporizador) clearInterval(this.temporizador);
+    this.avisos.chatActivo.set(null);
+    this.detenerPresencia();
+    this.detenerGrabacion(false);
     Object.values(this.archivos()).forEach(u => URL.revokeObjectURL(u));
+  }
+
+  private iniciarPresencia(clave: string): void {
+    this.detenerPresencia();
+    this.chatPresencia = clave;
+    this.espectadores.set([]);
+    const latir = () => this.api.viendo(clave).subscribe({
+      next: lista => { if (this.chatPresencia === clave) this.espectadores.set(lista); },
+      error: () => undefined
+    });
+    latir();
+    this.latidoPresencia = setInterval(latir, 7000);
+  }
+
+  private detenerPresencia(): void {
+    if (this.latidoPresencia) clearInterval(this.latidoPresencia);
+    this.latidoPresencia = undefined;
+    if (this.chatPresencia) this.api.dejarDeVer(this.chatPresencia).subscribe({ error: () => undefined });
+    this.chatPresencia = null;
+  }
+
+  llamar(): void {
+    const c = this.chatActual();
+    const telefono = (c?.waId ?? '').replace(/\D/g, '');
+    if (!telefono) {
+      this.error.set('Este contacto no tiene teléfono visible: Meta solo entregó su identificador.');
+      return;
+    }
+    if (!this.sip.isRegistered()) {
+      this.error.set('Tu softphone no está conectado. Conéctate para poder llamar.');
+      return;
+    }
+    const destino = telefono.startsWith('51') && telefono.length === 11 ? telefono.slice(2) : telefono;
+    this.error.set('');
+    this.sip.call(destino).catch(() => this.error.set('No se pudo iniciar la llamada.'));
+  }
+
+  agregarEmoji(e: string): void {
+    this.texto.update(t => t + e);
+  }
+
+  elegirArchivo(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    input.value = '';
+    this.menuAdjuntar.set(false);
+    if (!archivo) return;
+    this.quitarAdjunto();
+    this.adjunto.set(archivo);
+    if (archivo.type.startsWith('image/')) this.adjuntoVista.set(URL.createObjectURL(archivo));
+  }
+
+  quitarAdjunto(): void {
+    const v = this.adjuntoVista();
+    if (v) URL.revokeObjectURL(v);
+    this.adjuntoVista.set(null);
+    this.adjunto.set(null);
+  }
+
+  enviarPrincipal(): void {
+    if (this.adjunto()) this.enviarAdjunto();
+    else this.enviarTexto();
+  }
+
+  private enviarAdjunto(): void {
+    const sel = this.seleccion();
+    const archivo = this.adjunto();
+    if (!sel || !archivo || this.enviando()) return;
+    this.subirArchivo(sel, archivo, this.texto().trim(), () => { this.texto.set(''); this.quitarAdjunto(); });
+  }
+
+  private subirArchivo(sel: string, archivo: File, texto: string, alTerminar: () => void): void {
+    this.enviando.set(true);
+    this.error.set('');
+    this.api.enviarArchivo(sel, archivo, texto).subscribe({
+      next: () => { alTerminar(); this.enviando.set(false); this.refrescar(true); },
+      error: err => { this.error.set(this.mensajeError(err)); this.enviando.set(false); }
+    });
+  }
+
+  async iniciarGrabacion(): Promise<void> {
+    if (this.grabando() || !this.puedeEscribir()) return;
+    try {
+      this.flujoAudio = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const formato = ['audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm;codecs=opus'].find(t => MediaRecorder.isTypeSupported(t));
+      this.mediaRecorder = formato ? new MediaRecorder(this.flujoAudio, { mimeType: formato }) : new MediaRecorder(this.flujoAudio);
+      this.trozos = [];
+      this.mediaRecorder.ondataavailable = e => { if (e.data.size) this.trozos.push(e.data); };
+      this.mediaRecorder.start();
+      this.segundosGrabacion.set(0);
+      this.grabando.set(true);
+      this.relojGrabacion = setInterval(() => this.segundosGrabacion.update(s => s + 1), 1000);
+    } catch {
+      this.error.set('No se pudo usar el micrófono. Revisa el permiso del navegador.');
+    }
+  }
+
+  cancelarGrabacion(): void {
+    this.detenerGrabacion(false);
+  }
+
+  detenerGrabacion(enviar: boolean): void {
+    if (this.relojGrabacion) clearInterval(this.relojGrabacion);
+    this.relojGrabacion = undefined;
+    const grabador = this.mediaRecorder;
+    const sel = this.seleccion();
+    this.mediaRecorder = undefined;
+    this.grabando.set(false);
+    if (!grabador || grabador.state === 'inactive') {
+      this.flujoAudio?.getTracks().forEach(t => t.stop());
+      return;
+    }
+    grabador.onstop = () => {
+      this.flujoAudio?.getTracks().forEach(t => t.stop());
+      if (!enviar || !sel || !this.trozos.length) return;
+      const tipo = grabador.mimeType || 'audio/webm';
+      const ext = tipo.includes('ogg') ? 'ogg' : tipo.includes('mp4') ? 'm4a' : 'webm';
+      const archivo = new File([new Blob(this.trozos, { type: tipo })], `audio.${ext}`, { type: tipo });
+      this.subirArchivo(sel, archivo, '', () => undefined);
+    };
+    grabador.stop();
   }
 
   esImagen(m: WaoMensaje): boolean {
@@ -521,6 +756,13 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   seleccionar(clave: string): void {
     this.seleccion.set(clave);
+    this.avisos.chatActivo.set(clave);
+    this.avisos.limpiar(clave);
+    this.iniciarPresencia(clave);
+    this.quitarAdjunto();
+    this.emojis.set(false);
+    this.menuAdjuntar.set(false);
+    this.verEspectadores.set(false);
     this.error.set('');
     this.texto.set('');
     this.mensajes.set([]);

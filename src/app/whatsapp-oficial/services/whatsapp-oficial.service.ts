@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  WaoBaja, WaoEstado, WaoMensaje, WaoPlantillasRespuesta, WaoResumen, WaoUsuario
+  WaoBaja, WaoEstado, WaoMensaje, WaoEspectador, WaoPlantillasRespuesta, WaoResumen, WaoUsuario
 } from '../models/whatsapp-oficial.models';
 
 @Injectable({ providedIn: 'root' })
@@ -59,5 +59,21 @@ export class WhatsappOficialService {
 
   usuario(username: string): Observable<WaoUsuario> {
     return this.http.get<WaoUsuario>(`${this.base}/usuarios/${encodeURIComponent(username)}`);
+  }
+
+  enviarArchivo(numero: string, archivo: File, texto: string): Observable<WaoMensaje> {
+    const datos = new FormData();
+    datos.append('numero', numero);
+    datos.append('archivo', archivo, archivo.name);
+    if (texto) datos.append('texto', texto);
+    return this.http.post<WaoMensaje>(`${this.base}/mensajes/archivo`, datos);
+  }
+
+  viendo(chat: string): Observable<WaoEspectador[]> {
+    return this.http.post<WaoEspectador[]>(`${this.base}/conversaciones/${encodeURIComponent(chat)}/viendo`, {});
+  }
+
+  dejarDeVer(chat: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/conversaciones/${encodeURIComponent(chat)}/viendo`);
   }
 }

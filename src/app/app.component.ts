@@ -14,6 +14,7 @@ import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
 import { AgentPresenceService } from './core/services/agent-presence.service';
 import { SesionDesconexionService } from './core/services/sesion-desconexion.service';
+import { WhatsappOficialAvisosService } from './whatsapp-oficial/services/whatsapp-oficial-avisos.service';
 import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
 import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
@@ -121,7 +122,8 @@ export class AppComponent implements OnInit, OnDestroy {
     // Se pide aquí para que exista desde el arranque: al crearse aplica el tamaño de texto guardado.
     private fontSizeService: FontSizeService,
     public estadoAsesor: EstadoAsesorService,
-    private menuLateral: MenuLateralService
+    private menuLateral: MenuLateralService,
+    private waOficialAvisos: WhatsappOficialAvisosService
   ) {}
 
   /**
@@ -257,6 +259,8 @@ export class AppComponent implements OnInit, OnDestroy {
           error: (err) => console.error('❌ Error cargando menú:', err)
         });
 
+        this.waOficialAvisos.iniciar();
+
         // Conectar a FreeSWITCH automáticamente
         this.conectarFreeSWITCH(user);
 
@@ -277,6 +281,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       } else {
         // Usuario no autenticado - detener servicios
+        this.waOficialAvisos.detener();
         this.mantenimiento.detener();
         this.inactivityService.detener();
         this.sesionDesconexion.detener();

@@ -73,3 +73,8 @@ export interface WaoRemitente {
   rol?: string;
   cartera?: string;
 }
+
+export interface WaoEspectador {
+  usuario: string;
+  nombre: string;
+}
