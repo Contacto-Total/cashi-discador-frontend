@@ -7,6 +7,8 @@ export interface WaoMensaje {
   direccion: 'ENTRANTE' | 'SALIENTE';
   tipo: string;
   contenido: string | null;
+  mediaId: string | null;
+  mediaMime: string | null;
   plantilla: string | null;
   estado: 'RECIBIDO' | 'ENVIADO' | 'ENTREGADO' | 'LEIDO' | 'FALLIDO';
   codigoError: string | null;
@@ -58,4 +60,16 @@ export interface WaoPlantilla {
 
 export interface WaoPlantillasRespuesta {
   data: WaoPlantilla[];
+}
+
+export interface WaoUsuario {
+  id: number;
+  nombre: string;
+  rol: string | null;
+}
+
+export interface WaoRemitente {
+  nombre: string;
+  rol?: string;
+  cartera?: string;
 }

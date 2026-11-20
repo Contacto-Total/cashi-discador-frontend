@@ -2,8 +2,9 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, signal }
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WhatsappOficialService } from '../services/whatsapp-oficial.service';
+import { UserInfoService } from '../../whatsapp/services/user-info.service';
 import {
-  WaoBaja, WaoEstado, WaoMensaje, WaoPlantilla, WaoResumen
+  WaoBaja, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
 } from '../models/whatsapp-oficial.models';
 
 type Pestana = 'plantillas' | 'resumen' | 'bajas';
@@ -102,10 +103,26 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                       <div class="max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm"
                         [class.bg-emerald-100]="m.direccion === 'SALIENTE'" [class.bg-white]="m.direccion === 'ENTRANTE'">
                         @if (m.plantilla) { <p class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Plantilla · {{ m.plantilla }}</p> }
-                        <p class="whitespace-pre-wrap break-words text-slate-900">{{ m.contenido || ('[' + m.tipo.toLowerCase() + ']') }}</p>
+                        @if (m.mediaId) {
+                          @if (esImagen(m) && archivos()[m.id]) {
+                            <img [src]="archivos()[m.id]" alt="Imagen recibida" class="mb-1 max-h-72 max-w-full cursor-zoom-in rounded-md" (click)="imagenAmpliada.set(archivos()[m.id])" />
+                          } @else if (esImagen(m)) {
+                            <p class="text-xs text-slate-500">Cargando imagen...</p>
+                          } @else if (archivos()[m.id]) {
+                            <a [href]="archivos()[m.id]" target="_blank" class="mb-1 block text-xs font-semibold text-emerald-700 underline">Abrir {{ m.tipo.toLowerCase() }}</a>
+                          } @else {
+                            <p class="text-xs text-slate-500">Cargando {{ m.tipo.toLowerCase() }}...</p>
+                          }
+                        }
+                        @if (m.contenido || !m.mediaId) {
+                          <p class="whitespace-pre-wrap break-words text-slate-900">{{ m.contenido || ('[' + m.tipo.toLowerCase() + ']') }}</p>
+                        }
                         <p class="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-500">
                           @if (m.usuario) { <span>{{ m.usuario }} ·</span> }
                           <span>{{ m.fechaCreacion | date: 'HH:mm' }}</span>
+                          <button type="button" class="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700" title="Detalle del mensaje" aria-label="Detalle del mensaje" (click)="abrirDetalle(m)">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+                          </button>
                           @if (m.direccion === 'SALIENTE') {
                             <span [class.text-sky-600]="m.estado === 'LEIDO'" [class.text-rose-600]="m.estado === 'FALLIDO'" [title]="m.detalleError || m.estado">{{ marca(m) }}</span>
                           }
@@ -262,6 +279,40 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
           </div>
         </aside>
       </section>
+      @if (detalle(); as d) {
+        <div class="fixed inset-0 z-[9999] flex justify-end bg-slate-950/50" (click)="cerrarDetalle()">
+          <aside class="flex h-full w-full max-w-sm flex-col bg-white shadow-2xl" (click)="$event.stopPropagation()">
+            <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 class="text-sm font-semibold text-slate-950">Detalle del mensaje</h3>
+              <button type="button" class="grid size-8 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Cerrar" (click)="cerrarDetalle()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </header>
+            <div class="flex-1 overflow-y-auto px-5 py-4">
+              @if (d.direccion === 'SALIENTE') {
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Enviado por</p>
+                <p class="mt-1 text-sm font-semibold text-slate-900">{{ remitente()?.nombre || d.usuario || 'Sistema' }}</p>
+                @if (remitente()?.rol) { <p class="text-xs text-slate-500">{{ remitente()?.rol }}</p> }
+                @if (remitente()?.cartera) { <p class="text-xs text-slate-500">Cartera: {{ remitente()?.cartera }}</p> }
+              } @else {
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Recibido de</p>
+                <p class="mt-1 text-sm font-semibold text-slate-900">{{ d.nombre || d.userId || d.waId }}</p>
+                @if (d.waId) { <p class="text-xs text-slate-500">+{{ d.waId }}</p> }
+              }
+              <p class="mt-2 text-xs text-slate-500">{{ d.fechaCreacion | date: 'd MMM y, HH:mm' }}</p>
+              <hr class="my-4 border-slate-200" />
+              <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado</p>
+              <p class="mt-1 text-sm text-slate-900">{{ d.estado }}</p>
+              @if (d.detalleError) { <p class="mt-1 text-xs text-rose-600">{{ d.detalleError }}</p> }
+            </div>
+          </aside>
+        </div>
+      }
+      @if (imagenAmpliada(); as src) {
+        <div class="fixed inset-0 z-[9999] grid place-items-center bg-slate-950/80 p-6" (click)="imagenAmpliada.set(null)">
+          <img [src]="src" alt="Imagen" class="max-h-full max-w-full rounded-md" />
+        </div>
+      }
     </main>
   `
 })
@@ -289,6 +340,11 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly enviando = signal(false);
   readonly cargando = signal(false);
   readonly pestana = signal<Pestana>('plantillas');
+  readonly archivos = signal<Record<number, string>>({});
+  readonly imagenAmpliada = signal<string | null>(null);
+  readonly detalle = signal<WaoMensaje | null>(null);
+  readonly remitente = signal<WaoRemitente | null>(null);
+  private readonly solicitados = new Set<number>();
   readonly plantillaElegida = signal<string | null>(null);
   readonly parametros = signal<string[]>([]);
   private readonly ahora = signal(Date.now());
@@ -353,7 +409,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   readonly cercaDelTope = computed(() => this.porcentajeTope() >= 90);
 
-  constructor(private readonly api: WhatsappOficialService) {}
+  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService) {}
 
   ngOnInit(): void {
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
@@ -367,6 +423,41 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.temporizador) clearInterval(this.temporizador);
+    Object.values(this.archivos()).forEach(u => URL.revokeObjectURL(u));
+  }
+
+  esImagen(m: WaoMensaje): boolean {
+    return m.tipo === 'IMAGE' || m.tipo === 'STICKER';
+  }
+
+  abrirDetalle(m: WaoMensaje): void {
+    this.detalle.set(m);
+    this.remitente.set(null);
+    if (m.direccion !== 'SALIENTE' || !m.usuario) return;
+    this.api.usuario(m.usuario).subscribe({
+      next: u => {
+        this.remitente.set({ nombre: u.nombre, rol: u.rol ?? undefined });
+        this.userInfo.getUserInfoView(u.id).subscribe({
+          next: v => this.remitente.set({ nombre: u.nombre, rol: v.roles?.[0] ?? u.rol ?? undefined, cartera: v.asignaciones?.[0]?.nombreCartera })
+        });
+      },
+      error: () => this.remitente.set({ nombre: m.usuario ?? '' })
+    });
+  }
+
+  cerrarDetalle(): void {
+    this.detalle.set(null);
+  }
+
+  private cargarArchivos(lista: WaoMensaje[]): void {
+    for (const m of lista) {
+      if (!m.mediaId || this.solicitados.has(m.id)) continue;
+      this.solicitados.add(m.id);
+      this.api.media(m.id).subscribe({
+        next: blob => this.archivos.update(a => ({ ...a, [m.id]: URL.createObjectURL(blob) })),
+        error: () => this.solicitados.delete(m.id)
+      });
+    }
   }
 
   clave(m: WaoMensaje): string {
@@ -510,6 +601,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
       next: lista => {
         if (this.seleccion() !== clave) return;
         this.mensajes.set(lista);
+        this.cargarArchivos(lista);
         if (bajar) setTimeout(() => this.bajarPanel());
       }
     });

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  WaoBaja, WaoEstado, WaoMensaje, WaoPlantillasRespuesta, WaoResumen
+  WaoBaja, WaoEstado, WaoMensaje, WaoPlantillasRespuesta, WaoResumen, WaoUsuario
 } from '../models/whatsapp-oficial.models';
 
 @Injectable({ providedIn: 'root' })
@@ -51,5 +51,13 @@ export class WhatsappOficialService {
 
   quitarBaja(waId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/bajas/${encodeURIComponent(waId)}`);
+  }
+
+  media(id: number): Observable<Blob> {
+    return this.http.get(`${this.base}/mensajes/${id}/media`, { responseType: 'blob' });
+  }
+
+  usuario(username: string): Observable<WaoUsuario> {
+    return this.http.get<WaoUsuario>(`${this.base}/usuarios/${encodeURIComponent(username)}`);
   }
 }
