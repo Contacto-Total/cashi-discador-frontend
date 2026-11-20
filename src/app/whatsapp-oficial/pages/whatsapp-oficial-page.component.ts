@@ -16,6 +16,14 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
   selector: 'app-whatsapp-oficial-page',
   standalone: true,
   imports: [DatePipe, DecimalPipe, FormsModule],
+  styles: [`
+    .fondo-cashi {
+      background-color: #efeae2;
+      background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23047857' stroke-opacity='0.11' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(14 10) rotate(-18 12 12) scale(1.15)'><path d='M12 8V4H8'/><rect width='16' height='12' x='4' y='8' rx='2'/><path d='M2 14h2'/><path d='M20 14h2'/><path d='M15 13v2'/><path d='M9 13v2'/></g><g transform='translate(74 66) rotate(-18 12 12) scale(1.15)'><path d='M12 8V4H8'/><rect width='16' height='12' x='4' y='8' rx='2'/><path d='M2 14h2'/><path d='M20 14h2'/><path d='M15 13v2'/><path d='M9 13v2'/></g></g></svg>");
+      background-size: 120px 120px;
+      background-repeat: repeat;
+    }
+  `],
   template: `
     <main class="h-screen min-h-0 overflow-hidden bg-slate-100 text-slate-950">
       <section class="grid h-full min-h-0 grid-cols-1 sm:grid-cols-[minmax(300px,30%)_minmax(0,1fr)] lg:grid-cols-[minmax(280px,22%)_minmax(0,1fr)_minmax(300px,26%)]">
@@ -119,7 +127,7 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
               }
             </header>
 
-            <div #panel class="min-h-0 flex-1 overflow-y-auto bg-[#efeae2] px-[6%] py-4">
+            <div #panel class="fondo-cashi min-h-0 flex-1 overflow-y-auto px-[6%] py-4">
               @if (!mensajes().length) {
                 <div class="flex h-full flex-col items-center justify-center text-center text-slate-500">
                   <p class="font-semibold text-slate-900">Sin mensajes</p>
