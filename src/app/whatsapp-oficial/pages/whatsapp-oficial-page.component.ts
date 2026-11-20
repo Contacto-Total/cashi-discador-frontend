@@ -322,21 +322,30 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                 }
               }
               @if (seleccion()) {
-                <div class="border-t border-slate-200 pt-3">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mensajes rápidos</p>
-                  @if (!ventanaAbierta()) {
-                    <p class="mt-1 text-xs text-amber-700">Ventana de 24 h cerrada: solo se pueden enviar plantillas.</p>
-                  } @else {
-                    <p class="mt-1 text-xs text-slate-500">Un clic y se envía al cliente.</p>
-                  }
-                  <div class="mt-2 space-y-1.5">
+                <div class="rounded-2xl bg-gradient-to-br from-emerald-50 to-white p-3 ring-1 ring-emerald-100">
+                  <div class="flex items-center gap-2">
+                    <span class="grid size-7 place-items-center rounded-lg bg-emerald-600 text-white">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+                    </span>
+                    <div>
+                      <p class="text-sm font-semibold text-slate-900">Mensajes rápidos</p>
+                      <p class="text-[11px] text-slate-500">{{ ventanaAbierta() ? 'Un clic y se envía al cliente' : 'Ventana de 24 h cerrada: usa una plantilla' }}</p>
+                    </div>
+                  </div>
+                  <div class="mt-3 flex flex-wrap gap-1.5">
                     @for (r of mensajesRapidos; track r.titulo) {
                       <button type="button"
-                        class="w-full rounded-lg bg-white px-3 py-2 text-left ring-1 ring-slate-200 transition hover:bg-emerald-50 hover:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:ring-slate-200"
-                        [disabled]="!puedeEscribir()" (click)="enviarRapido(r)">
-                        <span class="block text-xs font-semibold text-emerald-700">{{ r.titulo }}</span>
-                        <span class="mt-0.5 block text-xs text-slate-600">{{ textoRapido(r) }}</span>
-                      </button>
+                        class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-200 transition hover:bg-emerald-600 hover:text-white hover:ring-emerald-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-white disabled:hover:text-emerald-800 disabled:hover:ring-emerald-200"
+                        [disabled]="!puedeEscribir()" (click)="enviarRapido(r)"
+                        (mouseenter)="rapidoVista.set(r)" (mouseleave)="rapidoVista.set(null)"
+                        (focus)="rapidoVista.set(r)" (blur)="rapidoVista.set(null)">{{ r.titulo }}</button>
+                    }
+                  </div>
+                  <div class="mt-3 min-h-14 rounded-xl bg-white/80 px-3 py-2 text-xs leading-relaxed text-slate-600 ring-1 ring-slate-100">
+                    @if (rapidoVista(); as v) {
+                      <span class="text-slate-800">{{ textoRapido(v) }}</span>
+                    } @else {
+                      <span class="text-slate-400">Pasa el cursor sobre un mensaje para ver el texto completo.</span>
                     }
                   </div>
                 </div>
@@ -460,6 +469,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly cargando = signal(false);
   readonly pestana = signal<Pestana>('plantillas');
   readonly mensajesRapidos: MensajeRapido[] = MENSAJES_RAPIDOS;
+  readonly rapidoVista = signal<MensajeRapido | null>(null);
   readonly archivos = signal<Record<number, string>>({});
   readonly espectadores = signal<WaoEspectador[]>([]);
   readonly verEspectadores = signal(false);
