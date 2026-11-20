@@ -1,17 +1,21 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { WhatsappOficialService } from '../services/whatsapp-oficial.service';
 import { WhatsappOficialAvisosService } from '../services/whatsapp-oficial-avisos.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SipService } from '../../core/services/sip.service';
+import { ClientInfoAclService, GlobalSearchResult, DynamicClient } from '../../whatsapp/componentes/info-client/client-info-acl.service';
 import { UserInfoService } from '../../whatsapp/services/user-info.service';
 import { MENSAJES_RAPIDOS, MensajeRapido } from '../models/mensajes-rapidos';
 import {
   WaoBaja, WaoEspectador, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
 } from '../models/whatsapp-oficial.models';
 
-type Pestana = 'plantillas' | 'resumen' | 'bajas';
+type Pestana = 'herramientas' | 'resumen' | 'bajas';
+type Herramienta = 'plantillas' | 'mensajes' | 'buscar';
+type ModoBusqueda = 'telefono' | 'documento';
 
 @Component({
   selector: 'app-whatsapp-oficial-page',
@@ -290,7 +294,17 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
           </header>
 
           <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-            @if (pestana() === 'plantillas') {
+            @if (pestana() === 'herramientas') {
+              <div class="flex gap-1 rounded-full bg-slate-100 p-0.5 text-xs font-medium">
+                @for (h of herramientas; track h.id) {
+                  <button type="button" class="flex-1 rounded-full px-2 py-1.5 transition"
+                    [class]="herramienta() === h.id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                    (click)="cambiarHerramienta(h.id)">{{ h.etiqueta }}</button>
+                }
+              </div>
+            }
+
+            @if (pestana() === 'herramientas' && herramienta() === 'plantillas') {
               @if (!seleccion()) {
                 <p class="text-sm text-slate-500">Elige una conversación para enviar una plantilla.</p>
               } @else if (errorPlantillas()) {
@@ -324,6 +338,9 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                   </button>
                 }
               }
+            }
+
+            @if (pestana() === 'herramientas' && herramienta() === 'mensajes') {
               @if (seleccion()) {
                 <div class="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
                   <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mensajes rápidos</p>
@@ -340,6 +357,51 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                     }
                   </ul>
                 </div>
+              } @else {
+                <p class="text-sm text-slate-500">Elige una conversación para usar los mensajes rápidos.</p>
+              }
+            }
+
+            @if (pestana() === 'herramientas' && herramienta() === 'buscar') {
+              <div class="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div class="flex gap-1 rounded-full bg-slate-100 p-0.5 text-xs font-medium">
+                  @for (m of modosBusqueda; track m.id) {
+                    <button type="button" class="flex-1 rounded-full px-2 py-1 transition"
+                      [class]="modoBusqueda() === m.id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                      (click)="cambiarModoBusqueda(m.id)">{{ m.etiqueta }}</button>
+                  }
+                </div>
+                <form class="mt-2 flex gap-2" (ngSubmit)="buscarCliente()">
+                  <input class="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    type="search" name="consultaCliente"
+                    [placeholder]="modoBusqueda() === 'documento' ? 'DNI / documento' : 'Número de teléfono'"
+                    [ngModel]="consultaCliente()" (ngModelChange)="consultaCliente.set($event)" />
+                  <button type="submit" class="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:bg-slate-300"
+                    [disabled]="buscandoCliente() || !consultaCliente().trim()">{{ buscandoCliente() ? '…' : 'Buscar' }}</button>
+                </form>
+                @if (errorBusqueda()) {
+                  <p class="mt-2 text-xs font-medium text-rose-600">{{ errorBusqueda() }}</p>
+                }
+              </div>
+              @if (resultadosCliente().length) {
+                <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+                  @for (r of resultadosCliente(); track r.clientId + '-' + r.subPortfolioId) {
+                    <li>
+                      <button type="button" class="block w-full px-4 py-3 text-left transition hover:bg-emerald-50/70" (click)="abrirChatCliente(r)">
+                        <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ r.nombreCartera }} · {{ r.nombreSubcartera }}</p>
+                        <p class="mt-1 truncate text-sm font-bold leading-5 text-slate-950">{{ nombreCliente(r.clientData) }}</p>
+                        <p class="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+                          <span>Doc: {{ r.clientData.documento }}</span>
+                          @if (r.clientData.dias_mora != null) {
+                            <span class="text-slate-300">•</span>
+                            <span>Mora: {{ r.clientData.dias_mora }} días</span>
+                          }
+                        </p>
+                      </button>
+                    </li>
+                  }
+                </ul>
+                <p class="text-xs text-slate-500">Haz clic en un cliente para abrir su chat.</p>
               }
             }
 
@@ -439,7 +501,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   @ViewChild('panel') panel?: ElementRef<HTMLElement>;
 
   readonly pestanas: { id: Pestana; etiqueta: string }[] = [
-    { id: 'plantillas', etiqueta: 'Plantillas' },
+    { id: 'herramientas', etiqueta: 'Herramientas' },
     { id: 'resumen', etiqueta: 'Resumen' },
     { id: 'bajas', etiqueta: 'Bajas' }
   ];
@@ -458,8 +520,23 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly errorPlantillas = signal('');
   readonly enviando = signal(false);
   readonly cargando = signal(false);
-  readonly pestana = signal<Pestana>('plantillas');
+  readonly pestana = signal<Pestana>('herramientas');
   readonly mensajesRapidos: MensajeRapido[] = MENSAJES_RAPIDOS;
+  readonly herramientas: { id: Herramienta; etiqueta: string }[] = [
+    { id: 'plantillas', etiqueta: 'Plantillas' },
+    { id: 'mensajes', etiqueta: 'Mensajes' },
+    { id: 'buscar', etiqueta: 'Buscar cliente' }
+  ];
+  readonly modosBusqueda: { id: ModoBusqueda; etiqueta: string }[] = [
+    { id: 'telefono', etiqueta: 'Teléfono' },
+    { id: 'documento', etiqueta: 'Documento' }
+  ];
+  readonly herramienta = signal<Herramienta>('plantillas');
+  readonly modoBusqueda = signal<ModoBusqueda>('telefono');
+  readonly consultaCliente = signal('');
+  readonly buscandoCliente = signal(false);
+  readonly errorBusqueda = signal('');
+  readonly resultadosCliente = signal<GlobalSearchResult[]>([]);
   readonly archivos = signal<Record<number, string>>({});
   readonly espectadores = signal<WaoEspectador[]>([]);
   readonly verEspectadores = signal(false);
@@ -550,12 +627,13 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   readonly cercaDelTope = computed(() => this.porcentajeTope() >= 90);
 
-  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService) {}
+  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService) {}
 
   ngOnInit(): void {
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
     this.refrescar();
     this.cargarBajas();
+    this.cambiarHerramienta('plantillas');
     this.temporizador = setInterval(() => {
       this.ahora.set(Date.now());
       this.refrescar(true);
@@ -619,6 +697,63 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
       next: () => { this.enviando.set(false); this.refrescar(true); setTimeout(() => this.bajarPanel(), 300); },
       error: err => { this.error.set(this.mensajeError(err)); this.enviando.set(false); }
     });
+  }
+
+  cambiarHerramienta(h: Herramienta): void {
+    this.herramienta.set(h);
+    if (h === 'plantillas' && !this.plantillas().length && !this.errorPlantillas()) this.cargarPlantillas();
+  }
+
+  cambiarModoBusqueda(m: ModoBusqueda): void {
+    this.modoBusqueda.set(m);
+    this.consultaCliente.set('');
+    this.errorBusqueda.set('');
+  }
+
+  buscarCliente(): void {
+    const valor = this.consultaCliente().trim();
+    if (!valor) return;
+    this.buscandoCliente.set(true);
+    this.errorBusqueda.set('');
+    this.resultadosCliente.set([]);
+    const consulta = this.modoBusqueda() === 'documento'
+      ? this.acl.searchByDocument(valor)
+      : this.acl.searchByPhone(this.acl.phoneKey(valor));
+    consulta.pipe(finalize(() => this.buscandoCliente.set(false))).subscribe({
+      next: lista => {
+        const limpia = (lista ?? []).filter(r => r && r.clientData && r.clientData.documento);
+        this.resultadosCliente.set(limpia);
+        if (!limpia.length) this.errorBusqueda.set('Sin resultados.');
+      },
+      error: () => this.errorBusqueda.set('No se pudo buscar el cliente.')
+    });
+  }
+
+  nombreCliente(c: DynamicClient): string {
+    const completo = c['nombre_completo'] || c['nombreCompleto'] || c['fullName'];
+    if (typeof completo === 'string' && completo.trim()) return completo.trim();
+    if (c.nombre?.trim()) return c.nombre;
+    const partes = [c.nombres, c.apellidos].map(p => p?.trim()).filter(Boolean);
+    return partes.length ? partes.join(' ') : 'Sin nombre';
+  }
+
+  abrirChatCliente(r: GlobalSearchResult): void {
+    const c = r.clientData;
+    const buscado = this.modoBusqueda() === 'telefono' ? this.acl.phoneKey(this.consultaCliente()) : '';
+    const claves = [buscado, ...[c.telefono, c.telefono_1, c.telefono_2, c.telefono_3].map(t => this.acl.phoneKey(t ? String(t) : ''))]
+      .filter((k, i, a) => k.length === 9 && a.indexOf(k) === i)
+      .map(k => '51' + k);
+    if (!claves.length) {
+      this.errorBusqueda.set('Este cliente no tiene teléfonos registrados.');
+      return;
+    }
+    this.errorBusqueda.set('');
+    forkJoin(claves.map(k => this.api.mensajes(k, 200).pipe(catchError(() => of([] as WaoMensaje[])))))
+      .subscribe(listas => {
+        const i = listas.findIndex(l => l.some(m => m.direccion === 'ENTRANTE'));
+        if (i >= 0) this.seleccionar(claves[i]);
+        else this.errorBusqueda.set('Este cliente aún no ha escrito al número oficial, así que no se puede abrir su chat.');
+      });
   }
 
   agregarEmoji(e: string): void {
@@ -835,7 +970,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   cambiarPestana(p: Pestana): void {
     this.pestana.set(p);
-    if (p === 'plantillas' && !this.plantillas().length && !this.errorPlantillas()) this.cargarPlantillas();
+    if (p === 'herramientas') this.cambiarHerramienta(this.herramienta());
     if (p === 'bajas') this.cargarBajas();
   }
 
