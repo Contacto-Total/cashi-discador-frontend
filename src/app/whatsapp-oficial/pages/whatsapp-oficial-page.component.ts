@@ -57,6 +57,9 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                 name="nuevo" placeholder="Nuevo chat: número con 51 o ID de Meta" [ngModel]="nuevoContacto()" (ngModelChange)="nuevoContacto.set($event)" />
               <button type="submit" class="shrink-0 rounded-full bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-slate-300" [disabled]="!nuevoContacto().trim()">Abrir</button>
             </form>
+            @if (error() && !seleccion()) {
+              <p class="mt-2 rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-200">{{ error() }}</p>
+            }
           </header>
 
           <section class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -322,32 +325,20 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                 }
               }
               @if (seleccion()) {
-                <div class="rounded-2xl bg-gradient-to-br from-emerald-50 to-white p-3 ring-1 ring-emerald-100">
-                  <div class="flex items-center gap-2">
-                    <span class="grid size-7 place-items-center rounded-lg bg-emerald-600 text-white">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
-                    </span>
-                    <div>
-                      <p class="text-sm font-semibold text-slate-900">Mensajes rápidos</p>
-                      <p class="text-[11px] text-slate-500">{{ ventanaAbierta() ? 'Un clic y se envía al cliente' : 'Ventana de 24 h cerrada: usa una plantilla' }}</p>
-                    </div>
-                  </div>
-                  <div class="mt-3 flex flex-wrap gap-1.5">
+                <div class="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mensajes rápidos</p>
+                  <p class="mt-1 text-xs text-slate-500">{{ ventanaAbierta() ? 'Haz clic en uno para enviarlo.' : 'Ventana de 24 h cerrada: solo plantillas.' }}</p>
+                  <ul class="mt-3 divide-y divide-slate-200 overflow-hidden rounded-lg bg-white ring-1 ring-slate-200">
                     @for (r of mensajesRapidos; track r.titulo) {
-                      <button type="button"
-                        class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-200 transition hover:bg-emerald-600 hover:text-white hover:ring-emerald-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-white disabled:hover:text-emerald-800 disabled:hover:ring-emerald-200"
-                        [disabled]="!puedeEscribir()" (click)="enviarRapido(r)"
-                        (mouseenter)="rapidoVista.set(r)" (mouseleave)="rapidoVista.set(null)"
-                        (focus)="rapidoVista.set(r)" (blur)="rapidoVista.set(null)">{{ r.titulo }}</button>
+                      <li>
+                        <button type="button" class="block w-full px-3 py-2 text-left transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          [disabled]="!puedeEscribir()" (click)="enviarRapido(r)">
+                          <span class="block text-xs font-semibold text-slate-800">{{ r.titulo }}</span>
+                          <span class="mt-0.5 line-clamp-2 block text-xs text-slate-500">{{ textoRapido(r) }}</span>
+                        </button>
+                      </li>
                     }
-                  </div>
-                  <div class="mt-3 min-h-14 rounded-xl bg-white/80 px-3 py-2 text-xs leading-relaxed text-slate-600 ring-1 ring-slate-100">
-                    @if (rapidoVista(); as v) {
-                      <span class="text-slate-800">{{ textoRapido(v) }}</span>
-                    } @else {
-                      <span class="text-slate-400">Pasa el cursor sobre un mensaje para ver el texto completo.</span>
-                    }
-                  </div>
+                  </ul>
                 </div>
               }
             }
@@ -469,7 +460,6 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly cargando = signal(false);
   readonly pestana = signal<Pestana>('plantillas');
   readonly mensajesRapidos: MensajeRapido[] = MENSAJES_RAPIDOS;
-  readonly rapidoVista = signal<MensajeRapido | null>(null);
   readonly archivos = signal<Record<number, string>>({});
   readonly espectadores = signal<WaoEspectador[]>([]);
   readonly verEspectadores = signal(false);
@@ -828,8 +818,19 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   abrirNuevo(): void {
     const valor = this.nuevoContacto().trim();
     if (!valor) return;
-    this.nuevoContacto.set('');
-    this.seleccionar(this.normalizarContacto(valor));
+    const clave = this.normalizarContacto(valor);
+    this.error.set('');
+    this.api.mensajes(clave, 200).subscribe({
+      next: lista => {
+        if (lista.some(m => m.direccion === 'ENTRANTE')) {
+          this.nuevoContacto.set('');
+          this.seleccionar(clave);
+        } else {
+          this.error.set('Ese contacto nunca ha escrito al número oficial, así que no se le puede enviar mensajes.');
+        }
+      },
+      error: err => this.error.set(this.mensajeError(err))
+    });
   }
 
   cambiarPestana(p: Pestana): void {
