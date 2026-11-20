@@ -248,6 +248,11 @@ export const routes: Routes = [
     canActivate: [authGuard, menuAccesoGuard]
   },
   {
+    path: 'whatsapp-oficial',
+    loadComponent: () => import('./whatsapp-oficial/pages/whatsapp-oficial-page.component').then(m => m.WhatsappOficialPageComponent),
+    canActivate: [authGuard, menuAccesoGuard]
+  },
+  {
     path: 'whatsapp/dashboard',
     loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-dashboard/whatsapp-dashboard.component').then(m => m.WhatsappDashboardComponent),
     canActivate: [authGuard, adminGuard, menuAccesoGuard]
