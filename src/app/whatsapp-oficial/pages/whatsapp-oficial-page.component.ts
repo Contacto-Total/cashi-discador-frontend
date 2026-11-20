@@ -6,6 +6,7 @@ import { WhatsappOficialAvisosService } from '../services/whatsapp-oficial-aviso
 import { AuthService } from '../../core/services/auth.service';
 import { SipService } from '../../core/services/sip.service';
 import { UserInfoService } from '../../whatsapp/services/user-info.service';
+import { MENSAJES_RAPIDOS, MensajeRapido } from '../models/mensajes-rapidos';
 import {
   WaoBaja, WaoEspectador, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
 } from '../models/whatsapp-oficial.models';
@@ -320,6 +321,26 @@ type Pestana = 'plantillas' | 'resumen' | 'bajas';
                   </button>
                 }
               }
+              @if (seleccion()) {
+                <div class="border-t border-slate-200 pt-3">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mensajes rápidos</p>
+                  @if (!ventanaAbierta()) {
+                    <p class="mt-1 text-xs text-amber-700">Ventana de 24 h cerrada: solo se pueden enviar plantillas.</p>
+                  } @else {
+                    <p class="mt-1 text-xs text-slate-500">Un clic y se envía al cliente.</p>
+                  }
+                  <div class="mt-2 space-y-1.5">
+                    @for (r of mensajesRapidos; track r.titulo) {
+                      <button type="button"
+                        class="w-full rounded-lg bg-white px-3 py-2 text-left ring-1 ring-slate-200 transition hover:bg-emerald-50 hover:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:ring-slate-200"
+                        [disabled]="!puedeEscribir()" (click)="enviarRapido(r)">
+                        <span class="block text-xs font-semibold text-emerald-700">{{ r.titulo }}</span>
+                        <span class="mt-0.5 block text-xs text-slate-600">{{ textoRapido(r) }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
             }
 
             @if (pestana() === 'resumen') {
@@ -438,6 +459,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly enviando = signal(false);
   readonly cargando = signal(false);
   readonly pestana = signal<Pestana>('plantillas');
+  readonly mensajesRapidos: MensajeRapido[] = MENSAJES_RAPIDOS;
   readonly archivos = signal<Record<number, string>>({});
   readonly espectadores = signal<WaoEspectador[]>([]);
   readonly verEspectadores = signal(false);
@@ -581,6 +603,22 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
     const destino = telefono.startsWith('51') && telefono.length === 11 ? telefono.slice(2) : telefono;
     this.error.set('');
     this.sip.call(destino).catch(() => this.error.set('No se pudo iniciar la llamada.'));
+  }
+
+  textoRapido(r: MensajeRapido): string {
+    const nombre = (this.chatActual()?.nombre ?? '').trim().split(/\s+/)[0] ?? '';
+    return nombre ? r.texto.replace('{nombre}', nombre) : r.texto.replace(' {nombre}', '').replace('{nombre}', '');
+  }
+
+  enviarRapido(r: MensajeRapido): void {
+    const sel = this.seleccion();
+    if (!sel || !this.puedeEscribir()) return;
+    this.enviando.set(true);
+    this.error.set('');
+    this.api.enviarTexto(sel, this.textoRapido(r)).subscribe({
+      next: () => { this.enviando.set(false); this.refrescar(true); setTimeout(() => this.bajarPanel(), 300); },
+      error: err => { this.error.set(this.mensajeError(err)); this.enviando.set(false); }
+    });
   }
 
   agregarEmoji(e: string): void {
