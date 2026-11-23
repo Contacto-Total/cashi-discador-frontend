@@ -49,7 +49,7 @@ const enSoles = (v: number | null): string => v == null ? '—' : 'S/ ' + v.toLo
       <section appTarjeta [class]="PRINCIPAL">
         <div class="mb-[.875rem] flex flex-none items-center justify-between gap-3 [@media(max-height:700px)]:mb-[.5rem]">
           <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="volver()">
-            <lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Monitoreo
+            <lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Llamadas evaluadas
           </button>
           <div class="flex items-center gap-[.375rem] text-[.8125rem] font-medium text-muted-foreground">
             @if (posicion() >= 0) { <span class="mr-1 whitespace-nowrap">{{ posicion() + 1 }} de {{ e.visibles().length }}</span> }
@@ -551,7 +551,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
   }
 
   // ---------- navegación ----------
-  volver(): void { this.router.navigate(['/admin/recordings'], { queryParams: { tab: 'monitoreo' } }); }
+  volver(): void { this.router.navigate(['/admin/recordings/llamadas']); }
   mover(d: number): void {
     const l = this.e.visibles()[this.posicion() + d];
     if (l) this.router.navigate(['/admin/recordings/llamada', l.idx], { replaceUrl: true });

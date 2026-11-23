@@ -32,9 +32,10 @@ export class MonitoreoService {
     return this.http.get<Rendimiento>(`${this.base}/rendimiento`, { params });
   }
 
-  /** Seguimiento por día: por asesor, día y rúbrica entre dos fechas (las dos incluidas). */
-  seguimiento(subcartera: number, desde: string, hasta: string): Observable<Seguimiento> {
-    const params = new HttpParams().set('subcartera', subcartera).set('desde', desde).set('hasta', hasta);
+  /** Seguimiento por día: por asesor, día y rúbrica entre dos fechas (las dos incluidas); con resultado, solo ese. */
+  seguimiento(subcartera: number, desde: string, hasta: string, resultado?: string): Observable<Seguimiento> {
+    let params = new HttpParams().set('subcartera', subcartera).set('desde', desde).set('hasta', hasta);
+    if (resultado) params = params.set('resultado', resultado);
     return this.http.get<Seguimiento>(`${this.base}/seguimiento`, { params });
   }
 

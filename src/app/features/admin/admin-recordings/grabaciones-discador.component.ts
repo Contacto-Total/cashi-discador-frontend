@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ToastService } from '../../../shared/services/toast.service';
 import { NombrePropioPipe } from '../../../shared/ui/nombre-propio.pipe';
@@ -10,21 +11,23 @@ import { CABECERA, CABECERA_TEXTO, CAMPO, ETIQUETA, FILTROS, LISTA, PANTALLA, SU
 import { SegmentadoComponent } from '../../asistencia/ui/segmentado.component';
 import { GrabacionesComponent } from './grabaciones/grabaciones.component';
 import { MonitoreoEstado } from './monitoreo/monitoreo-estado';
-import { MonitoreoListaComponent } from './monitoreo/monitoreo-lista.component';
+import { SeguimientoComponent } from './monitoreo/seguimiento.component';
 
 /**
  * Grabaciones del Discador: buscar y descargar grabaciones, y el monitoreo de lo que evaluó el speech. Arriba,
  * el ámbito (Cliente › Cartera › Subcartera) y las pestañas; cada pestaña pinta esta cabecera dentro de su
- * tarjeta. Sin subcartera elegida no se lista nada.
+ * tarjeta y puede pasarle sus controles (contexto de la plantilla), que van a la derecha de las pestañas.
+ * Monitoreo abre en el seguimiento por día, como en PROD; la lista de llamadas es una pantalla aparte.
+ * Sin subcartera elegida no se lista nada.
  */
 @Component({
   selector: 'app-grabaciones-discador',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: PANTALLA + ' @container/p5' },
-  imports: [NombrePropioPipe, SegmentadoComponent, MonitoreoListaComponent, GrabacionesComponent],
+  imports: [NgTemplateOutlet, NombrePropioPipe, SegmentadoComponent, SeguimientoComponent, GrabacionesComponent],
   template: `
-    <ng-template #cabecera>
+    <ng-template #cabecera let-extra>
       <div [class]="CABECERA">
         <div [class]="CABECERA_TEXTO">
           <p role="heading" aria-level="1" [class]="TITULO">Grabaciones del Discador</p>
@@ -56,11 +59,12 @@ import { MonitoreoListaComponent } from './monitoreo/monitoreo-lista.component';
       </div>
       <div class="mb-4 flex flex-none flex-wrap items-center gap-3">
         <app-segmentado [opciones]="PESTANAS" [valor]="e.pestana()" (cambiar)="e.pestana.set($any($event))" />
+        @if (extra) { <div class="ml-auto flex flex-wrap items-center gap-3"><ng-container *ngTemplateOutlet="extra" /></div> }
       </div>
     </ng-template>
 
     @if (e.pestana() === 'monitoreo') {
-      <app-monitoreo-lista [cabecera]="cabecera" />
+      <app-seguimiento [cabecera]="cabecera" />
     } @else {
       <app-grabaciones [cabecera]="cabecera" />
     }

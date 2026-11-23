@@ -1,52 +1,29 @@
-import { ChangeDetectionStrategy, Component, ElementRef, TemplateRef, ViewChild, computed, effect, inject, input, untracked } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, effect, inject, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BotonDirective } from '../../../../shared/ui/boton.directive';
 import { TarjetaDirective } from '../../../../shared/ui/tarjeta.directive';
 import {
-  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CAMPO, ENTRADA, ETIQUETA, FUERTE, INDICADORES, LISTA,
-  PILL, PRINCIPAL, REJILLA, REJILLA_SOLA, SEC, TABLA, TABLA_CAJA, TD, TD_1, TD_NUM, TH, TH_NUM, THEAD, TR, TonoPill, VACIO, ZONA
+  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CAMPO, ENTRADA, ETIQUETA, FUERTE, LISTA,
+  PANTALLA, PILL, PRINCIPAL, REJILLA, REJILLA_SOLA, SEC, SUBTITULO, TABLA, TABLA_CAJA, TD, TD_1, TD_NUM, TH, TH_NUM, THEAD, TITULO, TR, TonoPill, VACIO, ZONA
 } from '../../../asistencia/ui/clases';
-import { TR_ABRE } from '../../../asistencia/ui/ficha-clases';
+import { MINI, TR_ABRE } from '../../../asistencia/ui/ficha-clases';
 import { BOTON_APAGADO, BOTON_SEC } from '../../../asistencia/ui/control-comun';
-import { IndicadorComponent } from '../../../asistencia/ui/indicador.component';
 import { MedidorTabla } from '../../../asistencia/ui/medidor-tabla';
 import { PiePaginaComponent } from '../../../asistencia/ui/pie-pagina.component';
 import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component';
 import { MonitoreoEstado, rangosSemana, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { Llamada, Rubrica } from './monitoreo.models';
-import { NOMBRE_CLIENTE, pct, pts, rubricaEnFrase } from './monitoreo.calculos';
+import { NOMBRE_CLIENTE, pts } from './monitoreo.calculos';
+import { ResultadoFiltroComponent, gruposResultado, oracion, partes, textoResultado } from './resultado-filtro.component';
 
-/** «PROMESA DE PAGO» → «Promesa de pago». */
-export const oracion = (t: string | null | undefined): string => {
-  const s = (t ?? '').trim().toLowerCase();
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
+export { oracion, textoResultado };
+
 const fechaCorta = (f: string): string => `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`;
 
 export const NOMBRE_RUBRICA: Record<Rubrica, string> = { PDP: 'PDP', CD: 'CD', TIT: 'Titular', TER: 'Tercero' };
-/** Rótulo del grupo de resultados: la rúbrica en FOH; en Interbank, el tipo de contacto (efectivo o tercero relacionado). */
-const GRUPO_RESULTADO: Record<Rubrica, string> = { PDP: 'PDP', CD: 'CD', TIT: 'CE', TER: 'TR' };
-/** Orden de los resultados que evalúa el speech; los que no estén aquí van al final. */
-const ORDEN_RESULTADO = ['PROMESA DE PAGO', 'REFINANCIAMIENTO', 'OPORTUNIDAD DE PAGO', 'CONTACTO CON TITULAR O ENCARGADO', 'CON INTENCIÓN',
-  'SIN INTENCION', 'SIN INTENCIÓN', 'TITULAR PAGARÁ CON FRACCIONAMIENTO - CON DESCUENTO', 'TITULAR PAGARÁ CON FRACCIONAMIENTO - SIN DESCUENTO',
-  'TERCERO INFORMARÁ A TITULAR', 'TERCERO CONOCE AL TITULAR - BRINDA NUEVOS DATOS'];
-/** Texto corto de un resultado largo de Interbank. */
-const CORTO: Record<string, string> = {
-  'TITULAR PAGARÁ CON FRACCIONAMIENTO - CON DESCUENTO': 'Fraccionamiento con descuento',
-  'TITULAR PAGARÁ CON FRACCIONAMIENTO - SIN DESCUENTO': 'Fraccionamiento sin descuento'
-};
-export const textoResultado = (r: string): string => CORTO[r.toUpperCase()] ?? oracion(r);
-/** Los resultados que evalúa el speech de Interbank (clientes/ibk/seleccion.py): se ofrecen siempre, haya o no llamadas. */
-const CATALOGO_IBK: [Rubrica, string[]][] = [
-  ['TIT', ['PROMESA DE PAGO', 'TITULAR PAGARÁ CON FRACCIONAMIENTO - CON DESCUENTO', 'TITULAR PAGARÁ CON FRACCIONAMIENTO - SIN DESCUENTO']],
-  ['TER', ['TERCERO INFORMARÁ A TITULAR', 'TERCERO CONOCE AL TITULAR - BRINDA NUEVOS DATOS']]
-];
-/** Una gestión multiproducto trae varios resultados unidos por « / ». */
-const partes = (nivel2: string | null): string[] => (nivel2 ?? '').split(' / ').map(x => x.trim().toUpperCase()).filter(Boolean);
 
 /** El estado que ve la supervisora en la píldora de cada llamada. */
 export function estadoLlamada(l: Llamada): [string, TonoPill] {
@@ -66,48 +43,25 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
   selector: 'app-monitoreo-lista',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'contents' },
-  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, IndicadorComponent, PiePaginaComponent, SegmentadoComponent],
+  host: { class: PANTALLA + ' @container/p5' },
+  imports: [LucideAngularModule, TarjetaDirective, BotonDirective, PiePaginaComponent, SegmentadoComponent, ResultadoFiltroComponent],
   template: `
     <div [class]="REJILLA + ' ' + REJILLA_SOLA">
       <section appTarjeta [class]="PRINCIPAL">
-        <ng-container *ngTemplateOutlet="cabecera()" />
-
-        <div [class]="INDICADORES + ' [@media(max-height:700px)]:mb-4 transition-opacity duration-200 motion-reduce:transition-none'" [class.opacity-60]="cargando()">
-          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="porRevisar()" rotulo="Por revisar" [filtra]="true" tono="am" [activo]="e.filtro() === 'revisar'" (elegir)="filtrar('revisar')" />
-          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="faltas()" rotulo="Falta por confirmar" [filtra]="true" tono="ro" [activo]="e.filtro() === 'falta'" (elegir)="filtrar('falta')" />
-          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="revisadas()" rotulo="Revisadas" [filtra]="true" tono="ok" [activo]="e.filtro() === 'revisadas'" (elegir)="filtrar('revisadas')" />
-          @if (puntajesRubrica().length > 1) {
-            <!-- Cada rúbrica tiene otros criterios y otros puntos: con llamadas de dos, un puntaje por columna. -->
-            <div class="flex min-w-0">
-              <div class="flex w-full min-w-0 flex-row rounded-xl border border-border bg-card py-[.75rem] shadow-[0_1px_2px_rgb(15_23_42/.04)] [@media(max-height:700px)]:py-[.5rem]">
-                @for (p of puntajesRubrica(); track p.rubrica; let primero = $first) {
-                  <div class="flex min-w-0 flex-[1_1_0] flex-col items-center gap-[2px] px-[.5rem] text-center" [class]="primero ? '' : 'border-0 border-l border-solid border-border'" [title]="'Puntaje promedio de ' + p.nombre">
-                    <span class="block text-[1.5rem] leading-[1.15] font-bold text-foreground [font-variant-numeric:proportional-nums_lining-nums]">{{ pct(p.valor) }}@if (p.valor != null) {<small class="ml-[.3125rem] text-[.75rem] leading-[1.15] font-medium text-muted-foreground">%</small>}</span>
-                    <span class="block max-w-full overflow-hidden text-[.75rem] leading-[1.5] text-ellipsis whitespace-nowrap text-muted-foreground">Puntaje {{ p.nombre }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-          } @else {
-            <app-indicador [bajo]="true" [conDetalle]="false" [valor]="pct(promedio())" [unidad]="promedio() == null ? '' : '%'" rotulo="Puntaje promedio" />
-          }
+        <div class="mb-[.875rem] flex flex-none items-center gap-3 [@media(max-height:700px)]:mb-[.5rem]">
+          <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="volver()">
+            <lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Seguimiento por día
+          </button>
+        </div>
+        <div class="mb-4 flex flex-none flex-wrap items-center justify-between gap-x-6 gap-y-3 [@media(max-height:700px)]:mb-[.75rem]">
+          <div class="min-w-0 flex-none">
+            <p role="heading" aria-level="1" [class]="TITULO + ' whitespace-normal!'">Llamadas evaluadas</p>
+            <p [class]="SUBTITULO">Puntaje y revisión de cada llamada</p>
+          </div>
         </div>
 
         @if (grupos().length) {
-          <div [class]="CAMPO + ' mb-[.875rem]'">
-            <span [class]="ETIQUETA">Resultado</span>
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-              @for (g of grupos(); track g.rubrica) {
-                <div class="inline-flex min-h-[2.375rem] flex-wrap items-center gap-1 rounded-[.625rem] bg-muted p-[.1875rem]">
-                  <span class="pr-2 pl-[.4375rem] text-[.75rem] font-semibold text-muted-foreground">{{ g.nombre }}</span>
-                  @for (r of g.resultados; track r) {
-                    <button type="button" [class]="CHIP" [attr.aria-pressed]="e.resultado() === r" (click)="elegirResultado(r)">{{ textoResultado(r) }}</button>
-                  }
-                </div>
-              }
-            </div>
-          </div>
+          <app-resultado-filtro [grupos]="grupos()" [valor]="e.resultado()" (elegir)="elegirResultado($event)" />
         }
 
         <div class="mb-[.75rem] flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
@@ -182,9 +136,6 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
 
     <div appTarjeta [class]="BARRA">
       <span [class]="porRevisar() ? BARRA_ESTADO_HAY : BARRA_ESTADO">{{ estadoBarra() }}</span>
-      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" [disabled]="!e.idSubcartera()" (click)="verSeguimiento()">
-        <lucide-angular name="calendar-days" [size]="16" class="flex"></lucide-angular>Seguimiento por día
-      </button>
       <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" [disabled]="!e.idSubcartera()" (click)="verRendimiento()">
         <lucide-angular name="gauge" [size]="16" class="flex"></lucide-angular>{{ e.asesor() ? 'Ver rendimiento' : 'Ver rendimiento del equipo' }}
       </button>
@@ -200,26 +151,21 @@ export class MonitoreoListaComponent {
   private readonly router = inject(Router);
   protected readonly e = inject(MonitoreoEstado);
 
-  readonly cabecera = input.required<TemplateRef<unknown>>();
+  protected readonly TITULO = TITULO; protected readonly SUBTITULO = SUBTITULO; protected readonly MINI = MINI;
 
   protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly PRINCIPAL = PRINCIPAL; /** Como el prototipo: la tabla se encoge en pantallas bajas y el pie queda a la vista. */
   protected readonly ZONA = ZONA.replace('pb-6', 'pb-5');
-  protected readonly VACIO = VACIO; protected readonly INDICADORES = INDICADORES; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
+  protected readonly VACIO = VACIO; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
   protected readonly ENTRADA = ENTRADA; protected readonly LISTA = LISTA; protected readonly BUSCAR = BUSCAR; protected readonly BUSCAR_ICONO = BUSCAR_ICONO;
   protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; /** La tabla se desplaza por dentro y su barra va contra el borde de la tarjeta, no pegada al contenido. */
   protected readonly TABLA_CAJA = TABLA_CAJA.replace('flex-[1_0_auto]', 'min-h-0 flex-[1_1_auto]').replace('-mx-1', '-ml-1 -mr-8').replace('px-1', 'pl-1 pr-8'); protected readonly TABLA = TABLA; protected readonly THEAD = THEAD;
   protected readonly TR = TR; protected readonly TH = TH; protected readonly TH_NUM = TH_NUM; protected readonly TD = TD; protected readonly TD_1 = TD_1;
   protected readonly TD_NUM = TD_NUM; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly TR_ABRE = TR_ABRE;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY; protected readonly BOTON_SEC = BOTON_SEC + ' ' + BOTON_APAGADO;
-  protected readonly oracion = oracion; protected readonly textoResultado = textoResultado; protected readonly fechaCorta = fechaCorta; protected readonly pct = pct; protected readonly pts = pts;
+  protected readonly oracion = oracion; protected readonly textoResultado = textoResultado; protected readonly fechaCorta = fechaCorta; protected readonly pts = pts;
   protected readonly estado = estadoLlamada;
   protected readonly hoy = hoyIso();
   protected readonly PERIODOS = [{ clave: 'anterior', texto: 'Semana anterior' }, { clave: 'semana', texto: 'Esta semana' }];
-  /** Chip de resultado: blanco sobre la cápsula gris; elegido, en verde. */
-  protected readonly CHIP = 'h-8 cursor-pointer rounded-[.4375rem] border border-solid border-transparent bg-card px-[.875rem] [font-family:inherit] text-[.8125rem] font-medium text-(--ink2) '
-    + 'shadow-[0_1px_2px_rgb(0_0_0/.05)] transition-[background-color,border-color,color] duration-150 '
-    + 'hover:border-[color-mix(in_oklab,var(--verde-txt)_30%,var(--border))] hover:bg-[color-mix(in_oklab,var(--verde-txt)_6%,var(--card))] hover:text-foreground '
-    + 'aria-pressed:border-(--verde-txt)! aria-pressed:bg-(--ok-bg)! aria-pressed:font-semibold aria-pressed:text-(--verde-txt)!';
 
   protected readonly cargando = computed(() => !!this.e.idSubcartera() && this.e.llave() !== this.llaveActual());
   private readonly llaveActual = computed(() => `${this.e.idSubcartera()}|${this.e.desde()}|${this.e.hasta()}`);
@@ -228,22 +174,7 @@ export class MonitoreoListaComponent {
   readonly rango = computed(() => this.e.llamadas().filter(l =>
     (!this.e.resultado() || partes(l.nivel2).includes(this.e.resultado())) && (!this.e.asesor() || l.asesor === this.e.asesor())));
   readonly porRevisar = computed(() => this.rango().filter(l => !esRevisada(l)).length);
-  readonly faltas = computed(() => this.rango().filter(l => l.falta === 'PENDIENTE').length);
-  readonly revisadas = computed(() => this.rango().length - this.porRevisar());
   protected readonly NOMBRE_CLIENTE = NOMBRE_CLIENTE;
-  /** El puntaje de cada rúbrica con llamadas en el rango, en el orden del cliente. */
-  readonly puntajesRubrica = computed(() => (['TIT', 'TER', 'PDP', 'CD'] as Rubrica[]).flatMap(r => {
-    const del = this.rango().filter(l => l.rubrica === r);
-    if (!del.length) return [];
-    let c = 0, a = 0;
-    for (const l of del) { c += l.puntos; a += l.posibles; }
-    return [{ rubrica: r, nombre: rubricaEnFrase(r), valor: a ? (c / a) * 100 : null }];
-  }));
-  readonly promedio = computed(() => {
-    let c = 0, a = 0;
-    for (const l of this.rango()) { c += l.puntos; a += l.posibles; }
-    return a ? (c / a) * 100 : null;
-  });
 
   readonly visibles = computed(() => {
     const q = this.e.q().trim().toLowerCase(), f = this.e.filtro();
@@ -263,18 +194,7 @@ export class MonitoreoListaComponent {
   }
 
   /** Los resultados por rúbrica, de lo que hay en el ámbito y las fechas. */
-  readonly grupos = computed(() => {
-    const por = new Map<Rubrica, Set<string>>();
-    if (this.esIbk()) CATALOGO_IBK.forEach(([r, rs]) => por.set(r, new Set(rs)));
-    for (const l of this.e.llamadas()) {
-      if (!por.has(l.rubrica)) por.set(l.rubrica, new Set());
-      partes(l.nivel2).forEach(x => por.get(l.rubrica)!.add(x));
-    }
-    const lugar = (x: string): number => { const i = ORDEN_RESULTADO.indexOf(x); return i < 0 ? 99 : i; };
-    const orden: Rubrica[] = ['PDP', 'CD', 'TIT', 'TER'];
-    return orden.filter(r => por.get(r)?.size).map(r => ({ rubrica: r, nombre: GRUPO_RESULTADO[r],
-      resultados: [...por.get(r)!].sort((a, b) => lugar(a) - lugar(b) || a.localeCompare(b)) }));
-  });
+  readonly grupos = computed(() => gruposResultado(this.e.llamadas(), this.esIbk(), this.e.resultado()));
 
   readonly asesores = computed(() => [...new Set(this.e.llamadas().map(l => l.asesor).concat(this.e.asesor() ? [this.e.asesor()] : []))]
     .filter(Boolean).sort((a, b) => a.localeCompare(b)));
@@ -302,6 +222,8 @@ export class MonitoreoListaComponent {
   private pedido = 0;
 
   constructor() {
+    // Se llega desde el seguimiento: sin subcartera elegida (un enlace directo) se vuelve a él.
+    if (!this.e.idSubcartera()) { this.volver(); return; }
     effect(() => {
       const sub = this.e.idSubcartera(), desde = this.e.desde(), hasta = this.e.hasta(), llave = this.llaveActual();
       untracked(() => {
@@ -329,7 +251,6 @@ export class MonitoreoListaComponent {
   protected anula(l: Llamada): boolean { return l.falta === 'PENDIENTE' || l.falta === 'CONFIRMADA'; }
   protected nota(l: Llamada): number { return l.posibles ? (l.puntos / l.posibles) * 100 : 0; }
 
-  filtrar(f: 'revisar' | 'falta' | 'revisadas'): void { this.e.filtro.set(this.e.filtro() === f ? '' : f); this.e.pagina.set(1); }
   elegirResultado(r: string): void { this.e.resultado.set(this.e.resultado() === r ? '' : r); this.e.pagina.set(1); }
   elegirAsesor(a: string): void { this.e.asesor.set(a); this.e.pagina.set(1); }
   buscar(q: string): void { this.e.q.set(q); this.e.pagina.set(1); }
@@ -356,7 +277,7 @@ export class MonitoreoListaComponent {
     this.e.ultima.set(l.idx);
     this.router.navigate(['/admin/recordings/llamada', l.idx]);
   }
-  verSeguimiento(): void { this.router.navigate(['/admin/recordings/seguimiento']); }
+  volver(): void { this.router.navigate(['/admin/recordings'], { queryParams: { tab: 'monitoreo' } }); }
   verRendimiento(): void {
     this.router.navigate(['/admin/recordings/rendimiento'], { queryParams: this.e.asesor() ? { asesor: this.e.asesor() } : {} });
   }

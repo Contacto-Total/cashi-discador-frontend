@@ -1,20 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, TemplateRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BotonDirective } from '../../../../shared/ui/boton.directive';
 import { TarjetaDirective } from '../../../../shared/ui/tarjeta.directive';
-import { BARRA, BARRA_ESTADO, CAMPO, ETIQUETA, PANTALLA, PRINCIPAL, REJILLA, REJILLA_SOLA, SUBTITULO, TITULO, VACIO } from '../../../asistencia/ui/clases';
+import { BARRA, BARRA_ESTADO, PRINCIPAL, REJILLA, REJILLA_SOLA, VACIO } from '../../../asistencia/ui/clases';
 import { BOTON_APAGADO, BOTON_SEC } from '../../../asistencia/ui/control-comun';
 import { MINI } from '../../../asistencia/ui/ficha-clases';
-import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component';
 import { MonitoreoEstado, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
-import { CriterioRendimiento, Rubrica, SeguimientoCelda } from './monitoreo.models';
+import { CriterioRendimiento, Llamada, Rubrica, SeguimientoCelda } from './monitoreo.models';
+import { ResultadoFiltroComponent, gruposResultado, rubricaDeResultado } from './resultado-filtro.component';
 import { PuntoPerfil, pct, perfil, pts, puntosDe, rubricaEnFrase } from './monitoreo.calculos';
 
-const NOMBRE: Record<Rubrica, string> = { TIT: 'Titular', TER: 'Tercero', PDP: 'PDP', CD: 'CD' };
 const DIAS3 = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const MESES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 /** Un color por punto de la rúbrica, en el orden del gráfico. */
@@ -50,33 +49,25 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
 }
 
 /**
- * Seguimiento por día: una semana a la vez, el puntaje de cada asesor en cada día, por rúbrica, como la matriz del
- * monitoreo de PROD. Lunes a viernes, y el sábado o el domingo si hubo llamadas, para no esconder datos del total.
- * Una celda vacía es un día sin llamadas de esa persona, no 0 %.
+ * Seguimiento por día, la pestaña Monitoreo: una semana a la vez, el puntaje de cada asesor en cada día, por rúbrica,
+ * como la matriz del monitoreo de PROD. Lunes a viernes, y el sábado o el domingo si hubo llamadas, para no esconder
+ * datos del total. Una celda vacía es un día sin llamadas de esa persona, no 0 %. Una celda abre la lista de
+ * llamadas de ese asesor y ese día; el nombre, su rendimiento.
  */
 @Component({
   selector: 'app-seguimiento',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: PANTALLA + ' @container/p5' },
-  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, SegmentadoComponent],
+  host: { class: 'contents' },
+  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, ResultadoFiltroComponent],
   template: `
     <div [class]="REJILLA + ' ' + REJILLA_SOLA">
       <!-- La leyenda va al medio entre el cuadro y el borde de la tarjeta: el mismo espacio arriba y abajo. -->
       <section appTarjeta [class]="PRINCIPAL + ' pb-5!'">
-        <div class="mb-[.875rem] flex flex-none items-center gap-3 [@media(max-height:700px)]:mb-[.5rem]">
-          <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="volver()">
-            <lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Monitoreo
-          </button>
-        </div>
-        <div class="mb-4 flex flex-none flex-wrap items-center justify-between gap-x-6 gap-y-3 [@media(max-height:700px)]:mb-[.75rem]">
-          <div class="min-w-0 flex-none">
-            <p role="heading" aria-level="1" [class]="TITULO + ' whitespace-normal!'">Seguimiento por día</p>
-            <p [class]="SUBTITULO">Puntaje de cada asesor por día</p>
-          </div>
-          <div class="ml-auto flex flex-[1_1_auto] flex-nowrap items-end justify-end gap-x-3 gap-y-2">
-            <div [class]="CAMPO + ' flex-none'">
-              <span [class]="ETIQUETA">Semana</span>
+        <ng-container *ngTemplateOutlet="cabecera(); context: { $implicit: controles }" />
+        <!-- Semana y rúbrica: a la derecha de las pestañas. -->
+        <ng-template #controles>
+          @if (e.idSubcartera()) {
               <div class="flex items-center gap-[.375rem]">
                 <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" aria-label="Semana anterior" (click)="moverSemana(-1)">
                   <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
@@ -87,20 +78,22 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
                 </button>
                 <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" [disabled]="lunes() === lunesHoy" (click)="irA(lunesHoy)">Esta semana</button>
               </div>
-            </div>
-            @if (rubricas().length) {
-              <div [class]="CAMPO + ' flex-none'">
-                <span [class]="ETIQUETA">Rúbrica</span>
-                <app-segmentado [opciones]="opcionesRubrica()" [valor]="rubrica() ?? ''" (cambiar)="rubricaElegida.set($any($event))" />
-              </div>
-            }
-          </div>
-        </div>
+          }
+        </ng-template>
 
-        @if (cargando() && !celdas().length) {
+        <!-- El filtro de Resultado reemplaza al selector de rúbrica: un resultado o el rótulo de su grupo (la rúbrica entera). -->
+        @if (e.idSubcartera() && gruposResultado().length) {
+          <app-resultado-filtro [grupos]="gruposResultado()" [valor]="e.resultado()" (elegir)="elegirResultado($event)"
+                                [conRubrica]="true" [rubrica]="rubrica()" (elegirRubrica)="elegirRubrica($event)" />
+        }
+
+        @if (!e.idSubcartera()) {
+          <div [class]="VACIO">Elige cliente, cartera y subcartera</div>
+        } @else if (cargando() && !celdas().length) {
           <div [class]="VACIO">Cargando…</div>
         } @else if (!filas().length) {
-          <div [class]="VACIO">{{ error() || (rubrica() ? 'Sin llamadas de ' + enFrase(rubrica()!) + ' evaluadas esta semana' : 'Sin llamadas evaluadas esta semana') }}</div>
+          <div [class]="VACIO">{{ error() || (e.resultado() ? 'Sin llamadas de ' + e.resultado().toLowerCase() + ' evaluadas esta semana'
+            : rubrica() ? 'Sin llamadas de ' + enFrase(rubrica()!) + ' evaluadas esta semana' : 'Sin llamadas evaluadas esta semana') }}</div>
         } @else {
           <div class="min-h-0 flex-[0_1_auto] overflow-auto rounded-[.75rem] border border-solid border-border transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="cargando()">
             <table [class]="TABLA" [style.min-width]="'calc(21rem + ' + dias().length + ' * 9.75rem)'">
@@ -200,6 +193,9 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
 
     <div appTarjeta [class]="BARRA">
       <span [class]="BARRA_ESTADO">{{ estadoBarra() }}</span>
+      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" [disabled]="!e.idSubcartera()" (click)="verAsesor(null)">
+        <lucide-angular name="gauge" [size]="16" class="flex"></lucide-angular>Ver rendimiento del equipo
+      </button>
       <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" [disabled]="!filas().length" (click)="verSemana()">
         <lucide-angular name="list" [size]="16" class="flex"></lucide-angular>Ver las llamadas de la semana
       </button>
@@ -210,10 +206,12 @@ export class SeguimientoComponent {
   private readonly servicio = inject(MonitoreoService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly e = inject(MonitoreoEstado);
+  protected readonly e = inject(MonitoreoEstado);
+
+  /** La cabecera de Grabaciones del Discador (ámbito y pestañas); recibe los controles de esta pestaña. */
+  readonly cabecera = input.required<TemplateRef<unknown>>();
 
   protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly PRINCIPAL = PRINCIPAL; protected readonly VACIO = VACIO;
-  protected readonly TITULO = TITULO; protected readonly SUBTITULO = SUBTITULO; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly MINI = MINI;
   protected readonly BOTON_SEC = BOTON_SEC + ' ' + BOTON_APAGADO; protected readonly COLOR_PUNTO = COLOR_PUNTO;
   protected readonly pct = pct; protected readonly pts = pts; protected readonly fechaLarga = fechaLarga; protected readonly enFrase = rubricaEnFrase;
@@ -251,7 +249,11 @@ export class SeguimientoComponent {
   readonly lunes = signal(this.lunesHoy);
   readonly rubricas = signal<Rubrica[]>([]);
   readonly celdas = signal<SeguimientoCelda[]>([]);
-  readonly rubricaElegida = signal<Rubrica | null>(null);
+  /** Las llamadas de la semana, sin filtro de resultado: de ellas salen los resultados que se ofrecen. */
+  private readonly llamadasSemana = signal<Llamada[]>([]);
+  readonly gruposResultado = computed(() => gruposResultado(this.llamadasSemana(), this.rubricas().includes('TIT'), this.e.resultado(), this.rubrica()));
+  /** La rúbrica elegida vive en el estado: vuelve igual desde la lista de llamadas. */
+  readonly rubricaElegida = this.e.rubricaSeguimiento;
   readonly cargando = signal(false);
   readonly error = signal('');
   private pedido = 0;
@@ -263,7 +265,6 @@ export class SeguimientoComponent {
     const n = (r: Rubrica): number => this.celdas().filter(c => c.rubrica === r).reduce((s, c) => s + c.llamadas, 0);
     return [...rs].sort((a, b) => n(b) - n(a))[0] ?? null;
   });
-  readonly opcionesRubrica = computed(() => this.rubricas().map(r => ({ clave: r, texto: NOMBRE[r] })));
   readonly puntos = computed(() => this.rubrica() ? puntosDe(this.rubrica()!) : []);
   private readonly deRubrica = computed(() => this.celdas().filter(c => c.rubrica === this.rubrica()));
   readonly dias = computed(() => {
@@ -311,8 +312,16 @@ export class SeguimientoComponent {
   });
 
   constructor() {
-    if (!this.e.idSubcartera()) { this.volver(); return; }
-    this.cargar(this.lunesHoy, true);
+    // Al elegir otra subcartera, o al volver de la lista: la semana que se miraba o la última con llamadas.
+    effect(() => {
+      const sub = this.e.idSubcartera();
+      untracked(() => {
+        this.celdas.set([]); this.rubricas.set([]); this.llamadasSemana.set([]); this.error.set('');
+        if (!sub) return;
+        const semana = this.e.semana();
+        if (semana) this.irA(semana); else this.cargar(this.lunesHoy, true);
+      });
+    });
   }
 
   protected plural(n: number, uno: string, varios: string): string { return `${n} ${n === 1 ? uno : varios}`; }
@@ -329,15 +338,17 @@ export class SeguimientoComponent {
     const n = ++this.pedido;
     this.cargando.set(true);
     this.error.set('');
-    this.servicio.seguimiento(sub, lunes, masDias(lunes, 6)).subscribe({
+    this.servicio.seguimiento(sub, lunes, masDias(lunes, 6), this.e.resultado() || undefined).subscribe({
       next: s => {
         if (n !== this.pedido) return;
         if (buscar && !s.celdas.length && intentos > 0) { this.cargar(masDias(lunes, -7), true, intentos - 1); return; }
         const vacia = buscar && !s.celdas.length;
         this.lunes.set(vacia ? this.lunesHoy : lunes);
+        this.e.semana.set(this.lunes());
         this.rubricas.set(s.rubricas);
         this.celdas.set(vacia ? [] : s.celdas);
         this.cargando.set(false);
+        this.cargarResultados(sub, this.lunes());
       },
       error: err => {
         if (n !== this.pedido) return;
@@ -348,24 +359,47 @@ export class SeguimientoComponent {
     });
   }
 
+  /** Los resultados que hubo en la semana, para el filtro; si falla, quedan los del catálogo de Interbank. */
+  private cargarResultados(sub: number, lunes: string): void {
+    this.servicio.llamadas(sub, lunes, masDias(lunes, 6)).subscribe({
+      next: ll => { if (this.e.idSubcartera() === sub && this.lunes() === lunes) this.llamadasSemana.set(ll); },
+      error: () => this.llamadasSemana.set([])
+    });
+  }
+
   moverSemana(n: number): void {
     const destino = masDias(this.lunes(), 7 * n);
     this.irA(destino > this.lunesHoy ? this.lunesHoy : destino);
   }
   irA(lunes: string): void { this.lunes.set(lunes); this.cargar(lunes); }
 
-  volver(): void { this.router.navigate(['/admin/recordings'], { queryParams: { tab: 'monitoreo' } }); }
-  verAsesor(asesor: string): void { this.router.navigate(['/admin/recordings/rendimiento'], { queryParams: { asesor } }); }
+  /** El rótulo de un grupo: toda esa rúbrica, sin resultado. */
+  elegirRubrica(r: Rubrica): void {
+    this.rubricaElegida.set(r);
+    if (this.e.resultado()) { this.e.resultado.set(''); this.e.pagina.set(1); this.cargar(this.lunes()); }
+  }
+  /** Un resultado fija la rúbrica de la matriz; pulsar el elegido lo suelta. */
+  elegirResultado(r: string): void {
+    const nuevo = this.e.resultado() === r ? '' : r;
+    this.e.resultado.set(nuevo); this.e.pagina.set(1);
+    const rub = nuevo ? rubricaDeResultado(this.gruposResultado(), nuevo) : null;
+    if (rub) this.rubricaElegida.set(rub);
+    this.cargar(this.lunes());
+  }
+  /** El rendimiento de un asesor, o del equipo con null. */
+  verAsesor(asesor: string | null): void {
+    this.router.navigate(['/admin/recordings/rendimiento'], { queryParams: asesor ? { asesor } : {} });
+  }
   /** La lista de llamadas de ese asesor en ese día. */
   verDia(asesor: string, dia: string): void {
     this.e.asesor.set(asesor); this.e.desde.set(dia); this.e.hasta.set(dia);
     this.e.filtro.set(''); this.e.pagina.set(1);
-    this.volver();
+    this.router.navigate(['/admin/recordings/llamadas']);
   }
   verSemana(): void {
     const dom = masDias(this.lunes(), 6);
     this.e.asesor.set(''); this.e.desde.set(this.lunes()); this.e.hasta.set(dom > this.hoy ? this.hoy : dom);
     this.e.filtro.set(''); this.e.pagina.set(1);
-    this.volver();
+    this.router.navigate(['/admin/recordings/llamadas']);
   }
 }

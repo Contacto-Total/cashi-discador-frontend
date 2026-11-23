@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { Llamada } from './monitoreo.models';
+import { Llamada, Rubrica } from './monitoreo.models';
 
 const iso = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -37,6 +37,9 @@ export class MonitoreoEstado {
   readonly resultado = signal('');
   readonly pagina = signal(1);
   readonly ultima = signal<number | null>(null);
+  /** El lunes y la rúbrica que mira el seguimiento por día; null = la última semana con llamadas. */
+  readonly semana = signal<string | null>(null);
+  readonly rubricaSeguimiento = signal<Rubrica | null>(null);
 
   /** Las llamadas del ámbito y las fechas pedidas, y la llave con que se pidieron. */
   readonly llamadas = signal<Llamada[]>([]);
@@ -60,5 +63,7 @@ export class MonitoreoEstado {
     this.pagina.set(1);
     this.llamadas.set([]);
     this.llave.set('');
+    this.semana.set(null);
+    this.rubricaSeguimiento.set(null);
   }
 }

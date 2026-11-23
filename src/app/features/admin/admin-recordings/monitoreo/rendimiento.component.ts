@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../../../shared/services/toast.service';
@@ -83,10 +83,17 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
                   @for (l of radar().ejes; track $index) { <line [attr.x1]="radar().cx" [attr.y1]="radar().cy" [attr.x2]="l[0]" [attr.y2]="l[1]" stroke="var(--border)" stroke-width="1" /> }
                   <polygon [attr.points]="radar().forma" fill="color-mix(in oklab, var(--serie-a) 16%, transparent)" stroke="var(--serie-a)" stroke-width="2" stroke-linejoin="round" />
                   @for (c of radar().puntos; track $index) {
-                    <circle [attr.cx]="c.x" [attr.cy]="c.y" r="5" fill="var(--serie-a)" stroke="var(--card)" stroke-width="2"><title>{{ c.tip }}</title></circle>
+                    <circle [attr.cx]="c.x" [attr.cy]="c.y" r="5" fill="var(--serie-a)" stroke="var(--card)" stroke-width="2" />
                   }
                   @for (e of radar().etiquetas; track $index) {
                     <text [attr.x]="e.x" [attr.y]="e.y" [attr.text-anchor]="e.ancla" fill="var(--ink2)" font-size="11.5px">{{ e.nombre }}<tspan [attr.x]="e.x" dy="17" fill="var(--foreground)" font-weight="700" font-size="12px">{{ e.valor }}</tspan></text>
+                  }
+                  <!-- Zona de 14 px alrededor de cada punto: el punto mide 5 y no se acierta con el mouse. -->
+                  @for (z of radar().zonas; track $index) {
+                    <circle [attr.cx]="z.x" [attr.cy]="z.y" r="14" tabindex="0" class="cursor-default fill-transparent outline-none hover:fill-[color-mix(in_srgb,var(--serie-a)_14%,transparent)] focus-visible:fill-[color-mix(in_srgb,var(--serie-a)_14%,transparent)]"
+                            [attr.aria-label]="z.titulo + ': ' + z.detalle"
+                            (pointerenter)="verTip(z, $event.clientX, $event.clientY)" (pointermove)="verTip(z, $event.clientX, $event.clientY)" (pointerleave)="tip.set(null)"
+                            (focus)="verTipFoco(z, $event)" (blur)="tip.set(null)" />
                   }
                 </svg>
                 <p class="m-0 text-[.75rem] text-muted-foreground">Calculado sobre {{ llamadasRubrica() }} {{ llamadasRubrica() === 1 ? 'llamada' : 'llamadas' }}</p>
@@ -130,6 +137,14 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
       </section>
     </div>
 
+    @if (tip(); as t) {
+      <!-- El tooltip del gráfico, como el del artifact: el punto arriba, en negrita, y su puntaje debajo. -->
+      <div class="pointer-events-none fixed z-60 max-w-[18rem] min-w-[10rem] -translate-y-full rounded-[.5rem] border border-solid border-border bg-(--popover) px-[.625rem] py-[.5rem] text-[.75rem] leading-[1.45] text-(--ink2) shadow-[0_8px_24px_rgb(0_0_0/.12)]"
+           [style.left.px]="t.x" [style.top.px]="t.y" role="tooltip">
+        <div class="mb-1 font-semibold text-foreground">{{ t.titulo }}</div>
+        <div>{{ t.detalle }}</div>
+      </div>
+    }
     <div appTarjeta [class]="BARRA">
       <span [class]="porRevisar() ? BARRA_ESTADO_HAY : BARRA_ESTADO">{{ estadoBarra() }}</span>
       <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" (click)="verLlamadas()">
@@ -159,6 +174,9 @@ export class RendimientoComponent implements OnDestroy {
   private pedido = 0;
   /** Los porcentajes que dibuja el gráfico; pasan de un asesor al otro en una transición corta. */
   private readonly dibujados = signal<number[] | null>(null);
+  /** El tooltip del gráfico: arriba a la derecha del puntero, como el del artifact; null si no se muestra. */
+  readonly tip = signal<{ x: number; y: number; titulo: string; detalle: string } | null>(null);
+  private readonly anfitrion = inject<ElementRef<HTMLElement>>(ElementRef);
   private cuadro = 0;
   readonly error = signal('');
   readonly rubricaElegida = signal<Rubrica | null>(null);
@@ -208,8 +226,9 @@ export class RendimientoComponent implements OnDestroy {
       rejilla: [25, 50, 75, 100].map(poli),
       ejes: ejes.map((_, i) => pt(i, 100).map(z => +z.toFixed(1))),
       forma: ejes.map((e, i) => pt(i, valor(i)).map(z => z.toFixed(1)).join(',')).join(' '),
-      puntos: ejes.flatMap((e, i) => e.porcentaje == null ? [] : [{ x: +pt(i, valor(i))[0].toFixed(1), y: +pt(i, valor(i))[1].toFixed(1),
-        tip: `${e.nombre}: ${pts(e.porcentaje)} % · ${pts(e.cumplidos)} de ${pts(e.posibles)} puntos` }]),
+      zonas: ejes.map((e, i) => ({ x: +pt(i, e.porcentaje ?? 0)[0].toFixed(1), y: +pt(i, e.porcentaje ?? 0)[1].toFixed(1), titulo: e.nombre,
+        detalle: e.porcentaje == null ? 'No aplica' : `${pts(e.porcentaje)} % · ${pts(e.cumplidos)} de ${pts(e.posibles)} puntos` })),
+      puntos: ejes.flatMap((e, i) => e.porcentaje == null ? [] : [{ x: +pt(i, valor(i))[0].toFixed(1), y: +pt(i, valor(i))[1].toFixed(1) }]),
       etiquetas
     };
   });
@@ -280,6 +299,20 @@ export class RendimientoComponent implements OnDestroy {
     this.cuadro = requestAnimationFrame(paso);
   }
 
+  /**
+   * La pantalla es un contenedor (@container) y eso la vuelve la referencia de position: fixed; por eso el tooltip
+   * se ubica con coordenadas relativas a ella y no a la ventana.
+   */
+  verTip(z: { titulo: string; detalle: string }, x: number, y: number): void {
+    const caja = this.anfitrion.nativeElement.getBoundingClientRect();
+    this.tip.set({ titulo: z.titulo, detalle: z.detalle, x: Math.min(caja.width - 296, x - caja.left + 14), y: Math.max(8, y - caja.top - 10) });
+  }
+  /** Con teclado, el tooltip sale junto al punto enfocado. */
+  verTipFoco(z: { titulo: string; detalle: string }, ev: FocusEvent): void {
+    const r = (ev.target as Element).getBoundingClientRect();
+    this.verTip(z, r.right, r.top);
+  }
+
   ngOnDestroy(): void { cancelAnimationFrame(this.cuadro); }
 
   elegirAsesor(a: string): void {
@@ -290,6 +323,6 @@ export class RendimientoComponent implements OnDestroy {
     this.e.asesor.set(this.asesor() ?? '');
     this.e.filtro.set('');
     this.e.pagina.set(1);
-    this.volver();
+    this.router.navigate(['/admin/recordings/llamadas']);
   }
 }

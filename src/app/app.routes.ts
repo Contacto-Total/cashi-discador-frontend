@@ -503,8 +503,8 @@ export const routes: Routes = [
     data: { acceso: '/admin/recordings' }
   },
   {
-    path: 'admin/recordings/seguimiento',
-    loadComponent: () => import('./features/admin/admin-recordings/monitoreo/seguimiento.component').then(m => m.SeguimientoComponent),
+    path: 'admin/recordings/llamadas',
+    loadComponent: () => import('./features/admin/admin-recordings/monitoreo/monitoreo-lista.component').then(m => m.MonitoreoListaComponent),
     canActivate: [authGuard, menuAccesoGuard],
     data: { acceso: '/admin/recordings' }
   },
