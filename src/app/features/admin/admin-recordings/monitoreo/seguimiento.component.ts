@@ -62,7 +62,8 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
   imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, SegmentadoComponent],
   template: `
     <div [class]="REJILLA + ' ' + REJILLA_SOLA">
-      <section appTarjeta [class]="PRINCIPAL + ' pb-8!'">
+      <!-- La leyenda va al medio entre el cuadro y el borde de la tarjeta: el mismo espacio arriba y abajo. -->
+      <section appTarjeta [class]="PRINCIPAL + ' pb-5!'">
         <div class="mb-[.875rem] flex flex-none items-center gap-3 [@media(max-height:700px)]:mb-[.5rem]">
           <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" (click)="volver()">
             <lucide-angular name="arrow-left" [size]="16" class="flex"></lucide-angular>Monitoreo
@@ -166,7 +167,7 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
               </tfoot>
             </table>
           </div>
-          <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[.75rem] text-muted-foreground">
+          <div class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[.75rem] text-muted-foreground">
             @for (p of puntos(); track p.clave; let i = $index) {
               <span class="inline-flex items-center gap-[.375rem]"><i class="size-2 rounded-full" [class]="COLOR_PUNTO[i]"></i>{{ p.nombre }}</span>
             }
