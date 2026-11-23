@@ -4,12 +4,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BotonDirective } from '../../../../shared/ui/boton.directive';
 import { TarjetaDirective } from '../../../../shared/ui/tarjeta.directive';
-import { BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, CAMPO, ETIQUETA, LISTA, PANTALLA, PRINCIPAL, REJILLA, REJILLA_SOLA, SUBTITULO, TITULO, VACIO } from '../../../asistencia/ui/clases';
+import { BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, CAMPO, ENTRADA, ETIQUETA, LISTA, PANTALLA, PRINCIPAL, REJILLA, REJILLA_SOLA, SUBTITULO, TITULO, VACIO } from '../../../asistencia/ui/clases';
 import { BOTON_APAGADO, BOTON_SEC } from '../../../asistencia/ui/control-comun';
 import { MINI } from '../../../asistencia/ui/ficha-clases';
 import { IndicadorComponent } from '../../../asistencia/ui/indicador.component';
 import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component';
-import { MonitoreoEstado } from './monitoreo-estado';
+import { MonitoreoEstado, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { CriterioRendimiento, Rendimiento, Rubrica } from './monitoreo.models';
 import { PuntoPerfil, gruposDe, pct, perfil, puntoDe, pts, rubricaEnFrase, rubricasDe } from './monitoreo.calculos';
@@ -44,6 +44,15 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
             <p [class]="SUBTITULO">{{ subtitulo() }}</p>
           </div>
           <div class="ml-auto flex min-w-0 flex-[1_1_auto] flex-nowrap items-end justify-end gap-x-3 gap-y-2">
+            <!-- El rango es el mismo de la lista de llamadas: «Ver las llamadas» abre las mismas fechas. -->
+            <div [class]="CAMPO + ' flex-none'">
+              <label for="r-desde" [class]="ETIQUETA">Desde</label>
+              <input id="r-desde" type="date" [class]="ENTRADA" [value]="e.desde()" [max]="e.hasta()" (change)="cambiarDesde($any($event.target).value)">
+            </div>
+            <div [class]="CAMPO + ' flex-none'">
+              <label for="r-hasta" [class]="ETIQUETA">Hasta</label>
+              <input id="r-hasta" type="date" [class]="ENTRADA" [value]="e.hasta()" [min]="e.desde()" [max]="hoy" (change)="cambiarHasta($any($event.target).value)">
+            </div>
             <div [class]="CAMPO + ' flex-none'">
               <span [class]="ETIQUETA">Rúbrica</span>
               <app-segmentado [opciones]="opcionesRubrica()" [valor]="rubrica() ?? ''" (cambiar)="rubricaElegida.set($any($event))" />
@@ -63,7 +72,11 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
           <div class="mb-8 grid flex-none grid-cols-4 items-stretch gap-8 [@media(max-height:700px)]:mb-4 transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="actualizando()">
             <app-indicador [bajo]="true" [compacto]="true" [valor]="pct(puntaje())" [unidad]="puntaje() == null ? '' : '%'" rotulo="Puntaje" [detalle]="pts(r?.puntos ?? 0) + ' de ' + pts(r?.posibles ?? 0) + ' puntos'" />
             <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.llamadas ?? 0" rotulo="Llamadas evaluadas" [detalle]="desglose()" />
-            @if (asesor()) {
+            @if (asesor() && esFoh()) {
+              <!-- FOH no tiene faltas críticas: con un asesor, se compara con el equipo en la misma rúbrica y fechas. -->
+              <app-indicador [bajo]="true" [compacto]="true" [valor]="pct(puntajeEquipo().valor)" [unidad]="puntajeEquipo().valor == null ? '' : '%'" rotulo="Puntaje del equipo"
+                             [detalle]="'Promedio de ' + puntajeEquipo().asesores + (puntajeEquipo().asesores === 1 ? ' asesor' : ' asesores')" />
+            } @else if (asesor()) {
               <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.faltas ?? 0" rotulo="Faltas críticas" [detalle]="r?.faltas ? 'Revisar en sus llamadas' : 'Ninguna'" />
             } @else {
               <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.asesores ?? 0" rotulo="Asesores" detalle="con llamadas evaluadas" />
@@ -158,10 +171,11 @@ export class RendimientoComponent implements OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly ruta = inject(ActivatedRoute);
-  private readonly e = inject(MonitoreoEstado);
+  protected readonly e = inject(MonitoreoEstado);
 
   protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly PRINCIPAL = PRINCIPAL; protected readonly VACIO = VACIO;
   protected readonly TITULO = TITULO; protected readonly SUBTITULO = SUBTITULO; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
+  protected readonly ENTRADA = ENTRADA;
   protected readonly LISTA = LISTA; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY;
   protected readonly BOTON_SEC = BOTON_SEC + ' ' + BOTON_APAGADO; protected readonly MINI = MINI; protected readonly NOMBRE = NOMBRE; protected readonly pct = pct; protected readonly pts = pts;
   protected readonly CAJA = 'flex min-h-0 flex-col gap-[.875rem] overflow-hidden rounded-[.75rem] border border-solid border-border bg-card px-5 py-[1.125rem]';
@@ -188,8 +202,16 @@ export class RendimientoComponent implements OnDestroy {
   readonly subtitulo = computed(() => {
     const d = this.datos();
     if (!d) return '';
-    return d.llamadas && d.desde && d.hasta ? `Toda la historia evaluada: del ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}` : 'Sin llamadas evaluadas';
+    const rango = `del ${fechaCorta(this.e.desde())} al ${fechaCorta(this.e.hasta())}`;
+    return d.llamadas ? 'D' + rango.slice(1) : 'Sin llamadas evaluadas ' + rango;
   });
+  /** El rendimiento del equipo en las mismas fechas, para comparar a un asesor de FOH. */
+  private readonly equipo = signal<Rendimiento | null>(null);
+  readonly puntajeEquipo = computed(() => {
+    const r = this.equipo()?.rubricas.find(x => x.rubrica === this.rubrica());
+    return { valor: r?.posibles ? (r.puntos / r.posibles) * 100 : null, asesores: r?.asesores ?? 0 };
+  });
+  protected readonly hoy = hoyIso();
   readonly desglose = computed(() => this.rubricas().map(r => `${this.datos()?.rubricas.find(x => x.rubrica === r)?.llamadas ?? 0} ${rubricaEnFrase(r)}`).join(' · '));
   /** Las dos rúbricas del cliente, aunque una no tenga llamadas. */
   readonly rubricas = computed((): Rubrica[] => rubricasDe((this.datos()?.rubricas ?? []).map(r => r.rubrica)));
@@ -271,8 +293,18 @@ export class RendimientoComponent implements OnDestroy {
     const n = ++this.pedido;
     this.error.set('');
     this.actualizando.set(true);
-    this.servicio.rendimiento(sub, this.asesor()).subscribe({
-      next: d => { if (n !== this.pedido) return; this.datos.set(d); this.actualizando.set(false); },
+    const desde = this.e.desde(), hasta = this.e.hasta(), asesor = this.asesor();
+    this.servicio.rendimiento(sub, asesor, desde, hasta).subscribe({
+      next: d => {
+        if (n !== this.pedido) return;
+        this.datos.set(d); this.actualizando.set(false);
+        this.equipo.set(null);
+        // Solo FOH con un asesor necesita el equipo (la tarjeta que reemplaza a «Faltas críticas»).
+        const foh = d.rubricas.some(r => r.rubrica === 'PDP' || r.rubrica === 'CD');
+        if (asesor && foh) {
+          this.servicio.rendimiento(sub, null, desde, hasta).subscribe({ next: eq => { if (n === this.pedido) this.equipo.set(eq); }, error: () => this.equipo.set(null) });
+        }
+      },
       error: err => {
         if (n !== this.pedido) return;
         this.actualizando.set(false);
@@ -280,6 +312,22 @@ export class RendimientoComponent implements OnDestroy {
         this.toast.error(this.error());
       }
     });
+  }
+
+  cambiarDesde(v: string): void {
+    if (!v) return;
+    this.e.desde.set(v);
+    if (this.e.hasta() < v) this.e.hasta.set(v);
+    this.e.pagina.set(1);
+    this.cargar();
+  }
+  cambiarHasta(v: string): void {
+    if (!v) return;
+    const h = v > this.hoy ? this.hoy : v;
+    this.e.hasta.set(h);
+    if (this.e.desde() > h) this.e.desde.set(h);
+    this.e.pagina.set(1);
+    this.cargar();
   }
 
   /** Lleva el gráfico a los porcentajes nuevos en 280 ms; sin forma previa, con otra rúbrica o sin animaciones, de golpe. */

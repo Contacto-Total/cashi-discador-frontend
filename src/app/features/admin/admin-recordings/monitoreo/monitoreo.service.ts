@@ -25,9 +25,9 @@ export class MonitoreoService {
     return this.http.put<Ficha>(`${this.base}/llamada/${idx}`, cierre);
   }
 
-  /** Toda la historia evaluada de un asesor, o del equipo sin asesor. */
-  rendimiento(subcartera: number, asesor: string | null): Observable<Rendimiento> {
-    let params = new HttpParams().set('subcartera', subcartera);
+  /** Lo evaluado de un asesor, o del equipo sin asesor, entre dos fechas (las dos incluidas). */
+  rendimiento(subcartera: number, asesor: string | null, desde: string, hasta: string): Observable<Rendimiento> {
+    let params = new HttpParams().set('subcartera', subcartera).set('desde', desde).set('hasta', hasta);
     if (asesor) params = params.set('asesor', asesor);
     return this.http.get<Rendimiento>(`${this.base}/rendimiento`, { params });
   }
