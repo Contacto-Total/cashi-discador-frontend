@@ -18,7 +18,7 @@ import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component
 import { MonitoreoEstado, rangosSemana, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { Llamada, Rubrica } from './monitoreo.models';
-import { pct, pts, rubricaEnFrase } from './monitoreo.calculos';
+import { NOMBRE_CLIENTE, pct, pts, rubricaEnFrase } from './monitoreo.calculos';
 
 /** «PROMESA DE PAGO» → «Promesa de pago». */
 export const oracion = (t: string | null | undefined): string => {
@@ -160,7 +160,7 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
                       <tr [class]="TR + ' ' + TR_ABRE" tabindex="0" [attr.aria-current]="e.ultima() === l.idx" (click)="abrir(l)" (keydown.enter)="abrir(l)">
                         <td [class]="celda(l, TD)"><span [class]="FUERTE">{{ fechaCorta(l.fecha) }}</span><span [class]="SEC">{{ l.hora }}</span></td>
                         <td [class]="celda(l, TD)">{{ l.asesor }}</td>
-                        <td [class]="celda(l, TD)">{{ l.titular || '—' }}@if (docCj(l); as d) {<span [class]="SEC">{{ d }}</span>}</td>
+                        <td [class]="celda(l, TD)"><span [class]="NOMBRE_CLIENTE" [title]="l.titular || ''">{{ l.titular || '—' }}</span>@if (docCj(l); as d) {<span [class]="SEC">{{ d }}</span>}</td>
                         <td [class]="celda(l, TD) + ' max-w-[16rem] min-w-[9rem]'">{{ oracion(l.nivel1) }}<span [class]="SEC + ' overflow-hidden text-ellipsis whitespace-nowrap'" [title]="oracion(l.nivel2)">{{ oracion(l.nivel2) }}</span></td>
                         <td [class]="celda(l, TD_NUM)">
                           <span class="text-[.9375rem] font-semibold">{{ pts(l.puntos) }}/{{ pts(l.posibles) }}</span>
@@ -230,6 +230,7 @@ export class MonitoreoListaComponent {
   readonly porRevisar = computed(() => this.rango().filter(l => !esRevisada(l)).length);
   readonly faltas = computed(() => this.rango().filter(l => l.falta === 'PENDIENTE').length);
   readonly revisadas = computed(() => this.rango().length - this.porRevisar());
+  protected readonly NOMBRE_CLIENTE = NOMBRE_CLIENTE;
   /** El puntaje de cada rúbrica con llamadas en el rango, en el orden del cliente. */
   readonly puntajesRubrica = computed(() => (['TIT', 'TER', 'PDP', 'CD'] as Rubrica[]).flatMap(r => {
     const del = this.rango().filter(l => l.rubrica === r);

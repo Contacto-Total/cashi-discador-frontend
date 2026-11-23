@@ -50,6 +50,15 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
   imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, PiePaginaComponent],
+  // La barra que corre arriba de los resultados mientras busca; sin animación, queda quieta y llena.
+  styles: [`
+    .gb-barra { position: absolute; top: 0; left: 2rem; right: 2rem; z-index: 3; height: 3px; overflow: hidden; border-radius: 2px;
+      background: color-mix(in oklab, var(--ok-pt) 18%, transparent); }
+    .gb-barra::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; border-radius: 2px; background: var(--ok-pt);
+      animation: gb-barra 1.1s cubic-bezier(.4, 0, .2, 1) infinite; }
+    @keyframes gb-barra { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+    @media (prefers-reduced-motion: reduce) { .gb-barra::before { animation: none; width: 100%; opacity: .6; } }
+  `],
   template: `
     <div [class]="REJILLA + ' ' + REJILLA_SOLA">
       <section appTarjeta [class]="PRINCIPAL">
@@ -81,8 +90,12 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
               @for (a of asesores(); track a) { <option [value]="a" [selected]="a === asesor()">{{ a }}</option> }
             </select></div>
           <div class="flex justify-end gap-2 @max-[40.001rem]/tarjeta:col-[1/-1]">
-            <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" [disabled]="cargando()" (click)="buscar()">
-              <lucide-angular name="search" [size]="16" class="flex"></lucide-angular>Buscar
+            <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" [disabled]="cargando()" [attr.aria-busy]="cargando() || null" (click)="buscar()">
+              @if (cargando()) {
+                <span class="inline-flex animate-spin motion-reduce:animate-none"><lucide-angular name="loader-2" [size]="16" class="flex"></lucide-angular></span>
+              } @else {
+                <lucide-angular name="search" [size]="16" class="flex"></lucide-angular>
+              }Buscar
             </button>
             <button type="button" appBoton="secundario" [class]="'h-[2.375rem]! px-4! ' + BOTON_SEC" (click)="limpiar()">
               <lucide-angular name="x" [size]="16" class="flex"></lucide-angular>Limpiar
@@ -90,11 +103,26 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
           </div>
         </div>
 
-        <div #zona [class]="ZONA">
+        <div #zona [class]="ZONA + ' relative'" [attr.aria-busy]="cargando() || null">
+          @if (cargando()) { <div class="gb-barra" role="progressbar" aria-label="Buscando grabaciones"></div> }
           @if (!e.idSubcartera() || !buscado()) {
             <div [class]="VACIO">Ingresa al menos un criterio y pulsa Buscar</div>
           } @else if (cargando() && !visibles().length) {
-            <div [class]="VACIO">Buscando…</div>
+            <!-- Filas fantasma con el dibujo de la tabla: el ancho de cada columna y dos líneas donde la tabla tiene dos. -->
+            <div class="flex flex-col" aria-hidden="true">
+              <div class="flex h-[2.625rem] items-center gap-6 border-0 border-b border-solid border-border px-[calc(.625rem+1px)]">
+                @for (w of ESQ_COLS; track $index) {
+                  <span class="flex min-w-0 flex-col" [style.flex]="'0 1 ' + w + '%'"><i [class]="ESQ_BARRA + ' h-[.5rem]!'" [style.width.%]="w > 10 ? 40 : 70"></i></span>
+                }
+              </div>
+              @for (f of ESQ_FILAS; track f) {
+                <div class="flex h-[3.875rem] animate-pulse items-center gap-6 border-0 border-b border-solid border-(--line2) px-[calc(.625rem+1px)] motion-reduce:animate-none" [style.animation-delay.ms]="f * 120">
+                  @for (w of ESQ_COLS; track $index; let c = $index) {
+                    <span class="flex min-w-0 flex-col gap-[.375rem]" [style.flex]="'0 1 ' + w + '%'"><i [class]="ESQ_BARRA"></i>@if (ESQ_DOS.includes(c)) {<i [class]="ESQ_BARRA + ' h-[.5rem]! w-3/5'"></i>}</span>
+                  }
+                </div>
+              }
+            </div>
           } @else if (!visibles().length) {
             <div [class]="VACIO">{{ grupos().length ? 'Sin grabaciones con esta búsqueda' : 'Sin grabaciones con estos criterios' }}</div>
           } @else {
@@ -116,10 +144,10 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
                       @let abierta = abiertos().has(g.clave);
                       @let p = g.principal;
                       <tr [class]="TR">
-                        <td [class]="TD"><span [class]="FUERTE">{{ p.cliente || '—' }}</span><span [class]="SEC">{{ p.documento }}</span></td>
+                        <td [class]="TD + ' w-full max-w-0'"><span [class]="FUERTE + ' ' + CORTADO" [title]="p.cliente || ''">{{ p.cliente || '—' }}</span><span [class]="SEC">{{ p.documento }}</span></td>
                         <td [class]="TD">{{ p.telefono }}</td>
                         <td [class]="TD">{{ p.campana }}</td>
-                        <td [class]="TD">{{ asesorDe(p) || '—' }}</td>
+                        <td [class]="TD"><span [class]="CORTADO + ' max-w-[10rem]'" [title]="asesorDe(p) || ''">{{ asesorDe(p) || '—' }}</span></td>
                         <td [class]="TD + ' max-w-[11.5rem] min-w-[9rem]'">{{ p.tipificacion || '—' }}<span [class]="SEC + ' overflow-hidden text-ellipsis whitespace-nowrap'" [title]="p.tipificacion2 || ''">{{ p.tipificacion2 }}</span></td>
                         <td [class]="TD"><span [class]="FUERTE">{{ fecha(p.fechaInicio) }}</span><span [class]="SEC">{{ hora(p.fechaInicio) }}</span></td>
                         <td [class]="TD">
@@ -200,9 +228,19 @@ export class GrabacionesComponent {
 
   protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly PRINCIPAL = PRINCIPAL; /** Como el prototipo: la tabla se encoge en pantallas bajas y el pie queda a la vista. */
   protected readonly ZONA = ZONA.replace('pb-6', 'pb-5');
+  /** Filas fantasma de la primera búsqueda: ancho de cada columna (%), las que tienen dos líneas y cuántas filas. */
+  protected readonly ESQ_COLS = [22, 9, 9, 16, 15, 9, 8, 5];
+  protected readonly ESQ_DOS = [0, 4, 5, 6];
+  protected readonly ESQ_FILAS = [0, 1, 2, 3, 4, 5];
+  protected readonly ESQ_BARRA = 'block h-[.625rem] rounded-full bg-[color-mix(in_oklab,var(--foreground)_9%,transparent)]';
   protected readonly VACIO = VACIO; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA; protected readonly ENTRADA = ENTRADA; protected readonly LISTA = LISTA;
   /** La tabla se desplaza por dentro y su barra va contra el borde de la tarjeta, no pegada al contenido. */
   protected readonly TABLA_CAJA = TABLA_CAJA.replace('flex-[1_0_auto]', 'min-h-0 flex-[1_1_auto]').replace('-mx-1', '-ml-1 -mr-8').replace('px-1', 'pl-1 pr-8'); protected readonly TABLA = TABLA; protected readonly THEAD = THEAD; protected readonly TR = TR; protected readonly TH = TH;
+  /**
+   * Sin scroll horizontal a ningún ancho: el cliente toma lo que dejan las demás columnas y el asesor llega a 10rem;
+   * los dos se cortan con «…» y el nombre completo queda en el title.
+   */
+  protected readonly CORTADO = 'block overflow-hidden text-ellipsis whitespace-nowrap';
   protected readonly TH_NUM = TH_NUM; /** Filas más altas que en el resto del molde: cada una lleva dos líneas (cliente y documento, tipificación, fecha y hora). */
   protected readonly TD = TD.replace('py-[.5625rem]!', 'py-[.875rem]!'); protected readonly TD_1 = TD_1; protected readonly TD_NUM = TD_NUM.replace('py-[.5625rem]!', 'py-[.875rem]!'); protected readonly SEC = SEC;
   protected readonly FUERTE = FUERTE; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY;
@@ -262,6 +300,7 @@ export class GrabacionesComponent {
       .sort((x, y) => valor(x.principal).localeCompare(valor(y.principal)) * d);
   });
   readonly estadoBarra = computed(() => {
+    if (this.cargando()) return 'Buscando grabaciones…';
     if (!this.buscado()) return 'Sin búsqueda';
     const n = this.grupos().length, v = this.visibles().length;
     const t = `${n} ${n === 1 ? 'grabación' : 'grabaciones'}`;

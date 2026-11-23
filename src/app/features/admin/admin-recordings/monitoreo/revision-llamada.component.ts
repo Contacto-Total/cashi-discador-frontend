@@ -460,6 +460,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
   private aplicar(f: Ficha): void {
     const res = Object.fromEntries(f.criterios.map(c => [c.codigo, c.resultado])) as Record<string, Resultado | null>;
     this.ficha.set(f);
+    if (f.audios?.length) this.prepararAudio();
     this.guardado.set(res);
     this.borrador.set({ ...res });
     this.motivos.set({});
@@ -652,12 +653,14 @@ export class RevisionLlamadaComponent implements OnDestroy {
   }
 
   /**
-   * El audio se pide recién al primer play: es un WAV que el backend convierte. Mientras llega, los
-   * clics no piden otra descarga ni crean otro reproductor; se aplican en orden cuando llega.
+   * El audio se pide al abrir la llamada (sin acción) y no al primer play: es un WAV que el backend convierte y que
+   * baja entero antes de sonar, así que el play encuentra el archivo listo. Mientras llega, los clics no piden otra
+   * descarga ni crean otro reproductor; se aplican en orden cuando llega. Si la precarga falla no avisa: el play
+   * vuelve a pedirlo y ahí sí avisa.
    */
-  private prepararAudio(luego: () => void): void {
-    if (this.audio) { luego(); return; }
-    this.pendientes_.push(luego);
+  private prepararAudio(luego?: () => void): void {
+    if (this.audio) { luego?.(); return; }
+    if (luego) this.pendientes_.push(luego);
     if (this.descarga) return;
     const f = this.ficha();
     if (!f) return;
@@ -678,8 +681,9 @@ export class RevisionLlamadaComponent implements OnDestroy {
         acciones.forEach(accion => accion());
       },
       error: err => {
+        const pidio = this.pendientes_.length > 0;
         this.descarga = undefined; this.pendientes_ = [];
-        this.toast.error(err?.status === 503 ? 'El servidor de audio está ocupado; intenta en un momento' : 'No se pudo cargar el audio');
+        if (pidio) this.toast.error(err?.status === 503 ? 'El servidor de audio está ocupado; intenta en un momento' : 'No se pudo cargar el audio');
       }
     });
   }

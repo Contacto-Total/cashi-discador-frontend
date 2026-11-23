@@ -115,6 +115,9 @@ export function perfil(rubrica: Rubrica, criterios: CriterioRendimiento[]): Punt
   });
 }
 
+/** El nombre del cliente en una tabla: se corta con «…» para que la tabla no se ensanche; el completo va en el title. */
+export const NOMBRE_CLIENTE = 'block max-w-[14rem] overflow-hidden text-ellipsis whitespace-nowrap';
+
 /** Un decimal con punto, como el resto del CRM. */
 export const pct = (v: number | null | undefined): string => (v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1));
 export const pts = (v: number): string => String(Math.round(v * 10) / 10);
