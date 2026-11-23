@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  WaoBaja, WaoEstado, WaoMensaje, WaoEspectador, WaoPlantillasRespuesta, WaoResumen, WaoUsuario
+  WaoBaja, WaoPalabraProhibida, WaoEstado, WaoMensaje, WaoEspectador, WaoPlantillasRespuesta, WaoResumen, WaoUsuario
 } from '../models/whatsapp-oficial.models';
 
 @Injectable({ providedIn: 'root' })
@@ -51,6 +51,18 @@ export class WhatsappOficialService {
 
   quitarBaja(waId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/bajas/${encodeURIComponent(waId)}`);
+  }
+
+  palabrasProhibidas(): Observable<WaoPalabraProhibida[]> {
+    return this.http.get<WaoPalabraProhibida[]>(`${this.base}/palabras-prohibidas`);
+  }
+
+  agregarPalabraProhibida(palabra: string): Observable<WaoPalabraProhibida> {
+    return this.http.post<WaoPalabraProhibida>(`${this.base}/palabras-prohibidas`, { palabra });
+  }
+
+  quitarPalabraProhibida(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/palabras-prohibidas/${id}`);
   }
 
   media(id: number): Observable<Blob> {

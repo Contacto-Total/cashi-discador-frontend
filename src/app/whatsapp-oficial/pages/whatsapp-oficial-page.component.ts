@@ -11,7 +11,7 @@ import { ClientInfoAclService, GlobalSearchResult, DynamicClient } from '../../w
 import { UserInfoService } from '../../whatsapp/services/user-info.service';
 import { MENSAJES_RAPIDOS, MensajeRapido } from '../models/mensajes-rapidos';
 import {
-  WaoBaja, WaoEspectador, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
+  WaoBaja, WaoPalabraProhibida, WaoEspectador, WaoEstado, WaoMensaje, WaoPlantilla, WaoRemitente, WaoResumen
 } from '../models/whatsapp-oficial.models';
 
 type Pestana = 'herramientas' | 'resumen' | 'bajas';
@@ -435,6 +435,28 @@ type ModoBusqueda = 'telefono' | 'documento';
                   </button>
                 </div>
               }
+              <div class="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Palabras no permitidas</p>
+                <p class="mt-1 text-xs text-slate-500">Si un asesor escribe una de estas palabras, el mensaje no se envía.</p>
+                <form class="mt-3 flex gap-2" (submit)="$event.preventDefault(); agregarPalabraProhibida()">
+                  <input type="text" name="nuevaPalabra" maxlength="120" placeholder="Palabra o frase"
+                    class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    [ngModel]="nuevaPalabra()" (ngModelChange)="nuevaPalabra.set($event)" />
+                  <button type="submit" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" [disabled]="!nuevaPalabra().trim()">Agregar</button>
+                </form>
+                @if (!palabrasProhibidas().length) {
+                  <p class="mt-3 text-xs text-slate-500">Aún no hay palabras registradas.</p>
+                } @else {
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    @for (w of palabrasProhibidas(); track w.id) {
+                      <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                        {{ w.palabra }}
+                        <button type="button" class="font-bold text-rose-600 hover:text-rose-800" aria-label="Quitar" (click)="quitarPalabraProhibida(w.id)">×</button>
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
             }
 
             @if (pestana() === 'bajas') {
@@ -506,6 +528,8 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly chats = signal<WaoMensaje[]>([]);
   readonly mensajes = signal<WaoMensaje[]>([]);
   readonly bajas = signal<WaoBaja[]>([]);
+  readonly palabrasProhibidas = signal<WaoPalabraProhibida[]>([]);
+  readonly nuevaPalabra = signal('');
   readonly plantillas = signal<WaoPlantilla[]>([]);
   readonly seleccion = signal<string | null>(null);
   readonly busqueda = signal('');
@@ -978,6 +1002,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
     this.pestana.set(p);
     if (p === 'herramientas') this.cambiarHerramienta(this.herramienta());
     if (p === 'bajas') this.cargarBajas();
+    if (p === 'resumen') this.cargarPalabrasProhibidas();
   }
 
   elegirPlantilla(valor: string | null): void {
@@ -1045,6 +1070,26 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
         if (bajar) setTimeout(() => this.bajarPanel());
       }
     });
+  }
+
+  agregarPalabraProhibida(): void {
+    const palabra = this.nuevaPalabra().trim();
+    if (!palabra) return;
+    this.api.agregarPalabraProhibida(palabra).subscribe({
+      next: () => { this.nuevaPalabra.set(''); this.cargarPalabrasProhibidas(); },
+      error: err => this.error.set(this.mensajeError(err))
+    });
+  }
+
+  quitarPalabraProhibida(id: number): void {
+    this.api.quitarPalabraProhibida(id).subscribe({
+      next: () => this.cargarPalabrasProhibidas(),
+      error: err => this.error.set(this.mensajeError(err))
+    });
+  }
+
+  private cargarPalabrasProhibidas(): void {
+    this.api.palabrasProhibidas().subscribe({ next: l => this.palabrasProhibidas.set(l), error: () => this.palabrasProhibidas.set([]) });
   }
 
   private cargarBajas(): void {

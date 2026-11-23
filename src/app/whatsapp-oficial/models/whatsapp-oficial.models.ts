@@ -45,6 +45,13 @@ export interface WaoBaja {
   fechaCreacion: string;
 }
 
+export interface WaoPalabraProhibida {
+  id: number;
+  palabra: string;
+  fechaCreacion: string;
+  usuario: string | null;
+}
+
 export interface WaoPlantillaComponente {
   type: string;
   text?: string;
