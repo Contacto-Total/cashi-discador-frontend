@@ -144,10 +144,33 @@ export interface CriterioRendimiento {
   na: number;
 }
 
+/** Una rúbrica del rendimiento. Vienen siempre las dos del cliente, con 0 llamadas si no tiene. */
 export interface RubricaRendimiento {
   rubrica: Rubrica;
   llamadas: number;
+  puntos: number;
+  posibles: number;
+  revisadas: number;
+  faltas: number;
+  asesores: number;
   criterios: CriterioRendimiento[];
+}
+
+/** Una celda del seguimiento por día: un asesor, un día y una rúbrica. En FOH los criterios son sus 3 secciones. */
+export interface SeguimientoCelda {
+  asesor: string;
+  fecha: string;
+  rubrica: Rubrica;
+  llamadas: number;
+  puntos: number;
+  posibles: number;
+  criterios: CriterioRendimiento[];
+}
+
+export interface Seguimiento {
+  /** Las rúbricas de la subcartera, aunque no tengan llamadas. */
+  rubricas: Rubrica[];
+  celdas: SeguimientoCelda[];
 }
 
 export interface Rendimiento {

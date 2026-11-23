@@ -11,6 +11,8 @@ export interface RecordingDTO {
   cliente: string;
   campana: string;
   agente: string;
+  /** Nombre completo del asesor; `agente` es su usuario. */
+  agenteNombre?: string | null;
   fechaInicio: string;
   fechaFin: string;
   duracionSegundos: number;
@@ -67,6 +69,11 @@ export class AdminRecordingsService {
 
  /** Tipificaciones de nivel 1 activas, para el combo del filtro 
    * dadas por el subportafolio o portafolio. */
+
+  /** Asesores de la subcartera, para el filtro Asesor antes de buscar. */
+  asesoresDeSubcartera(subPortfolioId: number): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/asesores`, { params: new HttpParams().set('subPortfolioId', subPortfolioId) });
+  }
 
   getTipificacionesNivel1BySubPortafolio(
     subPortfolioId: number,

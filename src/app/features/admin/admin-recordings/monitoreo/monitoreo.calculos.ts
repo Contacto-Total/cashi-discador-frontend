@@ -55,35 +55,49 @@ export function notas(rubrica: Rubrica, criterios: Criterio[], resultados: Recor
 
 export interface Punto { clave: string; nombre: string; }
 
-/** Con el titular (FOH PDP, FOH CD, IBK titular): 5 puntos con los mismos nombres. */
+/**
+ * Los puntos del gráfico de cada rúbrica, con los nombres que les da su cliente. Interbank titular: las 5 pautas que
+ * califica Interbank (I a V); las internas (VI y VII) no van en el gráfico, sí en los criterios. Interbank tercero:
+ * 3 puntos por criterio. FOH (PDP y CD): las 3 secciones de su plantilla, las mismas del monitoreo de PROD.
+ */
 export const PUNTOS_TITULAR: Punto[] = [
-  { clave: 'pres', nombre: 'Presentación' }, { clave: 'emp', nombre: 'Empatía y sondeo' },
-  { clave: 'neg', nombre: 'Negociación' }, { clave: 'conf', nombre: 'Confirmación' }, { clave: 'cie', nombre: 'Cierre' }
+  { clave: 'I', nombre: 'Contacto con el cliente' }, { clave: 'II', nombre: 'Empatizar' },
+  { clave: 'III', nombre: 'Negociación y solución' }, { clave: 'IV', nombre: 'Cierre' }, { clave: 'V', nombre: 'Despedida' }
 ];
 /** Con un tercero (IBK): 3 puntos. */
 export const PUNTOS_TERCERO: Punto[] = [
   { clave: 'pres', nombre: 'Presentación' }, { clave: 'ubi', nombre: 'Ubicar al titular' }, { clave: 'cie', nombre: 'Cierre' }
 ];
-export const puntosDe = (rubrica: Rubrica): Punto[] => (rubrica === 'TER' ? PUNTOS_TERCERO : PUNTOS_TITULAR);
+export const PUNTOS_FOH: Punto[] = [
+  { clave: 'pres', nombre: 'Presentación' }, { clave: 'neg', nombre: 'Negociación' }, { clave: 'cie', nombre: 'Cierre' }
+];
+const esFoh = (rubrica: Rubrica): boolean => rubrica === 'PDP' || rubrica === 'CD';
+export const puntosDe = (rubrica: Rubrica): Punto[] => (rubrica === 'TER' ? PUNTOS_TERCERO : esFoh(rubrica) ? PUNTOS_FOH : PUNTOS_TITULAR);
+/** Los grupos de «Criterios que más falla»: los puntos del gráfico y, en titular, las pautas internas. */
+export const gruposDe = (rubrica: Rubrica): Punto[] => rubrica === 'TIT'
+  ? PUNTOS_TITULAR.concat([{ clave: 'VI', nombre: 'Trato al cliente (interna)' }, { clave: 'VII', nombre: 'Registro de la gestión (interna)' }])
+  : puntosDe(rubrica);
+const NOMBRE_RUB: Record<Rubrica, string> = { TIT: 'Titular', TER: 'Tercero', PDP: 'PDP', CD: 'CD' };
+/** El nombre de la rúbrica dentro de una frase: en minúscula, salvo las siglas (PDP, CD). */
+export const rubricaEnFrase = (r: Rubrica): string => NOMBRE_RUB[r].length > 3 ? NOMBRE_RUB[r].toLowerCase() : NOMBRE_RUB[r];
+/** Las rúbricas de cada cliente, en el orden del selector. */
+export const rubricasDe = (rubricas: Rubrica[]): Rubrica[] => rubricas.some(r => esFoh(r)) ? ['PDP', 'CD'] : ['TIT', 'TER'];
 
-/** FOH por criterio: CD tiene los de PDP menos intención de ayudar y lectura del contrato. */
+/** FOH: la sección de la plantilla (grupo); por campo si no viene, con las mismas secciones de la plantilla de PROD. */
+const SECCION_FOH: Record<string, string> = { PRESENTACION: 'pres', NEGOCIACION: 'neg', CIERRE: 'cie' };
 const PUNTO_FOH: Record<string, string> = {
-  pres_asert: 'pres', pres_nom_ape: 'pres', orig_llamada: 'pres', motiv_llamada: 'pres',
-  intencion_ayuda: 'emp', motiv_no_pago: 'emp',
-  opciones_pago: 'neg', beneficio_pago: 'neg', manejo_objec: 'neg', fecha_hora_pago: 'neg',
-  confirm_monto: 'conf', confirm_fecha: 'conf', confirm_canal: 'conf',
-  lectura_contrato: 'cie', datos_adicionales: 'cie', consec_pago: 'cie'
+  pres_asert: 'pres', pres_nom_ape: 'pres', orig_llamada: 'pres', motiv_llamada: 'pres', intencion_ayuda: 'pres',
+  motiv_no_pago: 'neg', manejo_objec: 'neg', opciones_pago: 'neg', beneficio_pago: 'neg', fecha_hora_pago: 'neg',
+  lectura_contrato: 'cie', datos_adicionales: 'cie', confirm_monto: 'cie', confirm_fecha: 'cie', confirm_canal: 'cie', consec_pago: 'cie'
 };
-/** IBK titular por pauta. */
-const PUNTO_PAUTA: Record<string, string> = { I: 'pres', II: 'emp', VI: 'emp', III: 'neg', IV: 'conf', V: 'cie', VII: 'cie' };
 /** IBK tercero por criterio: T3 a T5 ubican al titular. */
 const PUNTO_TERCERO: Record<string, string> = { T1: 'pres', T2: 'pres', T6: 'cie' };
 
-/** El punto del gráfico al que pertenece un criterio; null si no entra en ninguno (un criterio propio de una subcartera). */
+/** El punto (o grupo) al que pertenece un criterio; null si no entra en ninguno (un criterio propio de una subcartera). */
 export function puntoDe(rubrica: Rubrica, c: { codigo: string; grupo: string }): string | null {
-  if (rubrica === 'PDP' || rubrica === 'CD') return PUNTO_FOH[c.codigo] ?? null;
+  if (esFoh(rubrica)) return SECCION_FOH[(c.grupo || '').toUpperCase()] ?? PUNTO_FOH[c.codigo] ?? null;
   if (rubrica === 'TER') return PUNTO_TERCERO[c.codigo] ?? 'ubi';
-  return PUNTO_PAUTA[c.grupo] ?? null;
+  return c.grupo || null;
 }
 
 export interface PuntoPerfil extends Punto { cumplidos: number; posibles: number; porcentaje: number | null; }

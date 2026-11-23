@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { Cierre, Ficha, Llamada, Rendimiento, Transcripcion } from './monitoreo.models';
+import { Cierre, Ficha, Llamada, Rendimiento, Transcripcion, Seguimiento } from './monitoreo.models';
 
 /** La pestaña Monitoreo de Grabaciones Discador: lista, revisión, rendimiento, audio y transcripción. */
 @Injectable({ providedIn: 'root' })
@@ -30,6 +30,12 @@ export class MonitoreoService {
     let params = new HttpParams().set('subcartera', subcartera);
     if (asesor) params = params.set('asesor', asesor);
     return this.http.get<Rendimiento>(`${this.base}/rendimiento`, { params });
+  }
+
+  /** Seguimiento por día: por asesor, día y rúbrica entre dos fechas (las dos incluidas). */
+  seguimiento(subcartera: number, desde: string, hasta: string): Observable<Seguimiento> {
+    const params = new HttpParams().set('subcartera', subcartera).set('desde', desde).set('hasta', hasta);
+    return this.http.get<Seguimiento>(`${this.base}/seguimiento`, { params });
   }
 
   /** El Excel de la lista: llamadas y criterios de la subcartera entre dos fechas. */

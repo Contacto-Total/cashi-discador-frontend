@@ -503,6 +503,12 @@ export const routes: Routes = [
     data: { acceso: '/admin/recordings' }
   },
   {
+    path: 'admin/recordings/seguimiento',
+    loadComponent: () => import('./features/admin/admin-recordings/monitoreo/seguimiento.component').then(m => m.SeguimientoComponent),
+    canActivate: [authGuard, menuAccesoGuard],
+    data: { acceso: '/admin/recordings' }
+  },
+  {
     path: 'admin/recordings/llamada/:idx',
     loadComponent: () => import('./features/admin/admin-recordings/monitoreo/revision-llamada.component').then(m => m.RevisionLlamadaComponent),
     canActivate: [authGuard, menuAccesoGuard],

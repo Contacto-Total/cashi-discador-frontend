@@ -119,7 +119,7 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
                         <td [class]="TD"><span [class]="FUERTE">{{ p.cliente || '—' }}</span><span [class]="SEC">{{ p.documento }}</span></td>
                         <td [class]="TD">{{ p.telefono }}</td>
                         <td [class]="TD">{{ p.campana }}</td>
-                        <td [class]="TD">{{ p.agente || '—' }}</td>
+                        <td [class]="TD">{{ asesorDe(p) || '—' }}</td>
                         <td [class]="TD + ' max-w-[11.5rem] min-w-[9rem]'">{{ p.tipificacion || '—' }}<span [class]="SEC + ' overflow-hidden text-ellipsis whitespace-nowrap'" [title]="p.tipificacion2 || ''">{{ p.tipificacion2 }}</span></td>
                         <td [class]="TD"><span [class]="FUERTE">{{ fecha(p.fechaInicio) }}</span><span [class]="SEC">{{ hora(p.fechaInicio) }}</span></td>
                         <td [class]="TD">
@@ -127,8 +127,11 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
                             <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" [attr.aria-expanded]="abierta" [title]="'Gestión #' + g.idGestion + ': ver sus llamadas'" (click)="alternar(g)">
                               {{ g.total }} llamadas<lucide-angular [name]="abierta ? 'chevron-up' : 'chevron-down'" [size]="16" class="flex"></lucide-angular>
                             </button>
-                          } @else if (g.idGestion) { <span [title]="'Gestión #' + g.idGestion">1 llamada</span> }
-                          @else { <span class="text-[.75rem] text-muted-foreground" title="La llamada no quedó enlazada a ninguna gestión">Sin gestión</span> }
+                          } @else {
+                            @if (g.idGestion) { <span [title]="'Gestión #' + g.idGestion">1 llamada</span> }
+                            @else { <span class="text-[.75rem] text-muted-foreground" title="La llamada no quedó enlazada a ninguna gestión">Sin gestión</span> }
+                            <span [class]="SEC" title="Duración de la llamada">{{ duracion(p.duracionSegundos) }}</span>
+                          }
                         </td>
                         <td [class]="TD_NUM">
                           <span class="inline-flex min-w-[4.375rem] items-center justify-end gap-[.375rem]">
@@ -156,7 +159,7 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
                                   <span class="font-semibold text-muted-foreground">{{ i + 1 }}</span>
                                   <span><span class="font-semibold">{{ origen(l.origen) }}</span><small class="block text-[.75rem] text-muted-foreground">{{ estado(l.estadoLlamada) }}</small></span>
                                   <span>{{ l.telefono }}</span>
-                                  <span>{{ l.agente || '—' }}</span>
+                                  <span>{{ asesorDe(l) || '—' }}</span>
                                   <span>{{ fecha(l.fechaInicio) }}<small class="block text-[.75rem] text-muted-foreground">{{ hora(l.fechaInicio) }}</small></span>
                                   <span>{{ duracion(l.duracionSegundos) }}</span>
                                   <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" aria-label="Descargar audio" title="Descargar audio" [disabled]="bajando() === l.uuidLlamada" (click)="bajarAudio(l)">
@@ -204,6 +207,8 @@ export class GrabacionesComponent {
   protected readonly TD = TD.replace('py-[.5625rem]!', 'py-[.875rem]!'); protected readonly TD_1 = TD_1; protected readonly TD_NUM = TD_NUM.replace('py-[.5625rem]!', 'py-[.875rem]!'); protected readonly SEC = SEC;
   protected readonly FUERTE = FUERTE; protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY;
   protected readonly BOTON_SEC = BOTON_SEC + ' ' + BOTON_APAGADO; protected readonly MINI = MINI;
+  /** El nombre del asesor para mostrar y filtrar; su usuario si no tiene nombre. */
+  protected asesorDe(l: RecordingDTO): string { return l.agenteNombre || l.agente || ''; }
   protected readonly fecha = fecha; protected readonly hora = hora; protected readonly duracion = duracion; protected readonly hoy = hoyIso();
   protected readonly COLUMNAS: [Orden, string][] = [['cliente', 'Cliente'], ['telefono', 'Teléfono'], ['campana', 'Campaña'], ['agente', 'Asesor'], ['tipificacion', 'Tipificación'], ['fechaInicio', 'Fecha']];
 
@@ -245,12 +250,16 @@ export class GrabacionesComponent {
     }
     return [...mapa.values()];
   });
-  readonly asesores = computed(() => [...new Set(this.grabaciones().map(l => l.agente).filter(Boolean).concat(this.asesor() ? [this.asesor()] : []))]
+  /** Los asesores de la subcartera (por rol) llegan al elegirla; los de la búsqueda se suman, porque alguien con
+   *  llamadas puede ya no tener el rol. */
+  readonly asesoresSub = signal<string[]>([]);
+  readonly asesores = computed(() => [...new Set(this.asesoresSub().concat(this.grabaciones().map(l => this.asesorDe(l))).filter(Boolean).concat(this.asesor() ? [this.asesor()] : []))]
     .sort((a, b) => a.localeCompare(b)));
   readonly visibles = computed(() => {
     const [k, d] = this.orden(), a = this.asesor();
-    return this.grupos().filter(g => !a || g.llamadas.some(l => l.agente === a))
-      .sort((x, y) => String((x.principal as unknown as Record<string, unknown>)[k] ?? '').localeCompare(String((y.principal as unknown as Record<string, unknown>)[k] ?? '')) * d);
+    const valor = (l: RecordingDTO): string => k === 'agente' ? this.asesorDe(l) : String((l as unknown as Record<string, unknown>)[k] ?? '');
+    return this.grupos().filter(g => !a || g.llamadas.some(l => this.asesorDe(l) === a))
+      .sort((x, y) => valor(x.principal).localeCompare(valor(y.principal)) * d);
   });
   readonly estadoBarra = computed(() => {
     if (!this.buscado()) return 'Sin búsqueda';
@@ -274,8 +283,15 @@ export class GrabacionesComponent {
     // Al cambiar el ámbito cambia el catálogo y la búsqueda se vuelve a pedir, como hasta ahora.
     effect(() => {
       const cli = this.e.idCliente(), car = this.e.idCartera(), sub = this.e.idSubcartera();
-      untracked(() => { this.limpiar(); this.cargarCatalogo(cli, car, sub); });
+      untracked(() => { this.limpiar(); this.cargarCatalogo(cli, car, sub); this.cargarAsesores(sub); });
     });
+  }
+
+  private cargarAsesores(sub: number | null): void {
+    this.asesoresSub.set([]);
+    if (!sub) return;
+    this.servicio.asesoresDeSubcartera(sub).pipe(catchError(() => of([] as string[])))
+      .subscribe(lista => { if (this.e.idSubcartera() === sub) this.asesoresSub.set(lista); });
   }
 
   private cargarCatalogo(cli: number | null, car: number | null, sub: number | null): void {

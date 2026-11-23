@@ -18,7 +18,7 @@ import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component
 import { MonitoreoEstado, rangosSemana, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { Llamada, Rubrica } from './monitoreo.models';
-import { pct, pts } from './monitoreo.calculos';
+import { pct, pts, rubricaEnFrase } from './monitoreo.calculos';
 
 /** «PROMESA DE PAGO» → «Promesa de pago». */
 export const oracion = (t: string | null | undefined): string => {
@@ -77,7 +77,21 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
           <app-indicador [bajo]="true" [conDetalle]="false" [valor]="porRevisar()" rotulo="Por revisar" [filtra]="true" tono="am" [activo]="e.filtro() === 'revisar'" (elegir)="filtrar('revisar')" />
           <app-indicador [bajo]="true" [conDetalle]="false" [valor]="faltas()" rotulo="Falta por confirmar" [filtra]="true" tono="ro" [activo]="e.filtro() === 'falta'" (elegir)="filtrar('falta')" />
           <app-indicador [bajo]="true" [conDetalle]="false" [valor]="revisadas()" rotulo="Revisadas" [filtra]="true" tono="ok" [activo]="e.filtro() === 'revisadas'" (elegir)="filtrar('revisadas')" />
-          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="pct(promedio())" [unidad]="promedio() == null ? '' : '%'" rotulo="Puntaje promedio" />
+          @if (puntajesRubrica().length > 1) {
+            <!-- Cada rúbrica tiene otros criterios y otros puntos: con llamadas de dos, un puntaje por columna. -->
+            <div class="flex min-w-0">
+              <div class="flex w-full min-w-0 flex-row rounded-xl border border-border bg-card py-[.75rem] shadow-[0_1px_2px_rgb(15_23_42/.04)] [@media(max-height:700px)]:py-[.5rem]">
+                @for (p of puntajesRubrica(); track p.rubrica; let primero = $first) {
+                  <div class="flex min-w-0 flex-[1_1_0] flex-col items-center gap-[2px] px-[.5rem] text-center" [class]="primero ? '' : 'border-0 border-l border-solid border-border'" [title]="'Puntaje promedio de ' + p.nombre">
+                    <span class="block text-[1.5rem] leading-[1.15] font-bold text-foreground [font-variant-numeric:proportional-nums_lining-nums]">{{ pct(p.valor) }}@if (p.valor != null) {<small class="ml-[.3125rem] text-[.75rem] leading-[1.15] font-medium text-muted-foreground">%</small>}</span>
+                    <span class="block max-w-full overflow-hidden text-[.75rem] leading-[1.5] text-ellipsis whitespace-nowrap text-muted-foreground">Puntaje {{ p.nombre }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <app-indicador [bajo]="true" [conDetalle]="false" [valor]="pct(promedio())" [unidad]="promedio() == null ? '' : '%'" rotulo="Puntaje promedio" />
+          }
         </div>
 
         @if (grupos().length) {
@@ -168,6 +182,9 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
 
     <div appTarjeta [class]="BARRA">
       <span [class]="porRevisar() ? BARRA_ESTADO_HAY : BARRA_ESTADO">{{ estadoBarra() }}</span>
+      <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" [disabled]="!e.idSubcartera()" (click)="verSeguimiento()">
+        <lucide-angular name="calendar-days" [size]="16" class="flex"></lucide-angular>Seguimiento por día
+      </button>
       <button type="button" appBoton="secundario" [class]="'px-4! ' + BOTON_SEC" [disabled]="!e.idSubcartera()" (click)="verRendimiento()">
         <lucide-angular name="gauge" [size]="16" class="flex"></lucide-angular>{{ e.asesor() ? 'Ver rendimiento' : 'Ver rendimiento del equipo' }}
       </button>
@@ -213,6 +230,14 @@ export class MonitoreoListaComponent {
   readonly porRevisar = computed(() => this.rango().filter(l => !esRevisada(l)).length);
   readonly faltas = computed(() => this.rango().filter(l => l.falta === 'PENDIENTE').length);
   readonly revisadas = computed(() => this.rango().length - this.porRevisar());
+  /** El puntaje de cada rúbrica con llamadas en el rango, en el orden del cliente. */
+  readonly puntajesRubrica = computed(() => (['TIT', 'TER', 'PDP', 'CD'] as Rubrica[]).flatMap(r => {
+    const del = this.rango().filter(l => l.rubrica === r);
+    if (!del.length) return [];
+    let c = 0, a = 0;
+    for (const l of del) { c += l.puntos; a += l.posibles; }
+    return [{ rubrica: r, nombre: rubricaEnFrase(r), valor: a ? (c / a) * 100 : null }];
+  }));
   readonly promedio = computed(() => {
     let c = 0, a = 0;
     for (const l of this.rango()) { c += l.puntos; a += l.posibles; }
@@ -330,6 +355,7 @@ export class MonitoreoListaComponent {
     this.e.ultima.set(l.idx);
     this.router.navigate(['/admin/recordings/llamada', l.idx]);
   }
+  verSeguimiento(): void { this.router.navigate(['/admin/recordings/seguimiento']); }
   verRendimiento(): void {
     this.router.navigate(['/admin/recordings/rendimiento'], { queryParams: this.e.asesor() ? { asesor: this.e.asesor() } : {} });
   }

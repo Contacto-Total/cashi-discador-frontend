@@ -12,7 +12,7 @@ import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component
 import { MonitoreoEstado } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { CriterioRendimiento, Rendimiento, Rubrica } from './monitoreo.models';
-import { PuntoPerfil, pct, perfil, puntoDe, puntosDe, pts } from './monitoreo.calculos';
+import { PuntoPerfil, gruposDe, pct, perfil, puntoDe, pts, rubricaEnFrase, rubricasDe } from './monitoreo.calculos';
 
 const NOMBRE: Record<Rubrica, string> = { TIT: 'Titular', TER: 'Tercero', PDP: 'PDP', CD: 'CD' };
 const fechaCorta = (f: string): string => `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`;
@@ -43,34 +43,39 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
             <p role="heading" aria-level="1" [class]="TITULO + ' whitespace-normal!'">{{ asesor() || 'Todo el equipo' }}</p>
             <p [class]="SUBTITULO">{{ subtitulo() }}</p>
           </div>
-          <div [class]="CAMPO + ' ml-auto flex-[0_0_15rem]'">
-            <label for="r-asesor" [class]="ETIQUETA">Asesor</label>
-            <select id="r-asesor" [class]="LISTA" (change)="elegirAsesor($any($event.target).value)">
-              <option value="" [selected]="!asesor()">Todo el equipo</option>
-              @for (a of datos()?.asesores ?? []; track a) { <option [value]="a" [selected]="a === asesor()">{{ a }}</option> }
-            </select>
+          <div class="ml-auto flex min-w-0 flex-[1_1_auto] flex-nowrap items-end justify-end gap-x-3 gap-y-2">
+            <div [class]="CAMPO + ' flex-none'">
+              <span [class]="ETIQUETA">Rúbrica</span>
+              <app-segmentado [opciones]="opcionesRubrica()" [valor]="rubrica() ?? ''" (cambiar)="rubricaElegida.set($any($event))" />
+            </div>
+            <div [class]="CAMPO + ' flex-[0_0_15rem]'">
+              <label for="r-asesor" [class]="ETIQUETA">Asesor</label>
+              <select id="r-asesor" [class]="LISTA" (change)="elegirAsesor($any($event.target).value)">
+                <option value="" [selected]="!asesor()">Todo el equipo</option>
+                @for (a of datos()?.asesores ?? []; track a) { <option [value]="a" [selected]="a === asesor()">{{ a }}</option> }
+              </select>
+            </div>
           </div>
         </div>
 
         @if (datos(); as d) {
+          @let r = deRubrica();
           <div class="mb-8 grid flex-none grid-cols-4 items-stretch gap-8 [@media(max-height:700px)]:mb-4 transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="actualizando()">
-            <app-indicador [bajo]="true" [compacto]="true" [valor]="pct(puntaje())" [unidad]="puntaje() == null ? '' : '%'" rotulo="Puntaje" [detalle]="pts(d.puntos) + ' de ' + pts(d.posibles) + ' puntos'" />
-            <app-indicador [bajo]="true" [compacto]="true" [valor]="d.llamadas" rotulo="Llamadas evaluadas" [detalle]="desglose()" />
+            <app-indicador [bajo]="true" [compacto]="true" [valor]="pct(puntaje())" [unidad]="puntaje() == null ? '' : '%'" rotulo="Puntaje" [detalle]="pts(r?.puntos ?? 0) + ' de ' + pts(r?.posibles ?? 0) + ' puntos'" />
+            <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.llamadas ?? 0" rotulo="Llamadas evaluadas" [detalle]="desglose()" />
             @if (asesor()) {
-              <app-indicador [bajo]="true" [compacto]="true" [valor]="d.faltas" rotulo="Faltas críticas" [detalle]="d.faltas ? 'Revisar en sus llamadas' : 'Ninguna'" />
+              <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.faltas ?? 0" rotulo="Faltas críticas" [detalle]="r?.faltas ? 'Revisar en sus llamadas' : 'Ninguna'" />
             } @else {
-              <app-indicador [bajo]="true" [compacto]="true" [valor]="d.asesores.length" rotulo="Asesores" detalle="con llamadas evaluadas" />
+              <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.asesores ?? 0" rotulo="Asesores" detalle="con llamadas evaluadas" />
             }
-            <app-indicador [bajo]="true" [compacto]="true" [valor]="d.revisadas" rotulo="Revisadas" [detalle]="'de ' + d.llamadas" />
+            <app-indicador [bajo]="true" [compacto]="true" [valor]="r?.revisadas ?? 0" rotulo="Revisadas" [detalle]="'de ' + (r?.llamadas ?? 0)" />
           </div>
 
           <div class="grid min-h-0 flex-auto grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-stretch gap-8 max-[1100px]:grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="actualizando()">
             <section [class]="CAJA">
               <div [class]="CAB">
                 <p role="heading" aria-level="2" class="m-0 text-[.9375rem] font-semibold text-foreground">Puntaje por punto</p>
-                @if (d.rubricas.length > 1) {
-                  <app-segmentado [opciones]="opcionesRubrica()" [valor]="rubrica() ?? ''" (cambiar)="rubricaElegida.set($any($event))" />
-                } @else if (rubrica()) { <span class="text-[.8125rem] text-muted-foreground">{{ NOMBRE[rubrica()!] }}</span> }
+                @if (rubrica()) { <span class="text-[.8125rem] text-muted-foreground">{{ NOMBRE[rubrica()!] }}</span> }
               </div>
               @if (llamadasRubrica()) {
                 <svg class="mx-auto block h-full min-h-0 w-full max-w-[28rem] flex-auto overflow-visible pt-[.75rem]" [attr.viewBox]="'0 0 ' + radar().w + ' 290'" role="img" [attr.aria-label]="'Puntaje por punto de ' + (asesor() || 'todo el equipo')">
@@ -159,21 +164,26 @@ export class RendimientoComponent implements OnDestroy {
   readonly rubricaElegida = signal<Rubrica | null>(null);
 
   readonly esFoh = computed(() => this.rubrica() === 'PDP' || this.rubrica() === 'CD');
-  readonly puntaje = computed(() => { const d = this.datos(); return d?.posibles ? (d.puntos / d.posibles) * 100 : null; });
+  /** Cada rúbrica se mide por separado: tarjetas, gráfico, criterios y barra son de la elegida. */
+  readonly deRubrica = computed(() => this.datos()?.rubricas.find(r => r.rubrica === this.rubrica()) ?? null);
+  readonly puntaje = computed(() => { const r = this.deRubrica(); return r?.posibles ? (r.puntos / r.posibles) * 100 : null; });
   readonly subtitulo = computed(() => {
     const d = this.datos();
     if (!d) return '';
     return d.llamadas && d.desde && d.hasta ? `Toda la historia evaluada: del ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}` : 'Sin llamadas evaluadas';
   });
-  readonly desglose = computed(() => (this.datos()?.rubricas ?? [])
-    .map(r => `${r.llamadas} ${NOMBRE[r.rubrica].length > 3 ? NOMBRE[r.rubrica].toLowerCase() : NOMBRE[r.rubrica]}`).join(' · '));
+  readonly desglose = computed(() => this.rubricas().map(r => `${this.datos()?.rubricas.find(x => x.rubrica === r)?.llamadas ?? 0} ${rubricaEnFrase(r)}`).join(' · '));
+  /** Las dos rúbricas del cliente, aunque una no tenga llamadas. */
+  readonly rubricas = computed((): Rubrica[] => rubricasDe((this.datos()?.rubricas ?? []).map(r => r.rubrica)));
   /** La rúbrica elegida; si no, la que tiene más llamadas. */
   readonly rubrica = computed((): Rubrica | null => {
-    const rs = this.datos()?.rubricas ?? [], elegida = this.rubricaElegida();
-    if (elegida && rs.some(r => r.rubrica === elegida)) return elegida;
-    return [...rs].sort((a, b) => b.llamadas - a.llamadas)[0]?.rubrica ?? null;
+    if (!this.datos()) return null;
+    const rs = this.rubricas(), elegida = this.rubricaElegida();
+    if (elegida && rs.includes(elegida)) return elegida;
+    const n = (r: Rubrica): number => this.datos()?.rubricas.find(x => x.rubrica === r)?.llamadas ?? 0;
+    return [...rs].sort((a, b) => n(b) - n(a))[0] ?? null;
   });
-  readonly opcionesRubrica = computed(() => (this.datos()?.rubricas ?? []).map(r => ({ clave: r.rubrica, texto: NOMBRE[r.rubrica] })));
+  readonly opcionesRubrica = computed(() => this.rubricas().map(r => ({ clave: r, texto: NOMBRE[r] })));
   private readonly criterios = computed((): CriterioRendimiento[] => this.datos()?.rubricas.find(r => r.rubrica === this.rubrica())?.criterios ?? []);
   readonly llamadasRubrica = computed(() => this.datos()?.rubricas.find(r => r.rubrica === this.rubrica())?.llamadas ?? 0);
   readonly ejes = computed((): PuntoPerfil[] => this.rubrica() ? perfil(this.rubrica()!, this.criterios()) : []);
@@ -208,19 +218,19 @@ export class RendimientoComponent implements OnDestroy {
   readonly fallas = computed(() => {
     const rub = this.rubrica();
     if (!rub) return [];
-    return puntosDe(rub).map(p => ({
+    return gruposDe(rub).map(p => ({
       clave: p.clave, nombre: p.nombre,
       items: this.criterios().filter(c => c.noCumple > 0 && puntoDe(rub, c) === p.clave)
         .sort((a, b) => b.noCumple - a.noCumple || this.falla(b) - this.falla(a))
     })).filter(g => g.items.length);
   });
 
-  readonly porRevisar = computed(() => (this.datos()?.llamadas ?? 0) - (this.datos()?.revisadas ?? 0));
+  readonly porRevisar = computed(() => (this.deRubrica()?.llamadas ?? 0) - (this.deRubrica()?.revisadas ?? 0));
   readonly estadoBarra = computed(() => {
-    const d = this.datos();
-    if (!d?.llamadas) return 'Sin llamadas evaluadas';
+    const r = this.deRubrica();
+    if (!r?.llamadas) return 'Sin llamadas evaluadas';
     const n = this.porRevisar();
-    return `${d.llamadas} ${d.llamadas === 1 ? 'llamada evaluada' : 'llamadas evaluadas'}` + (n ? ` · ${n} por revisar` : '');
+    return `${r.llamadas} ${r.llamadas === 1 ? 'llamada evaluada' : 'llamadas evaluadas'} de ${rubricaEnFrase(r.rubrica)}` + (n ? ` · ${n} por revisar` : '');
   });
 
   constructor() {
