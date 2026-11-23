@@ -189,7 +189,8 @@ export class MonitoreoListaComponent {
   protected readonly ZONA = ZONA.replace('pb-6', 'pb-5');
   protected readonly VACIO = VACIO; protected readonly INDICADORES = INDICADORES; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
   protected readonly ENTRADA = ENTRADA; protected readonly LISTA = LISTA; protected readonly BUSCAR = BUSCAR; protected readonly BUSCAR_ICONO = BUSCAR_ICONO;
-  protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; protected readonly TABLA_CAJA = TABLA_CAJA.replace('flex-[1_0_auto]', 'min-h-0 flex-[1_1_auto]'); protected readonly TABLA = TABLA; protected readonly THEAD = THEAD;
+  protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; /** La tabla se desplaza por dentro y su barra va contra el borde de la tarjeta, no pegada al contenido. */
+  protected readonly TABLA_CAJA = TABLA_CAJA.replace('flex-[1_0_auto]', 'min-h-0 flex-[1_1_auto]').replace('-mx-1', '-ml-1 -mr-8').replace('px-1', 'pl-1 pr-8'); protected readonly TABLA = TABLA; protected readonly THEAD = THEAD;
   protected readonly TR = TR; protected readonly TH = TH; protected readonly TH_NUM = TH_NUM; protected readonly TD = TD; protected readonly TD_1 = TD_1;
   protected readonly TD_NUM = TD_NUM; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly TR_ABRE = TR_ABRE;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY; protected readonly BOTON_SEC = BOTON_SEC + ' ' + BOTON_APAGADO;
