@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Injector, OnDestroy, ViewChild, afterNextRender, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { Subscription, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../../../shared/services/toast.service';
@@ -336,6 +336,9 @@ export class RevisionLlamadaComponent implements OnDestroy {
   // ---------- audio ----------
   private audio?: HTMLAudioElement;
   private url?: string;
+  /** La descarga del audio en curso y las acciones pedidas mientras llega: una sola descarga y un solo reproductor. */
+  private descarga?: Subscription;
+  private pendientes_: (() => void)[] = [];
   readonly sonando = signal(false);
   readonly posicion_ = signal(0);
   readonly sigue = signal(true);
@@ -646,13 +649,19 @@ export class RevisionLlamadaComponent implements OnDestroy {
     if (i >= 0) this.centrar(document.getElementById('ln-' + i), this.zonaTr?.nativeElement);
   }
 
-  /** El audio se pide recién al primer play: es un WAV que el backend convierte. */
+  /**
+   * El audio se pide recién al primer play: es un WAV que el backend convierte. Mientras llega, los
+   * clics no piden otra descarga ni crean otro reproductor; se aplican en orden cuando llega.
+   */
   private prepararAudio(luego: () => void): void {
     if (this.audio) { luego(); return; }
+    this.pendientes_.push(luego);
+    if (this.descarga) return;
     const f = this.ficha();
     if (!f) return;
-    this.servicio.audio(f.idx).subscribe({
+    this.descarga = this.servicio.audio(f.idx).subscribe({
       next: blob => {
+        this.descarga = undefined;
         this.url = URL.createObjectURL(blob);
         const a = new Audio(this.url);
         a.playbackRate = this.velocidad();
@@ -661,9 +670,14 @@ export class RevisionLlamadaComponent implements OnDestroy {
         a.addEventListener('ended', () => this.sonando.set(false));
         a.addEventListener('timeupdate', () => this.alAvanzar(a.currentTime));
         this.audio = a;
-        luego();
+        const acciones = this.pendientes_;
+        this.pendientes_ = [];
+        acciones.forEach(accion => accion());
       },
-      error: err => this.toast.error(err?.status === 503 ? 'El servidor de audio está ocupado; intenta en un momento' : 'No se pudo cargar el audio')
+      error: err => {
+        this.descarga = undefined; this.pendientes_ = [];
+        this.toast.error(err?.status === 503 ? 'El servidor de audio está ocupado; intenta en un momento' : 'No se pudo cargar el audio');
+      }
     });
   }
   private alAvanzar(t: number): void {
@@ -674,9 +688,13 @@ export class RevisionLlamadaComponent implements OnDestroy {
       if (this.sigue() && i >= 0) this.centrar(document.getElementById('ln-' + i), this.zonaTr?.nativeElement);
     }
   }
+  /** Con `soltarArchivo` (otra llamada o salir de la pantalla) cancela la descarga y libera el reproductor. */
   private pararAudio(soltarArchivo: boolean): void {
     this.audio?.pause();
     if (soltarArchivo) {
+      this.descarga?.unsubscribe();
+      this.descarga = undefined; this.pendientes_ = [];
+      if (this.audio) { this.audio.removeAttribute('src'); this.audio.load(); }
       if (this.url) URL.revokeObjectURL(this.url);
       this.audio = undefined; this.url = undefined;
       this.sonando.set(false); this.posicion_.set(0); this.lineaSonando.set(-1);
