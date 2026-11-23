@@ -120,7 +120,7 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
             <label for="l-q" [class]="ETIQUETA">Buscar</label>
             <div [class]="BUSCAR">
               <lucide-angular name="search" [size]="16" [class]="BUSCAR_ICONO"></lucide-angular>
-              <input id="l-q" [class]="BUSCAR_CAMPO" placeholder="Asesor o cliente" [value]="e.q()" (input)="buscar($any($event.target).value)">
+              <input id="l-q" [class]="BUSCAR_CAMPO" [placeholder]="esIbk() ? 'DNI, CJ o nombre' : 'DNI o nombre'" [value]="e.q()" (input)="buscar($any($event.target).value)">
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
                       <tr [class]="TR + ' ' + TR_ABRE" tabindex="0" [attr.aria-current]="e.ultima() === l.idx" (click)="abrir(l)" (keydown.enter)="abrir(l)">
                         <td [class]="celda(l, TD)"><span [class]="FUERTE">{{ fechaCorta(l.fecha) }}</span><span [class]="SEC">{{ l.hora }}</span></td>
                         <td [class]="celda(l, TD)">{{ l.asesor }}</td>
-                        <td [class]="celda(l, TD)">{{ l.titular || '—' }}</td>
+                        <td [class]="celda(l, TD)">{{ l.titular || '—' }}@if (docCj(l); as d) {<span [class]="SEC">{{ d }}</span>}</td>
                         <td [class]="celda(l, TD) + ' max-w-[16rem] min-w-[9rem]'">{{ oracion(l.nivel1) }}<span [class]="SEC + ' overflow-hidden text-ellipsis whitespace-nowrap'" [title]="oracion(l.nivel2)">{{ oracion(l.nivel2) }}</span></td>
                         <td [class]="celda(l, TD_NUM)">
                           <span class="text-[.9375rem] font-semibold">{{ pts(l.puntos) }}/{{ pts(l.posibles) }}</span>
@@ -225,14 +225,21 @@ export class MonitoreoListaComponent {
       if (f === 'revisar' && esRevisada(l)) return false;
       if (f === 'falta' && l.falta !== 'PENDIENTE') return false;
       if (f === 'revisadas' && !esRevisada(l)) return false;
-      return !q || l.asesor.toLowerCase().includes(q) || (l.titular ?? '').toLowerCase().includes(q);
+      return !q || [l.asesor, l.titular, l.documento, l.cj].some(x => (x ?? '').toLowerCase().includes(q));
     });
   });
+
+  readonly esIbk = computed(() => this.e.llamadas().some(l => l.cliente === 'IBK'));
+
+  /** Documento del cliente y, en Interbank, sus CJ: debajo del nombre. */
+  docCj(l: Llamada): string {
+    return [l.documento, l.cj ? `CJ ${l.cj}` : ''].filter(Boolean).join(' · ');
+  }
 
   /** Los resultados por rúbrica, de lo que hay en el ámbito y las fechas. */
   readonly grupos = computed(() => {
     const por = new Map<Rubrica, Set<string>>();
-    if (this.e.llamadas().some(l => l.cliente === 'IBK')) CATALOGO_IBK.forEach(([r, rs]) => por.set(r, new Set(rs)));
+    if (this.esIbk()) CATALOGO_IBK.forEach(([r, rs]) => por.set(r, new Set(rs)));
     for (const l of this.e.llamadas()) {
       if (!por.has(l.rubrica)) por.set(l.rubrica, new Set());
       partes(l.nivel2).forEach(x => por.get(l.rubrica)!.add(x));

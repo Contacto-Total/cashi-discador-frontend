@@ -19,6 +19,9 @@ export interface Llamada {
   hora: string;
   asesor: string;
   titular: string;
+  documento: string | null;
+  /** Interbank: los CJ negociados o, sin negociación, los de la llamada. */
+  cj: string | null;
   nivel1: string;
   nivel2: string;
   puntos: number;
