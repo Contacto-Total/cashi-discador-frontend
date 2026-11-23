@@ -27,7 +27,9 @@ const TONOS: Record<TonoIndicador, { t: string; bg: string }> = {
       <span class="block text-[1.5rem] leading-[1.15] font-bold [font-variant-numeric:proportional-nums_lining-nums]"
             [class]="filtra ? 'text-foreground group-hover:text-(--t) group-aria-pressed:text-(--t)' : 'text-foreground'">{{ valor }}@if (unidad) {<small class="ml-[.3125rem] text-[.75rem] leading-[1.15] font-medium text-muted-foreground">{{ unidad }}</small>}</span>
       <span class="block text-[.75rem] leading-[1.5]" [class]="filtra ? 'text-muted-foreground group-aria-pressed:text-foreground' : 'text-muted-foreground'">{{ rotulo }}</span>
-      @if (conDetalle) {
+      @if (conDetalle && compacto) {
+        <span class="mt-[.125rem] block text-[.75rem] leading-[1.5]" [class]="(detalleRojo ? 'text-(--ro)' : 'text-muted-foreground') + (bajo && detalleNeutro && !detalleRojo ? ' [@media(max-height:700px)]:hidden' : '')">{{ detalle }}</span>
+      } @else if (conDetalle) {
         <div class="flex min-h-[2.5rem] min-w-0 flex-1 flex-col justify-center pt-[.625rem]">
           @if (detalle) {
             <span class="mt-[.375rem] block text-[.75rem] leading-[1.5] text-(--ink2)">{{ detalle }}</span>
@@ -38,7 +40,7 @@ const TONOS: Record<TonoIndicador, { t: string; bg: string }> = {
     </ng-template>
 
     @if (filtra) {
-      <button type="button" [attr.aria-pressed]="activo" (click)="elegir.emit()"
+      <button type="button" [attr.aria-pressed]="activo" (click)="elegir.emit()" [class]="bajo ? APRETADO : ''"
               [style.--t]="tonos[tono].t" [style.--t-bg]="tonos[tono].bg"
               class="group flex w-full min-w-0 cursor-pointer flex-col gap-[2px] rounded-xl border border-border bg-card px-[.875rem] py-[.75rem] text-left [font-family:inherit] text-foreground shadow-[0_1px_2px_rgb(15_23_42/.04)] transition-[background-color,border-color] duration-150
                      hover:border-[color-mix(in_oklab,var(--t)_40%,var(--border))] hover:bg-[color-mix(in_oklab,var(--t)_6%,transparent)]
@@ -46,7 +48,7 @@ const TONOS: Record<TonoIndicador, { t: string; bg: string }> = {
         <ng-container *ngTemplateOutlet="cuerpo" />
       </button>
     } @else {
-      <div class="flex w-full min-w-0 flex-col gap-[2px] rounded-xl border border-border bg-card px-[.875rem] py-[.75rem] shadow-[0_1px_2px_rgb(15_23_42/.04)]">
+      <div class="flex w-full min-w-0 flex-col gap-[2px] rounded-xl border border-border bg-card px-[.875rem] py-[.75rem] shadow-[0_1px_2px_rgb(15_23_42/.04)]" [class]="bajo ? APRETADO : ''">
         <ng-container *ngTemplateOutlet="cuerpo" />
       </div>
     }
@@ -60,6 +62,14 @@ export class IndicadorComponent {
   @Input() detalle = '';
   /** Sin línea de detalle: solo la cifra y su rótulo. */
   @Input() conDetalle = true;
+  /** El detalle en una línea pegada al rótulo, sin el espacio reservado de abajo. */
+  @Input() compacto = false;
+  /** Detalle compacto en rojo (una falta crítica que anula la nota). */
+  @Input() detalleRojo = false;
+  /** En pantallas de 700 px de alto o menos: menos relleno y sin el detalle neutro. */
+  @Input() bajo = false;
+  /** El detalle es informativo y se puede ocultar en pantallas bajas; false si avisa un cambio. */
+  @Input() detalleNeutro = true;
   /** Si es un botón que filtra la lista. */
   @Input() filtra = false;
   @Input() activo = false;
@@ -67,4 +77,5 @@ export class IndicadorComponent {
   @Output() elegir = new EventEmitter<void>();
 
   protected readonly tonos = TONOS;
+  protected readonly APRETADO = '[@media(max-height:700px)]:px-[.75rem] [@media(max-height:700px)]:py-[.5rem]';
 }

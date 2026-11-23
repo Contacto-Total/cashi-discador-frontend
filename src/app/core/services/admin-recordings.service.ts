@@ -17,6 +17,8 @@ export interface RecordingDTO {
   estadoLlamada: string;
   resultado: string;
   tipificacion: string;
+  /** Resultado (ruta_nivel_2) bajo la tipificación de nivel 1. */
+  tipificacion2?: string | null;
   /** Si la grabación tiene evaluación de calidad: habilita el botón de reporte. */
   tieneEvaluacion: boolean;
   /** Gestión a la que quedó enlazada la llamada (gestion_llamada) y cuántas llamadas tiene. */

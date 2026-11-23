@@ -493,8 +493,20 @@ export const routes: Routes = [
   },
   {
     path: 'admin/recordings',
-    loadComponent: () => import('./features/admin/admin-recordings/admin-recordings.component').then(m => m.AdminRecordingsComponent),
+    loadComponent: () => import('./features/admin/admin-recordings/grabaciones-discador.component').then(m => m.GrabacionesDiscadorComponent),
     canActivate: [authGuard, menuAccesoGuard]
+  },
+  {
+    path: 'admin/recordings/rendimiento',
+    loadComponent: () => import('./features/admin/admin-recordings/monitoreo/rendimiento.component').then(m => m.RendimientoComponent),
+    canActivate: [authGuard, menuAccesoGuard],
+    data: { acceso: '/admin/recordings' }
+  },
+  {
+    path: 'admin/recordings/llamada/:idx',
+    loadComponent: () => import('./features/admin/admin-recordings/monitoreo/revision-llamada.component').then(m => m.RevisionLlamadaComponent),
+    canActivate: [authGuard, menuAccesoGuard],
+    data: { acceso: '/admin/recordings' }
   },
   {
     path: 'admin/amd-test',
