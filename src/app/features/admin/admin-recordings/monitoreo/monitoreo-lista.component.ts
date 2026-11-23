@@ -73,7 +73,7 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
       <section appTarjeta [class]="PRINCIPAL">
         <ng-container *ngTemplateOutlet="cabecera()" />
 
-        <div [class]="INDICADORES + ' [@media(max-height:700px)]:mb-4'">
+        <div [class]="INDICADORES + ' [@media(max-height:700px)]:mb-4 transition-opacity duration-200 motion-reduce:transition-none'" [class.opacity-60]="cargando()">
           <app-indicador [bajo]="true" [conDetalle]="false" [valor]="porRevisar()" rotulo="Por revisar" [filtra]="true" tono="am" [activo]="e.filtro() === 'revisar'" (elegir)="filtrar('revisar')" />
           <app-indicador [bajo]="true" [conDetalle]="false" [valor]="faltas()" rotulo="Falta por confirmar" [filtra]="true" tono="ro" [activo]="e.filtro() === 'falta'" (elegir)="filtrar('falta')" />
           <app-indicador [bajo]="true" [conDetalle]="false" [valor]="revisadas()" rotulo="Revisadas" [filtra]="true" tono="ok" [activo]="e.filtro() === 'revisadas'" (elegir)="filtrar('revisadas')" />
@@ -128,12 +128,12 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
         <div #zona [class]="ZONA">
           @if (!e.idSubcartera()) {
             <div [class]="VACIO">Elige cliente, cartera y subcartera</div>
-          } @else if (cargando()) {
+          } @else if (cargando() && !visibles().length) {
             <div [class]="VACIO">Cargando…</div>
           } @else if (!visibles().length) {
             <div [class]="VACIO">{{ rango().length ? 'Sin llamadas con estos filtros' : 'Sin llamadas evaluadas en estas fechas' }}</div>
           } @else {
-            <div class="flex min-h-0 flex-[1_1_auto] flex-col">
+            <div class="flex min-h-0 flex-[1_1_auto] flex-col transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="cargando()" [attr.aria-busy]="cargando()">
               <div #caja [class]="TABLA_CAJA">
                 <table [class]="TABLA">
                   <thead [class]="THEAD"><tr [class]="TR">

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../../../shared/services/toast.service';
@@ -53,7 +53,7 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
         </div>
 
         @if (datos(); as d) {
-          <div class="mb-8 grid flex-none grid-cols-4 items-stretch gap-8 [@media(max-height:700px)]:mb-4">
+          <div class="mb-8 grid flex-none grid-cols-4 items-stretch gap-8 [@media(max-height:700px)]:mb-4 transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="actualizando()">
             <app-indicador [bajo]="true" [compacto]="true" [valor]="pct(puntaje())" [unidad]="puntaje() == null ? '' : '%'" rotulo="Puntaje" [detalle]="pts(d.puntos) + ' de ' + pts(d.posibles) + ' puntos'" />
             <app-indicador [bajo]="true" [compacto]="true" [valor]="d.llamadas" rotulo="Llamadas evaluadas" [detalle]="desglose()" />
             @if (asesor()) {
@@ -64,7 +64,7 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
             <app-indicador [bajo]="true" [compacto]="true" [valor]="d.revisadas" rotulo="Revisadas" [detalle]="'de ' + d.llamadas" />
           </div>
 
-          <div class="grid min-h-0 flex-auto grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-stretch gap-8 max-[1100px]:grid-cols-1">
+          <div class="grid min-h-0 flex-auto grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-stretch gap-8 max-[1100px]:grid-cols-1 transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="actualizando()">
             <section [class]="CAJA">
               <div [class]="CAB">
                 <p role="heading" aria-level="2" class="m-0 text-[.9375rem] font-semibold text-foreground">Puntaje por punto</p>
@@ -81,7 +81,7 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
                     <circle [attr.cx]="c.x" [attr.cy]="c.y" r="5" fill="var(--serie-a)" stroke="var(--card)" stroke-width="2"><title>{{ c.tip }}</title></circle>
                   }
                   @for (e of radar().etiquetas; track $index) {
-                    <text [attr.x]="e.x" [attr.y]="e.y" [attr.text-anchor]="e.ancla" fill="var(--ink2)" font-size="11.5px">{{ e.nombre }}<tspan [attr.x]="e.x" dy="14" fill="var(--foreground)" font-weight="700" font-size="12px">{{ e.valor }}</tspan></text>
+                    <text [attr.x]="e.x" [attr.y]="e.y" [attr.text-anchor]="e.ancla" fill="var(--ink2)" font-size="11.5px">{{ e.nombre }}<tspan [attr.x]="e.x" dy="17" fill="var(--foreground)" font-weight="700" font-size="12px">{{ e.valor }}</tspan></text>
                   }
                 </svg>
                 <p class="m-0 text-[.75rem] text-muted-foreground">Calculado sobre {{ llamadasRubrica() }} {{ llamadasRubrica() === 1 ? 'llamada' : 'llamadas' }}</p>
@@ -133,7 +133,7 @@ interface Etiqueta { x: number; y: number; ancla: string; nombre: string; valor:
     </div>
   `
 })
-export class RendimientoComponent {
+export class RendimientoComponent implements OnDestroy {
   private readonly servicio = inject(MonitoreoService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -149,6 +149,12 @@ export class RendimientoComponent {
 
   readonly asesor = signal<string | null>(null);
   readonly datos = signal<Rendimiento | null>(null);
+  /** Pidiendo otro asesor: lo anterior sigue a la vista, atenuado, hasta que llega lo nuevo. */
+  readonly actualizando = signal(false);
+  private pedido = 0;
+  /** Los porcentajes que dibuja el gráfico; pasan de un asesor al otro en una transición corta. */
+  private readonly dibujados = signal<number[] | null>(null);
+  private cuadro = 0;
   readonly error = signal('');
   readonly rubricaElegida = signal<Rubrica | null>(null);
 
@@ -179,6 +185,8 @@ export class RendimientoComponent {
     const ang = (i: number): number => -Math.PI / 2 + (i * 2 * Math.PI) / n;
     const pt = (i: number, v: number): [number, number] => [cx + Math.cos(ang(i)) * r * v / 100, cy + Math.sin(ang(i)) * r * v / 100];
     const poli = (v: number): string => ejes.map((_, i) => pt(i, v).map(z => z.toFixed(1)).join(',')).join(' ');
+    const dib = this.dibujados();
+    const valor = (i: number): number => dib && dib.length === ejes.length ? dib[i] : (ejes[i].porcentaje ?? 0);
     const etiquetas: Etiqueta[] = ejes.map((e, i) => {
       const [x, y] = pt(i, 128);
       const ancla = Math.abs(x - cx) < 4 ? 'middle' : x > cx ? 'start' : 'end';
@@ -189,8 +197,8 @@ export class RendimientoComponent {
       w, cx, cy,
       rejilla: [25, 50, 75, 100].map(poli),
       ejes: ejes.map((_, i) => pt(i, 100).map(z => +z.toFixed(1))),
-      forma: ejes.map((e, i) => pt(i, e.porcentaje ?? 0).map(z => z.toFixed(1)).join(',')).join(' '),
-      puntos: ejes.flatMap((e, i) => e.porcentaje == null ? [] : [{ x: +pt(i, e.porcentaje)[0].toFixed(1), y: +pt(i, e.porcentaje)[1].toFixed(1),
+      forma: ejes.map((e, i) => pt(i, valor(i)).map(z => z.toFixed(1)).join(',')).join(' '),
+      puntos: ejes.flatMap((e, i) => e.porcentaje == null ? [] : [{ x: +pt(i, valor(i))[0].toFixed(1), y: +pt(i, valor(i))[1].toFixed(1),
         tip: `${e.nombre}: ${pts(e.porcentaje)} % · ${pts(e.cumplidos)} de ${pts(e.posibles)} puntos` }]),
       etiquetas
     };
@@ -216,6 +224,10 @@ export class RendimientoComponent {
   });
 
   constructor() {
+    effect(() => {
+      const destino = this.ejes().map(e => e.porcentaje ?? 0);
+      untracked(() => this.animar(destino));
+    });
     this.ruta.queryParamMap.subscribe(q => {
       this.asesor.set(q.get('asesor'));
       this.cargar();
@@ -227,12 +239,38 @@ export class RendimientoComponent {
   private cargar(): void {
     const sub = this.e.idSubcartera();
     if (!sub) { this.volver(); return; }
-    this.datos.set(null); this.error.set('');
+    const n = ++this.pedido;
+    this.error.set('');
+    this.actualizando.set(true);
     this.servicio.rendimiento(sub, this.asesor()).subscribe({
-      next: d => this.datos.set(d),
-      error: err => { this.error.set(err?.error?.message || 'No se pudo cargar el rendimiento'); this.toast.error(this.error()); }
+      next: d => { if (n !== this.pedido) return; this.datos.set(d); this.actualizando.set(false); },
+      error: err => {
+        if (n !== this.pedido) return;
+        this.actualizando.set(false);
+        this.error.set(err?.error?.message || 'No se pudo cargar el rendimiento');
+        this.toast.error(this.error());
+      }
     });
   }
+
+  /** Lleva el gráfico a los porcentajes nuevos en 280 ms; sin forma previa, con otra rúbrica o sin animaciones, de golpe. */
+  private animar(destino: number[]): void {
+    cancelAnimationFrame(this.cuadro);
+    const desde = this.dibujados();
+    if (!desde || desde.length !== destino.length || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.dibujados.set(destino);
+      return;
+    }
+    const inicio = performance.now();
+    const paso = (t: number): void => {
+      const k = Math.min(1, (t - inicio) / 280), e = 1 - Math.pow(1 - k, 3);
+      this.dibujados.set(destino.map((d, i) => desde[i] + (d - desde[i]) * e));
+      if (k < 1) this.cuadro = requestAnimationFrame(paso);
+    };
+    this.cuadro = requestAnimationFrame(paso);
+  }
+
+  ngOnDestroy(): void { cancelAnimationFrame(this.cuadro); }
 
   elegirAsesor(a: string): void {
     this.router.navigate([], { relativeTo: this.ruta, queryParams: a ? { asesor: a } : {}, replaceUrl: true });

@@ -93,12 +93,12 @@ const duracion = (s: number | null | undefined): string => s == null ? '—' : `
         <div #zona [class]="ZONA">
           @if (!e.idSubcartera() || !buscado()) {
             <div [class]="VACIO">Ingresa al menos un criterio y pulsa Buscar</div>
-          } @else if (cargando()) {
+          } @else if (cargando() && !visibles().length) {
             <div [class]="VACIO">Buscando…</div>
           } @else if (!visibles().length) {
             <div [class]="VACIO">{{ grupos().length ? 'Sin grabaciones con esta búsqueda' : 'Sin grabaciones con estos criterios' }}</div>
           } @else {
-            <div class="flex min-h-0 flex-[1_1_auto] flex-col">
+            <div class="flex min-h-0 flex-[1_1_auto] flex-col transition-opacity duration-200 motion-reduce:transition-none" [class.opacity-60]="cargando()" [attr.aria-busy]="cargando()">
               <div #caja [class]="TABLA_CAJA">
                 <table [class]="TABLA">
                   <thead [class]="THEAD"><tr [class]="TR">
