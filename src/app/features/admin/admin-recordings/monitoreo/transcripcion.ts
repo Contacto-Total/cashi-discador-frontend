@@ -32,18 +32,36 @@ export function leerLineas(partes: Transcripcion[]): Linea[] {
 }
 
 /**
- * Cuando la transcripción no trae tiempos, el inicio de cada línea se reparte en la duración según su largo.
- * Devuelve el inicio de cada línea en segundos.
+ * El inicio de cada línea en segundos. Usa los tiempos reales (TIEMPOS) de las líneas que los traen; las que no
+ * (una línea que el alineado no pudo ubicar, o de otro audio) se reparten por su largo entre la anterior y la
+ * siguiente que sí tienen tiempo. Sin ningún tiempo real, todas se reparten en la duración según su largo.
  */
 export function inicios(lineas: Linea[], duracion: number | null): number[] {
-  if (lineas.length && lineas.every(l => l.inicio != null)) return lineas.map(l => l.inicio!);
-  const largos = lineas.map(l => l.dice.length + 12);
-  const suma = largos.reduce((a, b) => a + b, 0) || 1;
-  const total = duracion || Math.max(10, Math.round(suma / 14));
-  let acc = 0;
-  return largos.map(n => { const x = (acc / suma) * total; acc += n; return x; });
+  const largo = (l: Linea): number => l.dice.length + 12;
+  if (!lineas.some(l => l.inicio != null)) {
+    const largos = lineas.map(largo);
+    const suma = largos.reduce((a, b) => a + b, 0) || 1;
+    const total = duracion || Math.max(10, Math.round(suma / 14));
+    let acc = 0;
+    return largos.map(n => { const x = (acc / suma) * total; acc += n; return x; });
+  }
+  const salida = lineas.map(l => l.inicio);
+  for (let i = 0; i < salida.length; i++) {
+    if (salida[i] != null) continue;
+    let j = i;
+    while (j < salida.length && salida[j] == null) j++;
+    const desde = i > 0 ? salida[i - 1]! : 0;
+    const hasta = j < salida.length ? salida[j]! : Math.max(desde, duracion ?? desde);
+    // La línea anterior ocupa el comienzo del hueco; las que faltan van detrás, cada una según su largo.
+    const previo = i > 0 ? largo(lineas[i - 1]) : 0;
+    const largos = lineas.slice(i, j).map(largo);
+    const suma = previo + largos.reduce((a, b) => a + b, 0) || 1;
+    let acc = previo;
+    for (let k = i; k < j; k++) { salida[k] = desde + (hasta - desde) * (acc / suma); acc += largos[k - i]; }
+    i = j;
+  }
+  return salida.map(x => x!);
 }
-
 /** La línea que suena en `pos` segundos, o -1 antes de la primera. */
 export function lineaEn(ini: number[], pos: number): number {
   let i = -1;

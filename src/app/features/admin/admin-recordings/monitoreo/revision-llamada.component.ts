@@ -407,8 +407,10 @@ export class RevisionLlamadaComponent implements OnDestroy {
   });
 
   // ---------- transcripción ----------
-  readonly ini = computed(() => inicios(this.lineas(), this.ficha()?.duracion ?? null));
-  readonly duracion = computed(() => this.ficha()?.duracion || Math.round(this.ini().at(-1) ?? 0) + 5);
+  /** La duración real del audio cuando ya cargó: la registrada en la gestión puede no coincidir con el archivo. */
+  private readonly duracionAudio = signal(0);
+  readonly ini = computed(() => inicios(this.lineas(), this.duracionAudio() || (this.ficha()?.duracion ?? null)));
+  readonly duracion = computed(() => this.duracionAudio() || this.ficha()?.duracion || Math.round(this.ini().at(-1) ?? 0) + 5);
   readonly avance = computed(() => this.duracion() ? Math.min(100, (this.posicion_() / this.duracion()) * 100) : 0);
   readonly velocidadTexto = computed(() => String(this.velocidad()).replace('.', ',') + '×');
   readonly lineasDeCriterio = computed(() => Object.fromEntries((this.ficha()?.criterios ?? []).map(c => [c.codigo, lineasDe(c.frase, this.lineas())])) as Record<string, number[]>);
@@ -669,6 +671,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
         a.addEventListener('pause', () => this.sonando.set(false));
         a.addEventListener('ended', () => this.sonando.set(false));
         a.addEventListener('timeupdate', () => this.alAvanzar(a.currentTime));
+        a.addEventListener('loadedmetadata', () => { if (Number.isFinite(a.duration) && a.duration > 0) this.duracionAudio.set(a.duration); });
         this.audio = a;
         const acciones = this.pendientes_;
         this.pendientes_ = [];
@@ -697,7 +700,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
       if (this.audio) { this.audio.removeAttribute('src'); this.audio.load(); }
       if (this.url) URL.revokeObjectURL(this.url);
       this.audio = undefined; this.url = undefined;
-      this.sonando.set(false); this.posicion_.set(0); this.lineaSonando.set(-1);
+      this.sonando.set(false); this.posicion_.set(0); this.lineaSonando.set(-1); this.duracionAudio.set(0);
     }
   }
 }
