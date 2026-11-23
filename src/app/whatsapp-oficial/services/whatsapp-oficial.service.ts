@@ -57,8 +57,8 @@ export class WhatsappOficialService {
     return this.http.get<WaoPalabraProhibida[]>(`${this.base}/palabras-prohibidas`);
   }
 
-  agregarPalabraProhibida(palabra: string): Observable<WaoPalabraProhibida> {
-    return this.http.post<WaoPalabraProhibida>(`${this.base}/palabras-prohibidas`, { palabra });
+  agregarPalabraProhibida(palabra: string, alternativas: string): Observable<WaoPalabraProhibida> {
+    return this.http.post<WaoPalabraProhibida>(`${this.base}/palabras-prohibidas`, { palabra, alternativas });
   }
 
   quitarPalabraProhibida(id: number): Observable<void> {

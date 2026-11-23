@@ -18,6 +18,17 @@ type Pestana = 'herramientas' | 'resumen' | 'bajas';
 type Herramienta = 'plantillas' | 'mensajes' | 'buscar';
 type ModoBusqueda = 'telefono' | 'documento';
 
+interface CoincidenciaProhibida {
+  inicio: number;
+  fin: number;
+  texto: string;
+  opciones: { alternativa: string; mensaje: string }[];
+}
+
+function normalizarPalabra(s: string): string {
+  return s.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase();
+}
+
 @Component({
   selector: 'app-whatsapp-oficial-page',
   standalone: true,
@@ -228,6 +239,24 @@ type ModoBusqueda = 'telefono' | 'documento';
               <input #imagenInput type="file" class="hidden" accept="image/jpeg,image/png" (change)="elegirArchivo($event)" />
               <input #documentoInput type="file" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" (change)="elegirArchivo($event)" />
               <input #audioInput type="file" class="hidden" accept="audio/*" (change)="elegirArchivo($event)" />
+              @if (coincidencias().length) {
+                <div class="space-y-3 rounded-xl bg-rose-50 p-3 text-xs ring-1 ring-rose-200">
+                  <p class="font-semibold text-rose-800">Este mensaje no se puede enviar así</p>
+                  @for (c of coincidencias(); track c.inicio) {
+                    <div class="space-y-1.5">
+                      <p class="text-rose-800">
+                        «{{ c.texto }}» no está permitida.
+                        @if (c.opciones.length) { Elige cómo enviarlo: } @else { Escríbelo sin esa palabra. }
+                      </p>
+                      @for (o of c.opciones; track o.alternativa) {
+                        <button type="button" class="block w-full rounded-lg bg-white px-3 py-2 text-left text-slate-800 ring-1 ring-rose-200 transition hover:bg-emerald-50 hover:ring-emerald-300" (click)="aplicarOpcion(o.mensaje)">
+                          <span class="line-clamp-2">{{ o.mensaje }}</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
               <form class="flex items-end gap-2" (ngSubmit)="enviarPrincipal()">
                 @if (grabando()) {
                   <button type="button" class="grid size-11 shrink-0 place-items-center rounded-full text-rose-600 hover:bg-rose-50" title="Cancelar" aria-label="Cancelar grabación" (click)="cancelarGrabacion()">
@@ -444,13 +473,17 @@ type ModoBusqueda = 'telefono' | 'documento';
                     [ngModel]="nuevaPalabra()" (ngModelChange)="nuevaPalabra.set($event)" />
                   <button type="submit" class="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" [disabled]="!nuevaPalabra().trim()">Agregar</button>
                 </form>
+                <input type="text" name="nuevasAlternativas" maxlength="480" placeholder="Alternativas separadas por coma (opcional)"
+                  class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  [ngModel]="nuevasAlternativas()" (ngModelChange)="nuevasAlternativas.set($event)" />
+                <p class="mt-1 text-xs text-slate-500">Para cubrir variantes termina la palabra con * (ejemplo: deuda*).</p>
                 @if (!palabrasProhibidas().length) {
                   <p class="mt-3 text-xs text-slate-500">Aún no hay palabras registradas.</p>
                 } @else {
                   <div class="mt-3 flex flex-wrap gap-2">
                     @for (w of palabrasProhibidas(); track w.id) {
                       <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                        {{ w.palabra }}
+                        <span [title]="w.alternativas ? w.alternativas.split('|').join(', ') : 'Sin alternativas'">{{ w.palabra }}</span>
                         <button type="button" class="font-bold text-rose-600 hover:text-rose-800" aria-label="Quitar" (click)="quitarPalabraProhibida(w.id)">×</button>
                       </span>
                     }
@@ -530,6 +563,46 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly bajas = signal<WaoBaja[]>([]);
   readonly palabrasProhibidas = signal<WaoPalabraProhibida[]>([]);
   readonly nuevaPalabra = signal('');
+  readonly nuevasAlternativas = signal('');
+  readonly reglasProhibidas = computed(() =>
+    this.palabrasProhibidas()
+      .map(p => ({
+        tokens: p.palabra.split(' '),
+        alternativas: p.alternativas ? p.alternativas.split('|').map(a => a.trim()).filter(Boolean) : []
+      }))
+      .sort((a, b) => b.tokens.length - a.tokens.length)
+  );
+  readonly coincidencias = computed<CoincidenciaProhibida[]>(() => {
+    const texto = this.texto();
+    const reglas = this.reglasProhibidas();
+    if (!texto || !reglas.length) return [];
+    const tokens = Array.from(texto.matchAll(/[\p{L}\p{N}]+/gu)).map(m => ({
+      inicio: m.index ?? 0,
+      fin: (m.index ?? 0) + m[0].length,
+      norm: normalizarPalabra(m[0])
+    }));
+    const encontradas: CoincidenciaProhibida[] = [];
+    let i = 0;
+    while (i < tokens.length) {
+      const regla = reglas.find(r => r.tokens.every((t, k) => {
+        const tk = tokens[i + k];
+        if (!tk) return false;
+        return t.endsWith('*') ? tk.norm.startsWith(t.slice(0, -1)) : tk.norm === t;
+      }));
+      if (!regla) { i++; continue; }
+      const ultimo = tokens[i + regla.tokens.length - 1];
+      const inicio = tokens[i].inicio;
+      const fin = ultimo.fin;
+      encontradas.push({
+        inicio,
+        fin,
+        texto: texto.slice(inicio, fin),
+        opciones: regla.alternativas.map(a => ({ alternativa: a, mensaje: this.reemplazar(texto, inicio, fin, a) }))
+      });
+      i += regla.tokens.length;
+    }
+    return encontradas;
+  });
   readonly plantillas = signal<WaoPlantilla[]>([]);
   readonly seleccion = signal<string | null>(null);
   readonly busqueda = signal('');
@@ -661,6 +734,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
     this.refrescar();
     this.cargarBajas();
+    this.cargarPalabrasProhibidas();
     this.cambiarHerramienta('plantillas');
     const chatUrl = this.route.snapshot.queryParamMap.get('chat');
     if (chatUrl) this.seleccionar(chatUrl);
@@ -1072,11 +1146,23 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  aplicarOpcion(mensaje: string): void {
+    this.texto.set(mensaje);
+  }
+
+  private reemplazar(texto: string, inicio: number, fin: number, alternativa: string): string {
+    const original = texto.charAt(inicio);
+    const esMayuscula = original !== original.toLowerCase() && original === original.toUpperCase();
+    const nueva = esMayuscula ? alternativa.charAt(0).toUpperCase() + alternativa.slice(1) : alternativa;
+    return texto.slice(0, inicio) + nueva + texto.slice(fin);
+  }
+
   agregarPalabraProhibida(): void {
     const palabra = this.nuevaPalabra().trim();
     if (!palabra) return;
-    this.api.agregarPalabraProhibida(palabra).subscribe({
-      next: () => { this.nuevaPalabra.set(''); this.cargarPalabrasProhibidas(); },
+    const alternativas = this.nuevasAlternativas().split(',').map(a => a.trim()).filter(Boolean).join('|');
+    this.api.agregarPalabraProhibida(palabra, alternativas).subscribe({
+      next: () => { this.nuevaPalabra.set(''); this.nuevasAlternativas.set(''); this.cargarPalabrasProhibidas(); },
       error: err => this.error.set(this.mensajeError(err))
     });
   }

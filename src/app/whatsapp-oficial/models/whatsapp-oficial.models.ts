@@ -48,6 +48,7 @@ export interface WaoBaja {
 export interface WaoPalabraProhibida {
   id: number;
   palabra: string;
+  alternativas: string | null;
   fechaCreacion: string;
   usuario: string | null;
 }
