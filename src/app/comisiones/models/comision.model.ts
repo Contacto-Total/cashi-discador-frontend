@@ -104,6 +104,8 @@ export interface BonoPeriodo {
   porPuesto: boolean;
   /** SOBRE de asesor contra su logrado: solo paga si la subcartera llega al 100 % de la meta del mes */
   requiereMetaSubcartera: boolean;
+  /** SOBRE de asesor contra su logrado: solo cobra quien llega a este % de su meta individual; null = no se exige (INC-010) */
+  porcentajeMetaIndividual?: number | null;
   /** Asesores que no lo reciben */
   excluidos: number[];
   niveles: NivelBono[];

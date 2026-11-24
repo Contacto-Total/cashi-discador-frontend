@@ -121,6 +121,25 @@ import { CmxIconComponent } from './cmx-icon.component';
                                (change)="cambiar(i, { requiereMetaSubcartera: !b.requiereMetaSubcartera })" />
                         <span><b>Solo si la subcartera llega al 100 % de su meta del mes</b><span>Si la subcartera no llega, nadie cobra este bono aunque pase su nivel.</span></span>
                       </label>
+                      <!-- INC-010: % mínimo de la meta individual del asesor -->
+                      @let minimo = b.porcentajeMetaIndividual ?? null;
+                      <div class="cmx-bsw cmx-bsw-meta cmx-bsw-ind">
+                        <input type="checkbox" [id]="'cmx-bmi-' + i" [checked]="minimo !== null" [disabled]="soloLectura()"
+                               (change)="cambiar(i, { porcentajeMetaIndividual: minimo !== null ? null : MINIMO_INDIVIDUAL })" />
+                        <span>
+                          <b>
+                            <label [for]="'cmx-bmi-' + i">Solo si el asesor llega al</label>
+                            <span class="cmx-money is-short">
+                              <input type="number" min="1" max="999" step="1" [value]="minimo ?? MINIMO_INDIVIDUAL"
+                                     [disabled]="soloLectura() || minimo === null" aria-label="Porcentaje de su meta individual"
+                                     (input)="cambiarMinimoIndividual(i, $any($event.target).value)" />
+                              <span class="is-suffix">%</span>
+                            </span>
+                            <label [for]="'cmx-bmi-' + i">de su meta individual</label>
+                          </b>
+                          <span>Quien no llega a ese porcentaje no cobra este bono aunque pase su nivel; su puesto no pasa al siguiente.</span>
+                        </span>
+                      </div>
                     }
                   </div>
                 }
@@ -300,6 +319,14 @@ export class BonosTabComponent {
     return ` Con ${ltd} LTD cobra ${partes.map(x => `${x.cantidad} × ${x.monto}`).join(' + ')} = S/ ${total}.`;
   }
 
+  /** INC-010: porcentaje que se propone al marcar «Solo si el asesor llega al … % de su meta individual» */
+  readonly MINIMO_INDIVIDUAL = 70;
+
+  cambiarMinimoIndividual(i: number, valor: string): void {
+    const n = Number(valor);
+    this.cambiar(i, { porcentajeMetaIndividual: valor === '' || !Number.isFinite(n) ? this.MINIMO_INDIVIDUAL : n });
+  }
+
   cambiar(i: number, cambio: Partial<BonoPeriodo>): void {
     this.borrador.update(l => l.map((b, j) => j === i ? { ...b, ...cambio } : b));
   }
@@ -393,6 +420,7 @@ export class BonosTabComponent {
         baseTotal: sobreAsesor && !!b.baseTotal,
         porPuesto,
         requiereMetaSubcartera: sobreAsesor && !b.baseTotal && !!b.requiereMetaSubcartera,
+        porcentajeMetaIndividual: sobreAsesor && !b.baseTotal ? b.porcentajeMetaIndividual ?? null : null,
         excluidos: b.aplica === 'ASESOR' ? [...(b.excluidos ?? [])].sort((x, y) => x - y) : [],
         niveles: [...b.niveles]
           .sort((x, y) => (x.desde ?? 0) - (y.desde ?? 0))
