@@ -830,7 +830,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
         this.resultadosCliente.set(limpia);
         if (!limpia.length) this.errorBusqueda.set('Sin resultados.');
       },
-      error: () => this.errorBusqueda.set('No se pudo buscar el cliente.')
+      error: (e: { status?: number }) => this.errorBusqueda.set(e?.status === 404 ? 'Sin resultados.' : 'No se pudo buscar el cliente.')
     });
   }
 
