@@ -570,7 +570,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
         tokens: p.palabra.split(' '),
         alternativas: p.alternativas ? p.alternativas.split('|').map(a => a.trim()).filter(Boolean) : []
       }))
-      .sort((a, b) => b.tokens.length - a.tokens.length)
+      .sort((a, b) => b.tokens.length - a.tokens.length || b.alternativas.length - a.alternativas.length)
   );
   readonly coincidencias = computed<CoincidenciaProhibida[]>(() => {
     const texto = this.texto();
