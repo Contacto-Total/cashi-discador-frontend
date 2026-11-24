@@ -309,7 +309,7 @@ function normalizarPalabra(s: string): string {
           <header class="border-b border-slate-200 px-3 pt-3">
             <h3 class="px-1 text-sm font-semibold text-slate-900">Información y herramientas</h3>
             <nav class="mt-2 flex gap-1">
-              @for (p of pestanas; track p.id) {
+              @for (p of pestanas(); track p.id) {
                 <button type="button" class="rounded-t-lg px-3 py-2 text-xs font-semibold transition"
                   [class.bg-emerald-50]="pestana() === p.id" [class.text-emerald-700]="pestana() === p.id"
                   [class.text-slate-500]="pestana() !== p.id" (click)="cambiarPestana(p.id)">{{ p.etiqueta }}</button>
@@ -550,11 +550,12 @@ function normalizarPalabra(s: string): string {
 export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   @ViewChild('panel') panel?: ElementRef<HTMLElement>;
 
-  readonly pestanas: { id: Pestana; etiqueta: string }[] = [
+  readonly pestanas = computed<{ id: Pestana; etiqueta: string }[]>(() => [
     { id: 'herramientas', etiqueta: 'Herramientas' },
-    { id: 'resumen', etiqueta: 'Resumen' },
-    { id: 'bajas', etiqueta: 'Bajas' }
-  ];
+    ...(this.auth.hasAnyRole('ADMIN', 'SUPERVISOR', 'ADMINISTRACION')
+      ? [{ id: 'resumen' as Pestana, etiqueta: 'Resumen' }, { id: 'bajas' as Pestana, etiqueta: 'Bajas' }]
+      : [])
+  ]);
 
   readonly estado = signal<WaoEstado | null>(null);
   readonly resumen = signal<WaoResumen | null>(null);
