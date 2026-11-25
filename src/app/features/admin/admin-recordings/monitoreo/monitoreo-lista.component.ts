@@ -5,18 +5,19 @@ import { ToastService } from '../../../../shared/services/toast.service';
 import { BotonDirective } from '../../../../shared/ui/boton.directive';
 import { TarjetaDirective } from '../../../../shared/ui/tarjeta.directive';
 import {
-  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CAMPO, ENTRADA, ETIQUETA, FUERTE, LISTA,
+  BARRA, BARRA_ESTADO, BARRA_ESTADO_HAY, BUSCAR, BUSCAR_CAMPO, BUSCAR_ICONO, CAMPO, ENTRADA, ETIQUETA, FUERTE, INDICADORES, LISTA,
   PANTALLA, PILL, PRINCIPAL, REJILLA, REJILLA_SOLA, SEC, SUBTITULO, TABLA, TABLA_CAJA, TD, TD_1, TD_NUM, TH, TH_NUM, THEAD, TITULO, TR, TonoPill, VACIO, ZONA
 } from '../../../asistencia/ui/clases';
 import { MINI, TR_ABRE } from '../../../asistencia/ui/ficha-clases';
 import { BOTON_APAGADO, BOTON_SEC } from '../../../asistencia/ui/control-comun';
+import { IndicadorComponent } from '../../../asistencia/ui/indicador.component';
 import { MedidorTabla } from '../../../asistencia/ui/medidor-tabla';
 import { PiePaginaComponent } from '../../../asistencia/ui/pie-pagina.component';
 import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component';
 import { MonitoreoEstado, rangosSemana, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { Llamada, Rubrica } from './monitoreo.models';
-import { NOMBRE_CLIENTE, pts } from './monitoreo.calculos';
+import { NOMBRE_CLIENTE, pct, pts, rubricaEnFrase } from './monitoreo.calculos';
 import { ResultadoFiltroComponent, gruposResultado, oracion, partes, textoResultado } from './resultado-filtro.component';
 
 export { oracion, textoResultado };
@@ -44,7 +45,7 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: PANTALLA + ' @container/p5' },
-  imports: [LucideAngularModule, TarjetaDirective, BotonDirective, PiePaginaComponent, SegmentadoComponent, ResultadoFiltroComponent],
+  imports: [LucideAngularModule, TarjetaDirective, BotonDirective, IndicadorComponent, PiePaginaComponent, SegmentadoComponent, ResultadoFiltroComponent],
   template: `
     <div [class]="REJILLA + ' ' + REJILLA_SOLA">
       <section appTarjeta [class]="PRINCIPAL">
@@ -58,6 +59,42 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
             <p role="heading" aria-level="1" [class]="TITULO + ' whitespace-normal!'">Llamadas evaluadas</p>
             <p [class]="SUBTITULO">Puntaje y revisión de cada llamada</p>
           </div>
+          <!-- Las fechas son el filtro principal: indicadores, resultado, asesor y tabla se miden en este rango. -->
+          <div class="ml-auto flex min-w-0 flex-[0_1_auto] flex-nowrap items-end justify-end gap-x-3 gap-y-2">
+            <div [class]="CAMPO + ' flex-[0_0_9.5rem]'">
+              <label for="l-desde" [class]="ETIQUETA">Desde</label>
+              <input id="l-desde" type="date" [class]="ENTRADA" [value]="e.desde()" [max]="e.hasta()" (change)="cambiarDesde($any($event.target).value)">
+            </div>
+            <div [class]="CAMPO + ' flex-[0_0_9.5rem]'">
+              <label for="l-hasta" [class]="ETIQUETA">Hasta</label>
+              <input id="l-hasta" type="date" [class]="ENTRADA" [value]="e.hasta()" [max]="hoy" (change)="cambiarHasta($any($event.target).value)">
+            </div>
+            <div [class]="CAMPO + ' flex-none'">
+              <span [class]="ETIQUETA">Periodo</span>
+              <app-segmentado [opciones]="PERIODOS" [valor]="e.periodo()" (cambiar)="elegirPeriodo($any($event))" />
+            </div>
+          </div>
+        </div>
+
+        <div [class]="INDICADORES + ' [@media(max-height:700px)]:mb-4 transition-opacity duration-200 motion-reduce:transition-none'" [class.opacity-60]="cargando()">
+          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="porRevisar()" rotulo="Por revisar" [filtra]="true" tono="am" [activo]="e.filtro() === 'revisar'" (elegir)="filtrar('revisar')" />
+          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="faltas()" rotulo="Falta por confirmar" [filtra]="true" tono="ro" [activo]="e.filtro() === 'falta'" (elegir)="filtrar('falta')" />
+          <app-indicador [bajo]="true" [conDetalle]="false" [valor]="revisadas()" rotulo="Revisadas" [filtra]="true" tono="ok" [activo]="e.filtro() === 'revisadas'" (elegir)="filtrar('revisadas')" />
+          @if (puntajesRubrica().length > 1) {
+            <!-- Cada rúbrica tiene otros criterios y otros puntos: con llamadas de dos, un puntaje por columna. -->
+            <div class="flex min-w-0">
+              <div class="flex w-full min-w-0 flex-row rounded-xl border border-border bg-card py-[.75rem] shadow-[0_1px_2px_rgb(15_23_42/.04)] [@media(max-height:700px)]:py-[.5rem]">
+                @for (p of puntajesRubrica(); track p.rubrica; let primero = $first) {
+                  <div class="flex min-w-0 flex-[1_1_0] flex-col items-center gap-[2px] px-[.5rem] text-center" [class]="primero ? '' : 'border-0 border-l border-solid border-border'" [title]="'Puntaje promedio de ' + p.nombre">
+                    <span class="block text-[1.5rem] leading-[1.15] font-bold text-foreground [font-variant-numeric:proportional-nums_lining-nums]">{{ pct(p.valor) }}@if (p.valor != null) {<small class="ml-[.3125rem] text-[.75rem] leading-[1.15] font-medium text-muted-foreground">%</small>}</span>
+                    <span class="block max-w-full overflow-hidden text-[.75rem] leading-[1.5] text-ellipsis whitespace-nowrap text-muted-foreground">Puntaje {{ p.nombre }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <app-indicador [bajo]="true" [conDetalle]="false" [valor]="pct(promedio())" [unidad]="promedio() == null ? '' : '%'" rotulo="Puntaje promedio" />
+          }
         </div>
 
         @if (grupos().length) {
@@ -65,19 +102,7 @@ const esRevisada = (l: Llamada): boolean => l.estado !== 'POR_REVISAR';
         }
 
         <div class="mb-[.75rem] flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
-          <div [class]="CAMPO + ' flex-[0_0_9.5rem]'">
-            <label for="l-desde" [class]="ETIQUETA">Desde</label>
-            <input id="l-desde" type="date" [class]="ENTRADA" [value]="e.desde()" [max]="e.hasta()" (change)="cambiarDesde($any($event.target).value)">
-          </div>
-          <div [class]="CAMPO + ' flex-[0_0_9.5rem]'">
-            <label for="l-hasta" [class]="ETIQUETA">Hasta</label>
-            <input id="l-hasta" type="date" [class]="ENTRADA" [value]="e.hasta()" [max]="hoy" (change)="cambiarHasta($any($event.target).value)">
-          </div>
-          <div [class]="CAMPO + ' flex-none'">
-            <span [class]="ETIQUETA">Periodo</span>
-            <app-segmentado [opciones]="PERIODOS" [valor]="e.periodo()" (cambiar)="elegirPeriodo($any($event))" />
-          </div>
-          <div [class]="CAMPO + ' min-w-[9rem] flex-[1.7_1_13rem]'">
+          <div [class]="CAMPO + ' min-w-0 flex-[0_1_16rem]'">
             <label for="l-ases" [class]="ETIQUETA">Asesor</label>
             <select id="l-ases" [class]="LISTA" (change)="elegirAsesor($any($event.target).value)">
               <option value="" [selected]="!e.asesor()">Todos</option>
@@ -155,14 +180,14 @@ export class MonitoreoListaComponent {
 
   protected readonly REJILLA = REJILLA; protected readonly REJILLA_SOLA = REJILLA_SOLA; protected readonly PRINCIPAL = PRINCIPAL; /** Como el prototipo: la tabla se encoge en pantallas bajas y el pie queda a la vista. */
   protected readonly ZONA = ZONA.replace('pb-6', 'pb-5');
-  protected readonly VACIO = VACIO; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
+  protected readonly VACIO = VACIO; protected readonly INDICADORES = INDICADORES; protected readonly CAMPO = CAMPO; protected readonly ETIQUETA = ETIQUETA;
   protected readonly ENTRADA = ENTRADA; protected readonly LISTA = LISTA; protected readonly BUSCAR = BUSCAR; protected readonly BUSCAR_ICONO = BUSCAR_ICONO;
   protected readonly BUSCAR_CAMPO = BUSCAR_CAMPO; /** La tabla se desplaza por dentro y su barra va contra el borde de la tarjeta, no pegada al contenido. */
   protected readonly TABLA_CAJA = TABLA_CAJA.replace('flex-[1_0_auto]', 'min-h-0 flex-[1_1_auto]').replace('-mx-1', '-ml-1 -mr-8').replace('px-1', 'pl-1 pr-8'); protected readonly TABLA = TABLA; protected readonly THEAD = THEAD;
   protected readonly TR = TR; protected readonly TH = TH; protected readonly TH_NUM = TH_NUM; protected readonly TD = TD; protected readonly TD_1 = TD_1;
   protected readonly TD_NUM = TD_NUM; protected readonly SEC = SEC; protected readonly FUERTE = FUERTE; protected readonly PILL = PILL; protected readonly TR_ABRE = TR_ABRE;
   protected readonly BARRA = BARRA; protected readonly BARRA_ESTADO = BARRA_ESTADO; protected readonly BARRA_ESTADO_HAY = BARRA_ESTADO_HAY; protected readonly BOTON_SEC = BOTON_SEC + ' ' + BOTON_APAGADO;
-  protected readonly oracion = oracion; protected readonly textoResultado = textoResultado; protected readonly fechaCorta = fechaCorta; protected readonly pts = pts;
+  protected readonly oracion = oracion; protected readonly textoResultado = textoResultado; protected readonly fechaCorta = fechaCorta; protected readonly pct = pct; protected readonly pts = pts;
   protected readonly estado = estadoLlamada;
   protected readonly hoy = hoyIso();
   protected readonly PERIODOS = [{ clave: 'anterior', texto: 'Semana anterior' }, { clave: 'semana', texto: 'Esta semana' }];
@@ -174,7 +199,22 @@ export class MonitoreoListaComponent {
   readonly rango = computed(() => this.e.llamadas().filter(l =>
     (!this.e.resultado() || partes(l.nivel2).includes(this.e.resultado())) && (!this.e.asesor() || l.asesor === this.e.asesor())));
   readonly porRevisar = computed(() => this.rango().filter(l => !esRevisada(l)).length);
+  readonly faltas = computed(() => this.rango().filter(l => l.falta === 'PENDIENTE').length);
+  readonly revisadas = computed(() => this.rango().length - this.porRevisar());
   protected readonly NOMBRE_CLIENTE = NOMBRE_CLIENTE;
+  /** El puntaje de cada rúbrica con llamadas en el rango, en el orden del cliente. */
+  readonly puntajesRubrica = computed(() => (['TIT', 'TER', 'PDP', 'CD'] as Rubrica[]).flatMap(r => {
+    const del = this.rango().filter(l => l.rubrica === r);
+    if (!del.length) return [];
+    let c = 0, a = 0;
+    for (const l of del) { c += l.puntos; a += l.posibles; }
+    return [{ rubrica: r, nombre: rubricaEnFrase(r), valor: a ? (c / a) * 100 : null }];
+  }));
+  readonly promedio = computed(() => {
+    let c = 0, a = 0;
+    for (const l of this.rango()) { c += l.puntos; a += l.posibles; }
+    return a ? (c / a) * 100 : null;
+  });
 
   readonly visibles = computed(() => {
     const q = this.e.q().trim().toLowerCase(), f = this.e.filtro();
@@ -251,6 +291,7 @@ export class MonitoreoListaComponent {
   protected anula(l: Llamada): boolean { return l.falta === 'PENDIENTE' || l.falta === 'CONFIRMADA'; }
   protected nota(l: Llamada): number { return l.posibles ? (l.puntos / l.posibles) * 100 : 0; }
 
+  filtrar(f: 'revisar' | 'falta' | 'revisadas'): void { this.e.filtro.set(this.e.filtro() === f ? '' : f); this.e.pagina.set(1); }
   elegirResultado(r: string): void { this.e.resultado.set(this.e.resultado() === r ? '' : r); this.e.pagina.set(1); }
   elegirAsesor(a: string): void { this.e.asesor.set(a); this.e.pagina.set(1); }
   buscar(q: string): void { this.e.q.set(q); this.e.pagina.set(1); }

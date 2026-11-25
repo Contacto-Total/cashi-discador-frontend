@@ -8,6 +8,7 @@ import { TarjetaDirective } from '../../../../shared/ui/tarjeta.directive';
 import { BARRA, BARRA_ESTADO, PRINCIPAL, REJILLA, REJILLA_SOLA, VACIO } from '../../../asistencia/ui/clases';
 import { BOTON_APAGADO, BOTON_SEC } from '../../../asistencia/ui/control-comun';
 import { MINI } from '../../../asistencia/ui/ficha-clases';
+import { SegmentadoComponent } from '../../../asistencia/ui/segmentado.component';
 import { MonitoreoEstado, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { CriterioRendimiento, Llamada, Rubrica, SeguimientoCelda } from './monitoreo.models';
@@ -59,7 +60,7 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
-  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, ResultadoFiltroComponent],
+  imports: [NgTemplateOutlet, LucideAngularModule, TarjetaDirective, BotonDirective, SegmentadoComponent, ResultadoFiltroComponent],
   template: `
     <div [class]="REJILLA + ' ' + REJILLA_SOLA">
       <!-- La leyenda va al medio entre el cuadro y el borde de la tarjeta: el mismo espacio arriba y abajo. -->
@@ -68,6 +69,7 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
         <!-- Semana y rúbrica: a la derecha de las pestañas. -->
         <ng-template #controles>
           @if (e.idSubcartera()) {
+            <div class="flex items-center gap-3">
               <div class="flex items-center gap-[.375rem]">
                 <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" aria-label="Semana anterior" (click)="moverSemana(-1)">
                   <lucide-angular name="chevron-left" [size]="16" class="flex"></lucide-angular>
@@ -76,8 +78,10 @@ function sumar(celdas: SeguimientoCelda[], rubrica: Rubrica, anterior: number | 
                 <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI" aria-label="Semana siguiente" [disabled]="lunes() >= lunesHoy" (click)="moverSemana(1)">
                   <lucide-angular name="chevron-right" [size]="16" class="flex"></lucide-angular>
                 </button>
-                <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" [disabled]="lunes() === lunesHoy" (click)="irA(lunesHoy)">Esta semana</button>
               </div>
+              <!-- El mismo Periodo de la lista: salta a esta semana o a la anterior; las flechas van semana por semana. -->
+              <app-segmentado [opciones]="PERIODOS" [valor]="periodo()" (cambiar)="elegirPeriodo($any($event))" />
+            </div>
           }
         </ng-template>
 
@@ -247,6 +251,8 @@ export class SeguimientoComponent {
   protected readonly hoy = hoyIso();
   protected readonly lunesHoy = lunesDe(this.hoy);
   readonly lunes = signal(this.lunesHoy);
+  protected readonly PERIODOS = [{ clave: 'anterior', texto: 'Semana anterior' }, { clave: 'semana', texto: 'Esta semana' }];
+  readonly periodo = computed(() => this.lunes() === this.lunesHoy ? 'semana' : this.lunes() === masDias(this.lunesHoy, -7) ? 'anterior' : '');
   readonly rubricas = signal<Rubrica[]>([]);
   readonly celdas = signal<SeguimientoCelda[]>([]);
   /** Las llamadas de la semana, sin filtro de resultado: de ellas salen los resultados que se ofrecen. */
@@ -372,6 +378,7 @@ export class SeguimientoComponent {
     this.irA(destino > this.lunesHoy ? this.lunesHoy : destino);
   }
   irA(lunes: string): void { this.lunes.set(lunes); this.cargar(lunes); }
+  elegirPeriodo(p: 'semana' | 'anterior'): void { this.irA(p === 'semana' ? this.lunesHoy : masDias(this.lunesHoy, -7)); }
 
   /** El rótulo de un grupo: toda esa rúbrica, sin resultado. */
   elegirRubrica(r: Rubrica): void {
