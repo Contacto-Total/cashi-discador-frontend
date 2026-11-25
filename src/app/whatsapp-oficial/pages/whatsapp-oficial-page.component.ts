@@ -7,6 +7,8 @@ import { WhatsappOficialService } from '../services/whatsapp-oficial.service';
 import { WhatsappOficialAvisosService } from '../services/whatsapp-oficial-avisos.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SipService } from '../../core/services/sip.service';
+import { AgentStatusService } from '../../core/services/agent-status.service';
+import { AgentState } from '../../core/models/agent-status.model';
 import { ClientInfoAclService, GlobalSearchResult, DynamicClient } from '../../whatsapp/componentes/info-client/client-info-acl.service';
 import { UserInfoService } from '../../whatsapp/services/user-info.service';
 import { MENSAJES_RAPIDOS, MensajeRapido } from '../models/mensajes-rapidos';
@@ -660,6 +662,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   readonly parametros = signal<string[]>([]);
   private readonly ahora = signal(Date.now());
   private temporizador?: ReturnType<typeof setInterval>;
+  private estadoCambiadoPorWhatsapp = false;
 
   readonly chatsFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
@@ -720,7 +723,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
 
   readonly cercaDelTope = computed(() => this.porcentajeTope() >= 90);
 
-  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService, private readonly route: ActivatedRoute) {
+  constructor(private readonly api: WhatsappOficialService, private readonly userInfo: UserInfoService, readonly avisos: WhatsappOficialAvisosService, private readonly auth: AuthService, private readonly sip: SipService, private readonly acl: ClientInfoAclService, private readonly route: ActivatedRoute, private readonly agentStatus: AgentStatusService) {
     effect(() => {
       const texto = this.error();
       if (!texto) return;
@@ -732,6 +735,7 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.entrarEnEstadoWhatsapp();
     this.api.estado().subscribe({ next: e => this.estado.set(e), error: () => this.estado.set(null) });
     this.refrescar();
     this.cargarBajas();
@@ -746,11 +750,41 @@ export class WhatsappOficialPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.salirDelEstadoWhatsapp();
     if (this.temporizador) clearInterval(this.temporizador);
     this.avisos.chatActivo.set(null);
     this.detenerPresencia();
     this.detenerGrabacion(false);
     Object.values(this.archivos()).forEach(u => URL.revokeObjectURL(u));
+  }
+
+  private entrarEnEstadoWhatsapp(): void {
+    const user = this.auth.getCurrentUser();
+    if (!user?.id) return;
+    this.agentStatus.getAgentStatus(user.id).subscribe({
+      next: status => {
+        const actual = status.estadoActual as AgentState;
+        if (actual === AgentState.EN_LLAMADA || actual === AgentState.TIPIFICANDO || actual === AgentState.SEGUIMIENTO) return;
+        this.agentStatus.changeStatus(user.id, { estado: AgentState.WHATSAPP }).subscribe({
+          next: () => { this.estadoCambiadoPorWhatsapp = true; }
+        });
+      },
+      error: () => undefined
+    });
+  }
+
+  private salirDelEstadoWhatsapp(): void {
+    const user = this.auth.getCurrentUser();
+    if (!user?.id || !this.estadoCambiadoPorWhatsapp) return;
+    this.estadoCambiadoPorWhatsapp = false;
+    this.agentStatus.getAgentStatus(user.id).subscribe({
+      next: status => {
+        if (status.estadoActual === AgentState.WHATSAPP) {
+          this.agentStatus.changeStatus(user.id, { estado: AgentState.EN_LINEA }).subscribe();
+        }
+      },
+      error: () => undefined
+    });
   }
 
   private iniciarPresencia(clave: string): void {
