@@ -123,8 +123,9 @@ const enSoles = (v: number | null): string => v == null ? '—' : 'S/ ' + v.toLo
                   @let cambio = borrador()[c.codigo] !== guardado()[c.codigo];
                   <div [id]="'c-' + id(c.codigo)" class="grid scroll-mt-3 items-start gap-x-3 gap-y-[.375rem] border-0 border-b border-solid py-3 pr-[.625rem] pl-[calc(.625rem+1px)]"
                        [class]="(f.cliente === 'FOH' ? 'grid-cols-[minmax(0,1fr)_auto] ' : 'grid-cols-[2.5rem_minmax(0,1fr)_auto] ')
-                                + (cambio ? 'rounded-[.625rem] border-b-transparent bg-[color-mix(in_srgb,var(--am-bg)_70%,transparent)]' : 'border-(--line2)')
-                                + (brilla() === c.codigo ? ' animate-[sp-brilla_1.6s_ease-out]' : '')">
+                                + (cambio ? 'rounded-[.625rem] border-b-transparent bg-[color-mix(in_srgb,var(--am-bg)_70%,transparent)]'
+                                   : c.historial ? 'rounded-[.625rem] border-b-transparent bg-[color-mix(in_srgb,var(--info-bg)_70%,transparent)]' : 'border-(--line2)')
+                                + (brilla() === c.codigo ? ' sp-brilla' : '')">
                     @if (f.cliente !== 'FOH') {
                       <div class="pt-[.0625rem] text-[.8125rem] font-semibold text-(--ink2)">{{ c.codigo }}<small class="block text-[.6875rem] font-medium text-muted-foreground">{{ pts(c.puntos) }} pts</small></div>
                     }
@@ -166,21 +167,28 @@ const enSoles = (v: number | null): string => v == null ? '—' : 'S/ ' + v.toLo
                       </div>
                     } @else if (c.historial; as h) {
                       <div class="flex min-w-0 flex-wrap gap-x-[.875rem] gap-y-[.125rem] text-[.75rem] text-muted-foreground" [class]="f.cliente === 'FOH' ? 'col-[1/-1]' : 'col-[2/-1]'">
-                        <span><span class="font-semibold text-(--ink2)">Corregido</span> por {{ h.usuario }} el {{ h.fecha }}</span>
+                        <span><span class="font-semibold text-(--info)">Corregido</span> por {{ h.usuario }} el {{ h.fecha }}</span>
                         <span>Valor anterior: {{ h.antes ? RES[h.antes] : '—' }}</span><span>Motivo: {{ h.motivo }}</span>
                       </div>
                     }
                     @if (c.codigo === '3.4' && f.cuentas.length) {
-                      <div class="col-[2/-1] grid min-w-0 grid-cols-[auto_auto_1fr_auto] gap-y-[.375rem]">
-                        @for (k of f.cuentas; track k.cj) {
-                          <div class="col-[1/-1] grid grid-cols-subgrid items-center gap-x-5 rounded-[.625rem] border border-solid border-border bg-card px-3 py-2">
-                            <div><small class="block text-[.6875rem] leading-[1.3] text-muted-foreground">CJ</small><span class="text-[.8125rem] font-semibold whitespace-nowrap">{{ k.cj }}</span></div>
-                            <div><small class="block text-[.6875rem] leading-[1.3] text-muted-foreground">Óptimo</small><span class="text-[.8125rem] font-semibold whitespace-nowrap">{{ soles(k.optimo) }}</span></div>
-                            <div><small class="block text-[.6875rem] leading-[1.3] text-muted-foreground">Acordado</small><span class="text-[.8125rem] font-semibold whitespace-nowrap">{{ soles(k.acordado) }}</span>
-                              @if (k.acordado != null && k.pagos) { <small class="block text-[.6875rem] leading-[1.3] text-muted-foreground">en {{ k.pagos }} {{ k.pagos === 1 ? 'pago' : 'pagos' }}</small> }</div>
-                            @if (k.llegaAlOptimo != null) { <span [class]="PILL[k.llegaAlOptimo ? 'ok' : 'ro']">{{ k.llegaAlOptimo ? 'Llega al óptimo' : 'Por debajo del óptimo' }}</span> } @else { <span></span> }
+                      <!-- Todo el ancho, cuatro columnas iguales y cada dato centrado en la suya; con poco ancho el veredicto pasa a su propia línea. -->
+                      <div class="col-[2/-1] min-w-0 @container">
+                        <div class="grid grid-cols-[repeat(4,minmax(max-content,1fr))] gap-x-[1rem] rounded-[.625rem] border border-solid border-border bg-card px-[.75rem] @max-[32.5rem]:grid-cols-[repeat(3,minmax(max-content,1fr))]">
+                          <div class="col-[1/-1] grid grid-cols-subgrid items-baseline justify-items-center pt-[.5rem] text-[.6875rem] leading-[1.3] text-muted-foreground">
+                            <span>CJ</span><span>Óptimo</span><span>Acordado</span>
                           </div>
-                        }
+                          @for (k of f.cuentas; track k.cj; let primero = $first) {
+                            <div class="col-[1/-1] grid grid-cols-subgrid items-baseline justify-items-center pt-[.375rem] pb-[.5rem] text-[.8125rem] whitespace-nowrap" [class]="primero ? '' : 'border-0 border-t border-solid border-(--line2)'">
+                              <span class="font-semibold tabular-nums">{{ k.cj }}</span>
+                              <span class="font-semibold tabular-nums">{{ soles(k.optimo) }}</span>
+                              <span><span class="font-semibold tabular-nums">{{ soles(k.acordado) }}</span>@if (k.acordado != null && k.pagos) {<span class="ml-[.375rem] text-[.75rem] text-muted-foreground">en {{ k.pagos }} {{ k.pagos === 1 ? 'pago' : 'pagos' }}</span>}</span>
+                              @if (k.llegaAlOptimo != null) {
+                                <span [class]="PILL[k.llegaAlOptimo ? 'ok' : 'ro'] + ' @max-[32.5rem]:col-[1/-1] @max-[32.5rem]:mt-[.375rem]'">{{ k.llegaAlOptimo ? 'Llega al óptimo' : 'Por debajo del óptimo' }}</span>
+                              }
+                            </div>
+                          }
+                        </div>
                       </div>
                     }
                   </div>
@@ -200,14 +208,26 @@ const enSoles = (v: number | null): string => v == null ? '—' : 'S/ ' + v.toLo
         @if (ficha(); as f) {
           <dl class="m-0 grid flex-none grid-cols-[minmax(0,1.35fr)_minmax(0,.75fr)_minmax(0,.9fr)] gap-x-3 gap-y-[.625rem] [@media(max-height:700px)]:gap-y-[.375rem]">
             <div class="min-w-0"><dt class="text-[.75rem] text-muted-foreground">Fecha</dt><dd class="m-0 text-[.8125rem] font-semibold [overflow-wrap:anywhere]">{{ fechaCorta(f.fecha) }} {{ f.hora }}</dd></div>
-            <div class="min-w-0"><dt class="text-[.75rem] text-muted-foreground">Duración</dt><dd class="m-0 text-[.8125rem] font-semibold">{{ f.duracion ? mmss(f.duracion) : '—' }}</dd></div>
+            <div class="min-w-0"><dt class="text-[.75rem] text-muted-foreground">Duración</dt><dd class="m-0 text-[.8125rem] font-semibold">{{ duracionLlamada() ? mmss(duracionLlamada()) : '—' }}</dd></div>
             <div class="min-w-0"><dt class="text-[.75rem] text-muted-foreground">Cliente</dt><dd class="m-0 text-[.8125rem] font-semibold [overflow-wrap:anywhere]">{{ f.titular || '—' }}</dd></div>
             @if (f.cliente === 'IBK' && f.rubrica === 'TIT') {
               <div class="min-w-0"><dt class="text-[.75rem] text-muted-foreground">CJ</dt><dd class="m-0 text-[.8125rem] font-semibold [overflow-wrap:anywhere]">{{ f.cj || '—' }}</dd></div>
             }
           </dl>
           @if (f.audios.length) {
-            <div class="mt-[.875rem] [@media(max-height:700px)]:mt-[.625rem] flex flex-none items-center gap-3 rounded-[.625rem] border border-solid border-border bg-card p-[.375rem]">
+            <div class="mt-[.875rem] [@media(max-height:700px)]:mt-[.625rem] flex-none rounded-[.625rem] border border-solid border-border bg-card">
+              @if (multi()) {
+                <!-- Una gestión con rellamadas: se elige la llamada; audio y transcripción van juntos. -->
+                <div class="px-[.625rem] pt-[.625rem]">
+                  <div role="group" aria-label="Llamada" class="grid auto-cols-fr grid-flow-col gap-[.1875rem] rounded-[.5rem] bg-muted p-[.1875rem]">
+                    @for (a of f.audios; track a.orden; let k = $index) {
+                      <button type="button" [attr.aria-pressed]="parte() === k" (click)="elegirParte(k)"
+                              class="inline-flex cursor-pointer items-center justify-center rounded-[.375rem] border-0! bg-transparent px-[.875rem] py-[.3125rem] [font-family:inherit] text-[.8125rem] leading-[1.5] font-medium whitespace-nowrap text-[color-mix(in_srgb,var(--foreground)_62%,transparent)] aria-pressed:bg-(--seg-activo)! aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(0_0_0/.08)]">Llamada {{ k + 1 }}</button>
+                    }
+                  </div>
+                </div>
+              }
+              <div class="flex items-center gap-3" [class]="multi() ? 'p-[.625rem]' : 'p-[.375rem]'">
               <button type="button" appBoton="secundario" appBotonAlto="icono" [class]="MINI + ' rounded-[.4375rem]!'" [attr.aria-label]="sonando() ? 'Pausar' : 'Reproducir'" (click)="alternarAudio()">
                 <lucide-angular [name]="sonando() ? 'pause' : 'play'" [size]="16" class="flex"></lucide-angular>
               </button>
@@ -220,6 +240,7 @@ const enSoles = (v: number | null): string => v == null ? '—' : 'S/ ' + v.toLo
               </div>
               <span class="flex-none text-[.75rem] whitespace-nowrap text-muted-foreground">{{ mmss(duracion()) }}</span>
               <button type="button" appBoton="secundario" appBotonAlto="chico" [class]="MINI" aria-label="Velocidad de reproducción" (click)="cambiarVelocidad()">{{ velocidadTexto() }}</button>
+              </div>
             </div>
           }
           <div class="mt-4 mb-[.75rem] flex flex-none items-center gap-3 border-0 border-t border-solid border-(--line2) pt-4 [@media(max-height:700px)]:mt-[.75rem] [@media(max-height:700px)]:mb-[.5rem] [@media(max-height:700px)]:pt-[.75rem]">
@@ -289,7 +310,9 @@ const enSoles = (v: number | null): string => v == null ? '—' : 'S/ ' + v.toLo
       }
     </div>
   `,
-  styles: [`@keyframes sp-brilla { from { background-color: var(--am-bg); } to { background-color: transparent; } }`]
+  /* La clase y el @keyframes van juntos aquí porque Angular renombra los @keyframes del componente: una clase de
+     Tailwind con el nombre a secas no los encuentra. Sin 100 %, el destello termina en el fondo propio de la fila. */
+  styles: [`@keyframes sp-brilla { 0%, 35% { background-color: var(--info-bg); } } .sp-brilla { animation: sp-brilla 1.6s ease-out; }`]
 })
 export class RevisionLlamadaComponent implements OnDestroy {
   private readonly injector = inject(Injector);
@@ -409,8 +432,35 @@ export class RevisionLlamadaComponent implements OnDestroy {
   // ---------- transcripción ----------
   /** La duración real del audio cuando ya cargó: la registrada en la gestión puede no coincidir con el archivo. */
   private readonly duracionAudio = signal(0);
-  readonly ini = computed(() => inicios(this.lineas(), this.duracionAudio() || (this.ficha()?.duracion ?? null)));
-  readonly duracion = computed(() => this.duracionAudio() || this.ficha()?.duracion || Math.round(this.ini().at(-1) ?? 0) + 5);
+  /**
+   * Una gestión con rellamadas trae varias llamadas (un audio por llamada, en el orden de la transcripción). Se ve y
+   * suena una a la vez: `parte` es la elegida y `visibles` los índices de sus líneas, que siguen siendo los de toda la
+   * transcripción para que los criterios apunten siempre a la misma línea.
+   */
+  readonly parte = signal(0);
+  // Sin tiempos por llamada (transcripciones viejas) todas las líneas quedan en la primera: entonces se ve como una.
+  readonly multi = computed(() => (this.ficha()?.audios?.length ?? 0) > 1 && this.lineas().some(l => l.parte > 0));
+  readonly visibles = computed(() => {
+    const p = this.parte(), multi = this.multi();
+    return this.lineas().map((l, i) => (!multi || l.parte === p ? i : -1)).filter(i => i >= 0);
+  });
+  private readonly duracionParte = computed(() => {
+    const f = this.ficha(), s = f?.audios?.[this.parte()]?.duracion;
+    return this.multi() ? (s ? Number(s) || null : null) : (f?.duracion ?? null);
+  });
+  /** El inicio de las líneas de la llamada elegida (alineado con `visibles`) y, por índice de línea, `ini`. */
+  private readonly iniVisibles = computed(() => inicios(this.visibles().map(i => this.lineas()[i]), this.duracionAudio() || this.duracionParte()));
+  readonly ini = computed(() => {
+    const salida: number[] = new Array(this.lineas().length).fill(0), iv = this.iniVisibles();
+    this.visibles().forEach((i, k) => (salida[i] = iv[k]));
+    return salida;
+  });
+  readonly duracion = computed(() => this.duracionAudio() || this.duracionParte() || Math.round(this.iniVisibles().at(-1) ?? 0) + 5);
+  /**
+   * La del panel. Con una llamada, la del audio en cuanto carga, igual que el reproductor (la de la ficha cuenta
+   * también el timbre). Con varias, la suma de sus grabaciones que da la ficha.
+   */
+  readonly duracionLlamada = computed(() => (this.multi() ? this.ficha()?.duracion : this.duracionAudio() || this.ficha()?.duracion) || 0);
   readonly avance = computed(() => this.duracion() ? Math.min(100, (this.posicion_() / this.duracion()) * 100) : 0);
   readonly velocidadTexto = computed(() => String(this.velocidad()).replace('.', ',') + '×');
   readonly lineasDeCriterio = computed(() => Object.fromEntries((this.ficha()?.criterios ?? []).map(c => [c.codigo, lineasDe(c.frase, this.lineas())])) as Record<string, number[]>);
@@ -425,8 +475,8 @@ export class RevisionLlamadaComponent implements OnDestroy {
   });
   readonly turnos = computed(() => {
     const salida: { quien: Linea['quien']; desde: number; indices: number[] }[] = [];
-    this.lineas().forEach((l, i) => {
-      const ultimo = salida[salida.length - 1];
+    this.visibles().forEach(i => {
+      const l = this.lineas()[i], ultimo = salida[salida.length - 1];
       if (ultimo && ultimo.quien === l.quien) ultimo.indices.push(i); else salida.push({ quien: l.quien, desde: i, indices: [i] });
     });
     return salida;
@@ -443,7 +493,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
 
   private cargar(idx: number): void {
     this.pararAudio(true);
-    this.ficha.set(null); this.error.set(''); this.lineas.set([]); this.filtro.set(''); this.verDe.set(null); this.ver.set([]); this.q.set('');
+    this.ficha.set(null); this.error.set(''); this.lineas.set([]); this.filtro.set(''); this.verDe.set(null); this.ver.set([]); this.q.set(''); this.parte.set(0);
     forkJoin({
       ficha: this.servicio.ficha(idx),
       texto: this.servicio.transcripcion(idx).pipe(catchError(() => of([])))
@@ -565,6 +615,9 @@ export class RevisionLlamadaComponent implements OnDestroy {
   verLinea(cod: string, lineas: number[]): void {
     if (this.verDe() === cod) { this.verDe.set(null); this.ver.set([]); return; }
     if (!lineas.length) return;
+    // Si la evidencia está en otra llamada, el reproductor y la transcripción pasan a esa llamada.
+    const parte = this.lineas()[lineas[0]]?.parte ?? 0;
+    if (this.multi() && parte !== this.parte()) this.elegirParte(parte);
     this.soltar();
     this.verDe.set(cod);
     this.ver.set(lineas);
@@ -595,7 +648,8 @@ export class RevisionLlamadaComponent implements OnDestroy {
     const texto = esc(this.lineas()[i].dice), q = this.q().trim();
     if (!q) return texto;
     const re = new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-    const antes = this.lineas().slice(0, i).reduce((n, l) => n + (esc(l.dice).match(re)?.length ?? 0), 0);
+    // Solo cuentan las líneas que se ven: con varias llamadas, las de la elegida.
+    const antes = this.visibles().filter(k => k < i).reduce((n, k) => n + (esc(this.lineas()[k].dice).match(re)?.length ?? 0), 0);
     let k = antes;
     return texto.replace(re, m => `<mark class="rounded-[.125rem] bg-(--am-bg) text-inherit shadow-[0_0_0_1px_var(--am-ln)]${k++ === this.qi() ? ' bg-(--am-ln)!' : ''}">${m}</mark>`);
   }
@@ -618,6 +672,14 @@ export class RevisionLlamadaComponent implements OnDestroy {
   }
 
   // ---------- audio ----------
+  /** Otra llamada de la gestión: se suelta el audio de la actual y se pide el de la elegida. */
+  elegirParte(p: number): void {
+    if (p === this.parte()) return;
+    this.pararAudio(true);
+    this.parte.set(p);
+    this.sigue.set(true);
+    this.prepararAudio();
+  }
   alternarAudio(): void {
     if (this.sonando()) { this.audio?.pause(); return; }
     this.prepararAudio(() => { this.sigue.set(true); void this.audio!.play(); });
@@ -664,7 +726,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
     if (this.descarga) return;
     const f = this.ficha();
     if (!f) return;
-    this.descarga = this.servicio.audio(f.idx).subscribe({
+    this.descarga = this.servicio.audio(f.idx, this.parte() + 1).subscribe({
       next: blob => {
         this.descarga = undefined;
         this.url = URL.createObjectURL(blob);
@@ -689,7 +751,7 @@ export class RevisionLlamadaComponent implements OnDestroy {
   }
   private alAvanzar(t: number): void {
     this.posicion_.set(t);
-    const i = lineaEn(this.ini(), t);
+    const k = lineaEn(this.iniVisibles(), t), i = k >= 0 ? this.visibles()[k] : -1;
     if (i !== this.lineaSonando()) {
       this.lineaSonando.set(i);
       if (this.sigue() && i >= 0) this.centrar(document.getElementById('ln-' + i), this.zonaTr?.nativeElement);

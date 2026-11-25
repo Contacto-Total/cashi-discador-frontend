@@ -1,10 +1,14 @@
 import { Transcripcion } from './monitoreo.models';
 
-/** Una línea de la transcripción: quién habla, qué dice y dónde empieza en el audio (segundos). */
+/**
+ * Una línea de la transcripción: quién habla, qué dice, de qué llamada es (`parte`, 0 = la primera; una gestión con
+ * rellamadas junta varias) y dónde empieza en el audio de esa llamada (segundos).
+ */
 export interface Linea {
   quien: 'ASESOR' | 'CLIENTE';
   dice: string;
   inicio: number | null;
+  parte: number;
 }
 
 const sinTildes = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -14,18 +18,20 @@ const plano = (s: string): string => palabras(s).join(' ');
 
 /**
  * Las líneas de una transcripción guardada. Cada línea es «ASESOR: …» o «CLIENTE: …»; los marcadores
- * «[LLAMADA i de n]» de las gestiones con varias grabaciones se descartan. `tiempos` trae el inicio de
- * cada línea en milisegundos (audios_transcripcion.TIEMPOS); solo cuenta el del primer audio.
+ * «[LLAMADA i de n]» de las gestiones con varias grabaciones se descartan. `tiempos` trae, por línea, de qué
+ * audio es y su inicio en milisegundos (audios_transcripcion.TIEMPOS); una línea sin tiempo queda en la llamada
+ * de la anterior.
  */
-export function leerLineas(partes: Transcripcion[]): Linea[] {
+export function leerLineas(registros: Transcripcion[]): Linea[] {
   const salida: Linea[] = [];
-  for (const parte of partes) {
-    const crudas = (parte.transcripcion ?? '').split('\n');
+  for (const reg of registros) {
+    const crudas = (reg.transcripcion ?? '').split('\n');
     crudas.forEach((texto, i) => {
       const m = /^\s*(?:\[[^\]]*\]\s*)?(ASESOR|CLIENTE)\s*:\s*(.*)$/.exec(texto);
       if (!m) return;
-      const t = parte.tiempos?.lineas?.[i];
-      salida.push({ quien: m[1] as Linea['quien'], dice: m[2].trim(), inicio: t && t[0] === 0 ? t[1] / 1000 : null });
+      const t = reg.tiempos?.lineas?.[i];
+      const parte = t ? t[0] : (salida[salida.length - 1]?.parte ?? 0);
+      salida.push({ quien: m[1] as Linea['quien'], dice: m[2].trim(), inicio: t ? t[1] / 1000 : null, parte });
     });
   }
   return salida;
