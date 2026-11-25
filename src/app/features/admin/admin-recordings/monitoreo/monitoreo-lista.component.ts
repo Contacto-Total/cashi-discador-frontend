@@ -18,7 +18,7 @@ import { MonitoreoEstado, rangosSemana, hoyIso } from './monitoreo-estado';
 import { MonitoreoService } from './monitoreo.service';
 import { Llamada, Rubrica } from './monitoreo.models';
 import { NOMBRE_CLIENTE, pct, pts, rubricaEnFrase } from './monitoreo.calculos';
-import { ResultadoFiltroComponent, gruposResultado, oracion, partes, textoResultado } from './resultado-filtro.component';
+import { ResultadoFiltroComponent, gruposResultado, oracion, partes, rubricaDeResultado, textoResultado } from './resultado-filtro.component';
 
 export { oracion, textoResultado };
 
@@ -292,7 +292,7 @@ export class MonitoreoListaComponent {
   protected nota(l: Llamada): number { return l.posibles ? (l.puntos / l.posibles) * 100 : 0; }
 
   filtrar(f: 'revisar' | 'falta' | 'revisadas'): void { this.e.filtro.set(this.e.filtro() === f ? '' : f); this.e.pagina.set(1); }
-  elegirResultado(r: string): void { this.e.resultado.set(this.e.resultado() === r ? '' : r); this.e.pagina.set(1); }
+  elegirResultado(r: string): void { this.e.elegirResultado(r, x => rubricaDeResultado(this.grupos(), x)); }
   elegirAsesor(a: string): void { this.e.asesor.set(a); this.e.pagina.set(1); }
   buscar(q: string): void { this.e.q.set(q); this.e.pagina.set(1); }
 

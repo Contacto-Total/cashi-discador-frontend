@@ -382,15 +382,12 @@ export class SeguimientoComponent {
 
   /** El rótulo de un grupo: toda esa rúbrica, sin resultado. */
   elegirRubrica(r: Rubrica): void {
-    this.rubricaElegida.set(r);
+    this.e.elegirRubrica(r);
     if (this.e.resultado()) { this.e.resultado.set(''); this.e.pagina.set(1); this.cargar(this.lunes()); }
   }
-  /** Un resultado fija la rúbrica de la matriz; pulsar el elegido lo suelta. */
+  /** Un resultado fija la rúbrica de la matriz; pulsar el elegido lo suelta y vuelve la rúbrica de antes. */
   elegirResultado(r: string): void {
-    const nuevo = this.e.resultado() === r ? '' : r;
-    this.e.resultado.set(nuevo); this.e.pagina.set(1);
-    const rub = nuevo ? rubricaDeResultado(this.gruposResultado(), nuevo) : null;
-    if (rub) this.rubricaElegida.set(rub);
+    this.e.elegirResultado(r, x => rubricaDeResultado(this.gruposResultado(), x));
     this.cargar(this.lunes());
   }
   /** El rendimiento de un asesor, o del equipo con null. */
