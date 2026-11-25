@@ -75,10 +75,21 @@ export interface ColumnaReporte {
   tipo: TipoColumna;
 }
 
-/** Lo que devolvió la consulta: columnas y filas en el orden del procedimiento. */
+/** Un resultado del procedimiento: una hoja del Excel. */
+export interface HojaReporte {
+  nombre: string;
+  columnas: ColumnaReporte[];
+  filas: (string | number | null)[][];
+}
+
+/**
+ * Lo que devolvió la consulta: columnas y filas en el orden del procedimiento. columnas y filas
+ * son las de la primera hoja; hojas trae todas.
+ */
 export interface DatosReporte {
   columnas: ColumnaReporte[];
   filas: (string | number | null)[][];
+  hojas?: HojaReporte[];
   desde: string | null;
   hasta: string | null;
   generadoEn: string;

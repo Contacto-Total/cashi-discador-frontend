@@ -291,6 +291,16 @@ const MAX_FILAS = 500;
                   <h3 class="!m-0 text-[13.5px] font-extrabold">Vista previa</h3>
                   <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ resumenTabla() }}</span>
                 </div>
+                @if (hojas().length > 1 && !cargandoDatos()) {
+                  <div class="flex flex-wrap gap-1.5 px-3.5 pb-3" role="group" aria-label="Hojas del Excel">
+                    @for (h of hojas(); track $index; let i = $index) {
+                      <button type="button" (click)="hoja.set(i)" [attr.aria-pressed]="i === hoja()" [class]="claseHoja(i === hoja())">
+                        {{ h.nombre }}
+                        <span class="tabular-nums">{{ h.filas.length }}</span>
+                      </button>
+                    }
+                  </div>
+                }
 
                 @if (cargandoDatos()) {
                   <div class="flex flex-col gap-2 border-t border-[#e6e9ee] p-3.5 dark:border-slate-800" aria-hidden="true">
@@ -383,6 +393,8 @@ export class EntregablesReportComponent {
   descargando = signal(false);
   descargadoComo = signal<string | null>(null);
   copiado = signal<'archivo' | 'asunto' | null>(null);
+  /** Hoja del Excel que se ve en la vista previa. */
+  hoja = signal(0);
 
   /** Para descartar la respuesta de una consulta que ya no es la que se está mirando. */
   private turno = 0;
@@ -495,8 +507,17 @@ export class EntregablesReportComponent {
 
   // ==================== Resultado ====================
 
-  private columnas = computed<ColumnaVista[]>(() => {
+  hojas = computed(() => this.datos()?.hojas ?? []);
+
+  /** Los datos de la hoja elegida; sin hojas, los datos tal cual. */
+  private vista = computed<DatosReporte | null>(() => {
     const d = this.datos();
+    const h = d?.hojas?.[this.hoja()];
+    return d && h ? { ...d, columnas: h.columnas, filas: h.filas } : d;
+  });
+
+  private columnas = computed<ColumnaVista[]>(() => {
+    const d = this.vista();
     if (!d) return [];
     const porcentajes = new Set((this.consultaSel()?.columnasPorcentaje ?? []).map(normalizar));
     return d.columnas.map(col => {
@@ -513,7 +534,7 @@ export class EntregablesReportComponent {
   });
 
   tabla = computed(() => {
-    const d = this.datos();
+    const d = this.vista();
     if (!d) return null;
     const columnas = this.columnas();
     return {
@@ -523,7 +544,7 @@ export class EntregablesReportComponent {
   });
 
   resumenTabla = computed(() => {
-    const d = this.datos();
+    const d = this.vista();
     if (this.cargandoDatos()) return 'Consultando…';
     if (!d) return '';
     const filas = d.filas.length;
@@ -532,7 +553,7 @@ export class EntregablesReportComponent {
   });
 
   totales = computed(() => {
-    const d = this.datos();
+    const d = this.vista();
     const c = this.consultaSel();
     if (!d || !c || this.cargandoDatos() || this.errorDatos()) return [];
     const indices = d.columnas.map(col => normalizar(col.nombre));
@@ -692,6 +713,12 @@ export class EntregablesReportComponent {
     });
   }
 
+  claseHoja(elegida: boolean): string {
+    return 'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold transition-colors duration-150 ' +
+      (elegida ? 'border-[#2563eb] bg-[#eef4ff] text-[#1d4ed8] dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300'
+               : 'border-[#d5dbe3] bg-white text-[#334155] hover:border-[#c5ccd6] hover:bg-[#2563eb]/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300');
+  }
+
   copiar(texto: string, cual: 'archivo' | 'asunto'): void {
     if (!navigator.clipboard) {
       this.toast.error('No se pudo copiar');
@@ -747,6 +774,7 @@ export class EntregablesReportComponent {
     this.cargandoDatos.set(false);
     this.descargadoComo.set(null);
     this.copiado.set(null);
+    this.hoja.set(0);
   }
 
   private mensaje(err: any, porDefecto: string): string {
