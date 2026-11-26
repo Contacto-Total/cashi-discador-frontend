@@ -733,6 +733,16 @@ interface BorradorDeuda {
                           <lucide-angular name="file-text" [size]="12"></lucide-angular>
                           {{ generandoCartaGestionId() === schedule.id ? 'Generando...' : (cartasGeneradasGestionIds().has(schedule.id) ? 'Regenerar acuerdo' : 'Generar acuerdo') }}
                         </button>
+                        @if (esSubcarteraCastigoSip()) {
+                        <button
+                          (click)="generarConstanciaDesdeBanner(schedule)"
+                          [disabled]="generandoConstanciaGestionId() === schedule.id"
+                          class="px-2.5 py-1 bg-black/20 dark:bg-white/20 hover:bg-black/30 dark:hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-black/30 dark:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                          title="Generar la constancia de atención con el número de tarjeta del cliente">
+                          <lucide-angular name="file-text" [size]="12"></lucide-angular>
+                          {{ generandoConstanciaGestionId() === schedule.id ? 'Generando...' : 'Generar constancia' }}
+                        </button>
+                        }
                         }
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
@@ -3749,6 +3759,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   cartasGeneradasGestionIds = signal<Set<number>>(new Set());
   // Gestión cuya carta se está generando (deshabilita el botón mientras descarga)
   generandoCartaGestionId = signal<number | null>(null);
+  generandoConstanciaGestionId = signal<number | null>(null);
 
   // ==================== BLOQUEO PERIODO DE GRACIA (PROMESA VENCIDA DE OTRO ASESOR) ====================
   // Flag para mostrar la card de bloqueo cuando la última promesa del cliente está vencida
@@ -8841,6 +8852,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         console.error('❌ Error generando carta desde banner:', error);
         this.generandoCartaGestionId.set(null);
         alert('⚠️ Error al generar la Carta de Acuerdo.');
+      }
+    });
+  }
+
+  protected esSubcarteraCastigoSip(): boolean {
+    return Number(this.selectedSubPortfolioId) === 27;
+  }
+
+  protected generarConstanciaDesdeBanner(schedule: any): void {
+    const idGestion = Number(schedule?.id);
+    if (!idGestion || this.generandoConstanciaGestionId() === idGestion) return;
+
+    this.generandoConstanciaGestionId.set(idGestion);
+    this.cartaAcuerdoService.generarConstanciaAtencion(idGestion).subscribe({
+      next: (blob) => {
+        const docCliente = this.customerData()?.numero_documento || idGestion;
+        this.cartaAcuerdoService.descargarPdf(blob, `CONSTANCIA_ATENCION_${docCliente}.pdf`);
+        this.generandoConstanciaGestionId.set(null);
+      },
+      error: (error) => {
+        console.error('❌ Error generando constancia desde banner:', error);
+        this.generandoConstanciaGestionId.set(null);
+        if (error?.status === 422) {
+          alert('⚠️ No se generó la constancia: el cliente no tiene número de tarjeta registrado.');
+        } else {
+          alert('⚠️ Error al generar la Constancia de Atención.');
+        }
       }
     });
   }

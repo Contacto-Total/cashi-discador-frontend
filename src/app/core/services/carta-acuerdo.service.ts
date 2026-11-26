@@ -71,6 +71,19 @@ export class CartaAcuerdoService {
   }
 
   /**
+   * Genera la constancia de atención (SIP Castigo) desde una gestión
+   * Retorna el PDF como Blob
+   */
+  generarConstanciaAtencion(idGestion: number): Observable<Blob> {
+    return this.http.post(`${this.apiUrl}/constancia-atencion/${idGestion}`, null, {
+      responseType: 'blob',
+      headers: new HttpHeaders({
+        'Accept': 'application/pdf'
+      })
+    });
+  }
+
+  /**
    * Obtiene el historial de cartas generadas para un cliente
    */
   obtenerHistorial(idCliente: number): Observable<CartaGeneradaHistorial[]> {
