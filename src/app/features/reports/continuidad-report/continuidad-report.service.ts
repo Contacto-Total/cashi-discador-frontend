@@ -60,7 +60,8 @@ export class ContinuidadReportService {
     fechaDesde?: string,
     fechaHasta?: string,
     idCartera?: number,
-    idSubcartera?: number
+    idSubcartera?: number,
+    compra?: string
   ): Observable<ReporteResponse> {
     let params = new HttpParams();
 
@@ -68,6 +69,7 @@ export class ContinuidadReportService {
     if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
     if (idCartera) params = params.set('idCartera', idCartera.toString());
     if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
+    if (compra) params = params.set('compra', compra);
 
     return this.http.get<ReporteResponse>(this.baseUrl, { params });
   }
@@ -76,7 +78,8 @@ export class ContinuidadReportService {
     fechaDesde?: string,
     fechaHasta?: string,
     idCartera?: number,
-    idSubcartera?: number
+    idSubcartera?: number,
+    compra?: string
   ): Observable<Blob> {
     let params = new HttpParams();
 
@@ -84,6 +87,7 @@ export class ContinuidadReportService {
     if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
     if (idCartera) params = params.set('idCartera', idCartera.toString());
     if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
+    if (compra) params = params.set('compra', compra);
 
     return this.http.get(`${this.baseUrl}/excel`, {
       params,

@@ -7,7 +7,20 @@ export interface ReportePagosBancarios {
   tamanoPagina: number;
   totalPaginas: number;
   incluyePeriodoCompra?: boolean;
+  /** REQ-083: compra elegida (PRIMERA, SEGUNDA, …); null si se consultó toda la subcartera */
+  compra?: string | null;
+  /** REQ-083: la subcartera tiene compras; el Excel lleva la columna «Compra» */
+  incluyeCompra?: boolean;
   pagos: DetallePagoBancario[];
+}
+
+/** Filtros del reporte. compra (REQ-083): orden_compra de Tramo Propio; null = toda la subcartera. */
+export interface FiltrosReportePagosBancarios {
+  periodo: string;
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+  compra: string | null;
 }
 
 export interface DetallePagoBancario {
@@ -28,6 +41,8 @@ export interface DetallePagoBancario {
   cuotaAplicadaId: number | null;
   transaccionIdAplicada: number | null;
   periodoCompra?: string | null;
+  /** REQ-083: compra del cliente (orden_compra) */
+  compra?: string | null;
   /** Deuda, producto y moneda del pago (solo en los archivos que los traen). */
   cuenta?: string | null;
   producto?: string | null;

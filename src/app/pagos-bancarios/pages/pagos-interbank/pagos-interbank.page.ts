@@ -1262,11 +1262,12 @@ export class PagosInterbankPage implements OnInit, AfterViewChecked, OnDestroy {
 
   /** Reparte el mes en pedidos: el reporte devuelve como máximo 200 filas por página. */
   private todosLosPagos(mes: string, c: ContextoIbk): Observable<DetallePagoBancario[]> {
-    return this.reporte.obtenerReporte(mes, c.tenantId, c.carteraId, c.subcarteraId, 0, FILAS_POR_PEDIDO).pipe(
+    const filtros = { periodo: mes, tenantId: c.tenantId, carteraId: c.carteraId, subcarteraId: c.subcarteraId, compra: null };
+    return this.reporte.obtenerReporte(filtros, 0, FILAS_POR_PEDIDO).pipe(
       switchMap(primera => {
         if (primera.totalPaginas <= 1) return of(primera.pagos);
         const resto = Array.from({ length: primera.totalPaginas - 1 }, (_, i) =>
-          this.reporte.obtenerReporte(mes, c.tenantId, c.carteraId, c.subcarteraId, i + 1, FILAS_POR_PEDIDO));
+          this.reporte.obtenerReporte(filtros, i + 1, FILAS_POR_PEDIDO));
         return forkJoin(resto).pipe(map(paginas => [primera, ...paginas].flatMap(p => p.pagos)));
       })
     );

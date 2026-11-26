@@ -95,6 +95,8 @@ export interface GestionesFiltros {
   fechaHasta?: string;
   idCartera?: number | null;
   idSubcartera?: number | null;
+  /** REQ-083: orden_compra de la subcartera (PRIMERA, SEGUNDA, …); null = toda la subcartera */
+  compra?: string | null;
   idAgentes?: number[];
   idCampana?: number | null;
   documento?: string;
@@ -120,6 +122,7 @@ export class GestionesReportService {
     if (f.fechaHasta) params = params.set('fechaHasta', f.fechaHasta);
     if (f.idCartera) params = params.set('idCartera', f.idCartera.toString());
     if (f.idSubcartera) params = params.set('idSubcartera', f.idSubcartera.toString());
+    if (f.compra) params = params.set('compra', f.compra);
     if (f.idCampana) params = params.set('idCampana', f.idCampana.toString());
     if (f.documento && f.documento.trim()) params = params.set('documento', f.documento.trim());
     if (f.telefono && f.telefono.trim()) params = params.set('telefono', f.telefono.trim());

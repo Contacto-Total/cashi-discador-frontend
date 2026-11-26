@@ -212,7 +212,8 @@ export class ReportService {
     carteraId?: number,
     subcarteraId?: number,
     generacionVentana?: string,
-    cierreVentana?: string
+    cierreVentana?: string,
+    compra?: string
   ): Observable<AgentProductivityResponse> {
     let params = new HttpParams()
       .set('fechaInicio', fechaInicio)
@@ -223,6 +224,7 @@ export class ReportService {
     if (subcarteraId) params = params.set('subcarteraId', subcarteraId.toString());
     if (generacionVentana) params = params.set('generacionVentana', generacionVentana);
     if (cierreVentana) params = params.set('cierreVentana', cierreVentana);
+    if (compra) params = params.set('compra', compra);
 
     return this.http.get<AgentProductivityResponse>(`${this.apiUrl}/agent-productivity`, { params });
   }

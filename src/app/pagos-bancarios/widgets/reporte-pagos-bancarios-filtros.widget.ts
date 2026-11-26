@@ -1,10 +1,12 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
+import { FiltrosReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
+import { ComprasCarteraService, leerOpcionCompra, opcionesSubcartera } from '../../core/services/compras-cartera.service';
 
 @Component({
   selector: 'app-reporte-pagos-bancarios-filtros',
@@ -37,10 +39,10 @@ import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.mode
         </div>
         <div>
           <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Subcartera <span class="text-red-500">*</span></label>
-          <select [(ngModel)]="subcarteraId" name="subcartera" required [disabled]="carteraId === 0" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:disabled:bg-slate-800">
-            <option [ngValue]="0">Seleccionar</option>
-            @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
-              <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+          <select [(ngModel)]="seleccionSubcartera" (ngModelChange)="onSubcarteraChange($event)" name="subcartera" required [disabled]="carteraId === 0" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:disabled:bg-slate-800">
+            <option value="">Seleccionar</option>
+            @for (op of opcionesSubcartera(); track op.valor) {
+              <option [value]="op.valor">{{ op.etiqueta }}</option>
             }
           </select>
         </div>
@@ -57,19 +59,31 @@ import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.mode
 export class ReportePagosBancariosFiltrosWidget implements OnInit {
   private readonly tenantService = inject(TenantService);
   private readonly portfolioService = inject(PortfolioService);
+  private readonly comprasCartera = inject(ComprasCarteraService);
 
   @Input() loading = false;
-  @Output() consulta = new EventEmitter<{ periodo: string; tenantId: number; carteraId: number; subcarteraId: number }>();
+  /** REQ-083: muestra una opción por compra (solo el reporte de pagos bancarios; el consolidado no). */
+  @Input() conCompras = false;
+  @Output() consulta = new EventEmitter<FiltrosReportePagosBancarios>();
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
+  /** REQ-083: cada subcartera y sus compras («TPR - TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
+  opcionesSubcartera = computed(() => opcionesSubcartera(
+    this.subPortfolios().map(s => ({ id: s.id, nombreSubcartera: `${s.subPortfolioCode} - ${s.subPortfolioName}` })),
+    this.conComprasSenal() ? this.comprasCartera.compras() : {}));
+  private readonly conComprasSenal = signal(false);
+  seleccionSubcartera = '';
+  compra: string | null = null;
   periodo = this.periodoActual();
   tenantId = 0;
   carteraId = 0;
   subcarteraId = 0;
 
   ngOnInit(): void {
+    this.conComprasSenal.set(this.conCompras);
+    if (this.conCompras) this.comprasCartera.cargar();
     this.tenantService.getAllTenants().subscribe({
       next: (tenants) => this.tenants.set(tenants)
     });
@@ -78,7 +92,7 @@ export class ReportePagosBancariosFiltrosWidget implements OnInit {
   onTenantChange(tenantId: number): void {
     this.tenantId = Number(tenantId) || 0;
     this.carteraId = 0;
-    this.subcarteraId = 0;
+    this.limpiarSubcartera();
     this.portfolios.set([]);
     this.subPortfolios.set([]);
 
@@ -91,7 +105,7 @@ export class ReportePagosBancariosFiltrosWidget implements OnInit {
 
   onPortfolioChange(carteraId: number): void {
     this.carteraId = Number(carteraId) || 0;
-    this.subcarteraId = 0;
+    this.limpiarSubcartera();
     this.subPortfolios.set([]);
 
     if (this.carteraId > 0) {
@@ -101,9 +115,24 @@ export class ReportePagosBancariosFiltrosWidget implements OnInit {
     }
   }
 
+  onSubcarteraChange(seleccion: string): void {
+    const { idSubcartera, compra } = leerOpcionCompra(seleccion);
+    this.subcarteraId = idSubcartera ?? 0;
+    this.compra = compra;
+  }
+
+  private limpiarSubcartera(): void {
+    this.seleccionSubcartera = '';
+    this.subcarteraId = 0;
+    this.compra = null;
+  }
+
   consultar(): void {
     if (!this.puedeConsultar()) return;
-    this.consulta.emit({ periodo: this.periodo, tenantId: this.tenantId, carteraId: this.carteraId, subcarteraId: this.subcarteraId });
+    this.consulta.emit({
+      periodo: this.periodo, tenantId: this.tenantId, carteraId: this.carteraId,
+      subcarteraId: this.subcarteraId, compra: this.compra
+    });
   }
 
   puedeConsultar(): boolean {

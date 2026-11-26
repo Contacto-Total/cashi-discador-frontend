@@ -63,14 +63,18 @@ export class ExcepcionesReportService {
     fechaHasta?: string,
     idCartera?: number,
     idSubcartera?: number,
-    estado?: string
+    estado?: string,
+    idTenant?: number,
+    compra?: string
   ): Observable<ReporteResponse> {
     let params = new HttpParams();
 
     if (fechaDesde) params = params.set('fechaDesde', fechaDesde);
     if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
+    if (idTenant) params = params.set('idTenant', idTenant.toString());
     if (idCartera) params = params.set('idCartera', idCartera.toString());
     if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
+    if (compra) params = params.set('compra', compra);
     if (estado) params = params.set('estado', estado);
 
     return this.http.get<ReporteResponse>(this.baseUrl, { params });
@@ -81,14 +85,18 @@ export class ExcepcionesReportService {
     fechaHasta?: string,
     idCartera?: number,
     idSubcartera?: number,
-    estado?: string
+    estado?: string,
+    idTenant?: number,
+    compra?: string
   ): Observable<Blob> {
     let params = new HttpParams();
 
     if (fechaDesde) params = params.set('fechaDesde', fechaDesde);
     if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
+    if (idTenant) params = params.set('idTenant', idTenant.toString());
     if (idCartera) params = params.set('idCartera', idCartera.toString());
     if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
+    if (compra) params = params.set('compra', compra);
     if (estado) params = params.set('estado', estado);
 
     return this.http.get(`${this.baseUrl}/excel`, {

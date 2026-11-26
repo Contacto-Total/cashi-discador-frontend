@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -14,6 +14,11 @@ import {
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
 import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
+import {
+  ComprasCarteraService,
+  leerOpcionCompra,
+  opcionesSubcartera
+} from '../../../core/services/compras-cartera.service';
 
 @Component({
   selector: 'app-gestiones-report',
@@ -87,15 +92,15 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
           <!-- Subcartera -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcartera</label>
-            <select [(ngModel)]="filtros.idSubcartera" (ngModelChange)="onSubcarteraChange()"
+            <select [(ngModel)]="seleccionSubcartera" (ngModelChange)="onSubcarteraChange($event)"
               [disabled]="!filtros.idCartera"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                      disabled:opacity-50 disabled:cursor-not-allowed">
-              <option [ngValue]="null">Todas</option>
-              @for (sub of subcarteras(); track sub.id) {
-                <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
+              <option value="">Todas</option>
+              @for (op of opcionesSubcartera(); track op.valor) {
+                <option [value]="op.valor">{{ op.etiqueta }}</option>
               }
             </select>
           </div>
@@ -511,6 +516,9 @@ export class GestionesReportComponent implements OnInit {
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
+  /** REQ-083: cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
+  opcionesSubcartera = computed(() => opcionesSubcartera(this.subcarteras(), this.comprasCartera.compras()));
+  seleccionSubcartera = '';
 
   // Asesor (multi-seleccion, amarrado al alcance)
   private agentes: AgenteGestion[] = [];
@@ -538,6 +546,7 @@ export class GestionesReportComponent implements OnInit {
     idProveedor: null as number | null,
     idCartera: null as number | null,
     idSubcartera: null as number | null,
+    compra: null as string | null,
     documento: '',
     celular: '',
     gestionSistema: '' as '' | 'EXCLUIR' | 'SOLO' | 'EXTERNA'
@@ -545,7 +554,8 @@ export class GestionesReportComponent implements OnInit {
 
   constructor(
     private reporteService: GestionesReportService,
-    private comisionesService: ComisionesService
+    private comisionesService: ComisionesService,
+    private comprasCartera: ComprasCarteraService
   ) {}
 
   ngOnInit(): void {
@@ -557,6 +567,7 @@ export class GestionesReportComponent implements OnInit {
     this.filtros.fechaDesde = todayStr;
     this.filtros.fechaHasta = todayStr;
 
+    this.comprasCartera.cargar();
     this.comisionesService.obtenerInquilinos().subscribe({
       next: (data) => this.proveedores.set(data),
       error: (err) => console.error('Error cargando proveedores:', err)
@@ -569,7 +580,7 @@ export class GestionesReportComponent implements OnInit {
   // ===== Cascada proveedor/cartera/subcartera (+ recarga de asesores) =====
   onProveedorChange(idProveedor: number | null): void {
     this.filtros.idCartera = null;
-    this.filtros.idSubcartera = null;
+    this.limpiarSubcartera();
     this.carteras.set([]);
     this.subcarteras.set([]);
 
@@ -584,7 +595,7 @@ export class GestionesReportComponent implements OnInit {
   }
 
   onCarteraChange(idCartera: number | null): void {
-    this.filtros.idSubcartera = null;
+    this.limpiarSubcartera();
     this.subcarteras.set([]);
 
     if (idCartera) {
@@ -597,7 +608,16 @@ export class GestionesReportComponent implements OnInit {
     this.reloadAgentes();
   }
 
-  onSubcarteraChange(): void {
+  private limpiarSubcartera(): void {
+    this.seleccionSubcartera = '';
+    this.filtros.idSubcartera = null;
+    this.filtros.compra = null;
+  }
+
+  onSubcarteraChange(seleccion: string): void {
+    const { idSubcartera, compra } = leerOpcionCompra(seleccion);
+    this.filtros.idSubcartera = idSubcartera;
+    this.filtros.compra = compra;
     this.reloadTipificaciones();
     this.reloadAgentes();
   }
@@ -710,6 +730,7 @@ export class GestionesReportComponent implements OnInit {
       fechaHasta: this.filtros.fechaHasta,
       idCartera: this.filtros.idCartera,
       idSubcartera: this.filtros.idSubcartera,
+      compra: this.filtros.compra,
       idAgentes: this.selectedAgentes(),
       documento: this.filtros.documento,
       telefono: this.filtros.celular,

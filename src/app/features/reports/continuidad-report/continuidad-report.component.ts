@@ -9,6 +9,11 @@ import {
   ReporteResponse
 } from './continuidad-report.service';
 import { Cartera, Inquilino, Subcartera } from '@/comisiones/models/comision.model';
+import {
+  ComprasCarteraService,
+  leerOpcionCompra,
+  opcionesSubcartera
+} from '@/core/services/compras-cartera.service';
 import { ComisionesService } from '@/comisiones/services/comisiones.service';
 import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
@@ -107,16 +112,17 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
               Subcartera
             </label>
             <select
-              [(ngModel)]="filtros.idSubcartera"
+              [(ngModel)]="seleccionSubcartera"
+              (ngModelChange)="onSubcarteraChange($event)"
               [disabled]="!filtros.idCartera"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                      disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option [ngValue]="null">Todas</option>
-              @for (sub of subcarteras(); track sub.id) {
-                <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
+              <option value="">Todas</option>
+              @for (op of opcionesSubcartera(); track op.valor) {
+                <option [value]="op.valor">{{ op.etiqueta }}</option>
               }
             </select>
           </div>
@@ -345,6 +351,9 @@ export class ContinuidadReportComponent implements OnInit {
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
+  /** REQ-083: cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
+  opcionesSubcartera = computed(() => opcionesSubcartera(this.subcarteras(), this.comprasCartera.compras()));
+  seleccionSubcartera = '';
 
   // Filtros
   filtros = {
@@ -352,11 +361,13 @@ export class ContinuidadReportComponent implements OnInit {
     fechaHasta: '',
     idProveedor: null as number | null, // ✅ debe coincidir con ngModel
     idCartera: null as number | null,
-    idSubcartera: null as number | null
+    idSubcartera: null as number | null,
+    compra: null as string | null
   };
 
   constructor(private reporteService: ContinuidadReportService,
-    private comisionesService: ComisionesService
+    private comisionesService: ComisionesService,
+    private comprasCartera: ComprasCarteraService
   ) {}
 
   ngOnInit(): void {
@@ -367,6 +378,8 @@ export class ContinuidadReportComponent implements OnInit {
   const todayStr = `${yyyy}-${mm}-${dd}`;
   this.filtros.fechaDesde = todayStr;
   this.filtros.fechaHasta = todayStr;
+
+  this.comprasCartera.cargar();
 
   // Cargar proveedores
   this.comisionesService.obtenerInquilinos().subscribe({
@@ -382,7 +395,7 @@ export class ContinuidadReportComponent implements OnInit {
 
     onProveedorChange(idProveedor: number | null): void {
       this.filtros.idCartera = null;
-      this.filtros.idSubcartera = null;
+      this.limpiarSubcartera();
       this.carteras.set([]);
       this.subcarteras.set([]);
 
@@ -394,8 +407,20 @@ export class ContinuidadReportComponent implements OnInit {
       }
   }
 
-  onCarteraChange(idCartera: number | null): void {
+  private limpiarSubcartera(): void {
+    this.seleccionSubcartera = '';
     this.filtros.idSubcartera = null;
+    this.filtros.compra = null;
+  }
+
+  onSubcarteraChange(seleccion: string): void {
+    const { idSubcartera, compra } = leerOpcionCompra(seleccion);
+    this.filtros.idSubcartera = idSubcartera;
+    this.filtros.compra = compra;
+  }
+
+  onCarteraChange(idCartera: number | null): void {
+    this.limpiarSubcartera();
     this.subcarteras.set([]);
 
     if (idCartera) {
@@ -413,7 +438,8 @@ export class ContinuidadReportComponent implements OnInit {
       this.filtros.fechaDesde || undefined,
       this.filtros.fechaHasta || undefined,
       this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined
+      this.filtros.idSubcartera || undefined,
+      this.filtros.compra || undefined
     ).subscribe({
       next: (response) => {
         this.data.set(response.data);
@@ -435,7 +461,8 @@ export class ContinuidadReportComponent implements OnInit {
       this.filtros.fechaDesde || undefined,
       this.filtros.fechaHasta || undefined,
       this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined
+      this.filtros.idSubcartera || undefined,
+      this.filtros.compra || undefined
     ).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);

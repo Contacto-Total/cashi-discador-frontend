@@ -43,6 +43,7 @@ export class CompromisosReportService {
     rutaNivel2?: string,
     documento?: string,
     tipoPromesa?: string,
+    compra?: string,
     page: number = 0,
     size: number = 50
   ): Observable<ReporteResponse> {
@@ -59,6 +60,7 @@ export class CompromisosReportService {
     if (rutaNivel2) params = params.set('rutaNivel2', rutaNivel2);
     if (documento) params = params.set('documento', documento);
     if (tipoPromesa) params = params.set('tipoPromesa', tipoPromesa);
+    if (compra) params = params.set('compra', compra);
 
     return this.http.get<ReporteResponse>(this.baseUrl, { params });
   }
@@ -72,7 +74,8 @@ export class CompromisosReportService {
     estadoPago?: string,
     rutaNivel2?: string,
     documento?: string,
-    tipoPromesa?: string
+    tipoPromesa?: string,
+    compra?: string
   ): Observable<Blob> {
     let params = new HttpParams();
 
@@ -85,6 +88,7 @@ export class CompromisosReportService {
     if (rutaNivel2) params = params.set('rutaNivel2', rutaNivel2);
     if (documento) params = params.set('documento', documento);
     if (tipoPromesa) params = params.set('tipoPromesa', tipoPromesa);
+    if (compra) params = params.set('compra', compra);
 
     return this.http.get(`${this.baseUrl}/excel`, {
       params,

@@ -1,8 +1,10 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
-import { ReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
+import { firstValueFrom } from 'rxjs';
+import { DetallePagoBancario, FiltrosReportePagosBancarios, ReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
+import { ReportePagosBancariosService } from '../services/reporte-pagos-bancarios.service';
 
 @Component({
   selector: 'app-reporte-pagos-bancarios-resultados',
@@ -11,9 +13,12 @@ import { ReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
   template: `
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div class="flex flex-col gap-4 border-b border-slate-200 p-4 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between">
-        <div class="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2" [class.lg:grid-cols-4]="!reporte.compra" [class.lg:grid-cols-5]="!!reporte.compra">
         <div><p class="text-xs font-medium uppercase text-slate-500">Período</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.periodo }}</p></div>
         <div><p class="text-xs font-medium uppercase text-slate-500">Banco</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.banco }}</p></div>
+        @if (reporte.compra) {
+          <div><p class="text-xs font-medium uppercase text-slate-500">Compra</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.compra }}</p></div>
+        }
         <div><p class="text-xs font-medium uppercase text-slate-500">Total registros</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.totalRegistros }}</p></div>
         <div><p class="text-xs font-medium uppercase text-slate-500">Monto total</p><p class="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">{{ reporte.montoTotal | currency:'PEN':'symbol-narrow':'1.2-2' }}</p></div>
         </div>
@@ -44,6 +49,9 @@ import { ReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
 })
 export class ReportePagosBancariosResultadosWidget {
   @Input({ required: true }) reporte!: ReportePagosBancarios;
+  /** Filtros de la consulta: el Excel pide con ellos todas las páginas, no solo la que se ve. */
+  @Input() filtros: FiltrosReportePagosBancarios | null = null;
+  private readonly reportePagosBancariosService = inject(ReportePagosBancariosService);
   @Output() paginaCambiada = new EventEmitter<number>();
 
   descargando = false;
@@ -52,6 +60,21 @@ export class ReportePagosBancariosResultadosWidget {
     if (pagina >= 0 && pagina < this.reporte.totalPaginas) {
       this.paginaCambiada.emit(pagina);
     }
+  }
+
+  /**
+   * Todos los pagos de la consulta (todas las páginas, de 200 en 200), con la compra elegida si la hay.
+   * Sin filtros, los de la página en pantalla.
+   */
+  private async todosLosPagos(): Promise<DetallePagoBancario[]> {
+    if (!this.filtros || this.reporte.totalPaginas <= 1) return this.reporte.pagos;
+    const pagos: DetallePagoBancario[] = [];
+    for (let pagina = 0; ; pagina++) {
+      const parte = await firstValueFrom(this.reportePagosBancariosService.obtenerReporte(this.filtros, pagina, 200));
+      pagos.push(...parte.pagos);
+      if (pagina + 1 >= parte.totalPaginas) break;
+    }
+    return pagos;
   }
 
   async descargarExcel(): Promise<void> {
@@ -65,7 +88,11 @@ export class ReportePagosBancariosResultadosWidget {
 
       // Solo cartera propia trae periodo de compra (cartera nueva o antigua).
       const conPeriodoCompra = this.reporte.incluyePeriodoCompra === true;
-      const ultimaColumna = conPeriodoCompra ? 'N' : 'M';
+      // REQ-083: columna «Compra» al final, con el orden_compra del cliente.
+      const conCompra = this.reporte.incluyeCompra === true;
+      const columnas = 13 + (conPeriodoCompra ? 1 : 0) + (conCompra ? 1 : 0);
+      const ultimaColumna = String.fromCharCode('A'.charCodeAt(0) + columnas - 1);
+      const pagos = await this.todosLosPagos();
 
       const worksheet = workbook.addWorksheet('Pagos bancarios');
       worksheet.columns = [
@@ -82,7 +109,8 @@ export class ReportePagosBancariosResultadosWidget {
         { header: 'Referencia', key: 'referencia', width: 28 },
         { header: 'Monto banco', key: 'montoBanco', width: 16 },
         { header: 'Estado', key: 'estado', width: 16 },
-        ...(conPeriodoCompra ? [{ header: 'Periodo compra', key: 'periodoCompra', width: 18 }] : [])
+        ...(conPeriodoCompra ? [{ header: 'Periodo compra', key: 'periodoCompra', width: 18 }] : []),
+        ...(conCompra ? [{ header: 'Compra', key: 'compra', width: 16 }] : [])
       ];
 
       worksheet.mergeCells(`A1:${ultimaColumna}1`);
@@ -96,6 +124,10 @@ export class ReportePagosBancariosResultadosWidget {
       worksheet.getCell('B3').value = this.reporte.periodo;
       worksheet.getCell('D3').value = 'Total registros:';
       worksheet.getCell('E3').value = this.reporte.totalRegistros;
+      if (this.reporte.compra) {
+        worksheet.getCell('J3').value = 'Compra:';
+        worksheet.getCell('K3').value = this.reporte.compra;
+      }
       worksheet.getCell('G3').value = 'Monto total:';
       worksheet.getCell('H3').value = this.reporte.montoTotal;
       worksheet.getCell('H3').numFmt = '"S/." #,##0.00';
@@ -104,7 +136,7 @@ export class ReportePagosBancariosResultadosWidget {
       headerRow.values = [
         'Fecha banco', 'Hora atención', 'Documento', 'Código depositante', 'Nro. operación',
         'Nro. operación canal', 'Medio atención', 'Banco', 'Sucursal', 'Agencia', 'Referencia',
-        'Monto banco', 'Estado', ...(conPeriodoCompra ? ['Periodo compra'] : [])
+        'Monto banco', 'Estado', ...(conPeriodoCompra ? ['Periodo compra'] : []), ...(conCompra ? ['Compra'] : [])
       ];
       headerRow.eachCell(cell => {
         cell.font = { bold: true, color: { argb: 'FFFFFF' } };
@@ -112,7 +144,7 @@ export class ReportePagosBancariosResultadosWidget {
         cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       });
 
-      this.reporte.pagos.forEach(pago => {
+      pagos.forEach(pago => {
         const row = worksheet.addRow({
           fechaBanco: pago.fechaBanco || '', horaAtencion: pago.horaAtencion || '', documento: pago.documento || '',
           codigoDepositante: pago.codigoDepositante || '', numeroOperacion: pago.numeroOperacion || '',
@@ -127,6 +159,7 @@ export class ReportePagosBancariosResultadosWidget {
           celda.value = mesCompra ?? pago.periodoCompra ?? '';
           if (mesCompra) celda.numFmt = 'mmm-yyyy';
         }
+        if (conCompra) row.getCell('compra').value = pago.compra ?? '';
       });
 
       worksheet.autoFilter = { from: 'A5', to: `${ultimaColumna}5` };

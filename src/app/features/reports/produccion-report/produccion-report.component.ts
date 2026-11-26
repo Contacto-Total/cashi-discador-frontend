@@ -9,7 +9,6 @@ import {
   MetaReporteProduccion,
   TipoMetaReporteProduccion,
   FiltrosReporteProduccion,
-  GrupoProduccion,
   PageResponse
 } from './produccion-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
@@ -17,6 +16,12 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import {
+  ComprasCarteraService,
+  ComprasPorSubcartera,
+  leerOpcionCompra,
+  valorOpcionCompra
+} from '../../../core/services/compras-cartera.service';
 
 @Component({
   selector: 'app-produccion-report',
@@ -91,9 +96,8 @@ import { AuthService } from '../../../core/services/auth.service';
               <option value="">Todas las subcarteras</option>
               @for (sub of subcarteras(); track sub.id) {
                 <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
-                @if (tieneCarterasPorOrdenCompra(sub)) {
-                  <option [value]="sub.id + ':ANTIGUA'">{{ sub.nombreSubcartera }} · Antigua</option>
-                  <option [value]="sub.id + ':NUEVA'">{{ sub.nombreSubcartera }} · Nueva</option>
+                @for (compra of comprasDe(sub.id); track compra) {
+                  <option [value]="opcionCompra(sub.id, compra)">{{ sub.nombreSubcartera }} · {{ compra }}</option>
                 }
               }
             </select>
@@ -345,20 +349,24 @@ export class ProduccionReportComponent implements OnInit {
     idCartera: null as number | null,
     idSubcartera: null as number | null,
     tipoMeta: 'INTERNA' as TipoMetaReporteProduccion,
-    grupo: null as GrupoProduccion | null
+    compra: null as string | null
   };
 
   /**
-   * Lo que está elegido en el combo de subcartera: '' (todas), '21' o '21:ANTIGUA'. El combo
-   * maneja un solo valor, pero el reporte necesita la subcartera y el grupo por separado.
+   * Lo que está elegido en el combo de subcartera: '' (todas), '21' o '21:PRIMERA'. El combo
+   * maneja un solo valor, pero el reporte necesita la subcartera y la compra por separado.
    */
   seleccionSubcartera = '';
+
+  /** REQ-083: compras de cada subcartera, de la base (orden_compra). */
+  compras = signal<ComprasPorSubcartera>({});
 
   constructor(
     private produccionService: ProduccionReportService,
     private comisionesService: ComisionesService,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private comprasCartera: ComprasCarteraService
   ) {}
 
   get isAdmin(): boolean {
@@ -373,6 +381,8 @@ export class ProduccionReportComponent implements OnInit {
     const dd = String(today.getDate()).padStart(2, '0');
     this.filtros.fecha = `${yyyy}-${mm}-${dd}`;
     this.mesVigenciaNueva = `${yyyy}-${mm}`;
+
+    this.comprasCartera.obtener().subscribe(compras => this.compras.set(compras));
 
     // Cargar proveedores
     this.comisionesService.obtenerInquilinos().subscribe({
@@ -462,29 +472,30 @@ export class ProduccionReportComponent implements OnInit {
   }
 
   onSubcarteraChange(seleccion: string): void {
-    const [id, grupo] = (seleccion || '').split(':');
-    this.filtros.idSubcartera = id ? Number(id) : null;
-    this.filtros.grupo = (grupo as GrupoProduccion) || null;
+    const { idSubcartera, compra } = leerOpcionCompra(seleccion);
+    this.filtros.idSubcartera = idSubcartera;
+    this.filtros.compra = compra;
 
     this.limpiarResultados();
     if (this.contextoSeleccionado()) {
-      // La meta es una sola para toda la subcartera, así que no mira el grupo.
+      // La meta es una sola para toda la subcartera, así que no mira la compra.
       this.cargarGestionMetas();
     }
   }
 
-  /**
-   * Subcarteras que conviven con dos carteras por orden de compra. Hoy solo Tramo Propio,
-   * igual que comisiones.subcarteras-con-grupos en el backend.
-   */
-  tieneCarterasPorOrdenCompra(sub: Subcartera): boolean {
-    return sub.codigoSubcartera?.toUpperCase() === 'TPR';
+  /** Compras de la subcartera (vacío en las que no tienen): una opción más en el combo por cada una. */
+  comprasDe(idSubcartera: number): string[] {
+    return this.compras()[idSubcartera] ?? [];
+  }
+
+  opcionCompra(idSubcartera: number, compra: string): string {
+    return valorOpcionCompra(idSubcartera, compra);
   }
 
   private limpiarSubcartera(): void {
     this.seleccionSubcartera = '';
     this.filtros.idSubcartera = null;
-    this.filtros.grupo = null;
+    this.filtros.compra = null;
   }
 
   cargarGestionMetas(page = 0): void {
@@ -552,7 +563,7 @@ export class ProduccionReportComponent implements OnInit {
       idCartera: this.filtros.idCartera ?? undefined,
       idSubcartera: this.filtros.idSubcartera ?? undefined,
       tipoMeta: this.filtros.tipoMeta,
-      grupo: this.filtros.grupo ?? undefined
+      compra: this.filtros.compra ?? undefined
     };
   }
 

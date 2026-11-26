@@ -9,6 +9,13 @@ import {
   ReporteResponse
 } from './excepciones-report.service';
 import { FormatService } from '@/shared/services/format.service';
+import { ComisionesService } from '@/comisiones/services/comisiones.service';
+import { Cartera, Inquilino, Subcartera } from '@/comisiones/models/comision.model';
+import {
+  ComprasCarteraService,
+  leerOpcionCompra,
+  opcionesSubcartera
+} from '@/core/services/compras-cartera.service';
 
 @Component({
   selector: 'app-excepciones-report',
@@ -29,7 +36,7 @@ import { FormatService } from '@/shared/services/format.service';
 
       <!-- Filtros -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Fecha Desde -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Desde</label>
@@ -48,6 +55,42 @@ import { FormatService } from '@/shared/services/format.service';
               [(ngModel)]="filtroFechaHasta"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
+          </div>
+
+          <!-- Proveedor (REQ-083) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
+            <select [(ngModel)]="filtroProveedor" (ngModelChange)="onProveedorChange($event)"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+              <option [ngValue]="null">Todos</option>
+              @for (prov of proveedores(); track prov.id) {
+                <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Cartera (REQ-083) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cartera</label>
+            <select [(ngModel)]="filtroCartera" (ngModelChange)="onCarteraChange($event)" [disabled]="!filtroProveedor"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+              <option [ngValue]="null">Todas</option>
+              @for (cart of carteras(); track cart.id) {
+                <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Subcartera, con una opción por compra en Tramo Propio (REQ-083) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcartera</label>
+            <select [(ngModel)]="seleccionSubcartera" (ngModelChange)="onSubcarteraChange($event)" [disabled]="!filtroCartera"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">Todas</option>
+              @for (op of opcionesSubcartera(); track op.valor) {
+                <option [value]="op.valor">{{ op.etiqueta }}</option>
+              }
+            </select>
           </div>
 
           <!-- Estado -->
@@ -206,6 +249,16 @@ export class ExcepcionesReportComponent implements OnInit {
   filtroFechaDesde = '';
   filtroFechaHasta = '';
   filtroEstado = '';
+  // REQ-083: Proveedor, Cartera y Subcartera (con las compras de Tramo Propio)
+  filtroProveedor: number | null = null;
+  filtroCartera: number | null = null;
+  filtroSubcartera: number | null = null;
+  filtroCompra: string | null = null;
+  seleccionSubcartera = '';
+  proveedores = signal<Inquilino[]>([]);
+  carteras = signal<Cartera[]>([]);
+  subcarteras = signal<Subcartera[]>([]);
+  opcionesSubcartera = computed(() => opcionesSubcartera(this.subcarteras(), this.comprasCartera.compras()));
 
   // Estado
   cargando = signal(false);
@@ -213,6 +266,8 @@ export class ExcepcionesReportComponent implements OnInit {
   metricas = signal<ResumenMetricas | null>(null);
 
   private fmt = inject(FormatService);
+  private comisionesService = inject(ComisionesService);
+  private comprasCartera = inject(ComprasCarteraService);
 
   constructor(private reporteService: ExcepcionesReportService) {}
 
@@ -231,7 +286,49 @@ export class ExcepcionesReportComponent implements OnInit {
     this.filtroFechaDesde = formatDate(hace30Dias);
     this.filtroFechaHasta = formatDate(hoy);
 
+    this.comprasCartera.cargar();
+    this.comisionesService.obtenerInquilinos().subscribe({
+      next: (data) => this.proveedores.set(data),
+      error: (err) => console.error('Error cargando proveedores:', err)
+    });
+
     this.buscar();
+  }
+
+  onProveedorChange(idProveedor: number | null): void {
+    this.filtroCartera = null;
+    this.carteras.set([]);
+    this.limpiarSubcartera();
+    this.subcarteras.set([]);
+    if (idProveedor) {
+      this.comisionesService.obtenerCarteras(idProveedor).subscribe({
+        next: (data) => this.carteras.set(data),
+        error: (err) => console.error('Error cargando carteras:', err)
+      });
+    }
+  }
+
+  onCarteraChange(idCartera: number | null): void {
+    this.limpiarSubcartera();
+    this.subcarteras.set([]);
+    if (idCartera) {
+      this.comisionesService.obtenerSubcarteras(idCartera).subscribe({
+        next: (data) => this.subcarteras.set(data),
+        error: (err) => console.error('Error cargando subcarteras:', err)
+      });
+    }
+  }
+
+  onSubcarteraChange(seleccion: string): void {
+    const { idSubcartera, compra } = leerOpcionCompra(seleccion);
+    this.filtroSubcartera = idSubcartera;
+    this.filtroCompra = compra;
+  }
+
+  private limpiarSubcartera(): void {
+    this.seleccionSubcartera = '';
+    this.filtroSubcartera = null;
+    this.filtroCompra = null;
   }
 
   buscar(): void {
@@ -239,9 +336,11 @@ export class ExcepcionesReportComponent implements OnInit {
     this.reporteService.getReporte(
       this.filtroFechaDesde || undefined,
       this.filtroFechaHasta || undefined,
-      undefined,
-      undefined,
-      this.filtroEstado || undefined
+      this.filtroCartera ?? undefined,
+      this.filtroSubcartera ?? undefined,
+      this.filtroEstado || undefined,
+      this.filtroProveedor ?? undefined,
+      this.filtroCompra ?? undefined
     ).subscribe({
       next: (response) => {
         this.data.set(response.data);
@@ -261,9 +360,11 @@ export class ExcepcionesReportComponent implements OnInit {
     this.reporteService.exportarExcel(
       this.filtroFechaDesde || undefined,
       this.filtroFechaHasta || undefined,
-      undefined,
-      undefined,
-      this.filtroEstado || undefined
+      this.filtroCartera ?? undefined,
+      this.filtroSubcartera ?? undefined,
+      this.filtroEstado || undefined,
+      this.filtroProveedor ?? undefined,
+      this.filtroCompra ?? undefined
     ).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);

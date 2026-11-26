@@ -74,11 +74,11 @@
 
     <div class="flex flex-col gap-1.5">
       <label for="ap-subcartera" [class]="claseLabel">Subcartera</label>
-      <select id="ap-subcartera" [(ngModel)]="selectedSubcarteraId"
+      <select id="ap-subcartera" [(ngModel)]="seleccionSubcartera" (ngModelChange)="onSubcarteraChange($event)"
               [disabled]="!selectedCarteraId" [class]="claseInput">
-        <option [ngValue]="null">Todas</option>
-        @for (sub of subPortfolios; track sub.id) {
-          <option [ngValue]="sub.id">{{ sub.subPortfolioName }}</option>
+        <option value="">Todas</option>
+        @for (op of opcionesSubcartera; track op.valor) {
+          <option [value]="op.valor">{{ op.etiqueta }}</option>
         }
       </select>
     </div>

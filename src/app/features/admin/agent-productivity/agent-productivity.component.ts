@@ -20,6 +20,12 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
+import {
+  ComprasCarteraService,
+  OpcionSubcartera,
+  leerOpcionCompra,
+  opcionesSubcartera
+} from '../../../core/services/compras-cartera.service';
 
 Chart.register(...registerables);
 
@@ -63,6 +69,7 @@ interface TablaCorte {
 })
 export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewInit {
   private fmt = inject(FormatService);
+  private comprasCartera = inject(ComprasCarteraService);
 
   // Exponer Math para el template
   Math = Math;
@@ -184,6 +191,10 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   selectedTenantId: number | null = null;
   selectedCarteraId: number | null = null;
   selectedSubcarteraId: number | null = null;
+  /** REQ-083: compra de Tramo Propio elegida (PRIMERA, SEGUNDA, …); null = toda la subcartera */
+  selectedCompra: string | null = null;
+  /** Lo elegido en el combo Subcartera: '' (todas), '21' o '21:PRIMERA' */
+  seleccionSubcartera = '';
   selectedPeriod: PeriodType = 'today';
   generacionVentana: GeneracionVentana = 'mes';
   cierreVentana: CierreVentana = 'hoy';
@@ -223,6 +234,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   ) {}
 
   ngOnInit(): void {
+    this.comprasCartera.cargar();
     this.loadTenants();
     this.setDefaultDates();
     // No se consulta al entrar: el usuario debe pulsar "Buscar" para lanzar la consulta.
@@ -300,7 +312,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     this.portfolios = [];
     this.subPortfolios = [];
     this.selectedCarteraId = null;
-    this.selectedSubcarteraId = null;
+    this.limpiarSubcartera();
 
     if (this.selectedTenantId) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
@@ -314,9 +326,29 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     }
   }
 
+  /** REQ-083: cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). */
+  get opcionesSubcartera(): OpcionSubcartera[] {
+    return opcionesSubcartera(
+      this.subPortfolios.map(s => ({ id: s.id, nombreSubcartera: s.subPortfolioName })),
+      this.comprasCartera.compras()
+    );
+  }
+
+  onSubcarteraChange(seleccion: string): void {
+    const { idSubcartera, compra } = leerOpcionCompra(seleccion);
+    this.selectedSubcarteraId = idSubcartera;
+    this.selectedCompra = compra;
+  }
+
+  private limpiarSubcartera(): void {
+    this.seleccionSubcartera = '';
+    this.selectedSubcarteraId = null;
+    this.selectedCompra = null;
+  }
+
   onCarteraChange(): void {
     this.subPortfolios = [];
-    this.selectedSubcarteraId = null;
+    this.limpiarSubcartera();
 
     if (this.selectedCarteraId) {
       this.portfolioService.getActiveSubPortfoliosByPortfolio(this.selectedCarteraId).subscribe({
@@ -344,7 +376,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   private cacheKey(fechaInicio: string, fechaFin: string): string {
     return [
       fechaInicio, fechaFin,
-      this.selectedTenantId, this.selectedCarteraId, this.selectedSubcarteraId,
+      this.selectedTenantId, this.selectedCarteraId, this.selectedSubcarteraId, this.selectedCompra,
       this.generacionVentana, this.cierreVentana
     ].join('|');
   }
@@ -376,7 +408,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
       this.selectedCarteraId || undefined,
       this.selectedSubcarteraId || undefined,
       this.generacionVentana,
-      this.cierreVentana
+      this.cierreVentana,
+      this.selectedCompra || undefined
     ).subscribe({
       next: (data) => {
         this.productivityData = data;
@@ -536,7 +569,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     const tenant = this.tenants.find(t => t.id === this.selectedTenantId);
     const cartera = this.portfolios.find(p => p.id === this.selectedCarteraId);
     const sub = this.subPortfolios.find(s => s.id === this.selectedSubcarteraId);
-    [tenant?.tenantName, cartera?.portfolioName, sub?.subPortfolioName]
+    [tenant?.tenantName, cartera?.portfolioName,
+      sub && this.selectedCompra ? `${sub.subPortfolioName} · ${this.selectedCompra}` : sub?.subPortfolioName]
       .forEach(n => { if (n) partes.push(n); });
 
     const n = this.activeTab === 'corteHorario'
