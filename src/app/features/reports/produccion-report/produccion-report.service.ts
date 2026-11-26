@@ -41,7 +41,7 @@ export interface FiltrosReporteProduccion {
   idCartera?: number;
   idSubcartera?: number;
   tipoMeta: TipoMetaReporteProduccion;
-  /** REQ-083: orden_compra de la base (PRIMERA, SEGUNDA, …). Sin compra el reporte no filtra. */
+  /** Orden_compra de la base (PRIMERA, SEGUNDA, …). Sin compra el reporte no filtra. */
   compra?: string;
 }
 

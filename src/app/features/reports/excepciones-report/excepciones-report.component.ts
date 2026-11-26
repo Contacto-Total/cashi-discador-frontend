@@ -16,11 +16,16 @@ import {
   leerOpcionCompra,
   opcionesSubcartera
 } from '@/core/services/compras-cartera.service';
+import { forkJoin } from 'rxjs';
+import {
+  CargandoComprasComponent, DesgloseCompraComponent, EtiquetaCompraComponent, ValorCompra, VerCompraComponent, formatoCompra
+} from '@/shared/ui/desglose-compra.component';
 
 @Component({
   selector: 'app-excepciones-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule,
+    VerCompraComponent, DesgloseCompraComponent, EtiquetaCompraComponent, CargandoComprasComponent],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->
@@ -57,7 +62,7 @@ import {
             />
           </div>
 
-          <!-- Proveedor (REQ-083) -->
+          <!-- Proveedor -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
             <select [(ngModel)]="filtroProveedor" (ngModelChange)="onProveedorChange($event)"
@@ -69,7 +74,7 @@ import {
             </select>
           </div>
 
-          <!-- Cartera (REQ-083) -->
+          <!-- Cartera -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cartera</label>
             <select [(ngModel)]="filtroCartera" (ngModelChange)="onCarteraChange($event)" [disabled]="!filtroProveedor"
@@ -81,7 +86,7 @@ import {
             </select>
           </div>
 
-          <!-- Subcartera, con una opción por compra en Tramo Propio (REQ-083) -->
+          <!-- Subcartera, con una opción por compra en Tramo Propio -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcartera</label>
             <select [(ngModel)]="seleccionSubcartera" (ngModelChange)="onSubcarteraChange($event)" [disabled]="!filtroCartera"
@@ -132,28 +137,41 @@ import {
         </div>
       </div>
 
+      @if (hayDesglose()) {
+        <div class="mb-3">
+          <app-ver-compra [porCompra]="verPorCompra()" (porCompraChange)="cambiarVista($event)" [cargando]="cargandoCompras()" />
+        </div>
+      }
+
+      <div class="relative">
+      @if (cargandoCompras()) { <app-cargando-compras [compras]="comprasDesglose()" /> }
       <!-- Metricas -->
       @if (metricas()) {
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6 [&>*]:min-w-0">
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm text-gray-500 dark:text-gray-400">Total Excepciones</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ metricas()!.totalExcepciones }}</div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('totalExcepciones', 'num')" /> }
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-amber-500">
             <div class="text-sm text-gray-500 dark:text-gray-400">Pendientes</div>
             <div class="text-2xl font-bold text-amber-600">{{ metricas()!.excepcionesPendientes }}</div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('excepcionesPendientes', 'num')" /> }
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-green-500">
             <div class="text-sm text-gray-500 dark:text-gray-400">Aprobadas</div>
             <div class="text-2xl font-bold text-green-600">{{ metricas()!.excepcionesAprobadas }}</div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('excepcionesAprobadas', 'num')" /> }
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-red-500">
             <div class="text-sm text-gray-500 dark:text-gray-400">Rechazadas</div>
             <div class="text-2xl font-bold text-red-600">{{ metricas()!.excepcionesRechazadas }}</div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('excepcionesRechazadas', 'num')" /> }
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm text-gray-500 dark:text-gray-400">Monto Total Solicitado</div>
             <div class="text-xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(metricas()!.montoTotalSolicitado) }}</div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('montoTotalSolicitado', 'soles')" /> }
           </div>
         </div>
       }
@@ -180,6 +198,7 @@ import {
                   <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Cliente</th>
                   <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Asesor</th>
                   <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Cartera</th>
+                  @if (porCompra()) { <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Compra</th> }
                   <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Monto Base</th>
                   <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Solicitado</th>
                   <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Diferencia</th>
@@ -201,6 +220,9 @@ import {
                       <div class="text-gray-700 dark:text-gray-300">{{ item.nombreCartera }}</div>
                       <div class="text-xs text-gray-500">{{ item.nombreSubcartera }}</div>
                     </td>
+                    @if (porCompra()) {
+                      <td class="px-4 py-3"><app-etiqueta-compra [compra]="compraDe(item.id)" [indice]="indiceCompra(item.id)" /></td>
+                    }
                     <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-400">
                       {{ item.montoBase ? formatCurrency(item.montoBase) : 'Libre' }}
                     </td>
@@ -241,6 +263,7 @@ import {
           </div>
         </div>
       }
+      </div>
     </div>
   `
 })
@@ -249,7 +272,7 @@ export class ExcepcionesReportComponent implements OnInit {
   filtroFechaDesde = '';
   filtroFechaHasta = '';
   filtroEstado = '';
-  // REQ-083: Proveedor, Cartera y Subcartera (con las compras de Tramo Propio)
+  // Proveedor, Cartera y Subcartera (con las compras de Tramo Propio)
   filtroProveedor: number | null = null;
   filtroCartera: number | null = null;
   filtroSubcartera: number | null = null;
@@ -331,8 +354,83 @@ export class ExcepcionesReportComponent implements OnInit {
     this.filtroCompra = null;
   }
 
+  // ==================== DESGLOSE POR COMPRA ====================
+  verPorCompra = signal(false);
+  cargandoCompras = signal(false);
+  datosCompra = signal<ReporteResponse[] | null>(null);
+  /** Filtros de la última búsqueda */
+  private consultado = this.filtrosActuales();
+
+  private filtrosActuales() {
+    return {
+      fechaDesde: this.filtroFechaDesde, fechaHasta: this.filtroFechaHasta, estado: this.filtroEstado,
+      idTenant: this.filtroProveedor, idCartera: this.filtroCartera, idSubcartera: this.filtroSubcartera, compra: this.filtroCompra
+    };
+  }
+
+  comprasDesglose(): string[] {
+    const { idSubcartera, compra } = this.consultado;
+    if (compra || !idSubcartera) return [];
+    return this.comprasCartera.compras()[idSubcartera] ?? [];
+  }
+
+  hayDesglose(): boolean {
+    return this.comprasDesglose().length > 0 && !!this.metricas();
+  }
+
+  porCompra(): boolean {
+    return this.hayDesglose() && this.verPorCompra() && this.datosCompra()?.length === this.comprasDesglose().length;
+  }
+
+  /** Índice de compra de cada excepción */
+  private compraPorId = computed(() => {
+    const mapa = new Map<number, number>();
+    this.datosCompra()?.forEach((r, k) => r.data.forEach(d => mapa.set(d.id, k)));
+    return mapa;
+  });
+
+  compraDe(id: number): string | null {
+    const k = this.compraPorId().get(id);
+    return k === undefined ? null : this.comprasDesglose()[k];
+  }
+
+  indiceCompra(id: number): number {
+    return this.compraPorId().get(id) ?? 0;
+  }
+
+  cambiarVista(porCompra: boolean): void {
+    this.verPorCompra.set(porCompra);
+    if (porCompra && !this.datosCompra()) this.cargarCompras();
+  }
+
+  private cargarCompras(): void {
+    const compras = this.comprasDesglose();
+    if (!compras.length) return;
+    const f = this.consultado;
+    this.cargandoCompras.set(true);
+    forkJoin(compras.map(compra => this.reporteService.getReporte(
+      f.fechaDesde || undefined, f.fechaHasta || undefined, f.idCartera ?? undefined, f.idSubcartera ?? undefined,
+      f.estado || undefined, f.idTenant ?? undefined, compra
+    ))).subscribe({
+      next: r => { this.datosCompra.set(r); this.cargandoCompras.set(false); },
+      error: err => {
+        console.error('Error cargando el desglose por compra:', err);
+        this.cargandoCompras.set(false);
+        this.verPorCompra.set(false);
+        alert('Error al cargar el desglose por compra');
+      }
+    });
+  }
+
+  desgloseTarjeta(campo: keyof ResumenMetricas, tipo: 'num' | 'soles'): ValorCompra[] {
+    return this.comprasDesglose().map((compra, k) =>
+      ({ compra, valor: formatoCompra(this.datosCompra()?.[k]?.metricas?.[campo], tipo) }));
+  }
+
   buscar(): void {
     this.cargando.set(true);
+    this.consultado = this.filtrosActuales();
+    this.datosCompra.set(null);
     this.reporteService.getReporte(
       this.filtroFechaDesde || undefined,
       this.filtroFechaHasta || undefined,
@@ -346,6 +444,7 @@ export class ExcepcionesReportComponent implements OnInit {
         this.data.set(response.data);
         this.metricas.set(response.metricas);
         this.cargando.set(false);
+        this.verPorCompra.set(false);
       },
       error: (error) => {
         console.error('Error cargando reporte:', error);

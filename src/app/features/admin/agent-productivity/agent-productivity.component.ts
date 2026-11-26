@@ -4,7 +4,7 @@ import { FormatService } from '@/shared/services/format.service';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { Chart, registerables } from 'chart.js';
 import {
   ReportService,
@@ -23,9 +23,11 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import {
   ComprasCarteraService,
   OpcionSubcartera,
+  colorCompra,
   leerOpcionCompra,
   opcionesSubcartera
 } from '../../../core/services/compras-cartera.service';
+import { CargandoComprasComponent, DesgloseCompraComponent, ValorCompra, VerCompraComponent } from '../../../shared/ui/desglose-compra.component';
 
 Chart.register(...registerables);
 
@@ -63,7 +65,7 @@ interface TablaCorte {
 @Component({
   selector: 'app-agent-productivity',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, AppNumberPipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppNumberPipe, VerCompraComponent, DesgloseCompraComponent, CargandoComprasComponent],
   templateUrl: './agent-productivity.component.html',
   styleUrls: ['./agent-productivity.component.css']
 })
@@ -123,6 +125,10 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   readonly claseTotalCentro = this.totalBase + 'px-2.5 text-center text-[#5f6c80] dark:text-slate-400';
   readonly claseTotalAgente = this.totalBase + 'sticky left-0 z-[1] min-w-[210px] border-r px-2.5 text-left ';
   readonly claseBarra = 'ap-fill block h-full rounded-full bg-[#2563eb] dark:bg-blue-500';
+  readonly claseThCompra = this.thBase + 'px-2.5 text-right text-[10px] ';
+  readonly claseTdCompra = this.tdBase + 'px-2.5 text-right font-semibold ';
+  readonly claseTotalCompra = this.totalBase + 'px-2.5 text-right ';
+  readonly columnasPartidas = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
   // Tablas de Corte Horario. La columna Cierre va resaltada.
   private readonly corteFondoCierre = 'bg-[rgba(15,23,42,0.035)] dark:bg-white/5 ';
@@ -191,7 +197,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   selectedTenantId: number | null = null;
   selectedCarteraId: number | null = null;
   selectedSubcarteraId: number | null = null;
-  /** REQ-083: compra de Tramo Propio elegida (PRIMERA, SEGUNDA, …); null = toda la subcartera */
+  /** Compra de Tramo Propio elegida (PRIMERA, SEGUNDA, …); null = toda la subcartera */
   selectedCompra: string | null = null;
   /** Lo elegido en el combo Subcartera: '' (todas), '21' o '21:PRIMERA' */
   seleccionSubcartera = '';
@@ -326,7 +332,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     }
   }
 
-  /** REQ-083: cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). */
+  /** Cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). */
   get opcionesSubcartera(): OpcionSubcartera[] {
     return opcionesSubcartera(
       this.subPortfolios.map(s => ({ id: s.id, nombreSubcartera: s.subPortfolioName })),
@@ -338,6 +344,80 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     const { idSubcartera, compra } = leerOpcionCompra(seleccion);
     this.selectedSubcarteraId = idSubcartera;
     this.selectedCompra = compra;
+    this.datosPorCompra = null;
+  }
+
+  // ==================== DESGLOSE POR COMPRA ====================
+  verPorCompra = false;
+  cargandoCompras = false;
+  datosPorCompra: AgentProductivityResponse[] | null = null;
+  readonly colorCompra = colorCompra;
+
+  /** Compras de la subcartera consultada (vacío si ya se eligió una compra). */
+  get comprasDesglose(): string[] {
+    if (this.selectedCompra || !this.selectedSubcarteraId) return [];
+    return this.comprasCartera.compras()[this.selectedSubcarteraId] ?? [];
+  }
+  get hayDesglose(): boolean {
+    return this.comprasDesglose.length > 0 && !!this.productivityData;
+  }
+  get porCompra(): boolean {
+    return this.hayDesglose && this.verPorCompra && this.datosPorCompra?.length === this.comprasDesglose.length;
+  }
+  get partes(): number {
+    return this.porCompra ? this.comprasDesglose.length + 1 : 1;
+  }
+
+  cambiarVista(porCompra: boolean): void {
+    this.verPorCompra = porCompra;
+    if (porCompra && !this.datosPorCompra) this.cargarCompras();
+  }
+
+  private cargarCompras(): void {
+    const compras = this.comprasDesglose;
+    if (!compras.length) return;
+    const { fechaInicio, fechaFin } = this.getDateRange();
+    this.cargandoCompras = true;
+    forkJoin(compras.map(compra => this.reportService.getAgentProductivity(
+      fechaInicio, fechaFin,
+      this.selectedTenantId || undefined, this.selectedCarteraId || undefined, this.selectedSubcarteraId || undefined,
+      this.generacionVentana, this.cierreVentana, compra
+    ))).subscribe({
+      next: datos => { this.datosPorCompra = datos; this.cargandoCompras = false; },
+      error: err => {
+        console.error('Error loading productivity by compra:', err);
+        this.cargandoCompras = false;
+        this.verPorCompra = false;
+        this.error = 'Error al cargar el desglose por compra';
+      }
+    });
+  }
+  agenteCompra(agent: AgentMetrics, i: number): AgentMetrics | null {
+    return this.datosPorCompra?.[i]?.agents.find(a => a.idAgente === agent.idAgente) ?? null;
+  }
+  valorCompra(agent: AgentMetrics, i: number, campo: string): number {
+    const a = this.agenteCompra(agent, i);
+    if (!a) return 0;
+    return campo === 'gestiones' ? this.gestionesDe(a) : ((a as any)[campo] || 0);
+  }
+  totalCompra(i: number, campo: string): number {
+    return this.agentesFiltrados.reduce((s, a) => s + this.valorCompra(a, i, campo), 0);
+  }
+  resumenCompra(i: number): ProductivitySummary | null {
+    return this.datosPorCompra?.[i]?.summary ?? null;
+  }
+  desgloseTarjeta(campo: keyof ProductivitySummary, tipo: 'num' | 'soles' | 'pct'): ValorCompra[] {
+    return this.comprasDesglose.map((compra, i) => {
+      const v = Number(this.resumenCompra(i)?.[campo] ?? 0);
+      const valor = tipo === 'soles' ? 'S/ ' + this.formatMoney(v)
+        : tipo === 'pct' ? (this.fmt.number(v, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) || '0.0') + '%'
+        : (this.fmt.number(v) || '0');
+      return { compra, valor };
+    });
+  }
+  estiloCompra(i: number): Record<string, string> {
+    const c = colorCompra(i);
+    return { color: c.texto, background: c.fondo };
   }
 
   private limpiarSubcartera(): void {
@@ -391,6 +471,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
       const cacheado = this.cache.get(key);
       if (cacheado) {
         this.productivityData = cacheado;
+        this.datosPorCompra = null;
+        this.verPorCompra = false;
         this.actualizarOpcionesGestiones();
         this.error = null;
         setTimeout(() => this.initCharts(), 100);
@@ -416,6 +498,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
         this.actualizarOpcionesGestiones();
         this.cache.set(key, data);
         this.loading = false;
+        this.datosPorCompra = null;
+        this.verPorCompra = false;
         setTimeout(() => this.initCharts(), 100);
       },
       error: (err) => {

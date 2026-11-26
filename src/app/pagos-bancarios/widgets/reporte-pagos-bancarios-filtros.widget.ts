@@ -10,6 +10,7 @@ import { ComprasCarteraService, leerOpcionCompra, opcionesSubcartera } from '../
 
 @Component({
   selector: 'app-reporte-pagos-bancarios-filtros',
+  host: { class: 'block' },
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
@@ -62,14 +63,14 @@ export class ReportePagosBancariosFiltrosWidget implements OnInit {
   private readonly comprasCartera = inject(ComprasCarteraService);
 
   @Input() loading = false;
-  /** REQ-083: muestra una opción por compra (solo el reporte de pagos bancarios; el consolidado no). */
+  /** Muestra una opción por compra (solo el reporte de pagos bancarios; el consolidado no). */
   @Input() conCompras = false;
   @Output() consulta = new EventEmitter<FiltrosReportePagosBancarios>();
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
-  /** REQ-083: cada subcartera y sus compras («TPR - TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
+  /** Cada subcartera y sus compras («TPR - TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
   opcionesSubcartera = computed(() => opcionesSubcartera(
     this.subPortfolios().map(s => ({ id: s.id, nombreSubcartera: `${s.subPortfolioCode} - ${s.subPortfolioName}` })),
     this.conComprasSenal() ? this.comprasCartera.compras() : {}));

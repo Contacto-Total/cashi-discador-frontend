@@ -1,16 +1,28 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
+import { ComprasCarteraService } from '../../core/services/compras-cartera.service';
+import {
+  CargandoComprasComponent, DesgloseCompraComponent, EtiquetaCompraComponent, ValorCompra, VerCompraComponent
+} from '../../shared/ui/desglose-compra.component';
 import { DetallePagoBancario, FiltrosReportePagosBancarios, ReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
 import { ReportePagosBancariosService } from '../services/reporte-pagos-bancarios.service';
 
 @Component({
   selector: 'app-reporte-pagos-bancarios-resultados',
+  host: { class: 'block' },
   standalone: true,
-  imports: [CommonModule, CurrencyPipe],
+  imports: [CommonModule, CurrencyPipe, VerCompraComponent, DesgloseCompraComponent, CargandoComprasComponent, EtiquetaCompraComponent],
   template: `
+    @if (hayDesglose) {
+      <div class="mb-4">
+        <app-ver-compra [porCompra]="verPorCompra" (porCompraChange)="cambiarVista($event)" [cargando]="cargandoCompras" />
+      </div>
+    }
+    <div class="relative">
+    @if (cargandoCompras) { <app-cargando-compras [compras]="comprasDesglose" /> }
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div class="flex flex-col gap-4 border-b border-slate-200 p-4 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between">
         <div class="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2" [class.lg:grid-cols-4]="!reporte.compra" [class.lg:grid-cols-5]="!!reporte.compra">
@@ -19,8 +31,10 @@ import { ReportePagosBancariosService } from '../services/reporte-pagos-bancario
         @if (reporte.compra) {
           <div><p class="text-xs font-medium uppercase text-slate-500">Compra</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.compra }}</p></div>
         }
-        <div><p class="text-xs font-medium uppercase text-slate-500">Total registros</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.totalRegistros }}</p></div>
-        <div><p class="text-xs font-medium uppercase text-slate-500">Monto total</p><p class="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">{{ reporte.montoTotal | currency:'PEN':'symbol-narrow':'1.2-2' }}</p></div>
+        <div><p class="text-xs font-medium uppercase text-slate-500">Total registros</p><p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ reporte.totalRegistros }}</p>
+          @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desglose('totalRegistros')" /> }</div>
+        <div><p class="text-xs font-medium uppercase text-slate-500">Monto total</p><p class="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">{{ reporte.montoTotal | currency:'PEN':'symbol-narrow':'1.2-2' }}</p>
+          @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desglose('montoTotal')" /> }</div>
         </div>
         <button type="button" (click)="descargarExcel()" [disabled]="descargando || reporte.pagos.length === 0" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400">
           @if (descargando) { Generando... } @else { Descargar Excel }
@@ -29,9 +43,9 @@ import { ReportePagosBancariosService } from '../services/reporte-pagos-bancario
       @if (reporte.pagos.length === 0) {
         <div class="p-8 text-center text-sm text-slate-600 dark:text-slate-400">No se encontraron pagos para los filtros seleccionados.</div>
       } @else {
-        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700"><thead class="bg-slate-50 dark:bg-slate-700/50"><tr><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Fecha banco</th><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Documento</th><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Nro. operación</th><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Medio atención</th><th class="px-4 py-3 text-right text-xs font-medium uppercase text-slate-500">Monto banco</th><th class="px-4 py-3 text-center text-xs font-medium uppercase text-slate-500">Estado</th></tr></thead><tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700"><thead class="bg-slate-50 dark:bg-slate-700/50"><tr><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Fecha banco</th><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Documento</th><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Nro. operación</th><th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Medio atención</th>@if (porCompra) { <th class="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500">Compra</th> }<th class="px-4 py-3 text-right text-xs font-medium uppercase text-slate-500">Monto banco</th><th class="px-4 py-3 text-center text-xs font-medium uppercase text-slate-500">Estado</th></tr></thead><tbody class="divide-y divide-slate-200 dark:divide-slate-700">
           @for (pago of reporte.pagos; track pago.id) {
-            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.fechaBanco || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.documento || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.numeroOperacion || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.medioAtencion || '-' }}</td><td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">{{ (pago.montoBanco || 0) | currency:'PEN':'symbol-narrow':'1.2-2' }}</td><td class="px-4 py-3 text-center"><span class="rounded-full px-2 py-1 text-xs font-medium" [class]="pago.procesado ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'">{{ pago.procesado ? 'Conciliado' : 'Pendiente' }}</span></td></tr>
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.fechaBanco || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.documento || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.numeroOperacion || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.medioAtencion || '-' }}</td>@if (porCompra) { <td class="px-4 py-3"><app-etiqueta-compra [compra]="pago.compra" [indice]="indiceCompra(pago.compra)" /></td> }<td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">{{ (pago.montoBanco || 0) | currency:'PEN':'symbol-narrow':'1.2-2' }}</td><td class="px-4 py-3 text-center"><span class="rounded-full px-2 py-1 text-xs font-medium" [class]="pago.procesado ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'">{{ pago.procesado ? 'Conciliado' : 'Pendiente' }}</span></td></tr>
           }
        </tbody></table></div>
         @if (reporte.totalPaginas > 1) {
@@ -45,9 +59,10 @@ import { ReportePagosBancariosService } from '../services/reporte-pagos-bancario
         }
       }
     </section>
+    </div>
   `
 })
-export class ReportePagosBancariosResultadosWidget {
+export class ReportePagosBancariosResultadosWidget implements OnChanges {
   @Input({ required: true }) reporte!: ReportePagosBancarios;
   /** Filtros de la consulta: el Excel pide con ellos todas las páginas, no solo la que se ve. */
   @Input() filtros: FiltrosReportePagosBancarios | null = null;
@@ -55,6 +70,75 @@ export class ReportePagosBancariosResultadosWidget {
   @Output() paginaCambiada = new EventEmitter<number>();
 
   descargando = false;
+
+  // ==================== DESGLOSE POR COMPRA ====================
+  private readonly comprasCartera = inject(ComprasCarteraService);
+  verPorCompra = false;
+  cargandoCompras = false;
+  totalesCompra: { totalRegistros: number; montoTotal: number }[] | null = null;
+
+  ngOnInit(): void {
+    this.comprasCartera.cargar();
+  }
+
+  ngOnChanges(cambios: SimpleChanges): void {
+    if (cambios['filtros'] && !cambios['filtros'].firstChange) {
+      this.totalesCompra = null;
+      this.verPorCompra = false;
+    }
+  }
+
+  get comprasDesglose(): string[] {
+    if (!this.filtros || this.filtros.compra) return [];
+    return this.comprasCartera.compras()[this.filtros.subcarteraId] ?? [];
+  }
+
+  get hayDesglose(): boolean {
+    return this.comprasDesglose.length > 0;
+  }
+
+  get porCompra(): boolean {
+    return this.hayDesglose && this.verPorCompra && this.totalesCompra?.length === this.comprasDesglose.length;
+  }
+
+  cambiarVista(porCompra: boolean): void {
+    this.verPorCompra = porCompra;
+    if (porCompra && !this.totalesCompra) this.cargarCompras();
+  }
+
+  private cargarCompras(): void {
+    const filtros = this.filtros;
+    const compras = this.comprasDesglose;
+    if (!filtros || !compras.length) return;
+    this.cargandoCompras = true;
+    forkJoin(compras.map(compra => this.reportePagosBancariosService.obtenerReporte({ ...filtros, compra }, 0, 1))).subscribe({
+      next: r => {
+        this.totalesCompra = r.map(x => ({ totalRegistros: x.totalRegistros, montoTotal: x.montoTotal }));
+        this.cargandoCompras = false;
+      },
+      error: err => {
+        console.error('Error cargando el desglose por compra:', err);
+        this.cargandoCompras = false;
+        this.verPorCompra = false;
+      }
+    });
+  }
+
+  indiceCompra(compra: string | null | undefined): number {
+    return compra ? Math.max(0, this.comprasDesglose.indexOf(compra)) : 0;
+  }
+
+  desglose(campo: 'totalRegistros' | 'montoTotal'): ValorCompra[] {
+    return this.comprasDesglose.map((compra, k) => {
+      const v = this.totalesCompra?.[k]?.[campo] ?? 0;
+      return {
+        compra,
+        valor: campo === 'montoTotal'
+          ? 'S/ ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : v.toLocaleString('en-US')
+      };
+    });
+  }
 
   cambiarPagina(pagina: number): void {
     if (pagina >= 0 && pagina < this.reporte.totalPaginas) {
@@ -88,7 +172,7 @@ export class ReportePagosBancariosResultadosWidget {
 
       // Solo cartera propia trae periodo de compra (cartera nueva o antigua).
       const conPeriodoCompra = this.reporte.incluyePeriodoCompra === true;
-      // REQ-083: columna «Compra» al final, con el orden_compra del cliente.
+      // Columna «Compra» al final, con el orden_compra del cliente.
       const conCompra = this.reporte.incluyeCompra === true;
       const columnas = 13 + (conPeriodoCompra ? 1 : 0) + (conCompra ? 1 : 0);
       const ultimaColumna = String.fromCharCode('A'.charCodeAt(0) + columnas - 1);

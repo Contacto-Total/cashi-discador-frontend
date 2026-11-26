@@ -15,12 +15,14 @@ import {
   leerOpcionCompra,
   opcionesSubcartera
 } from '../../../core/services/compras-cartera.service';
+import { forkJoin } from 'rxjs';
+import { CargandoComprasComponent, DesgloseCompraComponent, EtiquetaCompraComponent, ValorCompra, VerCompraComponent } from '../../../shared/ui/desglose-compra.component';
 import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-compromisos-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, AppDatePipe, AppNumberPipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppDatePipe, AppNumberPipe, VerCompraComponent, DesgloseCompraComponent, EtiquetaCompraComponent, CargandoComprasComponent],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->
@@ -204,98 +206,115 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
           </p>
         }
       </div>
+      @if (hayDesglose()) {
+        <div class="mb-3">
+          <app-ver-compra [porCompra]="verPorCompra()" (porCompraChange)="cambiarVista($event)" [cargando]="cargandoCompras()" />
+        </div>
+      }
 
+      <div class="relative">
+      @if (cargandoCompras()) { <app-cargando-compras [compras]="comprasDesglose()" /> }
       <!-- Metricas -->
       @if (metricas()) {
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <lucide-angular name="handshake" [size]="24" class="text-purple-600 dark:text-purple-400"></lucide-angular>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 [&>*]:min-w-0">
+          <div class="@container bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex flex-col items-start gap-2 @min-[13rem]:flex-row @min-[13rem]:items-center @min-[13rem]:gap-3">
+              <div class="shrink-0 p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <lucide-angular name="handshake" [size]="18" class="text-purple-600 dark:text-purple-400"></lucide-angular>
               </div>
-              <div>
-                <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ metricas()!.totalPromesas }}</p>
+              <div class="min-w-0">
+                <p class="text-2xl font-bold leading-tight tabular-nums text-purple-600 dark:text-purple-400">{{ metricas()!.totalPromesas | appNumber }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Total Compromisos</p>
               </div>
             </div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('totalPromesas', false)" /> }
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <lucide-angular name="badge-check" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
+          <div class="@container bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex flex-col items-start gap-2 @min-[13rem]:flex-row @min-[13rem]:items-center @min-[13rem]:gap-3">
+              <div class="shrink-0 p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <lucide-angular name="badge-check" [size]="18" class="text-green-600 dark:text-green-400"></lucide-angular>
               </div>
-              <div>
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ metricas()!.promesasPagadas }}</p>
+              <div class="min-w-0">
+                <p class="text-2xl font-bold leading-tight tabular-nums text-green-600 dark:text-green-400">{{ metricas()!.promesasPagadas | appNumber }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Cuotas Pagadas</p>
               </div>
             </div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('promesasPagadas', false)" /> }
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <lucide-angular name="clock" [size]="24" class="text-yellow-600 dark:text-yellow-400"></lucide-angular>
+          <div class="@container bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex flex-col items-start gap-2 @min-[13rem]:flex-row @min-[13rem]:items-center @min-[13rem]:gap-3">
+              <div class="shrink-0 p-1.5 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                <lucide-angular name="clock" [size]="18" class="text-yellow-600 dark:text-yellow-400"></lucide-angular>
               </div>
-              <div>
-                <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ metricas()!.promesasPendientes }}</p>
+              <div class="min-w-0">
+                <p class="text-2xl font-bold leading-tight tabular-nums text-yellow-600 dark:text-yellow-400">{{ metricas()!.promesasPendientes | appNumber }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Cuotas Pendientes</p>
               </div>
             </div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('promesasPendientes', false)" /> }
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <lucide-angular name="alert-triangle" [size]="24" class="text-red-600 dark:text-red-400"></lucide-angular>
+          <div class="@container bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex flex-col items-start gap-2 @min-[13rem]:flex-row @min-[13rem]:items-center @min-[13rem]:gap-3">
+              <div class="shrink-0 p-1.5 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <lucide-angular name="alert-triangle" [size]="18" class="text-red-600 dark:text-red-400"></lucide-angular>
               </div>
-              <div>
-                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ metricas()!.promesasVencidas }}</p>
+              <div class="min-w-0">
+                <p class="text-2xl font-bold leading-tight tabular-nums text-red-600 dark:text-red-400">{{ metricas()!.promesasVencidas | appNumber }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Cuotas Vencidas</p>
               </div>
             </div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('promesasVencidas', false)" /> }
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <lucide-angular name="clipboard-list" [size]="24" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+          <div class="@container bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex flex-col items-start gap-2 @min-[13rem]:flex-row @min-[13rem]:items-center @min-[13rem]:gap-3">
+              <div class="shrink-0 p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <lucide-angular name="clipboard-list" [size]="18" class="text-blue-600 dark:text-blue-400"></lucide-angular>
               </div>
-              <div>
-                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ metricas()!.gestionesCompletadas }}</p>
+              <div class="min-w-0">
+                <p class="text-2xl font-bold leading-tight tabular-nums text-blue-600 dark:text-blue-400">{{ metricas()!.gestionesCompletadas | appNumber }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Gestiones</p>
               </div>
             </div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('gestionesCompletadas', false)" /> }
           </div>
 
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <lucide-angular name="x-circle" [size]="24" class="text-gray-600 dark:text-gray-400"></lucide-angular>
+          <div class="@container bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+            <div class="flex flex-col items-start gap-2 @min-[13rem]:flex-row @min-[13rem]:items-center @min-[13rem]:gap-3">
+              <div class="shrink-0 p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <lucide-angular name="x-circle" [size]="18" class="text-gray-600 dark:text-gray-400"></lucide-angular>
               </div>
-              <div>
-                <p class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ metricas()!.gestionesAnuladas }}</p>
+              <div class="min-w-0">
+                <p class="text-2xl font-bold leading-tight tabular-nums text-gray-600 dark:text-gray-400">{{ metricas()!.gestionesAnuladas | appNumber }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Anuladas</p>
               </div>
             </div>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('gestionesAnuladas', false)" /> }
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 [&>*]:min-w-0">
+          <div class="bg-linear-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-purple-100 uppercase">Monto Cuotas del Rango</p>
             <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPromesas | appNumber:'1.2-2' }}</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('montoTotalPromesas', true)" [sobreColor]="true" /> }
           </div>
-          <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
+          <div class="bg-linear-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-green-100 uppercase">Monto Pagado</p>
             <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagado | appNumber:'1.2-2' }}</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('montoTotalPagado', true)" [sobreColor]="true" /> }
           </div>
-          <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-md p-4 text-white">
+          <div class="bg-linear-to-r from-red-500 to-red-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-red-100 uppercase">Monto Pendiente</p>
             <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPendiente | appNumber:'1.2-2' }}</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('montoTotalPendiente', true)" [sobreColor]="true" /> }
           </div>
         </div>
       }
+      </div>
 
       <!-- Tabla -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
@@ -309,6 +328,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cliente</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cartera</th>
+                @if (porCompra()) { <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Compra</th> }
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Telefono</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tipo</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Variable PDP</th>
@@ -321,14 +341,14 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="13" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td [attr.colspan]="porCompra() ? 14 : 13" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="loader-2" [size]="32" class="animate-spin mx-auto mb-2"></lucide-angular>
                     <p>Cargando datos...</p>
                   </td>
                 </tr>
               } @else if (data().length === 0) {
                 <tr>
-                  <td colspan="13" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td [attr.colspan]="porCompra() ? 14 : 13" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
                     <p>No hay compromisos para mostrar</p>
                     <p class="text-xs mt-1">Selecciona las fechas y presiona "Buscar"</p>
@@ -343,6 +363,15 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                     <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.nombreCliente | slice:0:20 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreAgente | slice:0:15 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreCartera | slice:0:15 }}</td>
+                    @if (porCompra()) {
+                      <td class="px-3 py-2">
+                        @if (cargandoCompras()) {
+                          <span class="block h-2.5 w-14 animate-pulse rounded-full bg-slate-200 motion-reduce:animate-none dark:bg-slate-700"></span>
+                        } @else {
+                          <app-etiqueta-compra [compra]="compraDe(item.id)" [indice]="indiceCompra(item.id)" />
+                        }
+                      </td>
+                    }
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-mono">{{ item.telefonoContacto || '-' }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.rutaNivel2 || '-' }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.campoMontoOrigen || '-' }}</td>
@@ -427,7 +456,7 @@ export class CompromisosReportComponent implements OnInit {
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
-  /** REQ-083: cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
+  /** Cada subcartera y sus compras («TRAMO PROPIO · PRIMERA»). Valor '21' o '21:PRIMERA'. */
   opcionesSubcartera = computed(() => opcionesSubcartera(this.subcarteras(), this.comprasCartera.compras()));
   seleccionSubcartera = '';
   tiposCompromiso = signal<string[]>([]);
@@ -512,6 +541,86 @@ export class CompromisosReportComponent implements OnInit {
     const { idSubcartera, compra } = leerOpcionCompra(seleccion);
     this.filtros.idSubcartera = idSubcartera;
     this.filtros.compra = compra;
+    this.metricasCompra.set(null);
+  }
+
+  // ==================== DESGLOSE POR COMPRA ====================
+  verPorCompra = signal(false);
+  cargandoCompras = signal(false);
+  metricasCompra = signal<ResumenMetricas[] | null>(null);
+  /** Subcartera y compra de la última búsqueda */
+  private consultado = { idSubcartera: null as number | null, compra: null as string | null };
+
+  comprasDesglose(): string[] {
+    const { idSubcartera, compra } = this.consultado;
+    if (compra || idSubcartera === null) return [];
+    return this.comprasCartera.compras()[idSubcartera] ?? [];
+  }
+
+  hayDesglose(): boolean {
+    return this.comprasDesglose().length > 0 && !!this.metricas();
+  }
+
+  porCompra(): boolean {
+    return this.hayDesglose() && this.verPorCompra() && this.metricasCompra()?.length === this.comprasDesglose().length;
+  }
+
+  /** Compra de cada fila de la página mostrada (id → índice de compra) */
+  private compraFilas = signal<Map<number, number>>(new Map());
+
+  compraDe(id: number): string | null {
+    const k = this.compraFilas().get(id);
+    return k === undefined ? null : this.comprasDesglose()[k];
+  }
+
+  indiceCompra(id: number): number {
+    return this.compraFilas().get(id) ?? 0;
+  }
+
+  cambiarVista(porCompra: boolean): void {
+    this.verPorCompra.set(porCompra);
+    if (porCompra && !this.metricasCompra()) this.cargarCompras();
+  }
+
+  /**
+   * Trae cada compra hasta la página mostrada: con el mismo orden, toda fila de esta
+   * página aparece en las primeras (página + 1) × tamaño filas de su compra.
+   */
+  private cargarCompras(): void {
+    const compras = this.comprasDesglose();
+    if (!compras.length) return;
+    const f = this.filtros;
+    const hasta = (this.currentPage() + 1) * this.pageSize;
+    this.cargandoCompras.set(true);
+    forkJoin(compras.map(compra => this.compromisosService.getReporte(
+      f.fechaDesde, f.fechaHasta, f.idCartera || undefined, this.consultado.idSubcartera || undefined, f.idAgente || undefined,
+      f.estadoPago || undefined, f.rutaNivel2 || undefined, f.documento || undefined, f.tipoPromesa || undefined, compra, 0, hasta
+    ))).subscribe({
+      next: r => {
+        const mapa = new Map<number, number>();
+        r.forEach((x, k) => x.data.forEach(d => mapa.set(d.id, k)));
+        this.compraFilas.set(mapa);
+        this.metricasCompra.set(r.map(x => x.metricas));
+        this.cargandoCompras.set(false);
+      },
+      error: err => {
+        console.error('Error cargando el desglose por compra:', err);
+        this.cargandoCompras.set(false);
+        this.verPorCompra.set(false);
+        alert('Error al cargar el desglose por compra');
+      }
+    });
+  }
+
+  desgloseTarjeta(campo: keyof ResumenMetricas, soles: boolean): ValorCompra[] {
+    return this.comprasDesglose().map((compra, k) => {
+      const v = Number(this.metricasCompra()?.[k]?.[campo] ?? 0);
+      return {
+        compra,
+        valor: soles ? 'S/ ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                     : v.toLocaleString('en-US')
+      };
+    });
   }
 
   onCarteraChange(idCartera: number | null): void {
@@ -532,7 +641,10 @@ export class CompromisosReportComponent implements OnInit {
       return;
     }
     this.currentPage.set(0);
+    this.consultado = { idSubcartera: this.filtros.idSubcartera, compra: this.filtros.compra };
+    this.metricasCompra.set(null);
     this.loadPage(0);
+    this.verPorCompra.set(false);
   }
 
   goToPage(page: number): void {
@@ -564,6 +676,8 @@ export class CompromisosReportComponent implements OnInit {
         this.totalPages.set(response.totalPages);
         this.currentPage.set(response.page);
         this.loading.set(false);
+        // Al cambiar de página en «Por compra», se ubica la compra de las filas nuevas
+        if (this.porCompra()) this.cargarCompras();
       },
       error: (error) => {
         console.error('Error cargando reporte:', error);

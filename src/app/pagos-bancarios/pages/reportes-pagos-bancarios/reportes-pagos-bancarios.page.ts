@@ -33,6 +33,7 @@ export class ReportesPagosBancariosPage {
 
   consultar(filtros: FiltrosReportePagosBancarios): void {
     this.filtros = filtros;
+    this.reporte.set(null);
     this.cargarPagina(0);
   }
 
@@ -44,7 +45,7 @@ export class ReportesPagosBancariosPage {
     if (!this.filtros) return;
     this.loading.set(true);
     this.error.set(null);
-    this.reporte.set(null);
+    // Al cambiar de página se mantiene el resultado
     this.reportePagosBancariosService.obtenerReporte(this.filtros, pagina).subscribe({
       next: (reporte) => { this.reporte.set(reporte); this.loading.set(false); },
       error: (error) => { this.error.set(error.error?.mensaje || error.error?.message || 'No se pudo consultar el reporte de pagos bancarios.'); this.loading.set(false); }

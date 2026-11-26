@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import {
   ProduccionReportService,
   ReporteProduccionDTO,
+  ReporteProduccionResponse,
   ResumenProduccion,
   MetaReporteProduccion,
   TipoMetaReporteProduccion,
@@ -15,10 +16,12 @@ import { ComisionesService } from '../../../comisiones/services/comisiones.servi
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { CargandoComprasComponent, DesgloseCompraComponent, ValorCompra, VerCompraComponent } from '../../../shared/ui/desglose-compra.component';
 import { AuthService } from '../../../core/services/auth.service';
 import {
   ComprasCarteraService,
   ComprasPorSubcartera,
+  colorCompra,
   leerOpcionCompra,
   valorOpcionCompra
 } from '../../../core/services/compras-cartera.service';
@@ -26,7 +29,7 @@ import {
 @Component({
   selector: 'app-produccion-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe, VerCompraComponent, DesgloseCompraComponent, CargandoComprasComponent],
   template: `
     <div class="min-h-screen bg-gray-100 p-4 dark:bg-gray-900 md:p-6">
       <div class="mx-auto flex max-w-[1800px] flex-col items-start gap-4 xl:flex-row">
@@ -134,7 +137,7 @@ import {
 
       <!-- Métricas Resumen -->
       @if (resumen()) {
-        <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 [&>*]:min-w-0">
           <!-- Total Meta -->
           <div class="rounded-xl bg-gradient-to-r from-slate-800 to-slate-950 p-3 text-white shadow-md">
             <p class="text-xs font-semibold text-white uppercase">Meta Total</p>
@@ -145,24 +148,28 @@ import {
           <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-blue-100 uppercase">Generación Hoy</p>
              <p class="text-lg font-bold">S/ {{ resumen()!.totalGeneracion | number:'1.2-2' }}</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('totalGeneracion', 'soles')" [sobreColor]="true" /> }
           </div>
 
           <!-- Proyectado -->
           <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-amber-100 uppercase">Proyectado Hoy</p>
              <p class="text-lg font-bold">S/ {{ resumen()!.totalProyectado | number:'1.2-2' }}</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('totalProyectado', 'soles')" [sobreColor]="true" /> }
           </div>
 
           <!-- Pagos -->
           <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-green-100 uppercase">Pagos Hoy</p>
              <p class="text-lg font-bold">S/ {{ resumen()!.totalPagos | number:'1.2-2' }}</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('totalPagos', 'soles')" [sobreColor]="true" /> }
           </div>
 
           <!-- Puntos Global -->
           <div class="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-md p-3 text-white">
             <p class="text-xs text-teal-100 uppercase">Puntos Global</p>
              <p class="text-lg font-bold">{{ resumen()!.puntosGlobalPct | number:'1.2-2' }}%</p>
+            @if (porCompra() || cargandoCompras()) { <app-desglose-compra [cargando]="cargandoCompras()" [valores]="desgloseTarjeta('puntosGlobalPct', 'pct')" [sobreColor]="true" /> }
           </div>
 
           <!-- Total Carteras -->
@@ -171,7 +178,7 @@ import {
               <div class="p-1.5 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
                 <lucide-angular name="layers" [size]="20" class="text-teal-600 dark:text-teal-400"></lucide-angular>
               </div>
-              <div>
+              <div class="min-w-0">
                 <p class="text-xl font-bold text-gray-800 dark:text-white">{{ resumen()!.totalCarteras }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Carteras</p>
               </div>
@@ -179,33 +186,51 @@ import {
           </div>
         </div>
       }
+      @if (hayDesglose()) {
+        <div class="mb-3">
+          <app-ver-compra [porCompra]="verPorCompra()" (porCompraChange)="cambiarVista($event)" [cargando]="cargandoCompras()" />
+        </div>
+      }
 
       <!-- Tabla -->
+      <div class="relative">
+      @if (cargandoCompras()) { <app-cargando-compras [compras]="comprasDesglose()" /> }
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cartera</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Subcartera</th>
-                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</th>
-                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Generación Hoy</th>
-                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Proyectado Hoy</th>
-                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagos Hoy</th>
-                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Puntos Hoy %</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.rowspan]="porCompra() ? 2 : null">Cartera</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.rowspan]="porCompra() ? 2 : null">Subcartera</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.rowspan]="porCompra() ? 2 : null"
+                    [attr.title]="porCompra() ? 'La meta es una sola para toda la subcartera' : null">Meta {{ filtros.tipoMeta === 'INTERNA' ? 'Interna' : 'SIP' }}</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.colspan]="partes()" [class.text-center]="porCompra()">Generación Hoy</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.colspan]="partes()" [class.text-center]="porCompra()">Proyectado Hoy</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.colspan]="partes()" [class.text-center]="porCompra()">Pagos Hoy</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" [attr.colspan]="partes()">Puntos Hoy %</th>
               </tr>
+              @if (porCompra()) {
+                <tr>
+                  @for (col of [1, 2, 3, 4]; track col) {
+                    @for (c of comprasDesglose(); track c; let k = $index) {
+                      <th class="px-3 py-1.5 text-right text-[10px] font-bold uppercase" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ c }}</th>
+                    }
+                    <th class="px-3 py-1.5 text-right text-[10px] font-bold uppercase text-gray-600 dark:text-gray-300">Total</th>
+                  }
+                </tr>
+              }
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td [attr.colspan]="3 + 4 * partes()" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="loader-2" [size]="32" class="animate-spin mx-auto mb-2"></lucide-angular>
                     <p>Cargando datos...</p>
                   </td>
                 </tr>
               } @else if (data().length === 0) {
                 <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td [attr.colspan]="3 + 4 * partes()" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
                     <p>No hay datos de producción para mostrar</p>
                     <p class="text-xs mt-1">Selecciona los filtros y presiona "Buscar"</p>
@@ -219,15 +244,27 @@ import {
                     <td class="px-3 py-2 text-right text-gray-900 dark:text-white font-semibold">
                       S/ {{ item.meta | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">S/ {{ filaCompra(item, k)?.generacionHoy ?? 0 | number:'1.2-2' }}</td>
+                    } }
                     <td class="px-3 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold">
                       S/ {{ item.generacionHoy | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">S/ {{ filaCompra(item, k)?.proyectadoHoy ?? 0 | number:'1.2-2' }}</td>
+                    } }
                     <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400 font-semibold">
                       S/ {{ item.proyectadoHoy | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">S/ {{ filaCompra(item, k)?.pagosHoy ?? 0 | number:'1.2-2' }}</td>
+                    } }
                     <td class="px-3 py-2 text-right text-green-600 dark:text-green-400 font-semibold">
                       S/ {{ item.pagosHoy | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ filaCompra(item, k)?.puntosHoyPct ?? 0 | number:'1.2-2' }}%</td>
+                    } }
                     <td class="px-3 py-2 text-center">
                       <span class="text-sm font-bold" [class]="getPuntosTextClass(item.puntosHoyPct)">
                         {{ item.puntosHoyPct | number:'1.2-2' }}%
@@ -243,15 +280,27 @@ import {
                     <td class="px-3 py-2 text-right text-gray-900 dark:text-white">
                       S/ {{ resumen()!.totalMeta | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">S/ {{ resumenCompra(k)?.totalGeneracion ?? 0 | number:'1.2-2' }}</td>
+                    } }
                     <td class="px-3 py-2 text-right text-blue-700 dark:text-blue-300">
                       S/ {{ resumen()!.totalGeneracion | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">S/ {{ resumenCompra(k)?.totalProyectado ?? 0 | number:'1.2-2' }}</td>
+                    } }
                     <td class="px-3 py-2 text-right text-amber-700 dark:text-amber-300">
                       S/ {{ resumen()!.totalProyectado | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">S/ {{ resumenCompra(k)?.totalPagos ?? 0 | number:'1.2-2' }}</td>
+                    } }
                     <td class="px-3 py-2 text-right text-green-700 dark:text-green-300">
                       S/ {{ resumen()!.totalPagos | number:'1.2-2' }}
                     </td>
+                    @if (porCompra()) { @for (c of comprasDesglose(); track c; let k = $index) {
+                      <td class="px-3 py-2 text-right font-semibold" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ resumenCompra(k)?.puntosGlobalPct ?? 0 | number:'1.2-2' }}%</td>
+                    } }
                     <td class="px-3 py-2 text-center text-teal-700 dark:text-teal-300">
                       {{ resumen()!.puntosGlobalPct | number:'1.2-2' }}%
                     </td>
@@ -270,6 +319,7 @@ import {
             </p>
           </div>
         }
+      </div>
       </div>
       </main>
 
@@ -358,8 +408,69 @@ export class ProduccionReportComponent implements OnInit {
    */
   seleccionSubcartera = '';
 
-  /** REQ-083: compras de cada subcartera, de la base (orden_compra). */
+  /** Compras de cada subcartera, de la base (orden_compra). */
   compras = signal<ComprasPorSubcartera>({});
+
+  // ==================== DESGLOSE POR COMPRA ====================
+  verPorCompra = signal(false);
+  cargandoCompras = signal(false);
+  datosCompra = signal<ReporteProduccionResponse[] | null>(null);
+  readonly colorCompra = colorCompra;
+
+  /** Compras de la subcartera consultada (vacío si ya se eligió una compra). */
+  comprasDesglose(): string[] {
+    if (this.filtros.compra || this.filtros.idSubcartera === null) return [];
+    return this.compras()[this.filtros.idSubcartera] ?? [];
+  }
+
+  hayDesglose(): boolean {
+    return this.comprasDesglose().length > 0 && this.data().length > 0;
+  }
+
+  porCompra(): boolean {
+    return this.hayDesglose() && this.verPorCompra() && this.datosCompra()?.length === this.comprasDesglose().length;
+  }
+
+  partes(): number {
+    return this.porCompra() ? this.comprasDesglose().length + 1 : 1;
+  }
+
+  cambiarVista(porCompra: boolean): void {
+    this.verPorCompra.set(porCompra);
+    if (porCompra && !this.datosCompra()) this.cargarCompras();
+  }
+
+  private cargarCompras(): void {
+    const compras = this.comprasDesglose();
+    if (!compras.length) return;
+    const base = this.construirFiltros();
+    this.cargandoCompras.set(true);
+    forkJoin(compras.map(compra => this.produccionService.getReporte({ ...base, compra }))).subscribe({
+      next: datos => { this.datosCompra.set(datos); this.cargandoCompras.set(false); },
+      error: err => {
+        console.error('Error cargando el desglose por compra:', err);
+        this.cargandoCompras.set(false);
+        this.verPorCompra.set(false);
+        alert('Error al cargar el desglose por compra');
+      }
+    });
+  }
+
+  filaCompra(item: ReporteProduccionDTO, k: number): ReporteProduccionDTO | undefined {
+    return this.datosCompra()?.[k]?.data.find(d => d.idSubcartera === item.idSubcartera);
+  }
+
+  resumenCompra(k: number): ResumenProduccion | undefined {
+    return this.datosCompra()?.[k]?.resumen;
+  }
+
+  desgloseTarjeta(campo: keyof ResumenProduccion, tipo: 'soles' | 'pct'): ValorCompra[] {
+    const fmt = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return this.comprasDesglose().map((compra, k) => {
+      const v = Number(this.resumenCompra(k)?.[campo] ?? 0);
+      return { compra, valor: tipo === 'soles' ? 'S/ ' + fmt(v) : fmt(v) + '%' };
+    });
+  }
 
   constructor(
     private produccionService: ProduccionReportService,
@@ -431,6 +542,8 @@ export class ProduccionReportComponent implements OnInit {
         this.data.set(response.data);
         this.resumen.set(response.resumen);
         this.loading.set(false);
+        this.datosCompra.set(null);
+        this.verPorCompra.set(false);
       },
       error: (error) => {
         console.error('Error cargando reporte:', error);
@@ -590,6 +703,7 @@ export class ProduccionReportComponent implements OnInit {
   }
 
   private limpiarResultados(): void {
+    this.datosCompra.set(null);
     this.data.set([]);
     this.resumen.set(null);
     this.metas.set([]);

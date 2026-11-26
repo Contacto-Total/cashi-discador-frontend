@@ -95,7 +95,7 @@ export interface GestionesFiltros {
   fechaHasta?: string;
   idCartera?: number | null;
   idSubcartera?: number | null;
-  /** REQ-083: orden_compra de la subcartera (PRIMERA, SEGUNDA, …); null = toda la subcartera */
+  /** Orden_compra de la subcartera (PRIMERA, SEGUNDA, …); null = toda la subcartera */
   compra?: string | null;
   idAgentes?: number[];
   idCampana?: number | null;

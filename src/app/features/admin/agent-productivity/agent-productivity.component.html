@@ -4,7 +4,7 @@
   <!-- ============ Cabecera ============ -->
   <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
     <div>
-      <h1 class="!m-0 text-xl font-extrabold tracking-[-0.015em]">Productividad de Asesores</h1>
+      <h1 class="m-0! text-xl font-extrabold tracking-[-0.015em]">Productividad de Asesores</h1>
       <p class="mt-1 text-[12.5px] text-[#5f6c80] dark:text-slate-400">{{ subtitulo }}</p>
     </div>
     <button type="button" (click)="loadData(true)" [disabled]="anyLoading"
@@ -117,16 +117,18 @@
       <div [class]="'ap-fade transition-opacity duration-200 ' + (loading ? 'opacity-60' : '')" [attr.aria-busy]="loading">
 
         <!-- Indicadores -->
-        <div class="mb-2.5 grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
+        <div class="mb-2.5 grid gap-2.5 grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))]">
           <div [class]="claseKpi" [style.--i]="0">
             <span [class]="claseLabel">Total gestiones</span>
             <span [class]="claseKpiV">{{ summary?.totalGestiones | appNumber }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('totalGestiones', 'num')" /> }
             <span [class]="claseKpiS">de {{ summary?.totalAgentes | appNumber }} asesores</span>
           </div>
 
           <div [class]="claseKpi" [style.--i]="1">
             <span [class]="claseLabel">Promesas generadas</span>
             <span [class]="claseKpiV">{{ summary?.totalPromesas | appNumber }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('totalPromesas', 'num')" /> }
             <span [class]="claseKpiS + ' flex items-center gap-1.5'">
               <span [class]="'inline-flex items-center gap-1 font-bold tabular-nums ' + getChangeClass(summary?.cambioPromesas)">
                 <lucide-angular [name]="getChangeIcon(summary?.cambioPromesas)" [size]="12"></lucide-angular>
@@ -139,12 +141,14 @@
           <div [class]="claseKpi" [style.--i]="2">
             <span [class]="claseLabel">Monto comprometido</span>
             <span [class]="claseKpiV">S/ {{ formatMoney(summary?.montoTotalPromesas || 0) }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('montoTotalPromesas', 'soles')" /> }
             <span [class]="claseKpiS">Cuotas que vencen en el periodo</span>
           </div>
 
           <div [class]="claseKpi" [style.--i]="3">
             <span [class]="claseLabel">% Efectividad proyección</span>
             <span [class]="claseKpiV">{{ summary?.efectividadProyeccion | appNumber:'1.1-1' }}%</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('efectividadProyeccion', 'pct')" /> }
             <span [class]="claseKpiS">{{ etiquetaRecaudo }} / Proyección</span>
             <span [class]="claseMeter"><i [class]="claseBarra" [style.transform]="barra(summary?.efectividadProyeccion)"></i></span>
           </div>
@@ -152,6 +156,7 @@
           <div [class]="claseKpi" [style.--i]="4">
             <span [class]="claseLabel">% Tasa de cierre</span>
             <span [class]="claseKpiV">{{ summary?.efectividadGeneral | appNumber:'1.1-1' }}%</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('efectividadGeneral', 'pct')" /> }
             <span [class]="claseKpiS">Promesas / Contactos directos</span>
             <span [class]="claseMeter"><i [class]="claseBarra" [style.transform]="barra(summary?.efectividadGeneral)"></i></span>
           </div>
@@ -164,21 +169,25 @@
           <div [class]="claseProy">
             <span [class]="claseLabel">Monto rotas</span>
             <span [class]="claseProyV + ' text-[#b45309] dark:text-amber-400'">S/ {{ formatMoney(summary?.rotasMonto || 0) }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('rotasMonto', 'soles')" /> }
             <span [class]="claseProyS">{{ summary?.rotasPdp | appNumber }} PDP · {{ summary?.rotasCantidad | appNumber }} cuotas</span>
           </div>
           <div [class]="claseProy">
             <span [class]="claseLabel">Proyección colchón al cierre</span>
             <span [class]="claseProyV">S/ {{ formatMoney(summary?.colchonMonto || 0) }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('colchonMonto', 'soles')" /> }
             <span [class]="claseProyS">{{ summary?.colchonCantidad | appNumber }} cuotas</span>
           </div>
           <div [class]="claseProy">
             <span [class]="claseLabel">Proyección al cierre</span>
             <span [class]="claseProyV">S/ {{ formatMoney(summary?.cierreMonto || 0) }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('cierreMonto', 'soles')" /> }
             <span [class]="claseProyS">{{ summary?.cierreCantidad | appNumber }} acuerdos</span>
           </div>
           <div [class]="claseProy">
             <span [class]="claseLabel">Proyección mañana</span>
             <span [class]="claseProyV">S/ {{ formatMoney(summary?.mananaMonto || 0) }}</span>
+            @if (porCompra || cargandoCompras) { <app-desglose-compra [cargando]="cargandoCompras" [valores]="desgloseTarjeta('mananaMonto', 'soles')" /> }
             <span [class]="claseProyS">{{ summary?.mananaCantidad | appNumber }} cuotas</span>
           </div>
         </div>
@@ -219,6 +228,9 @@
               }
             </div>
           </div>
+          @if (hayDesglose) {
+            <app-ver-compra [porCompra]="verPorCompra" (porCompraChange)="cambiarVista($event)" [cargando]="cargandoCompras" />
+          }
 
           <span class="ml-auto text-[12px] text-[#5f6c80] dark:text-slate-400">
             <b class="font-bold tabular-nums text-[#0f172a] dark:text-slate-100">{{ agentesFiltrados.length }}</b>
@@ -228,43 +240,56 @@
         </div>
 
         <!-- Tabla -->
-        <div class="overflow-x-auto rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div class="relative">
+        @if (cargandoCompras) { <app-cargando-compras [compras]="comprasDesglose" /> }
+        <div [class]="'overflow-x-auto rounded-xl border border-[#e6e9ee] bg-white transition-opacity duration-200 dark:border-slate-800 dark:bg-slate-900 ' + (cargandoCompras ? 'opacity-60' : '')"
+             [attr.aria-busy]="cargandoCompras">
           <table class="w-full border-separate border-spacing-0 text-[12px] tabular-nums">
             <thead>
               <tr>
                 <th [class]="claseThAgente + 'h-[26px]'"></th>
-                <th colspan="2" [class]="claseGrupo + 'text-[#2563eb] dark:text-blue-400'">Actividad</th>
-                <th colspan="3" [class]="claseGrupo + 'text-[#4a3aa7] dark:text-violet-300'">
+                <th [attr.colspan]="2 * partes" [class]="claseGrupo + 'text-[#2563eb] dark:text-blue-400'">Actividad</th>
+                <th [attr.colspan]="3 * partes" [class]="claseGrupo + 'text-[#4a3aa7] dark:text-violet-300'">
                   Generación y proyección <span class="font-bold text-[#5f6c80] dark:text-slate-400">· S/</span>
                 </th>
-                <th colspan="2" [class]="claseGrupo + 'text-[#0f7a55] dark:text-emerald-400'">
+                <th [attr.colspan]="2 * partes" [class]="claseGrupo + 'text-[#0f7a55] dark:text-emerald-400'">
                   {{ etiquetaRecaudo }} <span class="font-bold text-[#5f6c80] dark:text-slate-400">· S/</span>
                 </th>
-                <th colspan="3" [class]="claseGrupo + 'text-[#334155] dark:text-slate-300'">Indicadores</th>
+                <th [attr.colspan]="2 * partes + 1" [class]="claseGrupo + 'text-[#334155] dark:text-slate-300'">Indicadores</th>
               </tr>
               <tr>
-                <th [class]="claseThAgente">Asesor</th>
-                <th [class]="claseTh + claseSep">
+                <th [class]="claseThAgente" [attr.rowspan]="porCompra ? 2 : null">Asesor</th>
+                <th [attr.colspan]="partes" [class]="claseTh + claseSep">
                   <span class="block">Gestiones</span>
                   <span [class]="claseThSub">{{ gestionesSub }}</span>
                 </th>
-                <th [class]="claseTh">Promesas</th>
-                <th [class]="claseTh + claseSep"
+                <th [attr.colspan]="partes" [class]="claseTh">Promesas</th>
+                <th [attr.colspan]="partes" [class]="claseTh + claseSep"
                     title="De lo pactado el día consultado, qué cuotas contar según cuándo vencen">
                   <span class="block">Generación del día</span>
                   <span [class]="claseThSub">{{ generacionSub }}</span>
                 </th>
-                <th [class]="claseTh">Proyección día</th>
-                <th [class]="claseTh">Proyectado total</th>
-                <th [class]="claseTh + claseSep">{{ etiquetaRecaudo }}</th>
-                <th [class]="claseTh">{{ etiquetaRecaudoAcumulado }}</th>
-                <th [class]="claseThInd + claseSep" title="(Recaudo / Proyección) × 100">% Efect. proyección</th>
-                <th [class]="claseThInd" title="Promesas / Contactos directos × 100">
+                <th [attr.colspan]="partes" [class]="claseTh">Proyección día</th>
+                <th [attr.colspan]="partes" [class]="claseTh">Proyectado total</th>
+                <th [attr.colspan]="partes" [class]="claseTh + claseSep">{{ etiquetaRecaudo }}</th>
+                <th [attr.colspan]="partes" [class]="claseTh">{{ etiquetaRecaudoAcumulado }}</th>
+                <th [attr.colspan]="partes" [class]="claseThInd + claseSep" title="(Recaudo / Proyección) × 100">% Efect. proyección</th>
+                <th [attr.colspan]="partes" [class]="claseThInd" title="Promesas / Contactos directos × 100">
                   <span class="block">Tasa de cierre</span>
                   <span [class]="claseThSub">{{ cierreSub }}</span>
                 </th>
-                <th [class]="claseThCentro">Tendencia</th>
+                <th [class]="claseThCentro" [attr.rowspan]="porCompra ? 2 : null">Tendencia</th>
               </tr>
+              @if (porCompra) {
+                <tr>
+                  @for (col of columnasPartidas; track col) {
+                    @for (c of comprasDesglose; track c; let k = $index) {
+                      <th [class]="claseThCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ c }}</th>
+                    }
+                    <th [class]="claseThCompra + 'text-[#334155] dark:text-slate-300'">TOTAL</th>
+                  }
+                </tr>
+              }
             </thead>
 
             <tbody>
@@ -273,7 +298,7 @@
                            dark:bg-slate-900 dark:hover:bg-slate-800/60" [style.--i]="i">
                   <td [class]="claseTdAgente">
                     <span class="flex items-center gap-2.5">
-                      <span [class]="'inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] text-[11px] font-extrabold '
+                      <span [class]="'inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold '
                                      + (agent.ranking <= 3
                                         ? 'bg-[#0f172a] text-white dark:bg-white dark:text-slate-900'
                                         : 'bg-[#eef1f5] text-[#334155] dark:bg-slate-800 dark:text-slate-300')">{{ agent.ranking }}</span>
@@ -281,16 +306,40 @@
                     </span>
                   </td>
                   <!-- El desglose va a la vista: antes solo aparecía al pasar el mouse -->
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ valorCompra(agent, k, 'gestiones') | appNumber }}</td>
+                  } }
                   <td [class]="claseTd + claseSep">
                     <b class="block text-[12.5px] font-extrabold leading-[1.3] text-[#0f172a] dark:text-slate-100">{{ gestionesDe(agent) | appNumber }}</b>
                     <span class="block text-[10.5px] font-semibold leading-[1.3] text-[#5f6c80] dark:text-slate-400">{{ desgloseGestiones(agent) }}</span>
                   </td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ valorCompra(agent, k, 'totalPromesas') | appNumber }}</td>
+                  } }
                   <td [class]="claseTdFuerte">{{ agent.totalPromesas | appNumber }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(valorCompra(agent, k, 'generacionHoy')) }}</td>
+                  } }
                   <td [class]="claseTd + claseSep">{{ formatMoney(agent.generacionHoy) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(valorCompra(agent, k, 'proyeccion')) }}</td>
+                  } }
                   <td [class]="claseTd">{{ formatMoney(agent.proyeccion) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(valorCompra(agent, k, 'proyeccionTotal')) }}</td>
+                  } }
                   <td [class]="claseTd">{{ formatMoney(agent.proyeccionTotal) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(valorCompra(agent, k, 'recaudo')) }}</td>
+                  } }
                   <td [class]="claseTdFuerte + claseSep">{{ formatMoney(agent.recaudo) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(valorCompra(agent, k, 'recaudoAcumulado')) }}</td>
+                  } }
                   <td [class]="claseTd">{{ formatMoney(agent.recaudoAcumulado) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ valorCompra(agent, k, 'efectividadProyeccion') | appNumber:'1.0-0' }}%</td>
+                  } }
                   <td [class]="claseTdInd + claseSep">
                     <span class="inline-flex w-full min-w-[72px] max-w-[120px] flex-col gap-1">
                       <b class="text-[12px] font-extrabold leading-[1.3] text-[#0f172a] dark:text-slate-100">{{ agent.efectividadProyeccion | appNumber:'1.0-0' }}%</b>
@@ -299,6 +348,9 @@
                       </span>
                     </span>
                   </td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTdCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ valorCompra(agent, k, 'tasaCierre') | appNumber:'1.0-1' }}%</td>
+                  } }
                   <td [class]="claseTdInd">
                     <span class="inline-flex w-full min-w-[72px] max-w-[120px] flex-col gap-1">
                       <b class="text-[12px] font-extrabold leading-[1.3] text-[#0f172a] dark:text-slate-100">{{ agent.tasaCierre | appNumber:'1.0-1' }}%</b>
@@ -308,7 +360,7 @@
                     </span>
                   </td>
                   <td [class]="claseTdCentro">
-                    <span [class]="'inline-flex h-[22px] items-center gap-1 rounded-[6px] px-1.5 text-[11px] font-bold ' + getTrendClass(agent.trend)">
+                    <span [class]="'inline-flex h-[22px] items-center gap-1 rounded-md px-1.5 text-[11px] font-bold ' + getTrendClass(agent.trend)">
                       <lucide-angular [name]="getTrendIcon(agent.trend)" [size]="13"></lucide-angular>
                       {{ getTrendLabel(agent.trend) }}
                     </span>
@@ -316,7 +368,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="11" class="px-4 py-10 text-center text-[#5f6c80] dark:text-slate-400">
+                  <td [attr.colspan]="9 * partes + 2" class="px-4 py-10 text-center text-[#5f6c80] dark:text-slate-400">
                     <lucide-angular name="inbox" [size]="40" class="mx-auto mb-2 text-[#c5ccd6]"></lucide-angular>
                     <p class="text-[13px]">{{ agents.length === 0
                           ? 'No hay datos de asesores para el periodo seleccionado'
@@ -333,20 +385,47 @@
                     <span class="block text-[12.5px] font-extrabold leading-[1.3]">TOTAL</span>
                     <span class="block text-[10.5px] font-semibold leading-[1.3] text-[#5f6c80] dark:text-slate-400">{{ agentesFiltrados.length }} asesores</span>
                   </td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ totalCompra(k, 'gestiones') | appNumber }}</td>
+                  } }
                   <td [class]="claseTotal + claseSep">{{ totalGestionesMostradas() | appNumber }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ totalCompra(k, 'totalPromesas') | appNumber }}</td>
+                  } }
                   <td [class]="claseTotal">{{ agentTotal('totalPromesas') | appNumber }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(totalCompra(k, 'generacionHoy')) }}</td>
+                  } }
                   <td [class]="claseTotal + claseSep">{{ formatMoney(agentTotal('generacionHoy')) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(totalCompra(k, 'proyeccion')) }}</td>
+                  } }
                   <td [class]="claseTotal">{{ formatMoney(agentTotal('proyeccion')) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(totalCompra(k, 'proyeccionTotal')) }}</td>
+                  } }
                   <td [class]="claseTotal">{{ formatMoney(agentTotal('proyeccionTotal')) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(totalCompra(k, 'recaudo')) }}</td>
+                  } }
                   <td [class]="claseTotal + claseSep">{{ formatMoney(agentTotal('recaudo')) }}</td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ formatMoney(totalCompra(k, 'recaudoAcumulado')) }}</td>
+                  } }
                   <td [class]="claseTotal">{{ formatMoney(agentTotal('recaudoAcumulado')) }}</td>
                   <!-- Los porcentajes muestran el global de la cabecera, no la suma de la
                        columna: sumar porcentajes no dice nada. Con el buscador activo ese
                        global ya no describe las filas visibles, así que no se muestra. -->
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ hayFiltroAgente ? '—' : (resumenCompra(k)?.efectividadProyeccion | appNumber:'1.0-1') + '%' }}</td>
+                  } }
                   <td [class]="claseTotalInd + claseSep"
                       [attr.title]="hayFiltroAgente ? 'El porcentaje global corresponde a todos los asesores' : null">
                     {{ hayFiltroAgente ? '—' : (summary?.efectividadProyeccion | appNumber:'1.0-1') + '%' }}
                   </td>
+                  @if (porCompra) { @for (c of comprasDesglose; track c; let k = $index) {
+                    <td [class]="claseTotalCompra + (k === 0 ? claseSep : '')" [style.color]="colorCompra(k).texto" [style.background]="colorCompra(k).fondo">{{ hayFiltroAgente ? '—' : (resumenCompra(k)?.efectividadGeneral | appNumber:'1.0-1') + '%' }}</td>
+                  } }
                   <td [class]="claseTotalInd"
                       [attr.title]="hayFiltroAgente ? 'El porcentaje global corresponde a todos los asesores' : null">
                     {{ hayFiltroAgente ? '—' : (summary?.efectividadGeneral | appNumber:'1.0-1') + '%' }}
@@ -357,12 +436,13 @@
             }
           </table>
         </div>
+        </div>
       </div>
     } @else if (loading) {
       <!-- Primera carga: el esqueleto ocupa el mismo lugar que tendrá el contenido -->
       <div class="animate-pulse motion-reduce:animate-none" role="status">
         <span class="sr-only">Cargando datos…</span>
-        <div class="mb-2.5 grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
+        <div class="mb-2.5 grid gap-2.5 grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))]">
           @for (n of esqueletoKpi; track n) {
             <div class="flex h-[98px] flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-3.5 py-3.5
                         dark:border-slate-800 dark:bg-slate-900">
@@ -397,9 +477,9 @@
     @if (loadingCorte && !corteHorarioData) {
       <div class="animate-pulse motion-reduce:animate-none" role="status">
         <span class="sr-only">Cargando corte horario…</span>
-        <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr))]">
+        <div class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))]">
           @for (n of esqueletoCorte; track n) {
-            <div class="h-[320px] overflow-hidden rounded-xl border border-[#e6e9ee] bg-white
+            <div class="h-80 overflow-hidden rounded-xl border border-[#e6e9ee] bg-white
                         dark:border-slate-800 dark:bg-slate-900">
               <div class="h-[62px] border-b border-[#e6e9ee] bg-[#f8fafc] dark:border-slate-800 dark:bg-slate-800"></div>
             </div>
@@ -420,11 +500,11 @@
           asesores · cortes a las 12:00, 15:00, 17:00 y al cierre del día
         </p>
 
-        <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr))]">
+        <div class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))]">
           @for (t of tablasCorte; track t.k; let i = $index) {
             <section class="ap-rise overflow-hidden rounded-xl border border-[#e6e9ee] bg-white
                             dark:border-slate-800 dark:bg-slate-900" [style.--i]="i">
-              <h3 [class]="'!m-0 flex h-[30px] items-center gap-1.5 border-b border-[#e6e9ee] bg-[#f8fafc] px-3 text-[10.5px] font-extrabold uppercase tracking-[0.07em] dark:border-slate-800 dark:bg-slate-800 ' + t.color">
+              <h3 [class]="'m-0! flex h-[30px] items-center gap-1.5 border-b border-[#e6e9ee] bg-[#f8fafc] px-3 text-[10.5px] font-extrabold uppercase tracking-[0.07em] dark:border-slate-800 dark:bg-slate-800 ' + t.color">
                 {{ t.titulo }}
                 @if (t.unidad) {
                   <span class="font-bold text-[#5f6c80] dark:text-slate-400">· {{ t.unidad }}</span>

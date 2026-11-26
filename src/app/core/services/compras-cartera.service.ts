@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 export type ComprasPorSubcartera = Record<number, string[]>;
 
 /**
- * REQ-083: compras de cada subcartera (hoy solo Tramo Propio: PRIMERA, SEGUNDA, …), para las opciones
+ * Compras de cada subcartera (hoy solo Tramo Propio: PRIMERA, SEGUNDA, …), para las opciones
  * «TRAMO PROPIO · PRIMERA» del filtro Subcartera de los reportes. Salen de la base: una compra nueva
  * aparece sola. Se piden una vez por sesión de la pantalla.
  */
@@ -72,4 +72,18 @@ export function leerOpcionCompra(valor: string | null | undefined): { idSubcarte
     idSubcartera: id ? Number(id) : null,
     compra: corte < 0 ? null : texto.slice(corte + 1) || null
   };
+}
+
+/** Color de cada compra en el desglose. */
+export interface ColorCompra { texto: string; fondo: string; borde: string }
+const COLORES_COMPRA: ColorCompra[] = [
+  { texto: '#6d28d9', fondo: '#f5f3ff', borde: '#ddd6fe' },
+  { texto: '#0e7490', fondo: '#ecfeff', borde: '#a5f3fc' },
+  { texto: '#b45309', fondo: '#fffbeb', borde: '#fde68a' },
+  { texto: '#be123c', fondo: '#fff1f2', borde: '#fecdd3' },
+  { texto: '#047857', fondo: '#ecfdf5', borde: '#a7f3d0' },
+  { texto: '#1d4ed8', fondo: '#eff6ff', borde: '#bfdbfe' }
+];
+export function colorCompra(i: number): ColorCompra {
+  return COLORES_COMPRA[((i % COLORES_COMPRA.length) + COLORES_COMPRA.length) % COLORES_COMPRA.length];
 }
