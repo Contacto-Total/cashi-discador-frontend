@@ -10,7 +10,8 @@ import {
   ConsultaReporte,
   DatosReporte,
   Entregable,
-  EntregablesReportService
+  EntregablesReportService,
+  EnvioEntregable
 } from './entregables-report.service';
 import { FiltroSubcarteraComponent, SeleccionSubcartera } from './filtro-subcartera.component';
 import { EUI, EUI_ANIM, euiAviso, euiSegmento } from './entregables-ui';
@@ -249,7 +250,7 @@ const MAX_FILAS = 500;
 
                 <div class="flex flex-wrap items-center gap-2.5">
                   <button type="button" (click)="descargar()" [class]="ui.primario"
-                          [disabled]="descargando() || cargandoDatos() || periodo().invalido">
+                          [disabled]="descargando() || cargandoDatos() || periodo().invalido || !datos() || !!errorDatos()">
                     @if (descargando()) {
                       <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
                       Generando
@@ -263,6 +264,12 @@ const MAX_FILAS = 500;
                     <lucide-angular name="refresh-cw" [size]="15" [class]="cargandoDatos() ? 'animate-spin' : ''"></lucide-angular>
                     Actualizar
                   </button>
+                  <button type="button" (click)="confirmando.set(true)" [class]="ui.secundario"
+                          [disabled]="!puedeMarcar() || confirmando()"
+                          [attr.title]="puedeMarcar() ? null : 'Primero descarga el Excel'">
+                    <lucide-angular name="check" [size]="15"></lucide-angular>
+                    Marcar como enviado
+                  </button>
                   @if (descargadoComo()) {
                     <span class="eui-entra flex min-w-0 items-center gap-1.5 text-[12.5px] font-semibold text-[#166534] dark:text-green-400">
                       <lucide-angular name="check" [size]="15"></lucide-angular>
@@ -270,6 +277,44 @@ const MAX_FILAS = 500;
                     </span>
                   }
                 </div>
+
+                @if (confirmando()) {
+                  <div class="eui-entra flex flex-col gap-2.5 rounded-[10px] border border-[#d5dbe3] bg-[#f8fafc] px-3.5 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+                    <p class="!m-0 text-[13px] font-semibold leading-[1.45] text-[#334155] dark:text-slate-200">
+                      Se marca como enviado el Excel descargado, {{ descarga()?.archivo }}: {{ resumenDescarga() }}.
+                      @if (consultaSel()?.registraEnvio) {
+                        Esos clientes no vuelven a salir en el siguiente envío.
+                      }
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <button type="button" (click)="marcarEnviado()" [class]="ui.primario" [disabled]="marcando()">
+                        @if (marcando()) {
+                          <lucide-angular name="loader-2" [size]="15" class="animate-spin"></lucide-angular>
+                          Marcando
+                        } @else {
+                          <lucide-angular name="check" [size]="15"></lucide-angular>
+                          Marcar como enviado
+                        }
+                      </button>
+                      <button type="button" (click)="confirmando.set(false)" [class]="ui.secundario" [disabled]="marcando()">Cancelar</button>
+                    </div>
+                  </div>
+                }
+
+                @if (faltaDescargar()) {
+                  <p class="!m-0 text-[12.5px] text-[#5f6c80] dark:text-slate-400">Para marcarlo como enviado, primero descarga el Excel.</p>
+                }
+
+                @if (envioDelPeriodo(); as v) {
+                  <p class="eui-entra !m-0 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#166534] dark:text-green-400">
+                    <lucide-angular name="check" [size]="15"></lucide-angular>
+                    <span class="[overflow-wrap:anywhere]">Marcado como enviado el {{ cuando(v) }} por {{ v.usuario }} · {{ filasTexto(v.filas) }}</span>
+                  </p>
+                } @else if (envios()[0]; as v) {
+                  <p class="!m-0 text-[12.5px] text-[#5f6c80] [overflow-wrap:anywhere] dark:text-slate-400">
+                    Último envío: {{ corte(v) }}, marcado el {{ cuando(v) }} por {{ v.usuario }}
+                  </p>
+                }
               </div>
 
               <!-- ============ Totales ============ -->
@@ -395,6 +440,12 @@ export class EntregablesReportComponent {
   copiado = signal<'archivo' | 'asunto' | null>(null);
   /** Hoja del Excel que se ve en la vista previa. */
   hoja = signal(0);
+  /** Últimos envíos marcados del entregable elegido, el más reciente primero. */
+  envios = signal<EnvioEntregable[]>([]);
+  confirmando = signal(false);
+  marcando = signal(false);
+  /** El último Excel descargado en esta visita: es lo que se marca como enviado. */
+  descarga = signal<{ idEntregable: number; archivo: string; datos: DatosReporte } | null>(null);
 
   /** Para descartar la respuesta de una consulta que ya no es la que se está mirando. */
   private turno = 0;
@@ -581,6 +632,34 @@ export class EntregablesReportComponent {
     });
   });
 
+  private filasDe(d: DatosReporte | null | undefined): number {
+    if (!d) return 0;
+    return d.hojas?.length ? d.hojas.reduce((suma, h) => suma + h.filas.length, 0) : d.filas.length;
+  }
+
+  /** Lo que se marcaría: las filas del Excel descargado, o cada hoja con las suyas si son varias. */
+  resumenDescarga = computed(() => {
+    const d = this.descarga()?.datos;
+    if (d?.hojas && d.hojas.length > 1) return d.hojas.map(h => `${h.nombre} (${this.entero(h.filas.length)})`).join(' · ');
+    return this.filasTexto(this.filasDe(d));
+  });
+
+  puedeMarcar = computed(() => {
+    const d = this.descarga();
+    return !!d && d.idEntregable === this.idSel() && this.filasDe(d.datos) > 0 && !this.marcando();
+  });
+
+  faltaDescargar = computed(() =>
+    !this.descarga() && this.filasDe(this.datos()) > 0 && !this.cargandoDatos() && !this.errorDatos() &&
+    !this.envioDelPeriodo());
+
+  /** El envío más reciente marcado con el periodo que se está mirando. */
+  envioDelPeriodo = computed(() => {
+    const rango = this.consultaSel()?.tipoPeriodo === 'RANGO';
+    return this.envios().find(v => (v.hasta ?? '') === this.isoHasta() &&
+      (!rango || (v.desde ?? '') === this.isoDesde())) ?? null;
+  });
+
   // ==================== Acciones ====================
 
   onSeleccion(seleccion: SeleccionSubcartera): void {
@@ -592,6 +671,7 @@ export class EntregablesReportComponent {
     this.consultas.set([]);
     this.entregables.set([]);
     this.idSel.set(null);
+    this.envios.set([]);
     this.limpiarResultado();
     if (seleccion.idSubcartera == null) {
       this.cargandoLista.set(false);
@@ -625,6 +705,11 @@ export class EntregablesReportComponent {
   elegir(id: number): void {
     if (id === this.idSel()) return;
     this.idSel.set(id);
+    this.envios.set([]);
+    this.service.getEnvios(id).subscribe({
+      next: (envios) => { if (this.idSel() === id) this.envios.set(envios); },
+      error: (err) => console.error('Error cargando los envíos del entregable:', err)
+    });
     this.consultar();
   }
 
@@ -686,13 +771,14 @@ export class EntregablesReportComponent {
 
   descargar(): void {
     const e = this.sel();
-    const p = this.periodo();
-    if (!e || p.invalido || this.descargando()) return;
+    const d = this.datos();
+    if (!e || !d || this.periodo().invalido || this.descargando()) return;
     const nombre = this.nombres().archivo;
 
     this.descargando.set(true);
     this.descargadoComo.set(null);
-    this.service.exportarExcel(e.id, p.desde ? aIso(p.desde) : null, p.hasta ? aIso(p.hasta) : null).subscribe({
+    this.descarga.set(null);
+    this.service.exportarExcel(e.id, d).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -704,6 +790,7 @@ export class EntregablesReportComponent {
         window.URL.revokeObjectURL(url);
         this.descargando.set(false);
         this.descargadoComo.set(nombre);
+        if (this.idSel() === e.id && this.datos() === d) this.descarga.set({ idEntregable: e.id, archivo: nombre, datos: d });
       },
       error: (err) => {
         console.error('Error exportando el entregable:', err);
@@ -711,6 +798,45 @@ export class EntregablesReportComponent {
         this.toast.error('No se pudo generar el Excel');
       }
     });
+  }
+
+  marcarEnviado(): void {
+    const e = this.sel();
+    const d = this.descarga();
+    if (!e || !d || d.idEntregable !== e.id || this.marcando()) return;
+
+    this.marcando.set(true);
+    this.service.marcarEnviado(e.id, d.archivo, d.datos)
+      .subscribe({
+        next: (envio) => {
+          this.marcando.set(false);
+          this.confirmando.set(false);
+          // Ya quedó marcado: para marcar otra vez hay que volver a descargar.
+          this.descarga.set(null);
+          if (this.idSel() === e.id) this.envios.update(lista => [envio, ...lista]);
+          this.toast.success('Marcado como enviado');
+        },
+        error: (err) => {
+          console.error('Error marcando el envío:', err);
+          this.marcando.set(false);
+          this.toast.error(this.mensaje(err, 'No se pudo marcar como enviado'));
+        }
+      });
+  }
+
+  /** «25/11/2026 a las 15:20» a partir de la hora de Lima del envío. */
+  cuando(v: EnvioEntregable): string {
+    const d = deIso(v.fechaRegistro);
+    return d ? `${dmy(d)} a las ${v.fechaRegistro.slice(11, 16)}` : v.fechaRegistro;
+  }
+
+  corte(v: EnvioEntregable): string {
+    const d = deIso(v.hasta);
+    return d ? `corte ${dmy(d)}` : 'sin fecha de corte';
+  }
+
+  filasTexto(n: number): string {
+    return `${this.entero(n)} ${n === 1 ? 'fila' : 'filas'}`;
   }
 
   claseHoja(elegida: boolean): string {
@@ -775,6 +901,8 @@ export class EntregablesReportComponent {
     this.descargadoComo.set(null);
     this.copiado.set(null);
     this.hoja.set(0);
+    this.confirmando.set(false);
+    this.descarga.set(null);
   }
 
   private mensaje(err: any, porDefecto: string): string {

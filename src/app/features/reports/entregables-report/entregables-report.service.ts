@@ -28,6 +28,8 @@ export interface ConsultaReporte {
   descripcion: string;
   tipoPeriodo: TipoPeriodo;
   conPlantilla: boolean;
+  /** Al marcarla como enviada registra lo enviado, y eso no vuelve a salir en el siguiente envío. */
+  registraEnvio: boolean;
   nota: string | null;
   avisoCortePasado: string | null;
   avisoCruzaMes: string | null;
@@ -95,6 +97,19 @@ export interface DatosReporte {
   generadoEn: string;
 }
 
+/** Un entregable marcado como enviado. fechaRegistro es hora de Lima (yyyy-MM-ddTHH:mm:ss). */
+export interface EnvioEntregable {
+  id: number;
+  idEntregable: number;
+  desde: string | null;
+  hasta: string | null;
+  nombreArchivo: string | null;
+  filas: number;
+  estado: 'ENVIADO';
+  usuario: string;
+  fechaRegistro: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -127,11 +142,19 @@ export class EntregablesReportService {
     return this.http.get<DatosReporte>(`${this.baseUrl}/${id}/datos`, { params: this.periodo(desde, hasta) });
   }
 
-  exportarExcel(id: number, desde: string | null, hasta: string | null): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/${id}/excel`, {
-      params: this.periodo(desde, hasta),
-      responseType: 'blob'
-    });
+  /** El Excel con los datos que ya tiene la pantalla, sin volver a consultar. */
+  exportarExcel(id: number, datos: DatosReporte): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/${id}/excel`, datos, { responseType: 'blob' });
+  }
+
+  /** Los últimos envíos marcados del entregable, el más reciente primero. */
+  getEnvios(id: number): Observable<EnvioEntregable[]> {
+    return this.http.get<EnvioEntregable[]>(`${this.baseUrl}/${id}/envios`);
+  }
+
+  /** Marca como enviado el Excel que se descargó: manda sus mismos datos, sin volver a consultar. */
+  marcarEnviado(id: number, nombreArchivo: string, datos: DatosReporte): Observable<EnvioEntregable> {
+    return this.http.post<EnvioEntregable>(`${this.baseUrl}/${id}/envios`, { nombreArchivo, datos });
   }
 
   private periodo(desde: string | null, hasta: string | null): HttpParams {
