@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { LucideAngularModule } from 'lucide-angular';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin, from, of } from 'rxjs';
+import { catchError, concatMap, toArray } from 'rxjs/operators';
 import {
   BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas, FiltroCartera,
@@ -50,6 +51,34 @@ interface CapsulaQue {
   tono: string;
   n: number;
   pastillas: Pastilla[];
+}
+
+interface Kpi {
+  clave: string;
+  etiqueta: string;
+  valor: string;
+  detalle: string;
+  ayuda: string;
+  tonoTexto: string;
+}
+
+interface EtapaEmbudo {
+  clave: string;
+  etiqueta: string;
+  ayuda: string;
+  n: number;
+  ancho: number;
+  paso: string;
+  barra: string;
+}
+
+interface TramoReparto {
+  clave: string;
+  etiqueta: string;
+  n: number;
+  ancho: number;
+  pct: string;
+  barra: string;
 }
 
 interface Vueltas {
@@ -128,6 +157,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** Las clases compartidas, para la plantilla. */
   readonly ui = CLASES;
+
+  readonly claseFiltroActivo = 'inline-flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-full border border-[#bfd3f7] bg-[#eff5ff] px-2.5 text-[12px] font-semibold !text-[#1d4ed8] transition-colors hover:bg-[#dfeafd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-blue-900 dark:bg-blue-950/50 dark:!text-blue-300 dark:hover:bg-blue-950';
 
   /** El selector de la cabecera, como Activos/Archivados en Tenores: lo que se mira a
    *  diario. Voces y tonos y Reglas se configuran de vez en cuando y van como botones
@@ -474,7 +505,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private readonly REFRESCO_MS = 5000;
   private refresco?: ReturnType<typeof setInterval>;
   private subSesiones?: Subscription;
-  private subResumen?: Subscription;
 
   constructor(private svc: BotVozService, private router: Router, private route: ActivatedRoute) {}
 
@@ -504,7 +534,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     clearInterval(this.refresco);
     this.subCola?.unsubscribe();
     this.subSesiones?.unsubscribe();
-    this.subResumen?.unsubscribe();
+    this.cerrarAudio();
     this.pararDemo();       // si no, la muestra sigue sonando al cambiar de pantalla
   }
 
@@ -588,6 +618,19 @@ export class BotVozComponent implements OnInit, OnDestroy {
   paginaColas = 1;
   paginaSesiones = 1;
   paginaDescartes = 1;
+  readonly TAMANIOS_LLAMADAS = [10, 25, 50, 100];
+  tamLlamadas = 25;
+  cargandoLlamadas = false;
+  primeraCargaLlamadas = true;
+  errorResumen = false;
+  exportando = false;
+  audioDe: number | null = null;
+  audioUrl: string | null = null;
+  cargandoAudio: number | null = null;
+  private solicitudEnCurso = false;
+  private seqLlamadas = 0;
+  private firmaFilas = '';
+  private firmaResumen = '';
   /** Cuantas llamadas hay con los filtros puestos, contadas en la base. */
   totalSesiones = 0;
 
@@ -698,7 +741,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // El desplegable de colas se rehace con el dia: las que no llamaron ese dia dejan
     // de ofrecerse. Y si la que estaba elegida no esta entre ellas, se suelta el filtro
     // en vez de dejar seleccionada una cola que ya no sale en la lista.
-    this.refrescarColasFiltro();
+    this.refrescarColasFiltro(true);
     this.paginaSesiones = 1;
     this.cargarSesiones();
   }
@@ -732,11 +775,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * En QAS eso dejó fuera la cola 4 entera —1.775 llamadas— porque su última sesión es
    * más vieja que las 100 últimas, y el selector enseñaba únicamente la cola 5.
    */
-  private refrescarColasFiltro(): void {
+  private refrescarColasFiltro(soltar = false): void {
     // Con un dia elegido se parte de cero: lo visto en otros dias no vale, o el
     // desplegable acumularia colas que ese dia no llamaron.
     // Igual con cliente, cartera o subcartera: las colas de otra cartera no se ofrecen.
-    if (this.fechaLlamadas || this.hayFiltroCartera) this.colasVistas.clear();
+    if (soltar && (this.fechaLlamadas || this.hayFiltroCartera)) this.colasVistas.clear();
     this.svc.getColasDelHistorico(this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
       next: (filas) => {
         for (const f of filas) {
@@ -749,7 +792,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.componerColasFiltro();
         // La cola elegida puede no haber llamado el dia nuevo: se suelta el filtro en
         // vez de dejar un desplegable enseñando algo que ya no esta entre sus opciones.
-        if ((this.fechaLlamadas || this.hayFiltroCartera) && this.colaLlamadas != null
+        if (soltar && (this.fechaLlamadas || this.hayFiltroCartera) && this.colaLlamadas != null
             && !this.colasFiltro.some((c) => c.id === this.colaLlamadas)) {
           this.colaLlamadas = null;
           this.paginaSesiones = 1;
@@ -767,8 +810,19 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private componerColasFiltro(): void {
     const m = new Map(this.colasVistas);
     for (const c of this.colas) if (c.id != null && this.enCartera(c)) m.set(c.id, c.nombre);
-    this.colasFiltro = [...m].map(([id, nombre]) => ({ id, nombre }))
+    const nuevas = [...m].map(([id, nombre]) => ({ id, nombre }))
         .sort((a, b) => a.id - b.id);
+    if (JSON.stringify(nuevas) === JSON.stringify(this.colasFiltro)) return;
+    this.colasFiltro = nuevas;
+    this.colasCampana = nuevas.filter((c) => !this.esColaDePrueba(c.nombre));
+    this.colasPrueba = nuevas.filter((c) => this.esColaDePrueba(c.nombre));
+  }
+
+  colasCampana: { id: number; nombre: string }[] = [];
+  colasPrueba: { id: number; nombre: string }[] = [];
+
+  private esColaDePrueba(nombre: string): boolean {
+    return /prueba|qas|inc-\d+/i.test(nombre);
   }
 
   /** Como se llama la cola de una sesion, ya este borrada o ya no tenga. */
@@ -797,6 +851,98 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.pastillasQue = this.pastillasLlamadas.filter((p) => p.familia === 'que');
     this.capsulasQue = this.agruparCapsulas(this.pastillasQue);
     this.contacto = this.calcularContacto(r);
+    this.kpis = this.calcularKpis(r);
+    this.embudo = this.calcularEmbudo(r);
+    this.reparto = this.calcularReparto(r);
+  }
+
+  kpis: Kpi[] = [];
+  embudo: EtapaEmbudo[] = [];
+  reparto: TramoReparto[] = [];
+
+  usd(n: number | null | undefined): string {
+    const v = Number(n ?? 0);
+    const d = v >= 1 ? 2 : 4;
+    return '$' + v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  duracion(seg: number | null | undefined): string {
+    const t = Math.round(Number(seg ?? 0));
+    if (t < 60) return `${t} s`;
+    return `${Math.floor(t / 60)} min ${String(t % 60).padStart(2, '0')} s`;
+  }
+
+  private promesasDe(r: ResumenLlamadas | null): number {
+    const res = r?.porResultadoConversacion ?? r?.porResultado ?? {};
+    return (res['ACUERDA_PAGO'] ?? 0) + (res['CONFIRMA_PAGO'] ?? 0);
+  }
+
+  private calcularKpis(r: ResumenLlamadas | null): Kpi[] {
+    if (!r) return [];
+    const total = r.total ?? 0;
+    const conversaron = r.conversaron ?? 0;
+    const contestaron = (r.sinHablar ?? 0) + conversaron;
+    const promesas = this.promesasDe(r);
+    const costo = r.costoUsd ?? 0;
+    return [
+      { clave: 'marcadas', etiqueta: 'Marcadas', valor: this.miles(total),
+        detalle: `${this.miles(contestaron)} contestaron`, tonoTexto: '',
+        ayuda: 'Llamadas hechas con los filtros puestos' },
+      { clave: 'hablaron', etiqueta: 'Hablaron de verdad', valor: this.porcentaje(conversaron, contestaron),
+        detalle: `${this.miles(conversaron)} de ${this.miles(contestaron)} que contestaron`,
+        tonoTexto: 'text-[#15803d] dark:text-emerald-400', ayuda: 'De los que descolgaron, cuántos dijeron algo' },
+      { clave: 'promesas', etiqueta: 'Con promesa', valor: this.miles(promesas),
+        detalle: `${this.porcentaje(promesas, conversaron)} de las conversaciones`,
+        tonoTexto: 'text-[#15803d] dark:text-emerald-400', ayuda: 'Cerraron o confirmaron una promesa de pago' },
+      { clave: 'costo', etiqueta: 'Costo total', valor: this.usd(costo),
+        detalle: `${this.usd(total ? costo / total : 0)} por llamada`, tonoTexto: '',
+        ayuda: 'Costo estimado de las llamadas con los filtros puestos' },
+      { clave: 'costopromesa', etiqueta: 'Costo por promesa', valor: promesas ? this.usd(costo / promesas) : '—',
+        detalle: promesas ? 'costo total entre promesas' : 'todavía sin promesas', tonoTexto: '',
+        ayuda: 'Cuánto cuesta, en llamadas, conseguir una promesa' },
+      { clave: 'duracion', etiqueta: 'Duración media', valor: this.duracion(r.duracionMediaSeg),
+        detalle: 'por llamada marcada', tonoTexto: '', ayuda: 'Incluye las que no contestaron' },
+    ];
+  }
+
+  private calcularEmbudo(r: ResumenLlamadas | null): EtapaEmbudo[] {
+    if (!r) return [];
+    const total = r.total ?? 0;
+    const conversaron = r.conversaron ?? 0;
+    const contestaron = (r.sinHablar ?? 0) + conversaron;
+    const etapas = [
+      { clave: 'marcadas', etiqueta: 'Marcadas', n: total, barra: 'bg-[#94a3b8] dark:bg-slate-500',
+        ayuda: 'Todas las llamadas con los filtros puestos' },
+      { clave: 'contestaron', etiqueta: 'Contestaron', n: contestaron, barra: 'bg-[#d97706] dark:bg-amber-400',
+        ayuda: 'Descolgaron una persona: no cuenta el buzón ni los que no contestaron' },
+      { clave: 'conversaron', etiqueta: 'Conversaron', n: conversaron, barra: 'bg-[#2563eb] dark:bg-blue-400',
+        ayuda: 'El cliente dijo algo en la llamada' },
+      { clave: 'promesa', etiqueta: 'Con promesa', n: this.promesasDe(r), barra: 'bg-[#15803d] dark:bg-emerald-400',
+        ayuda: 'Cerraron o confirmaron una promesa de pago' },
+    ];
+    return etapas.map((e, i, a) => ({
+      clave: e.clave, etiqueta: e.etiqueta, ayuda: e.ayuda, n: e.n, barra: e.barra,
+      ancho: total ? (e.n ? Math.max(1.5, (e.n / total) * 100) : 0) : 0,
+      paso: i === 0 ? '100 %' : `${this.porcentaje(e.n, a[i - 1].n)} de la anterior`,
+    }));
+  }
+
+  private calcularReparto(r: ResumenLlamadas | null): TramoReparto[] {
+    if (!r) return [];
+    const total = r.total ?? 0;
+    const e = r.porEstado ?? {};
+    const base = [
+      { clave: 'nodescolgaron', etiqueta: 'No descolgaron', n: (e['NO_CONTESTA'] ?? 0) + (e['OCUPADO'] ?? 0),
+        barra: 'bg-[#cbd5e1] dark:bg-slate-600' },
+      { clave: 'buzon', etiqueta: 'Buzón', n: e['BUZON'] ?? 0, barra: 'bg-[#64748b] dark:bg-slate-400' },
+      { clave: 'sinhablar', etiqueta: 'Descolgaron y no hablaron', n: r.sinHablar ?? 0,
+        barra: 'bg-[#d97706] dark:bg-amber-400' },
+      { clave: 'conversaron', etiqueta: 'Conversaron', n: r.conversaron ?? 0, barra: 'bg-[#15803d] dark:bg-emerald-400' },
+    ];
+    const resto = Math.max(0, total - base.reduce((a, b) => a + b.n, 0));
+    if (resto > 0) base.push({ clave: 'otros', etiqueta: 'Fallaron u otros', n: resto, barra: 'bg-[#b91c1c] dark:bg-red-400' });
+    return base.map((b) => ({ clave: b.clave, etiqueta: b.etiqueta, n: b.n, barra: b.barra,
+                              ancho: total ? (b.n / total) * 100 : 0, pct: this.porcentaje(b.n, total) }));
   }
 
   /**
@@ -943,7 +1089,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.svc.getCola(id).subscribe({
       next: (filas) => {
         if (this.colaLlamadas !== id) return;
-        this.vueltas = this.calcularVueltas(filas);
+        const nuevas = this.calcularVueltas(filas);
+        if (JSON.stringify(nuevas) !== JSON.stringify(this.vueltas)) this.vueltas = nuevas;
         this.errorVueltas = false;
       },
       error: () => {
@@ -1008,7 +1155,69 @@ export class BotVozComponent implements OnInit, OnDestroy {
   get sesionesPagina(): BotSesion[] { return this.sesiones; }
 
   get paginasSesiones(): number {
-    return Math.max(1, Math.ceil(this.totalSesiones / this.TAM_PAGINA));
+    return Math.max(1, Math.ceil(this.totalSesiones / this.tamLlamadas));
+  }
+
+  get desdeSesiones(): number {
+    return this.totalSesiones ? (this.paginaSesiones - 1) * this.tamLlamadas + 1 : 0;
+  }
+
+  get hastaSesiones(): number {
+    return Math.min(this.totalSesiones, this.paginaSesiones * this.tamLlamadas);
+  }
+
+  get llamadasEnVivo(): boolean {
+    return !this.sesionAbierta && this.audioDe == null && this.cargandoAudio == null && this.paginaSesiones === 1;
+  }
+
+  get motivoPausaLlamadas(): string {
+    if (this.sesionAbierta) return 'En pausa: hay una llamada abierta';
+    if (this.audioDe != null || this.cargandoAudio != null) return 'En pausa: reproduciendo un audio';
+    if (this.paginaSesiones > 1) return 'En pausa: no estás en la primera página';
+    return '';
+  }
+
+  get hayFiltrosLlamadas(): boolean {
+    return this.colaLlamadas != null || !!this.fechaLlamadas || !!this.pillLlamadas || !!this.busquedaLlamadas.trim();
+  }
+
+  get nombreColaLlamadas(): string {
+    return this.colasFiltro.find((c) => c.id === this.colaLlamadas)?.nombre ?? `Cola ${this.colaLlamadas}`;
+  }
+
+  get hoyIso(): string { return this.aIso(new Date()); }
+
+  get ayerIso(): string {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return this.aIso(d);
+  }
+
+  private aIso(d: Date): string {
+    const dos = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
+  }
+
+  cambiarTamLlamadas(n: number): void {
+    this.tamLlamadas = Number(n);
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
+  limpiarFiltrosLlamadas(): void {
+    this.busquedaLlamadas = '';
+    this.pillLlamadas = null;
+    this.colaLlamadas = null;
+    this.fechaLlamadas = '';
+    this.paginaSesiones = 1;
+    this.refrescarColasFiltro(true);
+    this.cargarSesiones();
+  }
+
+  quitarBusquedaLlamadas(): void {
+    this.busquedaLlamadas = '';
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
   }
 
   /** Buscar vuelve a la primera pagina: si no, buscas y caes en una que ya no existe.
@@ -1653,7 +1862,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.componerOpcionesCartera();
     this.paginaColas = 1;
     this.paginaSesiones = 1;
-    this.refrescarColasFiltro();
+    this.refrescarColasFiltro(true);
     if (this.vista === 'llamadas') this.cargarSesiones();
   }
 
@@ -2817,43 +3026,140 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(silencioso = false): void {
-    if (silencioso && this.subSesiones && !this.subSesiones.closed) return;
+    if (silencioso && (this.solicitudEnCurso || !this.llamadasEnVivo || document.hidden)) return;
+    const seq = ++this.seqLlamadas;
     this.subSesiones?.unsubscribe();
-    this.subResumen?.unsubscribe();
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
-    // Fecha vacia = todas las llamadas de la cola elegida, del dia que sean.
-    this.subSesiones = this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
-                         this.fechaLlamadas || null, g?.hablo ?? null,
-                         this.busquedaLlamadas.trim() || null,
-                         this.paginaSesiones - 1, this.TAM_PAGINA, this.filtroCarteraActual).subscribe({
-      next: (r) => {
-        this.sesiones = r.filas;
-        this.totalSesiones = r.total;
+    const pagina = this.paginaSesiones;
+    const cola = this.colaLlamadas;
+    const fecha = this.fechaLlamadas || null;
+    const filtro = this.filtroCarteraActual;
+    const busqueda = this.busquedaLlamadas.trim() || null;
+    if (!silencioso) {
+      this.cerrarAudio();
+      this.cargandoLlamadas = true;
+    }
+    this.solicitudEnCurso = true;
+    this.subSesiones = forkJoin({
+      sesiones: this.svc.getSesiones(g?.estados, g?.resultados, cola, fecha, g?.hablo ?? null,
+                                     busqueda, pagina - 1, this.tamLlamadas, filtro),
+      resumen: this.svc.getResumenSesiones(cola, fecha, filtro).pipe(catchError(() => of(null))),
+    }).subscribe({
+      next: ({ sesiones, resumen }) => {
+        if (seq !== this.seqLlamadas) return;
+        this.solicitudEnCurso = false;
+        this.cargandoLlamadas = false;
+        this.primeraCargaLlamadas = false;
         this.errorSesiones = false;
-        // Un filtro nuevo o el refresco pueden dejar menos paginas que la que se veia:
-        // se va a la ultima que existe en vez de enseñar una tabla vacia.
+        const firmaFilas = JSON.stringify(sesiones);
+        if (firmaFilas !== this.firmaFilas) {
+          this.firmaFilas = firmaFilas;
+          this.sesiones = sesiones.filas;
+          this.totalSesiones = sesiones.total;
+        }
+        if (resumen != null || !silencioso) {
+          const firmaResumen = JSON.stringify(resumen);
+          if (firmaResumen !== this.firmaResumen) {
+            this.firmaResumen = firmaResumen;
+            this.resumenLlamadas = resumen;
+          }
+          this.errorResumen = resumen == null;
+        }
         if (this.paginaSesiones > this.paginasSesiones) {
           this.paginaSesiones = this.paginasSesiones;
           this.cargarSesiones();
           return;
         }
-        // De aqui salen las opciones del filtro de cola: del historico, no de las
-        // colas que existen hoy.
         this.componerColasFiltro();
       },
       error: () => {
+        if (seq !== this.seqLlamadas) return;
+        this.solicitudEnCurso = false;
+        this.cargandoLlamadas = false;
+        this.primeraCargaLlamadas = false;
         this.errorSesiones = true;
         if (!silencioso) this.flash('No se pudieron cargar las llamadas', true);
       },
     });
-    // Los contadores van aparte porque cuentan el día ENTERO en la base y la tabla
-    // solo trae las 100 últimas de ese mismo día. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
-    // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.subResumen = this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
-      next: (r) => (this.resumenLlamadas = r),
-      error: () => (this.resumenLlamadas = null),
-    });
     this.cargarVueltas();
+  }
+
+  reproducir(s: BotSesion, ev: Event): void {
+    ev.stopPropagation();
+    if (!s.duracionSeg || this.cargandoAudio != null) return;
+    if (this.audioDe === s.id) {
+      this.cerrarAudio();
+      return;
+    }
+    this.cerrarAudio();
+    this.cargandoAudio = s.id;
+    this.svc.descargarGrabacion(s.uuidLlamada).subscribe({
+      next: (blob) => {
+        this.audioUrl = URL.createObjectURL(blob);
+        this.audioDe = s.id;
+        this.cargandoAudio = null;
+      },
+      error: () => {
+        this.cargandoAudio = null;
+        this.flash('No se encontró la grabación de esta llamada', true);
+      },
+    });
+  }
+
+  cerrarAudio(): void {
+    if (this.audioUrl) URL.revokeObjectURL(this.audioUrl);
+    this.audioUrl = null;
+    this.audioDe = null;
+  }
+
+  exportarLlamadas(): void {
+    if (this.exportando || !this.totalSesiones) return;
+    this.exportando = true;
+    const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
+    const paginas = Math.min(Math.ceil(this.totalSesiones / 100), 50);
+    const busqueda = this.busquedaLlamadas.trim() || null;
+    from(Array.from({ length: paginas }, (_, i) => i)).pipe(
+      concatMap((p) => this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas, this.fechaLlamadas || null,
+                                            g?.hablo ?? null, busqueda, p, 100, this.filtroCarteraActual)),
+      toArray(),
+    ).subscribe({
+      next: (bloques) => {
+        const filas = bloques.flatMap((b) => b.filas);
+        this.descargarCsv(filas);
+        this.exportando = false;
+        if (this.totalSesiones > filas.length) {
+          this.flash(`Se exportaron las ${this.miles(filas.length)} más recientes de ${this.miles(this.totalSesiones)}`);
+        }
+      },
+      error: () => {
+        this.exportando = false;
+        this.flash('No se pudieron exportar las llamadas', true);
+      },
+    });
+  }
+
+  private descargarCsv(filas: BotSesion[]): void {
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const celda = (v: unknown) => {
+      let t = v == null ? '' : String(v);
+      if (/^[=+\-@]/.test(t)) t = `'${t}`;
+      return `"${t.replace(/"/g, '""')}"`;
+    };
+    const cab = ['Inicio', 'Cola', 'Documento', 'Cliente', 'Teléfono', 'Cómo terminó', 'Qué salió', 'Duración (s)', 'Costo (USD)'];
+    const lineas = filas.map((s) => {
+      const f = s.inicio ? new Date(s.inicio) : null;
+      const inicio = f ? `${dos(f.getDate())}/${dos(f.getMonth() + 1)}/${f.getFullYear()} ${dos(f.getHours())}:${dos(f.getMinutes())}:${dos(f.getSeconds())}` : '';
+      return [inicio, this.nombreDeCola(s), s.documento, s.nombreCliente, s.telefono, this.comoTermino(s).texto,
+              this.queSeConsiguio(s), s.duracionSeg ?? '', s.costoEstimadoUsd ?? ''].map(celda).join(',');
+    });
+    const blob = new Blob(['\uFEFF' + [cab.map(celda).join(','), ...lineas].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ahora = new Date();
+    a.href = url;
+    a.download = `llamadas_bot_${this.aIso(ahora)}_${dos(ahora.getHours())}${dos(ahora.getMinutes())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   /**
