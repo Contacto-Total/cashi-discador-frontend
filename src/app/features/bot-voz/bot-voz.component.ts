@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, forkJoin, from, of } from 'rxjs';
 import { catchError, concatMap, toArray } from 'rxjs/operators';
+import { Workbook } from 'exceljs';
 import {
   BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas, ResumenCola, FiltroCartera,
@@ -3355,12 +3356,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
           if (this.totalSesiones > filas.length) {
             this.flash(`Se exportaron las ${this.miles(filas.length)} más recientes de ${this.miles(this.totalSesiones)}`);
           }
-        } catch {
+        } catch (e) {
+          console.error('Exportar llamadas: fallo al armar el Excel', e);
           this.flash('No se pudieron exportar las llamadas', true);
         }
         this.exportando = false;
       },
-      error: () => {
+      error: (e) => {
+        console.error('Exportar llamadas: fallo al pedir las llamadas', e);
         this.exportando = false;
         this.flash('No se pudieron exportar las llamadas', true);
       },
@@ -3368,7 +3371,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   private async descargarExcel(filas: BotSesion[]): Promise<void> {
-    const { Workbook } = await import('exceljs');
     const libro = new Workbook();
     const hoja = libro.addWorksheet('Llamadas', { views: [{ state: 'frozen', ySplit: 1 }] });
     const filasTabla = filas.map((s) => [
