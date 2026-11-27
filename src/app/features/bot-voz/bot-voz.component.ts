@@ -8,7 +8,7 @@ import { Subscription, forkJoin, from, of } from 'rxjs';
 import { catchError, concatMap, toArray } from 'rxjs/operators';
 import {
   BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
-  BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas, FiltroCartera,
+  BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas, ResumenCola, FiltroCartera,
 } from './bot-voz.service';
 
 /** Una pastilla de la pantalla de Llamadas, ya con su cuenta. */
@@ -51,6 +51,30 @@ interface CapsulaQue {
   tono: string;
   n: number;
   pastillas: Pastilla[];
+}
+
+interface FilaCola {
+  idCola: number;
+  nombre: string;
+  tipo: string;
+  fecha: string;
+  orden: string;
+  numero: number | null;
+  texto: string;
+  total: number;
+  contestaron: number;
+  pctContestaron: number;
+  conversaron: number;
+  pctConversaron: number;
+  promesas: number;
+  costo: number;
+  ultima: string | null;
+}
+
+interface GrupoColas {
+  clave: string;
+  etiqueta: string;
+  colas: { id: number; nombre: string }[];
 }
 
 interface Kpi {
@@ -534,6 +558,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     clearInterval(this.refresco);
     this.subCola?.unsubscribe();
     this.subSesiones?.unsubscribe();
+    this.subOv?.unsubscribe();
     this.cerrarAudio();
     this.pararDemo();       // si no, la muestra sigue sonando al cambiar de pantalla
   }
@@ -814,12 +839,207 @@ export class BotVozComponent implements OnInit, OnDestroy {
         .sort((a, b) => a.id - b.id);
     if (JSON.stringify(nuevas) === JSON.stringify(this.colasFiltro)) return;
     this.colasFiltro = nuevas;
-    this.colasCampana = nuevas.filter((c) => !this.esColaDePrueba(c.nombre));
-    this.colasPrueba = nuevas.filter((c) => this.esColaDePrueba(c.nombre));
+    const grupos = new Map<string, { id: number; nombre: string; orden: string; numero: number }[]>();
+    for (const c of nuevas) {
+      const p = this.parsearCola(c.nombre);
+      const lista = grupos.get(p.tipo) ?? [];
+      lista.push({ ...c, orden: p.orden, numero: p.numero ?? 0 });
+      grupos.set(p.tipo, lista);
+    }
+    this.gruposColas = [...grupos]
+      .sort((a, b) => this.pesoTipo(a[0]) - this.pesoTipo(b[0]) || a[0].localeCompare(b[0]))
+      .map(([clave, lista]) => ({
+        clave,
+        etiqueta: this.etiquetaTipo(clave),
+        colas: lista.sort((a, b) => b.orden.localeCompare(a.orden) || b.numero - a.numero || b.id - a.id)
+                    .map((c) => ({ id: c.id, nombre: c.nombre })),
+      }));
   }
 
-  colasCampana: { id: number; nombre: string }[] = [];
-  colasPrueba: { id: number; nombre: string }[] = [];
+  private parsearCola(nombre: string): { tipo: string; fecha: string; orden: string; numero: number | null } {
+    const m = /^BOT_([A-Z]+)_(\d{2})_(\d{2})_(\d{4})_(\d+)$/i.exec((nombre || '').trim());
+    if (m) return { tipo: m[1].toUpperCase(), fecha: `${m[2]}/${m[3]}/${m[4]}`, orden: `${m[4]}-${m[3]}-${m[2]}`, numero: Number(m[5]) };
+    return { tipo: this.esColaDePrueba(nombre || '') ? 'PRUEBAS' : 'OTRAS', fecha: '', orden: '', numero: null };
+  }
+
+  private pesoTipo(tipo: string): number {
+    const orden = ['CBRZ', 'SEG', 'LEV'];
+    const i = orden.indexOf(tipo);
+    if (i >= 0) return i;
+    return tipo === 'PRUEBAS' ? 98 : tipo === 'OTRAS' ? 99 : 10;
+  }
+
+  etiquetaTipo(tipo: string): string {
+    const nombres: Record<string, string> = {
+      CBRZ: 'CBRZ · Cobranza', SEG: 'SEG · Seguimiento', LEV: 'LEV · Levantamiento',
+      PRUEBAS: 'Pruebas (QAS)', OTRAS: 'Otras',
+    };
+    return nombres[tipo] ?? tipo;
+  }
+
+  claseTipoCola(tipo: string): string {
+    const base = 'inline-flex h-[22px] items-center whitespace-nowrap rounded-full px-2 text-[11.5px] font-bold';
+    const tonos: Record<string, string> = {
+      CBRZ: 'bg-[#eff5ff] text-[#1d4ed8] dark:bg-blue-950/60 dark:text-blue-300',
+      SEG: 'bg-[#fdf2dc] text-[#b45309] dark:bg-amber-950/50 dark:text-amber-300',
+      LEV: 'bg-[#e8f6ee] text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300',
+    };
+    return `${base} ${tonos[tipo] ?? 'bg-[#eef2f7] text-[#475569] dark:bg-slate-800 dark:text-slate-300'}`;
+  }
+
+  modoLlamadas: 'colas' | 'llamadas' = 'colas';
+  ovFilas: FilaCola[] = [];
+  ovFiltradas: FilaCola[] = [];
+  ovPaginaFilas: FilaCola[] = [];
+  ovTipos: { clave: string; etiqueta: string; n: number }[] = [];
+  ovTipo = '';
+  ovBusqueda = '';
+  ovOrden: { campo: string; dir: 1 | -1 } = { campo: 'recientes', dir: -1 };
+  ovPagina = 1;
+  readonly ovTam = 25;
+  ovCargando = false;
+  ovPrimera = true;
+  ovError = false;
+  private ovEnCurso = false;
+  private seqOv = 0;
+  private firmaOv = '';
+  private subOv?: Subscription;
+
+  get ovPaginas(): number { return Math.max(1, Math.ceil(this.ovFiltradas.length / this.ovTam)); }
+  get ovDesde(): number { return this.ovFiltradas.length ? (this.ovPagina - 1) * this.ovTam + 1 : 0; }
+  get ovHasta(): number { return Math.min(this.ovFiltradas.length, this.ovPagina * this.ovTam); }
+
+  private cargarResumenColas(silencioso: boolean): void {
+    if (silencioso && (this.ovEnCurso || document.hidden)) return;
+    const seq = ++this.seqOv;
+    this.subOv?.unsubscribe();
+    if (!silencioso) this.ovCargando = true;
+    this.ovEnCurso = true;
+    this.subOv = this.svc.getResumenPorCola(this.fechaLlamadas || null, this.filtroCarteraActual).subscribe({
+      next: (filas) => {
+        if (seq !== this.seqOv) return;
+        this.ovEnCurso = false;
+        this.ovCargando = false;
+        this.ovPrimera = false;
+        this.ovError = false;
+        const firma = JSON.stringify(filas);
+        if (firma === this.firmaOv) return;
+        this.firmaOv = firma;
+        this.ovFilas = filas.map((f) => this.aFilaCola(f));
+        this.recalcularOv();
+      },
+      error: () => {
+        if (seq !== this.seqOv) return;
+        this.ovEnCurso = false;
+        this.ovCargando = false;
+        this.ovPrimera = false;
+        this.ovError = true;
+        if (!silencioso) this.flash('No se pudieron cargar las colas', true);
+      },
+    });
+  }
+
+  private aFilaCola(f: ResumenCola): FilaCola {
+    const nombre = f.nombreCola || `Cola ${f.idCola}`;
+    const p = this.parsearCola(nombre);
+    const contestaron = (f.sinHablar ?? 0) + (f.conversaron ?? 0);
+    return {
+      idCola: f.idCola, nombre, tipo: p.tipo, fecha: p.fecha, orden: p.orden, numero: p.numero,
+      texto: `${p.tipo} ${p.fecha} ${p.numero ?? ''} ${nombre}`.toLowerCase(),
+      total: f.total ?? 0,
+      contestaron,
+      pctContestaron: f.total ? (contestaron / f.total) * 100 : 0,
+      conversaron: f.conversaron ?? 0,
+      pctConversaron: contestaron ? ((f.conversaron ?? 0) / contestaron) * 100 : 0,
+      promesas: f.promesas ?? 0,
+      costo: Number(f.costoUsd ?? 0),
+      ultima: f.ultimaLlamada,
+    };
+  }
+
+  recalcularOv(): void {
+    const cuenta = new Map<string, number>();
+    for (const f of this.ovFilas) cuenta.set(f.tipo, (cuenta.get(f.tipo) ?? 0) + 1);
+    const tipos = [...cuenta.keys()].sort((a, b) => this.pesoTipo(a) - this.pesoTipo(b) || a.localeCompare(b));
+    this.ovTipos = [{ clave: '', etiqueta: 'Todas', n: this.ovFilas.length },
+                    ...tipos.map((k) => ({ clave: k, etiqueta: k === 'PRUEBAS' ? 'Pruebas' : k === 'OTRAS' ? 'Otras' : k, n: cuenta.get(k) ?? 0 }))];
+    if (this.ovTipo && !cuenta.has(this.ovTipo)) this.ovTipo = '';
+    const fichas = this.ovBusqueda.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const { campo, dir } = this.ovOrden;
+    const valor = (f: FilaCola): number | string => {
+      switch (campo) {
+        case 'llamadas': return f.total;
+        case 'contestaron': return f.pctContestaron;
+        case 'conversaron': return f.pctConversaron;
+        case 'promesas': return f.promesas;
+        case 'costo': return f.costo;
+        case 'ultima': return f.ultima ?? '';
+        default: return f.orden ? `${f.orden}-${String(f.numero ?? 0).padStart(6, '0')}` : `0000-${String(f.idCola).padStart(8, '0')}`;
+      }
+    };
+    this.ovFiltradas = this.ovFilas
+      .filter((f) => (!this.ovTipo || f.tipo === this.ovTipo) && fichas.every((x) => f.texto.includes(x)))
+      .sort((a, b) => {
+        const va = valor(a);
+        const vb = valor(b);
+        const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb));
+        return c * dir || b.idCola - a.idCola;
+      });
+    if (this.ovPagina > this.ovPaginas) this.ovPagina = this.ovPaginas;
+    this.ovPaginaFilas = this.ovFiltradas.slice((this.ovPagina - 1) * this.ovTam, this.ovPagina * this.ovTam);
+  }
+
+  elegirTipoOv(clave: string): void {
+    this.ovTipo = clave;
+    this.ovPagina = 1;
+    this.recalcularOv();
+  }
+
+  alFiltrarOv(): void {
+    this.ovPagina = 1;
+    this.recalcularOv();
+  }
+
+  ordenarOv(campo: string): void {
+    this.ovOrden = this.ovOrden.campo === campo
+      ? { campo, dir: this.ovOrden.dir === 1 ? -1 : 1 }
+      : { campo, dir: -1 };
+    this.ovPagina = 1;
+    this.recalcularOv();
+  }
+
+  irAPaginaOv(n: number): void {
+    this.ovPagina = Math.min(Math.max(1, n), this.ovPaginas);
+    this.recalcularOv();
+  }
+
+  abrirCola(id: number): void {
+    this.modoLlamadas = 'llamadas';
+    this.colaLlamadas = id;
+    this.pillLlamadas = null;
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
+  verTodasLasLlamadas(): void {
+    this.modoLlamadas = 'llamadas';
+    this.colaLlamadas = null;
+    this.pillLlamadas = null;
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
+  volverALasColas(): void {
+    this.cerrarAudio();
+    this.modoLlamadas = 'colas';
+    this.colaLlamadas = null;
+    this.pillLlamadas = null;
+    this.busquedaLlamadas = '';
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
+  gruposColas: GrupoColas[] = [];
 
   private esColaDePrueba(nombre: string): boolean {
     return /prueba|qas|inc-\d+/i.test(nombre);
@@ -1224,6 +1444,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  Y recarga desde el servidor, porque el historico entero no cabe en el navegador.
    *  Los 350 ms evitan una peticion por cada tecla. */
   alBuscarLlamadas(): void {
+    if (this.modoLlamadas === 'colas' && this.busquedaLlamadas.trim()) this.modoLlamadas = 'llamadas';
     this.paginaSesiones = 1;
     clearTimeout(this.tempBusqueda);
     this.tempBusqueda = setTimeout(() => this.cargarSesiones(), 350);
@@ -3026,6 +3247,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(silencioso = false): void {
+    if (this.modoLlamadas === 'colas') {
+      this.cargarResumenColas(silencioso);
+      return;
+    }
     if (silencioso && (this.solicitudEnCurso || !this.llamadasEnVivo || document.hidden)) return;
     const seq = ++this.seqLlamadas;
     this.subSesiones?.unsubscribe();

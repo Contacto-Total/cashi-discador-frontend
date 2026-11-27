@@ -423,10 +423,157 @@
 
       <!-- ===================== LLAMADAS ===================== -->
       @case ('llamadas') {
+        @if (modoLlamadas === 'colas') {
         <section class="flex flex-col gap-4">
           <div class="sticky top-2 z-20 flex flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-3 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-wrap items-end gap-x-3 gap-y-2.5">
               <div class="mr-auto flex min-w-0 flex-col gap-[3px]">
+                <h2 class="!m-0 text-[17px] font-bold">Llamadas del bot</h2>
+                <p class="!m-0 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                  {{ miles(ovFiltradas.length) }} de {{ miles(ovFilas.length) }} colas · {{ fechaLlamadas ? (fechaLlamadas | date:'dd/MM/yyyy') : 'todos los días' }}
+                </p>
+              </div>
+              <span class="inline-flex h-[28px] items-center gap-1.5 rounded-full bg-[#e8f6ee] px-3 text-[12px] font-semibold text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300">
+                <span class="h-1.5 w-1.5 rounded-full bg-[#16a34a] dark:bg-emerald-400"></span>
+                Se actualiza cada 5 s
+              </span>
+              <div class="flex flex-col gap-1">
+                <span [class]="ui.etiqueta">Día</span>
+                <span class="flex items-center gap-1.5">
+                  <button type="button" (click)="cambiarFechaLlamadas('')" [attr.aria-pressed]="!fechaLlamadas"
+                          [class]="!fechaLlamadas ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">Todos</button>
+                  <button type="button" (click)="cambiarFechaLlamadas(hoyIso)" [attr.aria-pressed]="fechaLlamadas === hoyIso"
+                          [class]="fechaLlamadas === hoyIso ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">Hoy</button>
+                  <button type="button" (click)="cambiarFechaLlamadas(ayerIso)" [attr.aria-pressed]="fechaLlamadas === ayerIso"
+                          [class]="fechaLlamadas === ayerIso ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">Ayer</button>
+                  <span class="block w-[150px]">
+                    <input type="date" [ngModel]="fechaLlamadas" (ngModelChange)="cambiarFechaLlamadas($event)" aria-label="Elegir un día" [class]="ui.campo">
+                  </span>
+                </span>
+              </div>
+              <button type="button" (click)="verTodasLasLlamadas()" [class]="ui.botonSecundarioAlto">
+                <lucide-angular name="phone-call" [size]="15" class="block"></lucide-angular>
+                Ver todas las llamadas
+              </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 border-t border-[#eef1f5] pt-2.5 dark:border-slate-800">
+              @for (t of ovTipos; track t.clave) {
+                <button type="button" (click)="elegirTipoOv(t.clave)" [attr.aria-pressed]="ovTipo === t.clave" [class]="clasePastilla('gris', ovTipo === t.clave)">
+                  {{ t.etiqueta }}
+                  <span class="rounded-full px-1.5 text-[11px] tabular-nums" [ngClass]="ovTipo === t.clave ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-black/5 dark:bg-white/10'">{{ miles(t.n) }}</span>
+                </button>
+              }
+              <label class="relative ml-auto block min-w-[240px] flex-1 basis-[240px] sm:max-w-[360px]">
+                <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400">
+                  <lucide-angular name="search" [size]="15" class="block"></lucide-angular>
+                </span>
+                <input type="search" [(ngModel)]="ovBusqueda" (ngModelChange)="alFiltrarOv()"
+                       aria-label="Buscar cola" placeholder="Buscar cola: SEG 27/11, 115…" [class]="ui.campoBuscar">
+              </label>
+            </div>
+            <div class="-mb-3 -mx-[18px] h-[3px] overflow-hidden rounded-b-xl" aria-hidden="true">
+              @if (ovCargando) {
+                <div class="barrido h-full w-1/3 rounded-full bg-[#2563eb] dark:bg-blue-400"></div>
+              }
+            </div>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white transition-opacity duration-150 dark:border-slate-800 dark:bg-slate-900"
+               [class.atenuado]="ovCargando && !ovPrimera">
+            <div class="max-h-[72vh] overflow-auto">
+              <table class="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th [class]="ui.th + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('recientes')" class="inline-flex items-center gap-1 font-bold uppercase tracking-[0.05em]">
+                        Cola @if (ovOrden.campo === 'recientes') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }
+                      </button>
+                    </th>
+                    <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('llamadas')" class="font-bold uppercase tracking-[0.05em]">Llamadas @if (ovOrden.campo === 'llamadas') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }</button>
+                    </th>
+                    <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('contestaron')" class="font-bold uppercase tracking-[0.05em]">Contestaron @if (ovOrden.campo === 'contestaron') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }</button>
+                    </th>
+                    <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('conversaron')" class="font-bold uppercase tracking-[0.05em]">Conversaron @if (ovOrden.campo === 'conversaron') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }</button>
+                    </th>
+                    <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('promesas')" class="font-bold uppercase tracking-[0.05em]">Promesas @if (ovOrden.campo === 'promesas') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }</button>
+                    </th>
+                    <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('costo')" class="font-bold uppercase tracking-[0.05em]">Costo @if (ovOrden.campo === 'costo') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }</button>
+                    </th>
+                    <th [class]="ui.th + ' sticky top-0 z-[1]'">
+                      <button type="button" (click)="ordenarOv('ultima')" class="font-bold uppercase tracking-[0.05em]">Última llamada @if (ovOrden.campo === 'ultima') { {{ ovOrden.dir === 1 ? '↑' : '↓' }} }</button>
+                    </th>
+                    <th [class]="ui.th + ' sticky top-0 z-[1]'"><span class="sr-only">Abrir</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (f of ovPaginaFilas; track f.idCola) {
+                    <tr (click)="abrirCola(f.idCola)" (keydown.enter)="abrirCola(f.idCola)" tabindex="0"
+                        class="cursor-pointer transition-colors hover:bg-[#f8fafc] focus-visible:bg-[#eff5ff] focus-visible:outline-none dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800"
+                        [attr.aria-label]="'Ver las llamadas de la cola ' + f.nombre">
+                      <td [class]="ui.td">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span [class]="claseTipoCola(f.tipo)">{{ f.tipo === 'PRUEBAS' ? 'PRUEBA' : f.tipo }}</span>
+                          @if (f.fecha) {
+                            <span class="font-semibold tabular-nums">{{ f.fecha }}</span>
+                            <span class="tabular-nums text-[#5f6c80] dark:text-slate-400">N.º {{ f.numero }}</span>
+                          } @else {
+                            <span class="font-semibold">{{ f.nombre }}</span>
+                          }
+                        </div>
+                        @if (f.fecha) {
+                          <div class="text-[11.5px] text-[#8491a3] dark:text-slate-500">{{ f.nombre }}</div>
+                        }
+                      </td>
+                      <td [class]="ui.td + ' text-right font-semibold tabular-nums'">{{ miles(f.total) }}</td>
+                      <td [class]="ui.td + ' text-right tabular-nums'">{{ miles(f.contestaron) }} <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ f.pctContestaron.toFixed(1).replace('.', ',') }} %</span></td>
+                      <td [class]="ui.td + ' text-right tabular-nums'">{{ miles(f.conversaron) }} <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ f.pctConversaron.toFixed(1).replace('.', ',') }} %</span></td>
+                      <td [class]="ui.td + ' text-right tabular-nums'" [ngClass]="f.promesas ? 'font-extrabold text-[#15803d] dark:text-emerald-400' : 'text-[#8491a3] dark:text-slate-500'">{{ f.promesas ? miles(f.promesas) : '—' }}</td>
+                      <td [class]="ui.td + ' text-right tabular-nums'">{{ usd(f.costo) }}</td>
+                      <td [class]="ui.td + ' whitespace-nowrap tabular-nums text-[#5f6c80] dark:text-slate-400'">{{ f.ultima ? (f.ultima | date:'dd/MM HH:mm') : '—' }}</td>
+                      <td [class]="ui.td + ' text-[#8491a3]'"><lucide-angular name="chevron-right" [size]="16" class="block"></lucide-angular></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (ovError) {
+              <p class="!m-0 px-4 py-8 text-center text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">No se pudieron cargar las colas.</p>
+            } @else if (ovPrimera) {
+              <p class="!m-0 animate-pulse px-4 py-8 text-center text-[13px] font-semibold text-[#5f6c80] dark:text-slate-400">Cargando las colas…</p>
+            } @else if (ovFiltradas.length === 0) {
+              <p class="!m-0 px-4 py-8 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Ninguna cola coincide con lo que has pedido.</p>
+            }
+            <nav aria-label="Paginación de colas" class="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f5] px-4 py-3 dark:border-slate-800">
+              <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">Mostrando {{ miles(ovDesde) }}–{{ miles(ovHasta) }} de {{ miles(ovFiltradas.length) }} colas</span>
+              <span class="flex items-center gap-1">
+                <span class="mr-2 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">Página {{ miles(ovPagina) }} de {{ miles(ovPaginas) }}</span>
+                <button type="button" (click)="irAPaginaOv(1)" [disabled]="ovPagina === 1" [class]="ui.botonPagina">Primera</button>
+                <button type="button" (click)="irAPaginaOv(ovPagina - 1)" [disabled]="ovPagina === 1" aria-label="Página anterior" [class]="ui.botonIcono">
+                  <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
+                </button>
+                <button type="button" (click)="irAPaginaOv(ovPagina + 1)" [disabled]="ovPagina === ovPaginas" aria-label="Página siguiente" [class]="ui.botonIcono">
+                  <lucide-angular name="chevron-right" [size]="14" class="block"></lucide-angular>
+                </button>
+                <button type="button" (click)="irAPaginaOv(ovPaginas)" [disabled]="ovPagina === ovPaginas" [class]="ui.botonPagina">Última</button>
+              </span>
+            </nav>
+          </div>
+        </section>
+        }
+        @else {
+        <section class="flex flex-col gap-4">
+          <div class="sticky top-2 z-20 flex flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-3 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex flex-wrap items-end gap-x-3 gap-y-2.5">
+              <div class="mr-auto flex min-w-0 flex-col gap-[3px]">
+                <button type="button" (click)="volverALasColas()" [class]="ui.enlace + ' w-fit !text-[13px]'">
+                  <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
+                  Colas
+                </button>
                 <h2 class="!m-0 text-[17px] font-bold">Llamadas del bot</h2>
                 <p class="!m-0 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ subtituloLlamadas }}</p>
               </div>
@@ -449,16 +596,9 @@
                   <span class="relative block">
                     <select [ngModel]="colaLlamadas" (ngModelChange)="cambiarColaLlamadas($event)" [class]="ui.select">
                       <option [ngValue]="null">Todas</option>
-                      @if (colasCampana.length) {
-                        <optgroup label="Campañas">
-                          @for (c of colasCampana; track c.id) {
-                            <option [ngValue]="c.id">{{ c.nombre }}</option>
-                          }
-                        </optgroup>
-                      }
-                      @if (colasPrueba.length) {
-                        <optgroup label="Pruebas (QAS)">
-                          @for (c of colasPrueba; track c.id) {
+                      @for (g of gruposColas; track g.clave) {
+                        <optgroup [label]="etiquetaTipo(g.clave)">
+                          @for (c of g.colas; track c.id) {
                             <option [ngValue]="c.id">{{ c.nombre }}</option>
                           }
                         </optgroup>
@@ -772,6 +912,7 @@
             </div>
           </div>
         </section>
+        }
       }
 
       <!-- ===================== VOCES Y TONOS ===================== -->

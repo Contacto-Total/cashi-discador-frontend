@@ -273,6 +273,19 @@ export interface BotSesion {
 }
 
 /** Los totales de un día de llamadas, tal y como los cuenta la base. */
+export interface ResumenCola {
+  idCola: number;
+  nombreCola: string | null;
+  total: number;
+  noDescolgaron: number;
+  buzon: number;
+  sinHablar: number;
+  conversaron: number;
+  promesas: number;
+  costoUsd: number;
+  ultimaLlamada: string | null;
+}
+
 export interface ResumenLlamadas {
   /** null cuando no se pidio dia: el resumen es de TODO el historico de esa cola. */
   fecha: string | null;
@@ -599,5 +612,11 @@ export class BotVozService {
     if (idCola) p = p.set('idCola', String(idCola));
     if (fecha) p = p.set('fecha', fecha);
     return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`, { params: p });
+  }
+
+  getResumenPorCola(fecha?: string | null, cartera?: FiltroCartera): Observable<ResumenCola[]> {
+    let p = conCartera(new HttpParams(), cartera);
+    if (fecha) p = p.set('fecha', fecha);
+    return this.http.get<ResumenCola[]>(`${this.apiUrl}/sesiones/colas/resumen`, { params: p });
   }
 }
