@@ -3123,13 +3123,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
                                             g?.hablo ?? null, busqueda, p, 100, this.filtroCarteraActual)),
       toArray(),
     ).subscribe({
-      next: (bloques) => {
+      next: async (bloques) => {
         const filas = bloques.flatMap((b) => b.filas);
-        this.descargarCsv(filas);
-        this.exportando = false;
-        if (this.totalSesiones > filas.length) {
-          this.flash(`Se exportaron las ${this.miles(filas.length)} más recientes de ${this.miles(this.totalSesiones)}`);
+        try {
+          await this.descargarExcel(filas);
+          if (this.totalSesiones > filas.length) {
+            this.flash(`Se exportaron las ${this.miles(filas.length)} más recientes de ${this.miles(this.totalSesiones)}`);
+          }
+        } catch {
+          this.flash('No se pudieron exportar las llamadas', true);
         }
+        this.exportando = false;
       },
       error: () => {
         this.exportando = false;
@@ -3138,26 +3142,48 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
-  private descargarCsv(filas: BotSesion[]): void {
-    const dos = (n: number) => String(n).padStart(2, '0');
-    const celda = (v: unknown) => {
-      let t = v == null ? '' : String(v);
-      if (/^[=+\-@]/.test(t)) t = `'${t}`;
-      return `"${t.replace(/"/g, '""')}"`;
-    };
-    const cab = ['Inicio', 'Cola', 'Documento', 'Cliente', 'Teléfono', 'Cómo terminó', 'Qué salió', 'Duración (s)', 'Costo (USD)'];
-    const lineas = filas.map((s) => {
-      const f = s.inicio ? new Date(s.inicio) : null;
-      const inicio = f ? `${dos(f.getDate())}/${dos(f.getMonth() + 1)}/${f.getFullYear()} ${dos(f.getHours())}:${dos(f.getMinutes())}:${dos(f.getSeconds())}` : '';
-      return [inicio, this.nombreDeCola(s), s.documento, s.nombreCliente, s.telefono, this.comoTermino(s).texto,
-              this.queSeConsiguio(s), s.duracionSeg ?? '', s.costoEstimadoUsd ?? ''].map(celda).join(',');
+  private async descargarExcel(filas: BotSesion[]): Promise<void> {
+    const { Workbook } = await import('exceljs');
+    const libro = new Workbook();
+    const hoja = libro.addWorksheet('Llamadas', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const filasTabla = filas.map((s) => [
+      s.inicio ? new Date(s.inicio) : null,
+      this.nombreDeCola(s),
+      s.documento ?? '',
+      s.nombreCliente ?? '',
+      s.telefono ?? '',
+      this.comoTermino(s).texto,
+      this.queSeConsiguio(s) === '—' ? '' : this.queSeConsiguio(s),
+      s.duracionSeg ?? null,
+      s.costoEstimadoUsd != null ? Number(s.costoEstimadoUsd) : null,
+    ]);
+    hoja.addTable({
+      name: 'Llamadas',
+      ref: 'A1',
+      headerRow: true,
+      totalsRow: false,
+      style: { theme: 'TableStyleMedium2', showRowStripes: true },
+      columns: ['Inicio', 'Cola', 'Documento', 'Cliente', 'Teléfono', 'Cómo terminó', 'Qué salió', 'Duración (s)', 'Costo (USD)']
+        .map((name) => ({ name, filterButton: true })),
+      rows: filasTabla.length ? filasTabla : [[null, '', '', '', '', '', '', null, null]],
     });
-    const blob = new Blob(['\uFEFF' + [cab.map(celda).join(','), ...lineas].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const anchos = [18, 38, 14, 36, 14, 16, 22, 14, 14];
+    anchos.forEach((w, i) => (hoja.getColumn(i + 1).width = w));
+    hoja.getColumn(1).numFmt = 'dd/mm/yyyy hh:mm:ss';
+    hoja.getColumn(3).numFmt = '@';
+    hoja.getColumn(5).numFmt = '@';
+    hoja.getColumn(8).numFmt = '#,##0';
+    hoja.getColumn(9).numFmt = '"$"#,##0.0000';
+    hoja.getRow(1).height = 22;
+    hoja.getRow(1).alignment = { vertical: 'middle' };
+    const buffer = await libro.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const ahora = new Date();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const ahora = new Date();
     a.href = url;
-    a.download = `llamadas_bot_${this.aIso(ahora)}_${dos(ahora.getHours())}${dos(ahora.getMinutes())}.csv`;
+    a.download = `llamadas_bot_${this.aIso(ahora)}_${dos(ahora.getHours())}${dos(ahora.getMinutes())}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   }
