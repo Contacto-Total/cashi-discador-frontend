@@ -33,3 +33,8 @@
 @media (prefers-reduced-motion: reduce) {
   .aparecer, .deslizar, .fundir, .barra-viva { animation: none; }
 }
+
+@keyframes barrido { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.barrido { animation: barrido 1.1s ease-in-out infinite; }
+.atenuado { opacity: 0.55; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .barrido { animation: none; } }

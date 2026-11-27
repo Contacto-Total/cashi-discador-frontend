@@ -424,238 +424,341 @@
       <!-- ===================== LLAMADAS ===================== -->
       @case ('llamadas') {
         <section class="flex flex-col gap-4">
-          <div class="flex flex-wrap items-end gap-2.5">
-            <div class="mr-auto flex flex-col gap-[3px]">
-              <h2 class="!m-0 text-[17px] font-bold">Llamadas del bot</h2>
-              <p class="!m-0 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ subtituloLlamadas }}</p>
-            </div>
-
-            @if (colasFiltro.length) {
-              <label class="flex min-w-[190px] flex-col gap-1">
-                <span [class]="ui.etiqueta">Cola</span>
-                <span class="relative block">
-                  <select [ngModel]="colaLlamadas" (ngModelChange)="cambiarColaLlamadas($event)" [class]="ui.select">
-                    <option [ngValue]="null">Todas</option>
-                    @for (c of colasFiltro; track c.id) {
-                      <option [ngValue]="c.id">{{ c.nombre }}</option>
-                    }
-                  </select>
-                  <span [class]="ui.flechaSelect"><lucide-angular name="chevron-down" [size]="12" class="block"></lucide-angular></span>
-                </span>
-              </label>
-            }
-
-            <label class="flex flex-col gap-1">
-              <span [class]="ui.etiqueta">Día</span>
-              <span class="flex items-center gap-1.5">
-                <span class="block w-[160px]">
-                  <input type="date" [ngModel]="fechaLlamadas" (ngModelChange)="cambiarFechaLlamadas($event)" [class]="ui.campo">
-                </span>
-                @if (fechaLlamadas) {
-                  <button type="button" (click)="cambiarFechaLlamadas('')" [class]="ui.botonSecundarioAlto" title="Ver todos los días">Todos</button>
-                }
-              </span>
-            </label>
-
-          </div>
-
-          @if (resumenLlamadas; as r) {
-            <!-- Arriba lo que se cuenta y no se filtra -->
-            <div class="grid grid-cols-1 gap-4 xl:grid-cols-[3fr_2fr]">
-              <div class="flex flex-col gap-4 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
-                <div class="flex items-baseline justify-between gap-3">
-                  <h3 class="!m-0 !text-[15px] !font-bold">Contactabilidad</h3>
-                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
-                    <strong class="font-extrabold tabular-nums text-[#0f172a] dark:text-slate-100">{{ miles(r.total) }}</strong> marcadas
-                    @if (contacto.fallaron) { · {{ miles(contacto.fallaron) }} fallaron }
-                  </span>
-                </div>
-
-                <div class="flex flex-1 flex-col justify-center gap-2" role="img" [attr.aria-label]="contacto.resumen">
-                  <div class="grid h-[184px] grid-cols-4 items-end gap-5 border-b border-[#d9dfe7] px-2 dark:border-slate-700">
-                    @for (col of contacto.columnas; track col.clave) {
-                      <div class="flex flex-col items-center justify-end gap-1.5">
-                        <span class="text-[20px] font-extrabold leading-none tabular-nums" [ngClass]="col.tonoTexto">{{ miles(col.n) }}</span>
-                        <span class="block w-full max-w-[72px] rounded-t-md transition-[height] duration-500 ease-out" [ngClass]="col.barra" [style.height.px]="col.alto"></span>
-                      </div>
-                    }
-                  </div>
-                  <div class="grid grid-cols-4 gap-5 px-2">
-                    @for (col of contacto.columnas; track col.clave) {
-                      <div class="flex flex-col items-center gap-0.5 text-center">
-                        <span class="cursor-help text-[12.5px] font-semibold leading-tight underline decoration-[#94a3b8] decoration-dotted underline-offset-[5px]"
-                              [ngClass]="col.tonoTexto" [title]="col.ayuda">{{ col.etiqueta }}</span>
-                        <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ col.pct }}</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="grid grid-cols-4 gap-5 px-2">
-                    <div class="col-span-2 flex flex-col items-center gap-1">
-                      <span class="block h-2 w-full rounded-b-sm border-x-2 border-b-2 border-[#8491a3] dark:border-slate-500"></span>
-                      <span class="text-[12.5px] font-semibold">No contestaron · <span class="font-extrabold tabular-nums">{{ miles(contacto.noContestaron) }}</span></span>
-                    </div>
-                    <div class="col-span-2 flex flex-col items-center gap-1">
-                      <span class="block h-2 w-full rounded-b-sm border-x-2 border-b-2 border-[#8491a3] dark:border-slate-500"></span>
-                      <span class="text-[12.5px] font-semibold">Contestaron · <span class="font-extrabold tabular-nums">{{ miles(contacto.contestaron) }}</span></span>
-                    </div>
-                  </div>
-                </div>
-
-                <p class="!m-0 border-t border-[#eef1f5] pt-3 text-[13px] dark:border-slate-800">
-                  <strong class="font-extrabold tabular-nums !text-[#15803d] dark:!text-emerald-400">{{ miles(contacto.conversaron) }}</strong>
-                  de {{ miles(contacto.contestaron) }} hablaron de verdad
-                  <span class="tabular-nums text-[#5f6c80] dark:text-slate-400">({{ contacto.pctHablaron }})</span>
-                </p>
+          <div class="sticky top-2 z-20 flex flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-3 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex flex-wrap items-end gap-x-3 gap-y-2.5">
+              <div class="mr-auto flex min-w-0 flex-col gap-[3px]">
+                <h2 class="!m-0 text-[17px] font-bold">Llamadas del bot</h2>
+                <p class="!m-0 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ subtituloLlamadas }}</p>
               </div>
 
-              <div class="flex flex-col gap-4 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
-                <div class="flex items-baseline justify-between gap-3">
-                  <h3 class="!m-0 !text-[15px] !font-bold">Vueltas de la cola</h3>
-                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">cuántas llamadas lleva cada cliente</span>
-                </div>
-                @if (vueltas; as v) {
-                  <div class="grid flex-1 grid-cols-[170px_1fr] items-center gap-5">
-                    <div class="relative h-[170px] w-[170px]">
-                      <svg viewBox="0 0 200 200" class="h-full w-full" role="img" [attr.aria-label]="v.resumen">
-                        <g transform="rotate(-90 100 100)" fill="none" stroke-width="26">
-                          <circle cx="100" cy="100" r="80" class="stroke-[#eef1f5] dark:stroke-slate-800"></circle>
-                          @for (sg of v.segmentos; track sg.clave) {
-                            <circle cx="100" cy="100" r="80" [attr.pathLength]="v.total || 1"
-                                    [attr.stroke-dasharray]="sg.dash" [attr.stroke-dashoffset]="sg.offset" [ngClass]="sg.trazo"></circle>
+              <span class="inline-flex h-[28px] items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold"
+                    [ngClass]="llamadasEnVivo ? 'bg-[#e8f6ee] text-[#15803d] dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-[#eef2f7] text-[#475569] dark:bg-slate-800 dark:text-slate-300'">
+                <span class="h-1.5 w-1.5 rounded-full" [ngClass]="llamadasEnVivo ? 'bg-[#16a34a] dark:bg-emerald-400' : 'bg-[#94a3b8]'"></span>
+                {{ llamadasEnVivo ? 'Se actualiza cada 5 s' : motivoPausaLlamadas }}
+              </span>
+              @if (!llamadasEnVivo) {
+                <button type="button" (click)="cargarSesiones()" [class]="ui.botonSecundarioAlto">
+                  <lucide-angular name="refresh-cw" [size]="14" class="block"></lucide-angular>
+                  Actualizar
+                </button>
+              }
+
+              @if (colasFiltro.length) {
+                <label class="flex min-w-[220px] flex-col gap-1">
+                  <span [class]="ui.etiqueta">Cola</span>
+                  <span class="relative block">
+                    <select [ngModel]="colaLlamadas" (ngModelChange)="cambiarColaLlamadas($event)" [class]="ui.select">
+                      <option [ngValue]="null">Todas</option>
+                      @if (colasCampana.length) {
+                        <optgroup label="Campañas">
+                          @for (c of colasCampana; track c.id) {
+                            <option [ngValue]="c.id">{{ c.nombre }}</option>
                           }
-                        </g>
-                      </svg>
-                      <div class="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                        <span class="text-[27px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(v.total) }}</span>
-                        <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">clientes</span>
-                      </div>
+                        </optgroup>
+                      }
+                      @if (colasPrueba.length) {
+                        <optgroup label="Pruebas (QAS)">
+                          @for (c of colasPrueba; track c.id) {
+                            <option [ngValue]="c.id">{{ c.nombre }}</option>
+                          }
+                        </optgroup>
+                      }
+                    </select>
+                    <span [class]="ui.flechaSelect"><lucide-angular name="chevron-down" [size]="12" class="block"></lucide-angular></span>
+                  </span>
+                </label>
+              }
+
+              <div class="flex flex-col gap-1">
+                <span [class]="ui.etiqueta">Día</span>
+                <span class="flex items-center gap-1.5">
+                  <button type="button" (click)="cambiarFechaLlamadas('')" [attr.aria-pressed]="!fechaLlamadas"
+                          [class]="!fechaLlamadas ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">Todos</button>
+                  <button type="button" (click)="cambiarFechaLlamadas(hoyIso)" [attr.aria-pressed]="fechaLlamadas === hoyIso"
+                          [class]="fechaLlamadas === hoyIso ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">Hoy</button>
+                  <button type="button" (click)="cambiarFechaLlamadas(ayerIso)" [attr.aria-pressed]="fechaLlamadas === ayerIso"
+                          [class]="fechaLlamadas === ayerIso ? ui.botonSecundarioAlto + ' ' + ui.botonMarcado : ui.botonSecundarioAlto">Ayer</button>
+                  <span class="block w-[150px]">
+                    <input type="date" [ngModel]="fechaLlamadas" (ngModelChange)="cambiarFechaLlamadas($event)" aria-label="Elegir un día" [class]="ui.campo">
+                  </span>
+                </span>
+              </div>
+
+              <button type="button" (click)="exportarLlamadas()" [disabled]="exportando || !totalSesiones"
+                      title="Descarga en CSV las llamadas con los filtros puestos (hasta 5.000, las más recientes)" [class]="ui.botonSecundarioAlto">
+                <lucide-angular [name]="exportando ? 'loader-2' : 'file-spreadsheet'" [size]="15" class="block" [class.animate-spin]="exportando"></lucide-angular>
+                Exportar
+              </button>
+            </div>
+
+            @if (hayFiltrosLlamadas) {
+              <div class="flex flex-wrap items-center gap-1.5 border-t border-[#eef1f5] pt-2.5 dark:border-slate-800">
+                <span class="text-[12px] font-semibold text-[#5f6c80] dark:text-slate-400">Filtros:</span>
+                @if (colaLlamadas != null) {
+                  <button type="button" (click)="cambiarColaLlamadas(null)" [class]="claseFiltroActivo">
+                    Cola: {{ nombreColaLlamadas }}
+                    <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                  </button>
+                }
+                @if (fechaLlamadas) {
+                  <button type="button" (click)="cambiarFechaLlamadas('')" [class]="claseFiltroActivo">
+                    Día: {{ fechaLlamadas | date:'dd/MM/yyyy' }}
+                    <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                  </button>
+                }
+                @if (pillLlamadas) {
+                  <button type="button" (click)="alternarPill(pillLlamadas)" [class]="claseFiltroActivo">
+                    {{ etiquetaDelPill(pillLlamadas) }}
+                    <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                  </button>
+                }
+                @if (busquedaLlamadas.trim()) {
+                  <button type="button" (click)="quitarBusquedaLlamadas()" [class]="claseFiltroActivo">
+                    Búsqueda: {{ busquedaLlamadas.trim() }}
+                    <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                  </button>
+                }
+                <button type="button" (click)="limpiarFiltrosLlamadas()" [class]="ui.enlace + ' ml-1'">Limpiar filtros</button>
+              </div>
+            }
+            <div class="-mb-3 -mx-[18px] h-[3px] overflow-hidden rounded-b-xl" aria-hidden="true">
+              @if (cargandoLlamadas) {
+                <div class="barrido h-full w-1/3 rounded-full bg-[#2563eb] dark:bg-blue-400"></div>
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4 transition-opacity duration-150" [class.atenuado]="cargandoLlamadas && !primeraCargaLlamadas">
+            @if (resumenLlamadas; as r) {
+              <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                @for (k of kpis; track k.clave) {
+                  <div class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-[#e6e9ee] bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900" [title]="k.ayuda">
+                    <span class="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ k.etiqueta }}</span>
+                    <strong class="truncate text-[24px] font-extrabold leading-none tracking-[-0.02em] tabular-nums" [ngClass]="k.tonoTexto">{{ k.valor }}</strong>
+                    <span class="truncate text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ k.detalle }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="grid grid-cols-1 gap-4" [ngClass]="colaLlamadas != null ? 'xl:grid-cols-[3fr_2fr]' : 'xl:grid-cols-1'">
+                <div class="flex flex-col gap-4 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <h3 class="!m-0 !text-[15px] !font-bold">Del marcado a la promesa</h3>
+                    <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">
+                      <strong class="font-extrabold tabular-nums text-[#0f172a] dark:text-slate-100">{{ miles(r.total) }}</strong> marcadas
+                      @if (contacto.fallaron) { · {{ miles(contacto.fallaron) }} fallaron }
+                    </span>
+                  </div>
+
+                  <ol class="!m-0 flex list-none flex-col gap-3 !p-0" [attr.aria-label]="contacto.resumen">
+                    @for (e of embudo; track e.clave) {
+                      <li class="grid grid-cols-[120px_1fr_190px] items-center gap-3" [title]="e.ayuda">
+                        <span class="text-[13px] font-semibold">{{ e.etiqueta }}</span>
+                        <span class="block h-7 overflow-hidden rounded-md bg-[#eef1f5] dark:bg-slate-800">
+                          <span class="block h-full rounded-md transition-[width] duration-500 ease-out" [ngClass]="e.barra" [style.width.%]="e.ancho"></span>
+                        </span>
+                        <span class="flex items-baseline justify-end gap-2 whitespace-nowrap text-right">
+                          <strong class="text-[16px] font-extrabold tabular-nums">{{ miles(e.n) }}</strong>
+                          <span class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ e.paso }}</span>
+                        </span>
+                      </li>
+                    }
+                  </ol>
+
+                  <div class="flex flex-col gap-2 border-t border-[#eef1f5] pt-3 dark:border-slate-800">
+                    <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">Cómo terminaron las {{ miles(r.total) }} marcadas</span>
+                    <div class="flex h-3 w-full overflow-hidden rounded-full bg-[#eef1f5] dark:bg-slate-800" role="img" [attr.aria-label]="contacto.resumen">
+                      @for (t of reparto; track t.clave) {
+                        <span class="block h-full transition-[width] duration-500 ease-out" [ngClass]="t.barra" [style.width.%]="t.ancho" [title]="t.etiqueta + ': ' + miles(t.n)"></span>
+                      }
                     </div>
-                    <ul class="!m-0 flex list-none flex-col divide-y divide-[#eef1f5] !p-0 dark:divide-slate-800">
-                      @for (f of v.filas; track f.clave) {
-                        <li class="grid grid-cols-[12px_1fr_auto_48px] items-center gap-x-2.5 py-2.5">
-                          <span class="h-3 w-3 rounded-[3px]" [ngClass]="f.n ? f.muestra : 'border border-dashed border-[#c5ccd6] dark:border-slate-600'"></span>
-                          <span class="flex flex-col">
-                            <span class="whitespace-nowrap text-[13.5px] font-semibold" [ngClass]="f.n ? '' : 'text-[#8491a3] dark:text-slate-500'">{{ f.etiqueta }}</span>
-                            @if (f.sub) {
-                              <span class="whitespace-nowrap text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.sub }}</span>
-                            }
-                          </span>
-                          <span class="text-right text-[18px] font-extrabold leading-none tabular-nums" [ngClass]="f.n ? '' : 'text-[#8491a3] dark:text-slate-500'">{{ miles(f.n) }}</span>
-                          <span class="text-right text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ f.n ? f.pct : '—' }}</span>
+                    <ul class="!m-0 flex list-none flex-wrap gap-x-5 gap-y-1.5 !p-0 text-[12.5px]">
+                      @for (t of reparto; track t.clave) {
+                        <li class="inline-flex items-center gap-1.5">
+                          <span class="h-2.5 w-2.5 rounded-[3px]" [ngClass]="t.barra"></span>
+                          {{ t.etiqueta }}
+                          <strong class="font-extrabold tabular-nums">{{ miles(t.n) }}</strong>
+                          <span class="tabular-nums text-[#5f6c80] dark:text-slate-400">{{ t.pct }}</span>
                         </li>
                       }
                     </ul>
                   </div>
-                  <p class="!m-0 border-t border-[#eef1f5] pt-3 text-[13px] text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">La 2ª vuelta empieza cuando ya nadie espera su primera llamada.</p>
-                } @else {
-                  <div class="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[#c5ccd6] px-4 py-10 text-center dark:border-slate-700">
-                    <span class="flex text-[#5f6c80] dark:text-slate-400"><lucide-angular name="layers" [size]="20" class="block"></lucide-angular></span>
-                    <p class="!m-0 text-[13px] font-semibold">{{ colaLlamadas == null ? 'Elige una cola para ver sus vueltas' : (errorVueltas ? 'No se pudieron contar las vueltas' : 'Contando las vueltas…') }}</p>
-                    <p class="!m-0 text-[12px] text-[#5f6c80] dark:text-slate-400">Cada cliente, según cuántas veces se le ha llamado.</p>
+                </div>
+
+                @if (colaLlamadas != null) {
+                  <div class="flex flex-col gap-4 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
+                    <div class="flex items-baseline justify-between gap-3">
+                      <h3 class="!m-0 !text-[15px] !font-bold">Vueltas de la cola</h3>
+                      <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">cuántas llamadas lleva cada cliente</span>
+                    </div>
+                    @if (vueltas; as v) {
+                      <div class="grid flex-1 grid-cols-[170px_1fr] items-center gap-5">
+                        <div class="relative h-[170px] w-[170px]">
+                          <svg viewBox="0 0 200 200" class="h-full w-full" role="img" [attr.aria-label]="v.resumen">
+                            <g transform="rotate(-90 100 100)" fill="none" stroke-width="26">
+                              <circle cx="100" cy="100" r="80" class="stroke-[#eef1f5] dark:stroke-slate-800"></circle>
+                              @for (sg of v.segmentos; track sg.clave) {
+                                <circle cx="100" cy="100" r="80" [attr.pathLength]="v.total || 1"
+                                        [attr.stroke-dasharray]="sg.dash" [attr.stroke-dashoffset]="sg.offset" [ngClass]="sg.trazo"></circle>
+                              }
+                            </g>
+                          </svg>
+                          <div class="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                            <span class="text-[27px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(v.total) }}</span>
+                            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">clientes</span>
+                          </div>
+                        </div>
+                        <ul class="!m-0 flex list-none flex-col divide-y divide-[#eef1f5] !p-0 dark:divide-slate-800">
+                          @for (f of v.filas; track f.clave) {
+                            <li class="grid grid-cols-[12px_1fr_auto_48px] items-center gap-x-2.5 py-2.5">
+                              <span class="h-3 w-3 rounded-[3px]" [ngClass]="f.n ? f.muestra : 'border border-dashed border-[#c5ccd6] dark:border-slate-600'"></span>
+                              <span class="flex flex-col">
+                                <span class="whitespace-nowrap text-[13.5px] font-semibold" [ngClass]="f.n ? '' : 'text-[#8491a3] dark:text-slate-500'">{{ f.etiqueta }}</span>
+                                @if (f.sub) {
+                                  <span class="whitespace-nowrap text-[11.5px] text-[#5f6c80] dark:text-slate-400">{{ f.sub }}</span>
+                                }
+                              </span>
+                              <span class="text-right text-[18px] font-extrabold leading-none tabular-nums" [ngClass]="f.n ? '' : 'text-[#8491a3] dark:text-slate-500'">{{ miles(f.n) }}</span>
+                              <span class="text-right text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ f.n ? f.pct : '—' }}</span>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                      <p class="!m-0 border-t border-[#eef1f5] pt-3 text-[13px] text-[#5f6c80] dark:border-slate-800 dark:text-slate-400">La 2ª vuelta empieza cuando ya nadie espera su primera llamada.</p>
+                    } @else {
+                      <div class="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[#c5ccd6] px-4 py-10 text-center dark:border-slate-700">
+                        <span class="flex text-[#5f6c80] dark:text-slate-400"><lucide-angular name="layers" [size]="20" class="block"></lucide-angular></span>
+                        <p class="!m-0 text-[13px] font-semibold">{{ errorVueltas ? 'No se pudieron contar las vueltas' : 'Contando las vueltas…' }}</p>
+                      </div>
+                    }
                   </div>
                 }
               </div>
-            </div>
 
-            <!-- Debajo, solo los filtros que sirven para gestionar -->
-            @if (capsulasQue.length) {
-              <div class="flex flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
-                <div class="flex flex-wrap items-baseline justify-center gap-x-2">
-                  <h3 class="!m-0 !text-[15px] !font-bold">Qué salió de las {{ miles(r.conversaron ?? 0) }} conversaciones</h3>
-                  <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">pulsa uno para ver solo esas llamadas</span>
+              @if (capsulasQue.length) {
+                <div class="flex flex-col gap-2.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div class="flex flex-wrap items-baseline justify-center gap-x-2">
+                    <h3 class="!m-0 !text-[15px] !font-bold">Qué salió de las {{ miles(r.conversaron ?? 0) }} conversaciones</h3>
+                    <span class="text-[12px] text-[#5f6c80] dark:text-slate-400">pulsa uno para ver solo esas llamadas</span>
+                  </div>
+                  <div class="flex flex-wrap items-center justify-center gap-2" role="group" aria-label="Filtrar por resultado">
+                    @for (g of capsulasQue; track g.clave) {
+                      <div class="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-[22px] border border-[#e6e9ee] bg-[#f8fafc] py-1 pl-3.5 pr-1 dark:border-slate-800 dark:bg-slate-800/40">
+                        <span class="mr-1 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em]" [ngClass]="g.tono">
+                          {{ g.etiqueta }} <span class="tabular-nums text-[#0f172a] dark:text-slate-100">{{ miles(g.n) }}</span>
+                        </span>
+                        @for (p of g.pastillas; track p.clave) {
+                          <button type="button" (click)="alternarPill(p.clave)" [attr.aria-pressed]="pillLlamadas === p.clave"
+                                  [title]="p.ayuda" [class]="clasePastilla(p.tono, pillLlamadas === p.clave)">
+                            {{ p.etiqueta }}
+                            <span class="rounded-full px-1.5 text-[11px] tabular-nums"
+                                  [ngClass]="pillLlamadas === p.clave ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-black/5 dark:bg-white/10'">{{ miles(p.n) }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
                 </div>
-                <div class="flex flex-wrap items-center justify-center gap-2" role="group" aria-label="Filtrar por resultado">
-                  @for (g of capsulasQue; track g.clave) {
-                    <div class="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-[22px] border border-[#e6e9ee] bg-[#f8fafc] py-1 pl-3.5 pr-1 dark:border-slate-800 dark:bg-slate-800/40">
-                      <span class="mr-1 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em]" [ngClass]="g.tono">
-                        {{ g.etiqueta }} <span class="tabular-nums text-[#0f172a] dark:text-slate-100">{{ miles(g.n) }}</span>
-                      </span>
-                      @for (p of g.pastillas; track p.clave) {
-                        <button type="button" (click)="alternarPill(p.clave)" [attr.aria-pressed]="pillLlamadas === p.clave"
-                                [title]="p.ayuda" [class]="clasePastilla(p.tono, pillLlamadas === p.clave)">
-                          {{ p.etiqueta }}
-                          <span class="rounded-full px-1.5 text-[11px] tabular-nums"
-                                [ngClass]="pillLlamadas === p.clave ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-black/5 dark:bg-white/10'">{{ miles(p.n) }}</span>
-                        </button>
-                      }
-                    </div>
-                  }
-                </div>
-                @if (pillLlamadas) {
-                  <p class="!m-0 flex flex-wrap items-center justify-center gap-x-2 text-[13px]">
-                    <span>Viendo solo <strong>{{ etiquetaDelPill(pillLlamadas) }}</strong>: {{ miles(totalSesiones) }} llamada(s).</span>
-                    <button type="button" (click)="alternarPill(pillLlamadas)" [class]="ui.enlace">Ver todas</button>
-                  </p>
+              }
+            } @else {
+              <div class="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-[#c5ccd6] bg-white px-4 text-center dark:border-slate-700 dark:bg-slate-900">
+                @if (errorResumen) {
+                  <div class="flex flex-col items-center gap-2">
+                    <p class="!m-0 text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">No se pudieron calcular los totales.</p>
+                    <button type="button" (click)="cargarSesiones()" [class]="ui.botonSecundarioAlto">Reintentar</button>
+                  </div>
+                } @else {
+                  <p class="!m-0 animate-pulse text-[13px] font-semibold text-[#5f6c80] dark:text-slate-400">Calculando los totales…</p>
                 }
               </div>
             }
-          }
 
-          @if (!sesiones.length && (busquedaLlamadas || pillLlamadas)) {
-            <p class="!m-0 text-[13px] text-[#5f6c80] dark:text-slate-400">Ninguna llamada coincide con lo que has pedido.</p>
-          }
-
-          <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div class="overflow-x-auto">
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th [class]="ui.th">Inicio</th>
-                    @if (colasFiltro.length > 1) {
-                      <th [class]="ui.th">Cola</th>
-                    }
-                    <th [class]="ui.th">Cliente</th>
-                    <th [class]="ui.th">Cómo terminó</th>
-                    <th [class]="ui.th">Qué salió</th>
-                    <th [class]="ui.thDerecha">Duración</th>
-                    <th [class]="ui.thDerecha">Costo</th>
-                    <th [class]="ui.th"><span class="sr-only">Audio</span></th>
-                    <th [class]="ui.th"><span class="sr-only">Abrir</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (s of sesionesPagina; track s.id) {
-                    <tr (click)="abrirDetalle(s)" (keydown.enter)="abrirDetalle(s)" tabindex="0"
-                        class="cursor-pointer transition-colors hover:bg-[#f8fafc] focus-visible:bg-[#eff5ff] focus-visible:outline-none dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800"
-                        [attr.aria-label]="'Ver la transcripción de la llamada a ' + (s.nombreCliente || s.documento || s.telefono)">
-                      <td [class]="ui.td + ' whitespace-nowrap tabular-nums'">{{ s.inicio | date:'dd/MM HH:mm' }}</td>
+            <div class="overflow-hidden rounded-xl border border-[#e6e9ee] bg-white dark:border-slate-800 dark:bg-slate-900">
+              <div class="max-h-[70vh] overflow-auto">
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th [class]="ui.th + ' sticky top-0 z-[1]'">Inicio</th>
                       @if (colasFiltro.length > 1) {
-                        <td [class]="ui.td + ' text-[12.5px] text-[#5f6c80] dark:text-slate-400'">{{ nombreDeCola(s) }}</td>
+                        <th [class]="ui.th + ' sticky top-0 z-[1]'">Cola</th>
                       }
-                      <td [class]="ui.td">
-                        <div class="font-semibold">{{ s.nombreCliente || ('Cliente ' + s.idCliente) }}</div>
-                        <div class="text-[12px] text-[#5f6c80] dark:text-slate-400">{{ s.documento || s.telefono || '—' }}</div>
-                      </td>
-                      <td [class]="ui.td"><span [class]="claseInsignia(comoTermino(s).tono)">{{ comoTermino(s).texto }}</span></td>
-                      <td [class]="ui.td" [ngClass]="queSeConsiguio(s) === '—' ? 'text-[#5f6c80] dark:text-slate-400' : ''">{{ queSeConsiguio(s) }}</td>
-                      <td [class]="ui.td + ' text-right tabular-nums'">{{ s.duracionSeg ? s.duracionSeg + ' s' : '—' }}</td>
-                      <td [class]="ui.td + ' text-right tabular-nums'">{{ s.costoEstimadoUsd ? ('$' + s.costoEstimadoUsd) : '—' }}</td>
-                      <td [class]="ui.td">
-                        <!-- Descarga el audio sin abrir la fila: el clic no sube al <tr>. Sin duración no hay audio (WAV vacío). -->
-                        <button type="button" (click)="descargarGrabacion(s, $event)" (keydown.enter)="$event.stopPropagation()"
-                                [disabled]="!s.duracionSeg || descargando === s.id"
-                                [title]="!s.duracionSeg ? 'Esta llamada no tiene audio' : 'Descargar la grabación'"
-                                aria-label="Descargar la grabación" [class]="ui.botonIcono">
-                          <lucide-angular [name]="descargando === s.id ? 'loader-2' : 'download'" [size]="14" class="block" [class.animate-spin]="descargando === s.id"></lucide-angular>
-                        </button>
-                      </td>
-                      <td [class]="ui.td + ' text-[#8491a3]'"><lucide-angular name="chevron-right" [size]="16" class="block"></lucide-angular></td>
+                      <th [class]="ui.th + ' sticky top-0 z-[1]'">Cliente</th>
+                      <th [class]="ui.th + ' sticky top-0 z-[1]'">Cómo terminó</th>
+                      <th [class]="ui.th + ' sticky top-0 z-[1]'">Qué salió</th>
+                      <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">Duración</th>
+                      <th [class]="ui.thDerecha + ' sticky top-0 z-[1]'">Costo</th>
+                      <th [class]="ui.th + ' sticky top-0 z-[1]'"><span class="sr-only">Audio</span></th>
+                      <th [class]="ui.th + ' sticky top-0 z-[1]'"><span class="sr-only">Abrir</span></th>
                     </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-            @if (errorSesiones) {
-              <p class="!m-0 px-4 py-8 text-center text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">No se pudieron cargar las llamadas.</p>
-            } @else if (sesiones.length === 0) {
-              <p class="!m-0 px-4 py-8 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">Aún no hay llamadas registradas.</p>
-            }
-            @if (paginasSesiones > 1) {
+                  </thead>
+                  <tbody>
+                    @for (s of sesionesPagina; track s.id) {
+                      <tr (click)="abrirDetalle(s)" (keydown.enter)="abrirDetalle(s)" tabindex="0"
+                          class="cursor-pointer transition-colors hover:bg-[#f8fafc] focus-visible:bg-[#eff5ff] focus-visible:outline-none dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800"
+                          [attr.aria-label]="'Ver la transcripción de la llamada a ' + (s.nombreCliente || s.documento || s.telefono)">
+                        <td [class]="ui.td + ' whitespace-nowrap tabular-nums'">{{ s.inicio | date:'dd/MM HH:mm' }}</td>
+                        @if (colasFiltro.length > 1) {
+                          <td [class]="ui.td + ' max-w-[220px] truncate text-[12.5px] text-[#5f6c80] dark:text-slate-400'" [title]="nombreDeCola(s)">{{ nombreDeCola(s) }}</td>
+                        }
+                        <td [class]="ui.td">
+                          <div class="font-semibold">{{ s.nombreCliente || ('Cliente ' + s.idCliente) }}</div>
+                          <div class="text-[12px] tabular-nums text-[#5f6c80] dark:text-slate-400">{{ s.documento || '—' }}@if (s.telefono) { · {{ s.telefono }} }</div>
+                        </td>
+                        <td [class]="ui.td"><span [class]="claseInsignia(comoTermino(s).tono)">{{ comoTermino(s).texto }}</span></td>
+                        <td [class]="ui.td" [ngClass]="queSeConsiguio(s) === '—' ? 'text-[#5f6c80] dark:text-slate-400' : 'font-semibold'">{{ queSeConsiguio(s) }}</td>
+                        <td [class]="ui.td + ' text-right tabular-nums'">{{ s.duracionSeg ? s.duracionSeg + ' s' : '—' }}</td>
+                        <td [class]="ui.td + ' text-right tabular-nums'">{{ s.costoEstimadoUsd ? ('$' + s.costoEstimadoUsd) : '—' }}</td>
+                        <td [class]="ui.td">
+                          <span class="flex items-center gap-1.5">
+                            <button type="button" (click)="reproducir(s, $event)" (keydown.enter)="$event.stopPropagation()"
+                                    [disabled]="!s.duracionSeg || cargandoAudio === s.id"
+                                    [title]="!s.duracionSeg ? 'Esta llamada no tiene audio' : (audioDe === s.id ? 'Cerrar el reproductor' : 'Escuchar la llamada')"
+                                    [attr.aria-label]="audioDe === s.id ? 'Cerrar el reproductor' : 'Escuchar la llamada'" [class]="ui.botonIcono">
+                              <lucide-angular [name]="cargandoAudio === s.id ? 'loader-2' : (audioDe === s.id ? 'pause' : 'play')" [size]="14" class="block" [class.animate-spin]="cargandoAudio === s.id"></lucide-angular>
+                            </button>
+                            <button type="button" (click)="descargarGrabacion(s, $event)" (keydown.enter)="$event.stopPropagation()"
+                                    [disabled]="!s.duracionSeg || descargando === s.id"
+                                    [title]="!s.duracionSeg ? 'Esta llamada no tiene audio' : 'Descargar la grabación'"
+                                    aria-label="Descargar la grabación" [class]="ui.botonIcono">
+                              <lucide-angular [name]="descargando === s.id ? 'loader-2' : 'download'" [size]="14" class="block" [class.animate-spin]="descargando === s.id"></lucide-angular>
+                            </button>
+                          </span>
+                        </td>
+                        <td [class]="ui.td + ' text-[#8491a3]'"><lucide-angular name="chevron-right" [size]="16" class="block"></lucide-angular></td>
+                      </tr>
+                      @if (audioDe === s.id && audioUrl) {
+                        <tr>
+                          <td [attr.colspan]="colasFiltro.length > 1 ? 9 : 8" class="border-b border-[#eef1f5] bg-[#f8fafc] px-3 py-2 dark:border-slate-800 dark:bg-slate-800/40">
+                            <audio controls autoplay [src]="audioUrl" class="h-9 w-full max-w-[560px]"></audio>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (errorSesiones) {
+                <p class="!m-0 px-4 py-8 text-center text-[13px] font-semibold text-[#b91c1c] dark:text-red-400">No se pudieron cargar las llamadas.</p>
+              } @else if (sesiones.length === 0 && !primeraCargaLlamadas) {
+                <p class="!m-0 px-4 py-8 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">
+                  {{ hayFiltrosLlamadas ? 'Ninguna llamada coincide con lo que has pedido.' : 'Aún no hay llamadas registradas.' }}
+                </p>
+              }
               <nav aria-label="Paginación de llamadas" class="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f5] px-4 py-3 dark:border-slate-800">
-                <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
-                  Página {{ miles(paginaSesiones) }} de {{ miles(paginasSesiones) }} · {{ miles(totalSesiones) }} llamada(s)
+                <span class="flex flex-wrap items-center gap-3 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">
+                  <span>Mostrando {{ miles(desdeSesiones) }}–{{ miles(hastaSesiones) }} de {{ miles(totalSesiones) }}</span>
+                  <label class="flex items-center gap-1.5">
+                    Por página
+                    <select [ngModel]="tamLlamadas" (ngModelChange)="cambiarTamLlamadas($event)" aria-label="Llamadas por página"
+                            class="h-8 rounded-[7px] border border-[#d5dbe3] bg-white px-2 text-[12.5px] text-[#334155] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      @for (n of TAMANIOS_LLAMADAS; track n) {
+                        <option [ngValue]="n">{{ n }}</option>
+                      }
+                    </select>
+                  </label>
                 </span>
                 <span class="flex items-center gap-1">
+                  <span class="mr-2 text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">Página {{ miles(paginaSesiones) }} de {{ miles(paginasSesiones) }}</span>
                   <button type="button" (click)="irAPaginaSesiones(1)" [disabled]="paginaSesiones === 1" [class]="ui.botonPagina">Primera</button>
                   <button type="button" (click)="irAPaginaSesiones(paginaSesiones - 1)" [disabled]="paginaSesiones === 1" aria-label="Página anterior" [class]="ui.botonIcono">
                     <lucide-angular name="chevron-left" [size]="14" class="block"></lucide-angular>
@@ -666,7 +769,7 @@
                   <button type="button" (click)="irAPaginaSesiones(paginasSesiones)" [disabled]="paginaSesiones === paginasSesiones" title="Las más antiguas" [class]="ui.botonPagina">Última</button>
                 </span>
               </nav>
-            }
+            </div>
           </div>
         </section>
       }
