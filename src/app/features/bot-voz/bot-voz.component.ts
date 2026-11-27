@@ -1104,7 +1104,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     const conversaron = r.conversaron ?? 0;
     const contestaron = (r.sinHablar ?? 0) + conversaron;
     const promesas = this.promesasDe(r);
-    const costo = r.costoUsd ?? 0;
     return [
       { clave: 'marcadas', etiqueta: 'Marcadas', valor: this.miles(total),
         detalle: `${this.miles(contestaron)} contestaron`, tonoTexto: '',
@@ -1115,12 +1114,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
       { clave: 'promesas', etiqueta: 'Con promesa', valor: this.miles(promesas),
         detalle: `${this.porcentaje(promesas, conversaron)} de las conversaciones`,
         tonoTexto: 'text-[#15803d] dark:text-emerald-400', ayuda: 'Cerraron o confirmaron una promesa de pago' },
-      { clave: 'costo', etiqueta: 'Costo total', valor: this.usd(costo),
-        detalle: `${this.usd(total ? costo / total : 0)} por llamada`, tonoTexto: '',
-        ayuda: 'Costo estimado de las llamadas con los filtros puestos' },
-      { clave: 'costopromesa', etiqueta: 'Costo por promesa', valor: promesas ? this.usd(costo / promesas) : '—',
-        detalle: promesas ? 'costo total entre promesas' : 'todavía sin promesas', tonoTexto: '',
-        ayuda: 'Cuánto cuesta, en llamadas, conseguir una promesa' },
       { clave: 'duracion', etiqueta: 'Duración media', valor: this.duracion(r.duracionMediaSeg),
         detalle: 'por llamada marcada', tonoTexto: '', ayuda: 'Incluye las que no contestaron' },
     ];
