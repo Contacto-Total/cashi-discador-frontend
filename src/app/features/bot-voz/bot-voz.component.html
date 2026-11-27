@@ -485,7 +485,7 @@
               </div>
 
               <button type="button" (click)="exportarLlamadas()" [disabled]="exportando || !totalSesiones"
-                      title="Descarga en CSV las llamadas con los filtros puestos (hasta 5.000, las más recientes)" [class]="ui.botonSecundarioAlto">
+                      title="Descarga en Excel, en tabla con filtros, las llamadas con los filtros puestos (hasta 5.000, las más recientes)" [class]="ui.botonSecundarioAlto">
                 <lucide-angular [name]="exportando ? 'loader-2' : 'file-spreadsheet'" [size]="15" class="block" [class.animate-spin]="exportando"></lucide-angular>
                 Exportar
               </button>
