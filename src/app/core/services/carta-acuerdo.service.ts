@@ -101,6 +101,16 @@ export class CartaAcuerdoService {
     );
   }
 
+  asignacionSubcartera(idSubcartera: number): Observable<{ tiene: boolean; codigo: string | null }> {
+    return this.http.get<{ success: boolean, data: any[] }>(`${environment.apiUrl}/plantillas-carta/asignaciones`).pipe(
+      map(resp => {
+        const a = (resp?.data || []).find(x => Number(x.idSubcartera) === Number(idSubcartera));
+        const codigo = a?.codigoPlantilla ? String(a.codigoPlantilla).split(':')[0] : null;
+        return { tiene: !!a, codigo };
+      })
+    );
+  }
+
   /**
    * Descarga el PDF generado
    */

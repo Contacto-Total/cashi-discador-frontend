@@ -3760,6 +3760,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Gestión cuya carta se está generando (deshabilita el botón mientras descarga)
   generandoCartaGestionId = signal<number | null>(null);
   generandoConstanciaGestionId = signal<number | null>(null);
+  codigoPlantillaSubcartera = signal<string | null>(null);
 
   // ==================== BLOQUEO PERIODO DE GRACIA (PROMESA VENCIDA DE OTRO ASESOR) ====================
   // Flag para mostrar la card de bloqueo cuando la última promesa del cliente está vencida
@@ -8821,12 +8822,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private cargarEstadoCartaAcuerdo(idCliente: number | null): void {
     const idSubcartera = this.selectedSubPortfolioId;
     if (idSubcartera) {
-      this.cartaAcuerdoService.tienePlantillaSubcartera(idSubcartera).subscribe({
-        next: (tiene) => this.cartaPlantillaDisponible.set(tiene),
-        error: () => this.cartaPlantillaDisponible.set(false)
+      this.cartaAcuerdoService.asignacionSubcartera(idSubcartera).subscribe({
+        next: (a) => {
+          this.cartaPlantillaDisponible.set(a.tiene);
+          this.codigoPlantillaSubcartera.set(a.codigo);
+        },
+        error: () => {
+          this.cartaPlantillaDisponible.set(false);
+          this.codigoPlantillaSubcartera.set(null);
+        }
       });
     } else {
       this.cartaPlantillaDisponible.set(false);
+      this.codigoPlantillaSubcartera.set(null);
     }
 
     if (idCliente) {
@@ -8874,7 +8882,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   protected esSubcarteraCastigoSip(): boolean {
-    return Number(this.selectedSubPortfolioId) === 27;
+    return this.codigoPlantillaSubcartera() === 'castigo';
   }
 
   protected generarConstanciaDesdeBanner(schedule: any): void {
