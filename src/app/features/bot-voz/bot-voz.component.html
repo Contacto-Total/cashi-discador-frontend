@@ -670,7 +670,7 @@
 
           <div class="flex flex-col gap-4 transition-opacity duration-150" [class.atenuado]="cargandoLlamadas && !primeraCargaLlamadas">
             @if (resumenLlamadas; as r) {
-              <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
                 @for (k of kpis; track k.clave) {
                   <div class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-[#e6e9ee] bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900" [title]="k.ayuda">
                     <span class="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">{{ k.etiqueta }}</span>
